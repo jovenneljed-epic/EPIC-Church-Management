@@ -9,10 +9,7 @@ import type {
 // ============================================================
 // CONFIGURATION
 // ============================================================
-
-const API_BASE =
-    import.meta.env.VITE_API_URL ||
-    "http://192.168.1.10:5109/api";
+import { API_BASE_URL } from "../../../config";
 
 // ============================================================
 // AUTHENTICATION
@@ -271,14 +268,14 @@ export const ministryApi = {
 
     getMinistries: (): Promise<Ministry[]> =>
         request<Ministry[]>(
-            `${API_BASE}/Ministry`
+            `${API_BASE_URL}/Ministry`
         ),
 
     createMinistry: (
         payload: MinistryPayload
     ): Promise<Ministry> =>
         request<Ministry>(
-            `${API_BASE}/Ministry`,
+            `${API_BASE_URL}/Ministry`,
             {
                 method: "POST",
                 body: JSON.stringify(payload)
@@ -290,7 +287,7 @@ export const ministryApi = {
         payload: MinistryPayload
     ): Promise<Ministry> =>
         request<Ministry>(
-            `${API_BASE}/Ministry/${ministryId}`,
+            `${API_BASE_URL}/Ministry/${ministryId}`,
             {
                 method: "PUT",
                 body: JSON.stringify(payload)
@@ -301,7 +298,7 @@ export const ministryApi = {
         ministryId: number
     ): Promise<void> =>
         request<void>(
-            `${API_BASE}/Ministry/${ministryId}`,
+            `${API_BASE_URL}/Ministry/${ministryId}`,
             {
                 method: "DELETE"
             }
@@ -313,7 +310,7 @@ export const ministryApi = {
 
     getMembers: (): Promise<Member[]> =>
         request<Member[]>(
-            `${API_BASE}/Members`
+            `${API_BASE_URL}/Members`
         ),
 
     getMinistryMembers: async (
@@ -322,7 +319,7 @@ export const ministryApi = {
 
         const data =
             await request<unknown>(
-                `${API_BASE}/MinistryMember/ministry/${ministryId}`
+                `${API_BASE_URL}/MinistryMember/ministry/${ministryId}`
             );
 
         // Normal array response
@@ -358,7 +355,7 @@ export const ministryApi = {
         payload: AssignMemberPayload
     ): Promise<MinistryMember> =>
         request<MinistryMember>(
-            `${API_BASE}/MinistryMember`,
+            `${API_BASE_URL}/MinistryMember`,
             {
                 method: "POST",
                 body: JSON.stringify(payload)
@@ -369,7 +366,7 @@ export const ministryApi = {
         ministryMemberId: number
     ): Promise<void> =>
         request<void>(
-            `${API_BASE}/MinistryMember/${ministryMemberId}`,
+            `${API_BASE_URL}/MinistryMember/${ministryMemberId}`,
             {
                 method: "DELETE"
             }
@@ -383,7 +380,7 @@ export const ministryApi = {
         ministryId: number
     ): Promise<MinistrySummary> =>
         request<MinistrySummary>(
-            `${API_BASE}/MinistryPerformance/ministry/${ministryId}/summary`
+            `${API_BASE_URL}/MinistryPerformance/ministry/${ministryId}/summary`
         ),
 
     getPerformanceHistory:
@@ -393,7 +390,7 @@ export const ministryApi = {
 
             const data =
                 await request<unknown>(
-                    `${API_BASE}/MinistryPerformance/member/${ministryMemberId}`
+                    `${API_BASE_URL}/MinistryPerformance/member/${ministryMemberId}`
                 );
 
             if (Array.isArray(data)) {
@@ -425,7 +422,7 @@ export const ministryApi = {
         payload: PerformanceRating
     ): Promise<PerformanceRating> =>
         request<PerformanceRating>(
-            `${API_BASE}/MinistryPerformance`,
+            `${API_BASE_URL}/MinistryPerformance`,
             {
                 method: "POST",
                 body: JSON.stringify(payload)
@@ -437,7 +434,7 @@ export const ministryApi = {
         payload: PerformanceRating
     ): Promise<PerformanceRating> =>
         request<PerformanceRating>(
-            `${API_BASE}/MinistryPerformance/${performanceRatingId}`,
+            `${API_BASE_URL}/MinistryPerformance/${performanceRatingId}`,
             {
                 method: "PUT",
                 body: JSON.stringify(payload)
@@ -448,7 +445,7 @@ export const ministryApi = {
         performanceRatingId: number
     ): Promise<void> =>
         request<void>(
-            `${API_BASE}/MinistryPerformance/${performanceRatingId}`,
+            `${API_BASE_URL}/MinistryPerformance/${performanceRatingId}`,
             {
                 method: "DELETE"
             }

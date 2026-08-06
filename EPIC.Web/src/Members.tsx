@@ -6,7 +6,7 @@ import PermissionService from "./PermissionService";
    API CONFIGURATION
 ========================================================= */
 
-const API_BASE_URL = "http://192.168.1.10:5109/api";
+import { API_BASE_URL } from "./config";
 
 /* =========================================================
    TYPES

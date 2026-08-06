@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import "./ChurchServices.css";
 import PermissionService from "./PermissionService";
 
-const API_BASE_URL = "http://192.168.1.10:5109/api";
+import { API_BASE_URL } from "./config";
 
 interface ChurchService {
     churchServiceId: number;
