@@ -317,6 +317,9 @@ app.UseSwaggerUI(options =>
 
 app.UseCors("EPICWebPolicy");
 
+app.UseAuthentication();
+
+app.UseAuthorization();
 
 // ============================================================
 // 14. STATIC FILES - MEMBER PHOTOS
