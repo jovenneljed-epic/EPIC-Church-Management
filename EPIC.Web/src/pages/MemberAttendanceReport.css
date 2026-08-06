@@ -1,0 +1,927 @@
+﻿/* ============================================================
+   EPIC MEMBER ATTENDANCE REPORT
+   ============================================================ */
+
+.member-attendance-report {
+    width: 100%;
+    min-height: 100%;
+    padding: 28px;
+    background: #f5f7fb;
+    color: #172033;
+    box-sizing: border-box;
+}
+
+
+/* ============================================================
+   PAGE HEADER
+   ============================================================ */
+
+.mar-page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+.mar-eyebrow {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    color: #64748b;
+    margin-bottom: 7px;
+}
+
+.mar-page-header h1 {
+    margin: 0;
+    font-size: 30px;
+    font-weight: 800;
+    letter-spacing: -0.7px;
+}
+
+.mar-page-header p {
+    margin: 7px 0 0;
+    color: #64748b;
+    font-size: 14px;
+}
+
+.mar-header-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+
+.mar-primary-button,
+.mar-secondary-button {
+    border: 0;
+    border-radius: 9px;
+    padding: 11px 17px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.mar-primary-button {
+    background: #18233a;
+    color: white;
+}
+
+    .mar-primary-button:hover {
+        background: #0f172a;
+        transform: translateY(-1px);
+    }
+
+.mar-secondary-button {
+    background: white;
+    color: #334155;
+    border: 1px solid #dbe1ea;
+}
+
+    .mar-secondary-button:hover {
+        background: #f8fafc;
+    }
+
+
+/* ============================================================
+   FILTER PANEL
+   ============================================================ */
+
+.mar-filter-panel {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 3px 12px rgba(15, 23, 42, 0.04);
+}
+
+.mar-filter-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 800;
+    margin-bottom: 17px;
+}
+
+    .mar-filter-title span {
+        font-size: 18px;
+    }
+
+.mar-filter-grid {
+    display: grid;
+    grid-template-columns: 2fr 1.4fr 1fr 1fr auto;
+    gap: 12px;
+    align-items: end;
+}
+
+.mar-field {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+    .mar-field label {
+        font-size: 11px;
+        font-weight: 800;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .mar-field input,
+    .mar-field select {
+        width: 100%;
+        height: 42px;
+        box-sizing: border-box;
+        border: 1px solid #d9e0e9;
+        border-radius: 8px;
+        background: #fff;
+        padding: 0 12px;
+        color: #1e293b;
+        font-size: 13px;
+        outline: none;
+    }
+
+        .mar-field input:focus,
+        .mar-field select:focus {
+            border-color: #64748b;
+            box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.08);
+        }
+
+.mar-input-icon {
+    position: relative;
+}
+
+    .mar-input-icon span {
+        position: absolute;
+        left: 12px;
+        top: 12px;
+        font-size: 14px;
+    }
+
+    .mar-input-icon input {
+        padding-left: 35px;
+    }
+
+.mar-filter-button button {
+    height: 42px;
+    border: 1px solid #d9e0e9;
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 0 15px;
+    font-weight: 700;
+    color: #475569;
+    cursor: pointer;
+}
+
+
+/* ============================================================
+   STAT CARDS
+   ============================================================ */
+
+.mar-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 13px;
+    margin-bottom: 18px;
+}
+
+.mar-stat-card {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 13px;
+    padding: 17px;
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    min-width: 0;
+}
+
+.mar-stat-icon {
+    width: 43px;
+    height: 43px;
+    border-radius: 11px;
+    display: grid;
+    place-items: center;
+    font-size: 18px;
+    font-weight: 900;
+    flex-shrink: 0;
+}
+
+.mar-stat-card > div:last-child {
+    min-width: 0;
+}
+
+.mar-stat-card span {
+    display: block;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.mar-stat-card strong {
+    display: block;
+    margin-top: 3px;
+    font-size: 23px;
+    line-height: 1;
+}
+
+.mar-stat-card.total .mar-stat-icon {
+    background: #eef2ff;
+}
+
+.mar-stat-card.present .mar-stat-icon {
+    background: #ecfdf5;
+}
+
+.mar-stat-card.late .mar-stat-icon {
+    background: #fff7ed;
+}
+
+.mar-stat-card.early .mar-stat-icon {
+    background: #eff6ff;
+}
+
+.mar-stat-card.absent .mar-stat-icon {
+    background: #fef2f2;
+}
+
+.mar-stat-card.excused .mar-stat-icon {
+    background: #f5f3ff;
+}
+
+
+/* ============================================================
+   OVERVIEW CARDS
+   ============================================================ */
+
+.mar-overview-grid {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 20px;
+}
+
+.mar-overview-card {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 13px;
+    padding: 20px;
+}
+
+.mar-overview-label {
+    font-size: 12px;
+    font-weight: 800;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.mar-overview-value {
+    margin-top: 7px;
+    font-size: 34px;
+    font-weight: 850;
+    letter-spacing: -1px;
+}
+
+    .mar-overview-value.pastoral {
+        color: #dc2626;
+    }
+
+.mar-progress {
+    height: 8px;
+    border-radius: 10px;
+    background: #edf1f5;
+    overflow: hidden;
+    margin-top: 12px;
+}
+
+    .mar-progress div {
+        height: 100%;
+        background: #1e293b;
+        border-radius: inherit;
+        transition: width 0.3s ease;
+    }
+
+.mar-overview-note {
+    color: #64748b;
+    font-size: 12px;
+    margin-top: 9px;
+}
+
+
+/* ============================================================
+   PANEL
+   ============================================================ */
+
+.mar-panel {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    margin-bottom: 20px;
+    overflow: hidden;
+    box-shadow: 0 3px 12px rgba(15, 23, 42, 0.03);
+}
+
+.mar-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    padding: 20px 21px;
+    border-bottom: 1px solid #edf1f5;
+}
+
+    .mar-panel-header h2 {
+        margin: 0;
+        font-size: 17px;
+        font-weight: 800;
+    }
+
+    .mar-panel-header p {
+        margin: 5px 0 0;
+        color: #64748b;
+        font-size: 12px;
+    }
+
+.mar-record-count {
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 700;
+}
+
+
+/* ============================================================
+   TABLE
+   ============================================================ */
+
+.mar-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.mar-table {
+    width: 100%;
+    min-width: 1050px;
+    border-collapse: collapse;
+}
+
+    .mar-table th {
+        background: #f8fafc;
+        color: #64748b;
+        font-size: 10px;
+        font-weight: 850;
+        letter-spacing: 0.7px;
+        text-transform: uppercase;
+        text-align: left;
+        padding: 13px 15px;
+        border-bottom: 1px solid #e5eaf0;
+        white-space: nowrap;
+    }
+
+    .mar-table td {
+        padding: 14px 15px;
+        border-bottom: 1px solid #edf1f5;
+        font-size: 13px;
+        vertical-align: middle;
+    }
+
+    .mar-table tbody tr:hover {
+        background: #fafbfc;
+    }
+
+    .mar-table tbody tr:last-child td {
+        border-bottom: 0;
+    }
+
+
+/* ============================================================
+   MEMBER
+   ============================================================ */
+
+.mar-member {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 190px;
+}
+
+.mar-avatar {
+    width: 37px;
+    height: 37px;
+    border-radius: 10px;
+    background: #e8edf4;
+    color: #334155;
+    display: grid;
+    place-items: center;
+    font-size: 13px;
+    font-weight: 850;
+}
+
+.mar-member strong {
+    display: block;
+    color: #1e293b;
+    font-size: 13px;
+}
+
+.mar-member span {
+    display: block;
+    margin-top: 2px;
+    color: #94a3b8;
+    font-size: 10px;
+}
+
+
+/* ============================================================
+   PERCENTAGE
+   ============================================================ */
+
+.mar-percentage {
+    min-width: 105px;
+}
+
+    .mar-percentage strong {
+        font-size: 13px;
+    }
+
+.mar-mini-progress {
+    width: 80px;
+    height: 5px;
+    background: #edf1f5;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-top: 6px;
+}
+
+    .mar-mini-progress div {
+        height: 100%;
+        border-radius: inherit;
+    }
+
+    .mar-mini-progress .excellent {
+        background: #16a34a;
+    }
+
+    .mar-mini-progress .good {
+        background: #2563eb;
+    }
+
+    .mar-mini-progress .needs-follow-up {
+        background: #d97706;
+    }
+
+    .mar-mini-progress .pastoral-follow-up {
+        background: #dc2626;
+    }
+
+
+/* ============================================================
+   NUMBERS
+   ============================================================ */
+
+.mar-number {
+    font-weight: 800;
+}
+
+    .mar-number.present {
+        color: #16a34a;
+    }
+
+    .mar-number.late {
+        color: #d97706;
+    }
+
+    .mar-number.early {
+        color: #2563eb;
+    }
+
+    .mar-number.absent {
+        color: #dc2626;
+    }
+
+    .mar-number.excused {
+        color: #7c3aed;
+    }
+
+
+/* ============================================================
+   STATUS
+   ============================================================ */
+
+.mar-status {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 20px;
+    padding: 5px 9px;
+    font-size: 9px;
+    font-weight: 850;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+}
+
+    .mar-status.excellent {
+        background: #dcfce7;
+        color: #15803d;
+    }
+
+    .mar-status.good {
+        background: #dbeafe;
+        color: #1d4ed8;
+    }
+
+    .mar-status.needs-follow-up {
+        background: #fef3c7;
+        color: #a16207;
+    }
+
+    .mar-status.pastoral-follow-up {
+        background: #fee2e2;
+        color: #b91c1c;
+    }
+
+    .mar-status.status-present {
+        background: #dcfce7;
+        color: #15803d;
+    }
+
+    .mar-status.status-late {
+        background: #fef3c7;
+        color: #a16207;
+    }
+
+    .mar-status.status-early {
+        background: #dbeafe;
+        color: #1d4ed8;
+    }
+
+    .mar-status.status-absent {
+        background: #fee2e2;
+        color: #b91c1c;
+    }
+
+    .mar-status.status-excused {
+        background: #ede9fe;
+        color: #6d28d9;
+    }
+
+
+/* ============================================================
+   VIEW BUTTON
+   ============================================================ */
+
+.mar-view-button {
+    border: 1px solid #d8dee8;
+    background: white;
+    border-radius: 7px;
+    padding: 7px 11px;
+    font-size: 11px;
+    font-weight: 750;
+    color: #334155;
+    cursor: pointer;
+}
+
+    .mar-view-button:hover {
+        background: #f8fafc;
+    }
+
+
+/* ============================================================
+   EMPTY
+   ============================================================ */
+
+.mar-empty {
+    text-align: center !important;
+    padding: 45px 20px !important;
+    color: #94a3b8 !important;
+}
+
+
+/* ============================================================
+   MEMBER HISTORY
+   ============================================================ */
+
+.mar-history-panel {
+    scroll-margin-top: 20px;
+}
+
+.mar-close-button {
+    width: 34px;
+    height: 34px;
+    border: 1px solid #dbe1e8;
+    background: white;
+    border-radius: 8px;
+    font-size: 20px;
+    color: #64748b;
+    cursor: pointer;
+}
+
+    .mar-close-button:hover {
+        background: #f8fafc;
+    }
+
+.mar-member-summary {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    border-bottom: 1px solid #edf1f5;
+}
+
+    .mar-member-summary > div {
+        padding: 17px 20px;
+        border-right: 1px solid #edf1f5;
+    }
+
+        .mar-member-summary > div:last-child {
+            border-right: 0;
+        }
+
+    .mar-member-summary span {
+        display: block;
+        font-size: 10px;
+        color: #64748b;
+        text-transform: uppercase;
+        font-weight: 800;
+    }
+
+    .mar-member-summary strong {
+        display: block;
+        margin-top: 5px;
+        font-size: 21px;
+    }
+
+
+/* ============================================================
+   CLASSIFICATION
+   ============================================================ */
+
+.mar-classification-grid {
+    padding: 20px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+.mar-classification {
+    border: 1px solid #e5eaf0;
+    border-radius: 11px;
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    gap: 11px;
+}
+
+.mar-classification-icon {
+    font-size: 20px;
+}
+
+.mar-classification strong {
+    display: block;
+    font-size: 11px;
+}
+
+.mar-classification span {
+    display: block;
+    color: #64748b;
+    margin-top: 3px;
+    font-size: 11px;
+}
+
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+
+.mar-footer-note {
+    display: flex;
+    justify-content: space-between;
+    color: #94a3b8;
+    font-size: 11px;
+    padding: 5px 2px 20px;
+}
+
+
+/* ============================================================
+   LOADING
+   ============================================================ */
+
+.mar-loading-page {
+    min-height: 500px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.mar-loading-spinner {
+    width: 38px;
+    height: 38px;
+    border: 4px solid #e2e8f0;
+    border-top-color: #334155;
+    border-radius: 50%;
+    animation: mar-spin 0.8s linear infinite;
+    margin-bottom: 18px;
+}
+
+@keyframes mar-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.mar-loading-page h2 {
+    margin: 0;
+    font-size: 19px;
+}
+
+.mar-loading-page p {
+    color: #64748b;
+    font-size: 13px;
+}
+
+
+/* ============================================================
+   ERROR
+   ============================================================ */
+
+.mar-error-page {
+    min-height: 500px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+
+.mar-error-icon {
+    width: 48px;
+    height: 48px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: #fee2e2;
+    color: #dc2626;
+    font-size: 25px;
+    font-weight: 900;
+    margin-bottom: 15px;
+}
+
+.mar-error-page h2 {
+    margin: 0;
+}
+
+.mar-error-page p {
+    color: #64748b;
+    max-width: 500px;
+    font-size: 13px;
+    margin: 8px 0 20px;
+}
+
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 1300px) {
+
+    .mar-stat-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .mar-filter-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .mar-filter-button {
+        grid-column: span 2;
+    }
+
+        .mar-filter-button button {
+            width: 100%;
+        }
+}
+
+@media (max-width: 900px) {
+
+    .member-attendance-report {
+        padding: 18px;
+    }
+
+    .mar-page-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .mar-header-actions {
+        width: 100%;
+    }
+
+        .mar-header-actions button {
+            flex: 1;
+        }
+
+    .mar-overview-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .mar-member-summary {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+        .mar-member-summary > div:nth-child(3) {
+            border-right: 0;
+        }
+}
+
+@media (max-width: 600px) {
+
+    .mar-page-header h1 {
+        font-size: 24px;
+    }
+
+    .mar-stat-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .mar-filter-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .mar-filter-button {
+        grid-column: auto;
+    }
+
+    .mar-classification-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .mar-member-summary {
+        grid-template-columns: 1fr 1fr;
+    }
+
+        .mar-member-summary > div {
+            border-right: 0;
+            border-bottom: 1px solid #edf1f5;
+        }
+
+    .mar-footer-note {
+        flex-direction: column;
+        gap: 5px;
+    }
+}
+
+
+/* ============================================================
+   PRINT
+   ============================================================ */
+
+@media print {
+
+    body {
+        background: white !important;
+    }
+
+    .member-attendance-report {
+        padding: 0;
+        background: white;
+    }
+
+    .mar-header-actions,
+    .mar-filter-panel,
+    .mar-view-button,
+    .mar-close-button,
+    .epic-sidebar,
+    .epic-topbar,
+    .epic-footer {
+        display: none !important;
+    }
+
+    .mar-page-header {
+        margin-bottom: 15px;
+    }
+
+    .mar-stat-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .mar-panel {
+        box-shadow: none;
+        break-inside: avoid;
+    }
+
+    .mar-table {
+        min-width: 0;
+    }
+
+    .mar-footer-note {
+        display: none;
+    }
+}
