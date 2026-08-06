@@ -79,7 +79,7 @@ builder.Services.AddCors(options =>
     {
         policy
             .WithOrigins(
-            "https://epic-cms.vercel.app",
+          
 
                 "http://localhost:5173",
                 "http://localhost:5174",
@@ -94,7 +94,8 @@ builder.Services.AddCors(options =>
                 "http://192.168.1.10:5177",
 
                 "http://localhost:4173",
-                "http://192.168.1.10:4173"
+                "http://192.168.1.10:4173",
+                "https://epic-cms.vercel.app"
             )
             .AllowAnyHeader()
             .AllowAnyMethod()
