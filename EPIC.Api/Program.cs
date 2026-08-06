@@ -25,7 +25,6 @@ builder.Configuration.Sources
     {
         source.ReloadOnChange = false;
     });
-});
 builder.Configuration.Sources.Clear();
 
 builder.Configuration
@@ -345,11 +344,6 @@ app.UseSwaggerUI(options =>
 // ============================================================
 
 app.UseCors("EPICWebPolicy");
-
-app.UseAuthentication();
-
-app.UseAuthorization();
-
 // ============================================================
 // 14. STATIC FILES - MEMBER PHOTOS
 // ============================================================
@@ -361,7 +355,6 @@ app.UseStaticFiles(
             new PhysicalFileProvider(
                 memberPhotoFolder
             ),
-
         RequestPath =
             "/member-photos"
     }
