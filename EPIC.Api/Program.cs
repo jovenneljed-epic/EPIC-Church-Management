@@ -7,13 +7,24 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
-
+using Microsoft.Extensions.Configuration;
 using System.Text;
 
-var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+var options = new WebApplicationOptions
 {
     Args = args,
     EnvironmentName = Environments.Production
+};
+
+var builder = WebApplication.CreateBuilder(options);
+
+builder.Configuration.Sources
+    .OfType<Microsoft.Extensions.Configuration.Json.JsonConfigurationSource>()
+    .ToList()
+    .ForEach(source =>
+    {
+        source.ReloadOnChange = false;
+    });
 });
 builder.Configuration.Sources.Clear();
 
