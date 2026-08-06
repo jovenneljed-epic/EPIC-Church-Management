@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/EPIC.Web/">
+    <File Path="EPIC.Web/index.html" />
+    <File Path="EPIC.Web/package.json" />
+    <File Path="EPIC.Web/README.md" />
+    <File Path="EPIC.Web/tsconfig.json" />
+    <File Path="EPIC.Web/vite.config.ts" />
+  </Folder>
+  <Project Path="EPIC.Admin/EPIC.Admin.csproj" Id="9d3b4189-3bce-4643-a7b7-67981645c645" />
+  <Project Path="EPIC.Api/EPIC.Api.csproj" />
+  <Project Path="EPIC.Core/EPIC.Core.csproj" />
+  <Project Path="EPIC.Infrastructure/EPIC.Infrastructure.vbproj" />
+  <Project Path="EPIC.Shared/EPIC.Shared.csproj" />
+</Solution>
