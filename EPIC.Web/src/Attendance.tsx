@@ -5,6 +5,8 @@
     useState
 } from "react";
 
+import "./Attendance.css";
+
 import { API_BASE_URL } from "./config";
 // =============================================================
 // TYPES
