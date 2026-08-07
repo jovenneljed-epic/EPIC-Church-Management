@@ -7,13 +7,12 @@ import {
 
 import "./Expenses.css";
 
+import {
+    apiClient,
+} from "../api/apiClient";
 /* =========================================================
    API CONFIGURATION
    ========================================================= */
-
-const API_BASE_URL =
-    "http://192.168.1.10:5109/api";
-
 /*
  * IMPORTANT:
  *
@@ -177,29 +176,10 @@ function createEmptyForm(): FormData {
    AUTH
    ========================================================= */
 
-function getToken(): string | null {
-    const keys = [
-        "token",
-        "accessToken",
-        "jwt",
-        "authToken",
-        "epicToken",
-    ];
 
-    for (const key of keys) {
-        const value =
-            localStorage.getItem(key);
-
-        if (value) {
-            return value
-                .replace(/^Bearer\s+/i, "")
-                .trim();
-        }
-    }
-
-    return null;
-}
-
+/* =========================================================
+   API FETCH
+   ========================================================= */
 /* =========================================================
    API FETCH
    ========================================================= */
@@ -209,59 +189,14 @@ async function apiFetch(
     options: RequestInit = {}
 ): Promise<Response> {
 
-    const token = getToken();
-
-    const headers = new Headers(
-        options.headers || {}
-    );
-
-    headers.set(
-        "Accept",
-        "application/json"
-    );
-
-    if (
-        options.body &&
-        !headers.has("Content-Type")
-    ) {
-        headers.set(
-            "Content-Type",
-            "application/json"
-        );
-    }
-
-    if (token) {
-        headers.set(
-            "Authorization",
-            `Bearer ${token}`
-        );
-    }
-
-    /*
-     * endpoint must be:
-     *
-     * /Expenses
-     * /Expenses/dashboard
-     *
-     * NOT:
-     *
-     * /api/Expenses
-     */
-
-    const fullUrl =
-        `${API_BASE_URL}${endpoint}`;
-
     console.log(
         "EPIC EXPENSE API:",
-        fullUrl
+        endpoint
     );
 
-    return fetch(
-        fullUrl,
-        {
-            ...options,
-            headers,
-        }
+    return apiClient(
+        endpoint,
+        options
     );
 }
 
@@ -537,7 +472,7 @@ export default function Expenses() {
                 /*
                  * CORRECT ENDPOINT
                  *
-                 * http://192.168.1.10:5109/api/Expenses
+                 *
                  */
 
                 const response =

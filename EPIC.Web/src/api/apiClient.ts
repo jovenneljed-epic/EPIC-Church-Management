@@ -1,5 +1,4 @@
 import { API_BASE_URL } from "../config";
-
 export interface ApiOptions extends RequestInit {
     body?: BodyInit | null;
 }
@@ -9,14 +8,13 @@ export async function apiClient(
     options: ApiOptions = {}
 ): Promise<Response> {
 
-    const token =
-        localStorage.getItem("token");
+    const token = localStorage.getItem("token");
 
-    const headers =
-        new Headers(options.headers || {});
+    const headers = new Headers(
+        options.headers || {}
+    );
 
     if (token) {
-
         headers.set(
             "Authorization",
             `Bearer ${token}`
@@ -27,7 +25,6 @@ export async function apiClient(
         options.body &&
         !(options.body instanceof FormData)
     ) {
-
         headers.set(
             "Content-Type",
             "application/json"
@@ -39,14 +36,13 @@ export async function apiClient(
         "application/json"
     );
 
-    const response =
-        await fetch(
-            `${API_BASE_URL}${endpoint}`,
-            {
-                ...options,
-                headers
-            }
-        );
+    const response = await fetch(
+        `${API_BASE_URL}${endpoint}`,
+        {
+            ...options,
+            headers
+        }
+    );
 
     if (response.status === 401) {
 

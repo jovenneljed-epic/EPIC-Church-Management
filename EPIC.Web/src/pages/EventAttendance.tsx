@@ -1,9 +1,7 @@
+import { API_BASE_URL } from "../config";
 import React, { useEffect, useMemo, useState } from "react";
 import "./EventAttendance.css";
 
-const API_BASE_URL =
-    import.meta.env.VITE_API_URL ||
-    "http://192.168.1.10:5109/api";
 
 const ATTENDANCE_STATUSES = [
     "PRESENT",

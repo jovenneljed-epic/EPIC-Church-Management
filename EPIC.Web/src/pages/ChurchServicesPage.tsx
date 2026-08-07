@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../config";
 import React, {
     useCallback,
     useEffect,
@@ -38,11 +39,8 @@ interface ChurchServiceForm {
 
 type ServiceFilter = "ALL" | "UPCOMING" | "PAST";
 
-const API_URL =
-    import.meta.env.VITE_API_URL ||
-    "http://192.168.1.10:5109/api";
 
-const API_BASE = `${API_URL}/ChurchServices`;
+const API_BASE = `${API_BASE_URL}/ChurchServices`;
 
 const EMPTY_FORM: ChurchServiceForm = {
     serviceName: "",

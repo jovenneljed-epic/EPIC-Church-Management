@@ -1,3 +1,4 @@
+import { API_BASE_URL } from "../config";
 import {
     useEffect,
     useMemo,
@@ -24,7 +25,7 @@ import {
     AlertCircle,
 } from "lucide-react";
 
-const API_URL = "http://localhost:5109/api";
+
 
 // ============================================================
 // TYPES
@@ -186,7 +187,7 @@ async function apiRequest(
     }
 
     const response = await fetch(
-        `${API_URL}${endpoint}`,
+        `${API_BASE_URL}${endpoint}`,
         {
             ...options,
             headers: {
