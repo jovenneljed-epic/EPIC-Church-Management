@@ -25,62 +25,108 @@ namespace EPIC.Api.Controllers
         {
             var today = DateTime.Today;
 
-            var result = new
+            var totalMembers = await _context.Members.CountAsync();
+            var activeMembers = await _context.Members.CountAsync(m => m.Status == "Active");
+            var inactiveMembers = totalMembers - activeMembers;
+
+            var totalVisitors = await _context.Visitors.CountAsync();
+
+            var totalMinistries = await _context.Ministries.CountAsync();
+
+            var todayAttendance = await _context.Attendances
+                .CountAsync(a => a.AttendanceDate.Date == today);
+
+            var todayGiving = await _context.Givings
+                .Where(g => g.GivingDate.Date == today)
+                .SumAsync(g => (decimal?)g.Amount) ?? 0;
+
+            var totalIncome = await _context.Incomes
+                .SumAsync(i => (decimal?)i.Amount) ?? 0;
+
+            var totalExpenses = await _context.Expenses
+                .SumAsync(e => (decimal?)e.Amount) ?? 0;
+
+            var upcomingService = await _context.ChurchServices
+                .Where(s =>
+                    s.ServiceDate >= today &&
+                    s.Status == "SCHEDULED")
+                .OrderBy(s => s.ServiceDate)
+                .Select(s => new
+                {
+                    churchServiceId = s.ChurchServiceId,
+                    serviceName = s.ServiceName,
+                    serviceType = s.ServiceType,
+                    serviceDate = s.ServiceDate,
+                    startTime = s.StartTime,
+                    endTime = s.EndTime,
+                    location = s.Location,
+                    serviceLeader = s.ServiceLeader,
+                    speaker = s.Speaker,
+                    description = s.Description,
+                    status = s.Status
+                })
+                .FirstOrDefaultAsync();
+
+            return Ok(new
             {
-                totalMembers = await _context.Members
-                    .CountAsync(),
+                generatedAt = DateTime.UtcNow,
 
-                activeMembers = await _context.Members
-                    .CountAsync(m => m.Status == "Active"),
+                members = new
+                {
+                    total = totalMembers,
+                    active = activeMembers,
+                    inactive = inactiveMembers
+                },
 
+                visitors = new
+                {
+                    total = totalVisitors
+                },
 
-                totalVisitors = await _context.Visitors
-                    .CountAsync(),
+                ministries = new
+                {
+                    total = totalMinistries,
+                    active = totalMinistries,
+                    activeAssignments = 0
+                },
 
+                attendance = new
+                {
+                    date = today,
+                    total = todayAttendance,
+                    present = todayAttendance,
+                    late = 0,
+                    early = 0,
+                    absent = 0,
+                    excused = 0,
+                    attendanceRate = totalMembers == 0
+                        ? 0
+                        : Math.Round((double)todayAttendance / totalMembers * 100, 2)
+                },
 
-                totalMinistries = await _context.Ministries
-                    .CountAsync(),
+                finance = new
+                {
+                    totalGiving = todayGiving,
+                    totalExpenses = totalExpenses,
+                    netChurchFunds = totalIncome - totalExpenses
+                },
 
-
-                todayAttendance = await _context.Attendances
-                    .CountAsync(a => a.AttendanceDate.Date == today),
-
-
-                todayGiving = await _context.Givings
-                    .Where(g => g.GivingDate.Date == today)
-                    .SumAsync(g => (decimal?)g.Amount) ?? 0,
-
-
-                totalIncome = await _context.Incomes
-                    .SumAsync(i => (decimal?)i.Amount) ?? 0,
-
-
-                totalExpenses = await _context.Expenses
-                    .SumAsync(e => (decimal?)e.Amount) ?? 0,
-
-
-                upcomingService = await _context.ChurchServices
-                    .Where(s =>
+                events = new
+                {
+                    total = await _context.ChurchServices.CountAsync(),
+                    upcoming = await _context.ChurchServices.CountAsync(s =>
                         s.ServiceDate >= today &&
-                        s.Status == "SCHEDULED")
-                    .OrderBy(s => s.ServiceDate)
-                    .Select(s => new
-                    {
-                        s.ServiceName,
-                        s.ServiceType,
-                        s.ServiceDate,
-                        s.StartTime,
-                        s.EndTime,
-                        s.Location,
-                        s.Speaker
-                    })
-                    .FirstOrDefaultAsync()
-            };
-
-
-            return Ok(result);
+                        s.Status == "SCHEDULED"),
+                    scheduled = await _context.ChurchServices.CountAsync(s =>
+                        s.Status == "SCHEDULED"),
+                    completed = await _context.ChurchServices.CountAsync(s =>
+                        s.Status == "COMPLETED"),
+                    items = upcomingService == null
+                        ? new object[] { }
+                        : new[] { upcomingService }
+                }
+            });
         }
-
 
 
         // MOBILE DASHBOARD
