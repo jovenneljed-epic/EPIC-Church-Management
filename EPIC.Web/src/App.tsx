@@ -353,6 +353,16 @@ const App: React.FC = () => {
                 ================================================= */}
 
                 <nav className="epic-navigation">
+<div
+    style={{
+        background: "red",
+        color: "white",
+        padding: 10,
+        fontWeight: "bold"
+    }}
+>
+    THIS IS THE NEW APP.TSX
+</div>
 
                     <div className="epic-nav-section">
                         MAIN MENU
