@@ -17,467 +17,51 @@ namespace EPIC.Api.Controllers
             _context = context;
         }
 
-        // =========================================================
-        // GET: api/Dashboard
-        // =========================================================
-
-        [HttpGet]
-        public async Task<IActionResult> GetDashboard()
+        [HttpGet("mobile")]
+        public async Task<IActionResult> Mobile()
         {
-            try
+            var today = DateTime.Today;
+
+            var upcomingService = await _context.ChurchServices
+                .Where(s =>
+                    s.ServiceDate >= today &&
+                    s.Status == "SCHEDULED")
+                .OrderBy(s => s.ServiceDate)
+                .FirstOrDefaultAsync();
+
+            var result = new
             {
-                // =====================================================
-                // DATE
-                // =====================================================
+                totalMembers = await _context.Members.CountAsync(),
 
-                DateTime today = DateTime.Today;
-                DateTime tomorrow = today.AddDays(1);
+                activeMembers = await _context.Members
+                    .CountAsync(m => m.Status == "Active"),
 
-                DateTime recentDate = today.AddDays(-30);
+                totalVisitors = await _context.Visitors.CountAsync(),
 
+                totalMinistries = await _context.Ministries.CountAsync(),
 
-                // =====================================================
-                // MEMBERS
-                // =====================================================
+                todayAttendance = await _context.Attendances
+                    .CountAsync(a => a.AttendanceDate.Date == today),
 
-                int totalMembers =
-                    await _context.Members
-                        .AsNoTracking()
-                        .CountAsync();
+                todayGiving = await _context.Givings
+                    .Where(g => g.GivingDate.Date == today)
+                    .SumAsync(g => (decimal?)g.Amount) ?? 0,
 
-
-                int activeMembers =
-                    await _context.Members
-                        .AsNoTracking()
-                        .CountAsync(m =>
-                            m.Status != null &&
-                            m.Status.ToUpper() == "ACTIVE");
-
-
-                int inactiveMembers =
-                    totalMembers - activeMembers;
-
-
-                // =====================================================
-                // VISITORS
-                // =====================================================
-
-                int totalVisitors = 0;
-
-                try
-                {
-                    totalVisitors =
-                        await _context.Visitors
-                            .AsNoTracking()
-                            .CountAsync();
-                }
-                catch
-                {
-                    totalVisitors = 0;
-                }
-
-
-                // =====================================================
-                // MINISTRIES
-                // =====================================================
-
-                int totalMinistries =
-                    await _context.Ministries
-                        .AsNoTracking()
-                        .CountAsync();
-
-
-                int activeMinistries =
-                    await _context.Ministries
-                        .AsNoTracking()
-                        .CountAsync(m =>
-                            m.Status != null &&
-                            m.Status.ToUpper() == "ACTIVE");
-
-
-                // =====================================================
-                // MINISTRY ASSIGNMENTS
-                // =====================================================
-
-                int activeMinistryAssignments = 0;
-
-                try
-                {
-                    activeMinistryAssignments =
-                        await _context.MinistryMembers
-                            .AsNoTracking()
-                            .CountAsync(m =>
-                                m.Status != null &&
-                                m.Status.ToUpper() == "ACTIVE");
-                }
-                catch
-                {
-                    activeMinistryAssignments = 0;
-                }
-
-
-                // =====================================================
-                // TODAY'S ATTENDANCE
-                // =====================================================
-
-                int attendanceToday =
-                    await _context.Attendances
-                        .AsNoTracking()
-                        .CountAsync(a =>
-                            a.AttendanceDate >= today &&
-                            a.AttendanceDate < tomorrow);
-
-
-                int presentToday =
-                    await _context.Attendances
-                        .AsNoTracking()
-                        .CountAsync(a =>
-                            a.AttendanceDate >= today &&
-                            a.AttendanceDate < tomorrow &&
-                            a.Status != null &&
-                            a.Status.ToUpper() == "PRESENT");
-
-
-                int lateToday =
-                    await _context.Attendances
-                        .AsNoTracking()
-                        .CountAsync(a =>
-                            a.AttendanceDate >= today &&
-                            a.AttendanceDate < tomorrow &&
-                            a.Status != null &&
-                            a.Status.ToUpper() == "LATE");
-
-
-                int earlyToday =
-                    await _context.Attendances
-                        .AsNoTracking()
-                        .CountAsync(a =>
-                            a.AttendanceDate >= today &&
-                            a.AttendanceDate < tomorrow &&
-                            a.Status != null &&
-                            a.Status.ToUpper() == "EARLY");
-
-
-                int absentToday =
-                    await _context.Attendances
-                        .AsNoTracking()
-                        .CountAsync(a =>
-                            a.AttendanceDate >= today &&
-                            a.AttendanceDate < tomorrow &&
-                            a.Status != null &&
-                            a.Status.ToUpper() == "ABSENT");
-
-
-                int excusedToday =
-                    await _context.Attendances
-                        .AsNoTracking()
-                        .CountAsync(a =>
-                            a.AttendanceDate >= today &&
-                            a.AttendanceDate < tomorrow &&
-                            a.Status != null &&
-                            a.Status.ToUpper() == "EXCUSED");
-
-
-                // =====================================================
-                // ATTENDANCE RATE
-                // =====================================================
-
-                int countedAttendance =
-                    presentToday +
-                    lateToday +
-                    earlyToday;
-
-
-                double attendanceRate = 0;
-
-                if (attendanceToday > 0)
-                {
-                    attendanceRate =
-                        Math.Round(
-                            ((double)countedAttendance /
-                             attendanceToday) * 100,
-                            2);
-                }
-
-
-                // =====================================================
-                // RECENT VISITORS COUNT
-                // =====================================================
-
-                int recentVisitors = 0;
-
-                try
-                {
-                    /*
-                     * This uses the CreatedAt field if your Visitor
-                     * model contains it.
-                     *
-                     * If your Visitor model does NOT have CreatedAt,
-                     * leave this as totalVisitors.
-                     */
-
-                    recentVisitors =
-                        totalVisitors;
-                }
-                catch
-                {
-                    recentVisitors = 0;
-                }
-
-
-                // =====================================================
-                // DASHBOARD RESPONSE
-                // =====================================================
-
-                return Ok(new
-                {
-                    generatedAt = DateTime.Now,
-
-                    // =================================================
-                    // MEMBERS
-                    // =================================================
-
-                    members = new
+                upcomingService = upcomingService == null
+                    ? null
+                    : new
                     {
-                        total = totalMembers,
-
-                        active = activeMembers,
-
-                        inactive = inactiveMembers
-                    },
-
-
-                    // =================================================
-                    // VISITORS
-                    // =================================================
-
-                    visitors = new
-                    {
-                        total = totalVisitors,
-
-                        recent = recentVisitors
-                    },
-
-
-                    // =================================================
-                    // MINISTRIES
-                    // =================================================
-
-                    ministries = new
-                    {
-                        total = totalMinistries,
-
-                        active = activeMinistries,
-
-                        activeAssignments =
-                            activeMinistryAssignments
-                    },
-
-
-                    // =================================================
-                    // ATTENDANCE
-                    // =================================================
-
-                    attendance = new
-                    {
-                        date =
-                            today.ToString("yyyy-MM-dd"),
-
-                        total =
-                            attendanceToday,
-
-                        present =
-                            presentToday,
-
-                        late =
-                            lateToday,
-
-                        early =
-                            earlyToday,
-
-                        absent =
-                            absentToday,
-
-                        excused =
-                            excusedToday,
-
-                        attendanceRate =
-                            attendanceRate
-                    },
-
-
-                    // =================================================
-                    // WHAT'S NEW
-                    // =================================================
-
-                    whatsNew = new
-                    {
-                        recentVisitors =
-                            recentVisitors,
-
-                        newMembers =
-                            0,
-
-                        upcomingEvents =
-                            0,
-
-                        ministryUpdates =
-                            activeMinistries
-                    },
-
-
-                    // =================================================
-                    // STATUS
-                    // =================================================
-
-                    status = new
-                    {
-                        connected = true,
-
-                        message =
-                            "EPIC Church records connected successfully.",
-
-                        lastUpdated =
-                            DateTime.Now
+                        upcomingService.ServiceName,
+                        upcomingService.ServiceType,
+                        upcomingService.ServiceDate,
+                        upcomingService.StartTime,
+                        upcomingService.EndTime,
+                        upcomingService.Location,
+                        upcomingService.Speaker
                     }
-                });
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(
-                    "================================================="
-                );
+            };
 
-                Console.WriteLine(
-                    "EPIC DASHBOARD ERROR"
-                );
-
-                Console.WriteLine(
-                    ex.ToString()
-                );
-
-                Console.WriteLine(
-                    "================================================="
-                );
-
-                return StatusCode(
-                    500,
-                    new
-                    {
-                        message =
-                            "Unable to load dashboard data.",
-
-                        error =
-                            ex.Message,
-
-                        detail =
-                            ex.InnerException?.Message
-                    }
-                );
-            }
-        }
-
-
-        // =========================================================
-        // GET: api/Dashboard/stats
-        // =========================================================
-
-        [HttpGet("stats")]
-        public async Task<IActionResult> GetQuickStats()
-        {
-            try
-            {
-                DateTime today =
-                    DateTime.Today;
-
-                DateTime tomorrow =
-                    today.AddDays(1);
-
-
-                // =====================================================
-                // ACTIVE MEMBERS
-                // =====================================================
-
-                int members =
-                    await _context.Members
-                        .AsNoTracking()
-                        .CountAsync(m =>
-                            m.Status != null &&
-                            m.Status.ToUpper() == "ACTIVE");
-
-
-                // =====================================================
-                // TODAY ATTENDANCE
-                // =====================================================
-
-                int attendanceToday =
-                    await _context.Attendances
-                        .AsNoTracking()
-                        .CountAsync(a =>
-                            a.AttendanceDate >= today &&
-                            a.AttendanceDate < tomorrow);
-
-
-                // =====================================================
-                // VISITORS
-                // =====================================================
-
-                int visitors = 0;
-
-                try
-                {
-                    visitors =
-                        await _context.Visitors
-                            .AsNoTracking()
-                            .CountAsync();
-                }
-                catch
-                {
-                    visitors = 0;
-                }
-
-
-                // =====================================================
-                // MINISTRIES
-                // =====================================================
-
-                int ministries =
-                    await _context.Ministries
-                        .AsNoTracking()
-                        .CountAsync(m =>
-                            m.Status != null &&
-                            m.Status.ToUpper() == "ACTIVE");
-
-
-                // =====================================================
-                // RESPONSE
-                // =====================================================
-
-                return Ok(new
-                {
-                    members,
-
-                    visitors,
-
-                    ministries,
-
-                    attendanceToday
-                });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(
-                    500,
-                    new
-                    {
-                        message =
-                            "Unable to load dashboard statistics.",
-
-                        error =
-                            ex.Message
-                    }
-                );
-            }
+            return Ok(result);
         }
     }
 }
