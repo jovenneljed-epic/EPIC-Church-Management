@@ -407,13 +407,12 @@ const Dashboard: React.FC = () => {
                         );
                     }
 
-                    const result =
-                        await response.json();
+                    const result = await response.json();
 
-                    console.log(
-                        "EPIC DASHBOARD DATA:",
-                        result
-                    );
+                    console.log("=================================");
+                    console.log("EPIC DASHBOARD RESPONSE");
+                    console.log(JSON.stringify(result, null, 2));
+                    console.log("=================================");
 
                     // ====================================================
                     // CHURCH SERVICES
