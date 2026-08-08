@@ -49,7 +49,8 @@ namespace EPIC.Api.Data
         public DbSet<Permission> Permissions { get; set; }
 
         public DbSet<ChurchSettings> ChurchSettings { get; set; }
-       
+        public DbSet<CRBreakPass> CRBreakPasses { get; set; }
+
 
 
         // =========================================================
