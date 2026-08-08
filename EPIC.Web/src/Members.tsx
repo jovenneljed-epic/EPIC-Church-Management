@@ -1,11 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import "./Members.css";
 import PermissionService from "./PermissionService";
-
-/* =========================================================
-   API CONFIGURATION
-========================================================= */
-
 import { API_BASE_URL } from "./config";
 
 /* =========================================================
@@ -145,7 +140,6 @@ const getJwtPayload = (): JwtPayload | null => {
         return JSON.parse(decoded) as JwtPayload;
 
     } catch (error) {
-
         console.error(
             "JWT PAYLOAD ERROR:",
             error
@@ -160,7 +154,6 @@ const getJwtPayload = (): JwtPayload | null => {
 ========================================================= */
 
 const getCurrentUserRoles = (): string[] => {
-
     const payload = getJwtPayload();
 
     if (!payload) {
@@ -171,7 +164,7 @@ const getCurrentUserRoles = (): string[] => {
         payload.role,
         payload.roles,
         payload[
-        "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
+            "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
         ]
     ];
 
@@ -181,20 +174,16 @@ const getCurrentUserRoles = (): string[] => {
         | undefined;
 
     for (const value of possibleRoleValues) {
-
         if (
             typeof value === "string" ||
             Array.isArray(value)
         ) {
-
             roleValue = value;
-
             break;
         }
     }
 
     if (Array.isArray(roleValue)) {
-
         return roleValue
             .flatMap(role =>
                 String(role).split(",")
@@ -206,7 +195,6 @@ const getCurrentUserRoles = (): string[] => {
     }
 
     if (typeof roleValue === "string") {
-
         return roleValue
             .split(",")
             .map(role =>
@@ -223,7 +211,6 @@ const getCurrentUserRoles = (): string[] => {
 ========================================================= */
 
 const hasAdminRole = (): boolean => {
-
     const roles = getCurrentUserRoles();
 
     return roles.some(
@@ -254,8 +241,14 @@ const apiFetch = async (
         "application/json"
     );
 
-    if (options.body) {
-
+    /*
+       Only set JSON Content-Type when body
+       is NOT FormData.
+    */
+    if (
+        options.body &&
+        !(options.body instanceof FormData)
+    ) {
         headers.set(
             "Content-Type",
             "application/json"
@@ -263,7 +256,6 @@ const apiFetch = async (
     }
 
     if (token) {
-
         headers.set(
             "Authorization",
             `Bearer ${token}`
@@ -333,9 +325,6 @@ const Members: React.FC = () => {
 
     /* =====================================================
        PERMISSIONS
-
-       ADMIN automatically receives permissions.
-       MEMBER must have explicit permission.
     ===================================================== */
 
     const canCreateMembers =
@@ -364,22 +353,14 @@ const Members: React.FC = () => {
     ===================================================== */
 
     useEffect(() => {
-
         setIsAdmin(
             hasAdminRole()
         );
-
     }, []);
 
     /* =====================================================
        LOAD MEMBERS
     ===================================================== */
-
-    useEffect(() => {
-
-        loadMembers();
-
-    }, []);
 
     const loadMembers = async () => {
 
@@ -394,14 +375,12 @@ const Members: React.FC = () => {
                 );
 
             if (response.status === 401) {
-
                 throw new Error(
                     "UNAUTHORIZED: Please login again."
                 );
             }
 
             if (response.status === 403) {
-
                 throw new Error(
                     "FORBIDDEN: You do not have permission to view members."
                 );
@@ -451,6 +430,10 @@ const Members: React.FC = () => {
         }
     };
 
+    useEffect(() => {
+        loadMembers();
+    }, []);
+
     /* =====================================================
        STATISTICS
     ===================================================== */
@@ -477,16 +460,14 @@ const Members: React.FC = () => {
     const maleMembers =
         members.filter(
             member =>
-                member.gender
-                    ?.toUpperCase() ===
+                member.gender?.toUpperCase() ===
                 "MALE"
         ).length;
 
     const femaleMembers =
         members.filter(
             member =>
-                member.gender
-                    ?.toUpperCase() ===
+                member.gender?.toUpperCase() ===
                 "FEMALE"
         ).length;
 
@@ -556,18 +537,10 @@ const Members: React.FC = () => {
 
                     const matchesSearch =
                         !keyword ||
-                        fullName.includes(
-                            keyword
-                        ) ||
-                        code.includes(
-                            keyword
-                        ) ||
-                        ministry.includes(
-                            keyword
-                        ) ||
-                        contact.includes(
-                            keyword
-                        );
+                        fullName.includes(keyword) ||
+                        code.includes(keyword) ||
+                        ministry.includes(keyword) ||
+                        contact.includes(keyword);
 
                     const matchesStatus =
                         statusFilter === "ALL" ||
@@ -732,6 +705,9 @@ const Members: React.FC = () => {
 
     /* =====================================================
        SAVE MEMBER
+       
+       CREATE = JSON POST
+       UPDATE = FormData PUT
     ===================================================== */
 
     const saveMember = async (
@@ -794,114 +770,278 @@ const Members: React.FC = () => {
 
         try {
 
-            const payload = {
+            /* =========================================
+               CREATE MEMBER
+               POST /api/Members
+            ========================================= */
 
-                memberCode:
-                    form.memberCode.trim(),
+            if (!isEditing) {
 
-                firstName:
-                    form.firstName.trim(),
+                const payload = {
 
-                middleName:
-                    form.middleName.trim(),
+                    memberCode:
+                        form.memberCode.trim(),
 
-                lastName:
-                    form.lastName.trim(),
+                    firstName:
+                        form.firstName.trim(),
 
-                suffix:
-                    form.suffix.trim(),
+                    middleName:
+                        form.middleName.trim(),
 
-                gender:
-                    form.gender || null,
+                    lastName:
+                        form.lastName.trim(),
 
-                birthDate:
-                    form.birthDate || null,
+                    suffix:
+                        form.suffix.trim(),
 
-                civilStatus:
-                    form.civilStatus || null,
+                    gender:
+                        form.gender || null,
 
-                contactNumber:
-                    form.contactNumber.trim(),
+                    birthDate:
+                        form.birthDate || null,
 
-                email:
-                    form.email.trim(),
+                    civilStatus:
+                        form.civilStatus || null,
 
-                address:
-                    form.address.trim(),
+                    contactNumber:
+                        form.contactNumber.trim(),
 
-                ministry:
-                    form.ministry.trim(),
+                    email:
+                        form.email.trim(),
 
-                status:
-                    form.status,
+                    address:
+                        form.address.trim(),
 
-                dateJoined:
-                    form.dateJoined || null,
+                    ministry:
+                        form.ministry.trim(),
 
-                occupation:
-                    form.occupation.trim(),
+                    status:
+                        form.status,
 
-                notes:
+                    dateJoined:
+                        form.dateJoined || null,
+
+                    occupation:
+                        form.occupation.trim(),
+
+                    notes:
+                        form.notes.trim()
+                };
+
+                const response =
+                    await apiFetch(
+                        `${API_BASE_URL}/Members`,
+                        {
+                            method: "POST",
+                            body:
+                                JSON.stringify(payload)
+                        }
+                    );
+
+                if (
+                    response.status === 401
+                ) {
+                    throw new Error(
+                        "UNAUTHORIZED: Please login again."
+                    );
+                }
+
+                if (
+                    response.status === 403
+                ) {
+                    throw new Error(
+                        "FORBIDDEN: You do not have permission to create members."
+                    );
+                }
+
+                if (!response.ok) {
+
+                    const text =
+                        await response.text();
+
+                    throw new Error(
+                        text ||
+                        `Unable to add member. Server returned ${response.status}.`
+                    );
+                }
+
+                setMessage(
+                    "Member added successfully."
+                );
+            }
+
+            /* =========================================
+               UPDATE MEMBER
+               PUT /api/Members/{id}
+               
+               Backend uses [FromForm]
+            ========================================= */
+
+            else {
+
+                if (!editingMember?.memberId) {
+
+                    throw new Error(
+                        "Unable to update member: Member ID is missing."
+                    );
+                }
+
+                const formData =
+                    new FormData();
+
+                formData.append(
+                    "MemberCode",
+                    form.memberCode.trim()
+                );
+
+                formData.append(
+                    "FirstName",
+                    form.firstName.trim()
+                );
+
+                formData.append(
+                    "MiddleName",
+                    form.middleName.trim()
+                );
+
+                formData.append(
+                    "LastName",
+                    form.lastName.trim()
+                );
+
+                formData.append(
+                    "Suffix",
+                    form.suffix.trim()
+                );
+
+                formData.append(
+                    "Gender",
+                    form.gender || ""
+                );
+
+                formData.append(
+                    "BirthDate",
+                    form.birthDate || ""
+                );
+
+                formData.append(
+                    "CivilStatus",
+                    form.civilStatus || ""
+                );
+
+                formData.append(
+                    "ContactNumber",
+                    form.contactNumber.trim()
+                );
+
+                formData.append(
+                    "Email",
+                    form.email.trim()
+                );
+
+                formData.append(
+                    "Address",
+                    form.address.trim()
+                );
+
+                formData.append(
+                    "Ministry",
+                    form.ministry.trim()
+                );
+
+                formData.append(
+                    "Status",
+                    form.status
+                );
+
+                formData.append(
+                    "DateJoined",
+                    form.dateJoined || ""
+                );
+
+                formData.append(
+                    "Occupation",
+                    form.occupation.trim()
+                );
+
+                formData.append(
+                    "Notes",
                     form.notes.trim()
-            };
-
-            const url =
-                isEditing
-                    ? `${API_BASE_URL}/Members/${editingMember?.memberId}`
-                    : `${API_BASE_URL}/Members`;
-
-            const response =
-                await apiFetch(
-                    url,
-                    {
-                        method:
-                            isEditing
-                                ? "PUT"
-                                : "POST",
-
-                        body:
-                            JSON.stringify(
-                                payload
-                            )
-                    }
                 );
 
-            if (
-                response.status === 401
-            ) {
+                console.log(
+                    "UPDATING MEMBER:",
+                    editingMember.memberId
+                );
 
-                throw new Error(
-                    "UNAUTHORIZED: Please login again."
+                console.log(
+                    "UPDATE URL:",
+                    `${API_BASE_URL}/Members/${editingMember.memberId}`
+                );
+
+                const response =
+                    await apiFetch(
+                        `${API_BASE_URL}/Members/${editingMember.memberId}`,
+                        {
+                            method: "PUT",
+                            body: formData
+                        }
+                    );
+
+                console.log(
+                    "UPDATE RESPONSE STATUS:",
+                    response.status
+                );
+
+                if (
+                    response.status === 401
+                ) {
+
+                    throw new Error(
+                        "UNAUTHORIZED: Please login again."
+                    );
+                }
+
+                if (
+                    response.status === 403
+                ) {
+
+                    throw new Error(
+                        "FORBIDDEN: You do not have permission to edit members."
+                    );
+                }
+
+                if (
+                    response.status === 404
+                ) {
+
+                    const text =
+                        await response.text();
+
+                    throw new Error(
+                        `UPDATE ENDPOINT NOT FOUND (404). URL: ${API_BASE_URL}/Members/${editingMember.memberId}. ${text}`
+                    );
+                }
+
+                if (!response.ok) {
+
+                    const text =
+                        await response.text();
+
+                    throw new Error(
+                        text ||
+                        `Unable to update member. Server returned ${response.status}.`
+                    );
+                }
+
+                setMessage(
+                    "Member updated successfully."
                 );
             }
 
-            if (
-                response.status === 403
-            ) {
-
-                throw new Error(
-                    isEditing
-                        ? "FORBIDDEN: You do not have permission to edit members."
-                        : "FORBIDDEN: You do not have permission to create members."
-                );
-            }
-
-            if (!response.ok) {
-
-                const text =
-                    await response.text();
-
-                throw new Error(
-                    text ||
-                    `Unable to save member. Server returned ${response.status}.`
-                );
-            }
-
-            setMessage(
-                isEditing
-                    ? "Member updated successfully."
-                    : "Member added successfully."
-            );
+            /* =========================================
+               CLOSE + REFRESH
+            ========================================= */
 
             setShowModal(false);
             setEditingMember(null);
@@ -1049,66 +1189,95 @@ const Members: React.FC = () => {
 
         try {
 
-            const payload = {
+            const formData =
+                new FormData();
 
-                memberCode:
-                    member.memberCode || "",
+            formData.append(
+                "MemberCode",
+                member.memberCode || ""
+            );
 
-                firstName:
-                    member.firstName || "",
+            formData.append(
+                "FirstName",
+                member.firstName || ""
+            );
 
-                middleName:
-                    member.middleName || "",
+            formData.append(
+                "MiddleName",
+                member.middleName || ""
+            );
 
-                lastName:
-                    member.lastName || "",
+            formData.append(
+                "LastName",
+                member.lastName || ""
+            );
 
-                suffix:
-                    member.suffix || "",
+            formData.append(
+                "Suffix",
+                member.suffix || ""
+            );
 
-                gender:
-                    member.gender || null,
+            formData.append(
+                "Gender",
+                member.gender || ""
+            );
 
-                birthDate:
-                    member.birthDate || null,
+            formData.append(
+                "BirthDate",
+                member.birthDate || ""
+            );
 
-                civilStatus:
-                    member.civilStatus || null,
+            formData.append(
+                "CivilStatus",
+                member.civilStatus || ""
+            );
 
-                contactNumber:
-                    member.contactNumber || "",
+            formData.append(
+                "ContactNumber",
+                member.contactNumber || ""
+            );
 
-                email:
-                    member.email || "",
+            formData.append(
+                "Email",
+                member.email || ""
+            );
 
-                address:
-                    member.address || "",
+            formData.append(
+                "Address",
+                member.address || ""
+            );
 
-                ministry:
-                    member.ministry || "",
+            formData.append(
+                "Ministry",
+                member.ministry || ""
+            );
 
-                status:
-                    newStatus,
+            formData.append(
+                "Status",
+                newStatus
+            );
 
-                dateJoined:
-                    member.dateJoined || null,
+            formData.append(
+                "DateJoined",
+                member.dateJoined || ""
+            );
 
-                occupation:
-                    member.occupation || "",
+            formData.append(
+                "Occupation",
+                member.occupation || ""
+            );
 
-                notes:
-                    member.notes || ""
-            };
+            formData.append(
+                "Notes",
+                member.notes || ""
+            );
 
             const response =
                 await apiFetch(
                     `${API_BASE_URL}/Members/${member.memberId}`,
                     {
                         method: "PUT",
-                        body:
-                            JSON.stringify(
-                                payload
-                            )
+                        body: formData
                     }
                 );
 
@@ -1233,11 +1402,6 @@ const Members: React.FC = () => {
                         <span>↻</span>
                         Refresh
                     </button>
-
-                    {/* =========================================
-                       CREATE BUTTON
-                       ONLY ADMIN / CREATE PERMISSION
-                    ========================================= */}
 
                     {canCreateMembers && (
 
@@ -1856,10 +2020,6 @@ const Members: React.FC = () => {
 
                                             <td>
 
-                                                {/* ===================================
-                                                    EDIT PERMISSION
-                                                =================================== */}
-
                                                 {canEditMembers ? (
 
                                                     <button
@@ -1930,10 +2090,6 @@ const Members: React.FC = () => {
 
                                                 <div className="member-actions">
 
-                                                    {/* =================================
-                                                        VIEW
-                                                    ================================= */}
-
                                                     <button
                                                         type="button"
                                                         className="member-action-btn view-action"
@@ -1946,10 +2102,6 @@ const Members: React.FC = () => {
                                                     >
                                                         👁
                                                     </button>
-
-                                                    {/* =================================
-                                                        EDIT
-                                                    ================================= */}
 
                                                     {canEditMembers && (
 
@@ -1967,10 +2119,6 @@ const Members: React.FC = () => {
                                                         </button>
 
                                                     )}
-
-                                                    {/* =================================
-                                                        DELETE
-                                                    ================================= */}
 
                                                     {canDeleteMembers && (
 
@@ -2023,7 +2171,6 @@ const Members: React.FC = () => {
                                 event.target ===
                                 event.currentTarget
                             ) {
-
                                 closeModal();
                             }
                         }
@@ -2680,46 +2827,41 @@ const Members: React.FC = () => {
                                         : "Close"}
                                 </button>
 
-                                {/* =========================================
-                                   SAVE / UPDATE BUTTON
-                                   HIDDEN FOR VIEW-ONLY MEMBER
-                                ========================================= */}
-
                                 {(
                                     editingMember
                                         ? canEditMembers
                                         : canCreateMembers
                                 ) && (
 
-                                        <button
-                                            type="submit"
-                                            className="modal-save-btn"
-                                            disabled={
-                                                saving
-                                            }
-                                        >
+                                    <button
+                                        type="submit"
+                                        className="modal-save-btn"
+                                        disabled={
+                                            saving
+                                        }
+                                    >
 
-                                            {saving ? (
+                                        {saving ? (
 
-                                                <>
-                                                    <span className="button-spinner" />
-                                                    Saving...
-                                                </>
+                                            <>
+                                                <span className="button-spinner" />
+                                                Saving...
+                                            </>
 
-                                            ) : (
+                                        ) : (
 
-                                                <>
-                                                    ✓{" "}
-                                                    {editingMember
-                                                        ? "Update Member"
-                                                        : "Save Member"}
-                                                </>
+                                            <>
+                                                ✓{" "}
+                                                {editingMember
+                                                    ? "Update Member"
+                                                    : "Save Member"}
+                                            </>
 
-                                            )}
+                                        )}
 
-                                        </button>
+                                    </button>
 
-                                    )}
+                                )}
 
                             </div>
 
@@ -2815,7 +2957,6 @@ const normalizeStatus = (
     if (
         normalized === "INACTIVE"
     ) {
-
         return "INACTIVE";
     }
 
@@ -2842,7 +2983,6 @@ const formatDate = (
             date.getTime()
         )
     ) {
-
         return value;
     }
 
@@ -2873,7 +3013,6 @@ const formatInputDate = (
             value
         )
     ) {
-
         return value;
     }
 
@@ -2885,7 +3024,6 @@ const formatInputDate = (
             date.getTime()
         )
     ) {
-
         return "";
     }
 
