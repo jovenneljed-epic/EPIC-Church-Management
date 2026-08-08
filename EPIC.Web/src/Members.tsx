@@ -1,35 +1,102 @@
-import React, { useEffect, useMemo, useState } from "react";
-import "./Members.css";
-import PermissionService from "./PermissionService";
+import React, {
+    useCallback,
+    useEffect,
+    useMemo,
+    useState,
+} from "react";
 
-/* =========================================================
-   API CONFIGURATION
-========================================================= */
-
+import {
+    Users,
+    Search,
+    Plus,
+    RefreshCw,
+    Edit,
+    UserX,
+    Eye,
+    X,
+    Save,
+    UserCircle,
+    Phone,
+    MapPin,
+    CalendarDays,
+    Church,
+    ClipboardCheck,
+    CheckCircle,
+    AlertCircle,
+} from "lucide-react";
 import { API_BASE_URL } from "./config";
+import "./Members.css";
 
-/* =========================================================
-   TYPES
-========================================================= */
+// ============================================================
+// TYPES
+// ============================================================
 
 interface Member {
     memberId: number;
-    memberCode?: string;
-    firstName?: string;
-    middleName?: string;
-    lastName?: string;
-    suffix?: string;
-    gender?: string;
-    birthDate?: string;
-    civilStatus?: string;
-    contactNumber?: string;
-    email?: string;
-    address?: string;
-    ministry?: string;
-    status?: string;
-    dateJoined?: string;
-    occupation?: string;
-    notes?: string;
+    memberCode: string;
+
+    firstName: string;
+    middleName: string;
+    lastName: string;
+
+    gender: string;
+    birthDate: string | null;
+
+    contactNumber: string;
+    address: string;
+
+    civilStatus: string;
+    ministry: string;
+
+    dateJoined: string | null;
+
+    status: string;
+    photoPath: string;
+
+    createdDate: string;
+    updatedDate: string | null;
+}
+
+interface MemberProfile {
+    member: Member;
+
+    attendanceSummary: {
+        totalRecords: number;
+        present: number;
+        late: number;
+        early: number;
+        absent: number;
+        excused: number;
+        attendanceRate: number;
+    };
+
+    attendanceHistory: {
+        attendanceId: number;
+        attendanceDate: string;
+        service: string;
+        status: string;
+        recordedBy: string;
+        recordedDate: string;
+    }[];
+
+    ministries: {
+        ministryMemberId: number;
+        ministryId: number;
+        ministryName: string;
+        role: string;
+        status: string;
+        dateAssigned: string | null;
+    }[];
+
+    visitorConversion: {
+        visitorId: number;
+        visitorCode: string;
+        firstVisitDate: string | null;
+        visitCount: number;
+        followUpStatus: string;
+        conversionDate: string | null;
+        status: string;
+    } | null;
 }
 
 interface MemberForm {
@@ -37,64 +104,44 @@ interface MemberForm {
     firstName: string;
     middleName: string;
     lastName: string;
-    suffix: string;
     gender: string;
     birthDate: string;
-    civilStatus: string;
     contactNumber: string;
-    email: string;
     address: string;
+    civilStatus: string;
     ministry: string;
-    status: string;
     dateJoined: string;
-    occupation: string;
-    notes: string;
+    status: string;
+    photoPath: string;
 }
-
-interface JwtPayload {
-    sub?: string;
-    name?: string;
-    unique_name?: string;
-    role?: string | string[];
-    roles?: string | string[];
-
-    [key: string]: unknown;
-}
-
-/* =========================================================
-   EMPTY FORM
-========================================================= */
 
 const emptyForm: MemberForm = {
     memberCode: "",
     firstName: "",
     middleName: "",
     lastName: "",
-    suffix: "",
     gender: "",
     birthDate: "",
-    civilStatus: "",
     contactNumber: "",
-    email: "",
     address: "",
+    civilStatus: "",
     ministry: "",
+    dateJoined: "",
     status: "ACTIVE",
-    dateJoined: new Date().toISOString().split("T")[0],
-    occupation: "",
-    notes: ""
+    photoPath: "",
 };
 
-/* =========================================================
-   TOKEN HELPERS
-========================================================= */
+// ============================================================
+// TOKEN
+// ============================================================
 
-const getToken = (): string | null => {
+function getToken(): string | null {
     const keys = [
         "token",
         "accessToken",
         "jwt",
         "authToken",
-        "epicToken"
+        "epicToken",
     ];
 
     for (const key of keys) {
@@ -108,417 +155,254 @@ const getToken = (): string | null => {
     }
 
     return null;
-};
+}
 
-/* =========================================================
-   JWT PAYLOAD
-========================================================= */
+// ============================================================
+// API ERROR
+// ============================================================
 
-const getJwtPayload = (): JwtPayload | null => {
+class ApiError extends Error {
+    status: number;
+
+    constructor(
+        message: string,
+        status: number = 0
+    ) {
+        super(message);
+        this.name = "ApiError";
+        this.status = status;
+    }
+}
+
+// ============================================================
+// RESPONSE MESSAGE
+// ============================================================
+
+async function readResponseMessage(
+    response: Response
+): Promise<string> {
+    try {
+        const text = await response.text();
+
+        if (!text) {
+            return "";
+        }
+
+        try {
+            const json = JSON.parse(text);
+
+            if (typeof json === "string") {
+                return json;
+            }
+
+            return (
+                json?.message ||
+                json?.title ||
+                json?.error ||
+                text
+            );
+        } catch {
+            return text;
+        }
+    } catch {
+        return "";
+    }
+}
+
+// ============================================================
+// API FETCH
+// ============================================================
+
+async function apiFetch(
+    url: string,
+    options: RequestInit = {}
+): Promise<Response> {
     const token = getToken();
 
     if (!token) {
-        return null;
-    }
-
-    try {
-        const parts = token.split(".");
-
-        if (parts.length !== 3) {
-            return null;
-        }
-
-        const base64Url = parts[1];
-
-        const base64 = base64Url
-            .replace(/-/g, "+")
-            .replace(/_/g, "/");
-
-        const padded =
-            base64 +
-            "=".repeat(
-                (4 - (base64.length % 4)) % 4
-            );
-
-        const decoded = atob(padded);
-
-        return JSON.parse(decoded) as JwtPayload;
-
-    } catch (error) {
-
-        console.error(
-            "JWT PAYLOAD ERROR:",
-            error
+        throw new ApiError(
+            "Your session has expired. Please login again.",
+            401
         );
-
-        return null;
-    }
-};
-
-/* =========================================================
-   GET CURRENT USER ROLES
-========================================================= */
-
-const getCurrentUserRoles = (): string[] => {
-
-    const payload = getJwtPayload();
-
-    if (!payload) {
-        return [];
     }
 
-    const possibleRoleValues = [
-        payload.role,
-        payload.roles,
-        payload[
-        "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
-        ]
-    ];
-
-    let roleValue:
-        | string
-        | string[]
-        | undefined;
-
-    for (const value of possibleRoleValues) {
-
-        if (
-            typeof value === "string" ||
-            Array.isArray(value)
-        ) {
-
-            roleValue = value;
-
-            break;
-        }
-    }
-
-    if (Array.isArray(roleValue)) {
-
-        return roleValue
-            .flatMap(role =>
-                String(role).split(",")
-            )
-            .map(role =>
-                role.trim().toUpperCase()
-            )
-            .filter(Boolean);
-    }
-
-    if (typeof roleValue === "string") {
-
-        return roleValue
-            .split(",")
-            .map(role =>
-                role.trim().toUpperCase()
-            )
-            .filter(Boolean);
-    }
-
-    return [];
-};
-
-/* =========================================================
-   ADMIN CHECK
-========================================================= */
-
-const hasAdminRole = (): boolean => {
-
-    const roles = getCurrentUserRoles();
-
-    return roles.some(
-        role =>
-            role === "ADMIN" ||
-            role === "ADMINISTRATOR" ||
-            role === "SUPER ADMIN" ||
-            role === "SUPERADMIN"
+    const headers = new Headers(
+        options.headers || {}
     );
-};
-
-/* =========================================================
-   API FETCH
-========================================================= */
-
-const apiFetch = async (
-    url: string,
-    options: RequestInit = {}
-): Promise<Response> => {
-
-    const token = getToken();
-
-    const headers =
-        new Headers(options.headers || {});
 
     headers.set(
         "Accept",
         "application/json"
     );
 
-    if (options.body) {
-
+    if (
+        options.body &&
+        !(options.body instanceof FormData) &&
+        !headers.has("Content-Type")
+    ) {
         headers.set(
             "Content-Type",
             "application/json"
         );
     }
 
-    if (token) {
+    headers.set(
+        "Authorization",
+        `Bearer ${token}`
+    );
 
-        headers.set(
-            "Authorization",
-            `Bearer ${token}`
+    let response: Response;
+
+    try {
+        response = await fetch(
+            url,
+            {
+                ...options,
+                headers,
+            }
+        );
+    } catch (error) {
+        console.error(
+            "MEMBERS API NETWORK ERROR:",
+            error
+        );
+
+        throw new ApiError(
+            `Cannot connect to EPIC API at ${API_BASE_URL}.`,
+            0
         );
     }
 
-    return fetch(
-        url,
-        {
-            ...options,
-            headers
-        }
-    );
-};
+    if (response.status === 401) {
+        throw new ApiError(
+            "Your session has expired. Please login again.",
+            401
+        );
+    }
 
-/* =========================================================
-   COMPONENT
-========================================================= */
+    if (response.status === 403) {
+        throw new ApiError(
+            "You do not have permission to access Members.",
+            403
+        );
+    }
+
+    if (!response.ok) {
+        const message =
+            await readResponseMessage(response);
+
+        throw new ApiError(
+            message ||
+            `EPIC API returned HTTP ${response.status}.`,
+            response.status
+        );
+    }
+
+    return response;
+}
+
+// ============================================================
+// MAIN COMPONENT
+// ============================================================
 
 const Members: React.FC = () => {
-
-    /* =====================================================
-       STATE
-    ===================================================== */
 
     const [members, setMembers] =
         useState<Member[]>([]);
 
     const [loading, setLoading] =
-        useState<boolean>(true);
+        useState(true);
 
     const [saving, setSaving] =
-        useState<boolean>(false);
+        useState(false);
 
-    const [search, setSearch] =
-        useState<string>("");
-
-    const [statusFilter, setStatusFilter] =
-        useState<string>("ALL");
-
-    const [ministryFilter, setMinistryFilter] =
-        useState<string>("ALL");
-
-    const [showModal, setShowModal] =
-        useState<boolean>(false);
-
-    const [editingMember, setEditingMember] =
-        useState<Member | null>(null);
-
-    const [form, setForm] =
-        useState<MemberForm>(emptyForm);
-
-    const [message, setMessage] =
-        useState<string>("");
+    const [profileLoading, setProfileLoading] =
+        useState(false);
 
     const [error, setError] =
-        useState<string>("");
+        useState("");
 
-    /* =====================================================
-       CURRENT USER
-    ===================================================== */
+    const [message, setMessage] =
+        useState("");
 
-    const [isAdmin, setIsAdmin] =
-        useState<boolean>(
-            hasAdminRole()
-        );
+    const [search, setSearch] =
+        useState("");
 
-    /* =====================================================
-       PERMISSIONS
+    const [showForm, setShowForm] =
+        useState(false);
 
-       ADMIN automatically receives permissions.
-       MEMBER must have explicit permission.
-    ===================================================== */
+    const [showProfile, setShowProfile] =
+        useState(false);
 
-    const canCreateMembers =
-        isAdmin ||
-        PermissionService.hasPermission(
-            "Members",
-            "create"
-        );
+    const [editingId, setEditingId] =
+        useState<number | null>(null);
 
-    const canEditMembers =
-        isAdmin ||
-        PermissionService.hasPermission(
-            "Members",
-            "edit"
-        );
+    const [form, setForm] =
+        useState<MemberForm>({
+            ...emptyForm,
+        });
 
-    const canDeleteMembers =
-        isAdmin ||
-        PermissionService.hasPermission(
-            "Members",
-            "delete"
-        );
+    const [selectedMember, setSelectedMember] =
+        useState<MemberProfile | null>(null);
 
-    /* =====================================================
-       REFRESH USER ROLE
-    ===================================================== */
+    // ========================================================
+    // LOAD MEMBERS
+    // ========================================================
 
-    useEffect(() => {
+    const loadMembers = useCallback(
+        async () => {
+            setLoading(true);
+            setError("");
 
-        setIsAdmin(
-            hasAdminRole()
-        );
-
-    }, []);
-
-    /* =====================================================
-       LOAD MEMBERS
-    ===================================================== */
-
-    useEffect(() => {
-
-        loadMembers();
-
-    }, []);
-
-    const loadMembers = async () => {
-
-        setLoading(true);
-        setError("");
-
-        try {
-
-            const response =
-                await apiFetch(
-                    `${API_BASE_URL}/Members`
-                );
-
-            if (response.status === 401) {
-
-                throw new Error(
-                    "UNAUTHORIZED: Please login again."
-                );
-            }
-
-            if (response.status === 403) {
-
-                throw new Error(
-                    "FORBIDDEN: You do not have permission to view members."
-                );
-            }
-
-            if (!response.ok) {
-
-                const text =
-                    await response.text();
-
-                throw new Error(
-                    text ||
-                    `Members API returned ${response.status}.`
-                );
-            }
-
-            const data =
-                await response.json();
-
-            const list: Member[] =
-                Array.isArray(data)
-                    ? data
-                    : Array.isArray(data.members)
-                        ? data.members
-                        : Array.isArray(data.data)
-                            ? data.data
-                            : [];
-
-            setMembers(list);
-
-        } catch (err) {
-
-            console.error(
-                "LOAD MEMBERS ERROR:",
-                err
-            );
-
-            setError(
-                err instanceof Error
-                    ? err.message
-                    : "Unable to load members."
-            );
-
-        } finally {
-
-            setLoading(false);
-        }
-    };
-
-    /* =====================================================
-       STATISTICS
-    ===================================================== */
-
-    const totalMembers =
-        members.length;
-
-    const activeMembers =
-        members.filter(
-            member =>
-                normalizeStatus(
-                    member.status
-                ) === "ACTIVE"
-        ).length;
-
-    const inactiveMembers =
-        members.filter(
-            member =>
-                normalizeStatus(
-                    member.status
-                ) === "INACTIVE"
-        ).length;
-
-    const maleMembers =
-        members.filter(
-            member =>
-                member.gender
-                    ?.toUpperCase() ===
-                "MALE"
-        ).length;
-
-    const femaleMembers =
-        members.filter(
-            member =>
-                member.gender
-                    ?.toUpperCase() ===
-                "FEMALE"
-        ).length;
-
-    /* =====================================================
-       MINISTRY LIST
-    ===================================================== */
-
-    const ministries =
-        useMemo(() => {
-
-            const values =
-                members
-                    .map(
-                        member =>
-                            member.ministry?.trim()
-                    )
-                    .filter(
-                        (
-                            ministry
-                        ): ministry is string =>
-                            Boolean(ministry)
+            try {
+                const response =
+                    await apiFetch(
+                        `${API_BASE_URL}/Members`
                     );
 
-            return Array.from(
-                new Set(values)
-            ).sort();
+                const data =
+                    await response.json();
 
-        }, [members]);
+                const list: Member[] =
+                    Array.isArray(data)
+                        ? data
+                        : Array.isArray(data?.members)
+                            ? data.members
+                            : Array.isArray(data?.data)
+                                ? data.data
+                                : [];
 
-    /* =====================================================
-       FILTERED MEMBERS
-    ===================================================== */
+                setMembers(list);
+
+            } catch (err) {
+                console.error(
+                    "LOAD MEMBERS ERROR:",
+                    err
+                );
+
+                setError(
+                    err instanceof Error
+                        ? err.message
+                        : "Unable to load members."
+                );
+            } finally {
+                setLoading(false);
+            }
+        },
+        []
+    );
+
+    // ========================================================
+    // INITIAL LOAD
+    // ========================================================
+
+    useEffect(() => {
+        loadMembers();
+    }, [loadMembers]);
+
+    // ========================================================
+    // SEARCH
+    // ========================================================
 
     const filteredMembers =
         useMemo(() => {
@@ -528,64 +412,31 @@ const Members: React.FC = () => {
                     .trim()
                     .toLowerCase();
 
+            if (!keyword) {
+                return members;
+            }
+
             return members.filter(
                 member => {
 
                     const fullName =
-                        getFullName(
-                            member
-                        ).toLowerCase();
-
-                    const code =
-                        (
-                            member.memberCode ||
-                            ""
-                        ).toLowerCase();
-
-                    const ministry =
-                        (
-                            member.ministry ||
-                            ""
-                        ).toLowerCase();
-
-                    const contact =
-                        (
-                            member.contactNumber ||
-                            ""
-                        ).toLowerCase();
-
-                    const matchesSearch =
-                        !keyword ||
-                        fullName.includes(
-                            keyword
-                        ) ||
-                        code.includes(
-                            keyword
-                        ) ||
-                        ministry.includes(
-                            keyword
-                        ) ||
-                        contact.includes(
-                            keyword
-                        );
-
-                    const matchesStatus =
-                        statusFilter === "ALL" ||
-                        normalizeStatus(
-                            member.status
-                        ) === statusFilter;
-
-                    const matchesMinistry =
-                        ministryFilter === "ALL" ||
-                        (
-                            member.ministry ||
-                            ""
-                        ) === ministryFilter;
+                        getFullName(member)
+                            .toLowerCase();
 
                     return (
-                        matchesSearch &&
-                        matchesStatus &&
-                        matchesMinistry
+                        fullName.includes(keyword) ||
+
+                        member.memberCode
+                            ?.toLowerCase()
+                            .includes(keyword) ||
+
+                        member.contactNumber
+                            ?.toLowerCase()
+                            .includes(keyword) ||
+
+                        member.ministry
+                            ?.toLowerCase()
+                            .includes(keyword)
                     );
                 }
             );
@@ -593,64 +444,42 @@ const Members: React.FC = () => {
         }, [
             members,
             search,
-            statusFilter,
-            ministryFilter
         ]);
 
-    /* =====================================================
-       FORM CHANGE
-    ===================================================== */
+    // ========================================================
+    // OPEN ADD FORM
+    // ========================================================
 
-    const handleInputChange = (
-        field: keyof MemberForm,
-        value: string
-    ) => {
+    const openAddForm = () => {
 
-        setForm(
-            previous => ({
-                ...previous,
-                [field]: value
-            })
-        );
-    };
-
-    /* =====================================================
-       OPEN ADD MODAL
-    ===================================================== */
-
-    const openAddModal = () => {
-
-        if (!canCreateMembers) {
-
-            setError(
-                "Permission denied. You do not have permission to create members."
-            );
-
-            return;
-        }
-
-        setEditingMember(null);
+        setEditingId(null);
 
         setForm({
             ...emptyForm,
-            memberCode:
-                generateMemberCode()
         });
 
-        setMessage("");
         setError("");
-        setShowModal(true);
+        setMessage("");
+
+        setShowForm(true);
     };
 
-    /* =====================================================
-       OPEN VIEW / EDIT MODAL
-    ===================================================== */
+    // ========================================================
+    // OPEN EDIT FORM
+    // ========================================================
 
-    const openEditModal = (
+    const openEditForm = (
         member: Member
     ) => {
 
-        setEditingMember(member);
+        console.log(
+            "EDIT MEMBER:",
+            member
+        );
+
+        setEditingId(
+            member.memberId
+        );
 
         setForm({
             memberCode:
@@ -665,137 +494,202 @@ const Members: React.FC = () => {
             lastName:
                 member.lastName || "",
 
-            suffix:
-                member.suffix || "",
-
             gender:
                 member.gender || "",
 
             birthDate:
-                formatInputDate(
+                toInputDate(
                     member.birthDate
                 ),
-
-            civilStatus:
-                member.civilStatus || "",
 
             contactNumber:
                 member.contactNumber || "",
 
-            email:
-                member.email || "",
-
             address:
                 member.address || "",
+
+            civilStatus:
+                member.civilStatus || "",
 
             ministry:
                 member.ministry || "",
 
-            status:
-                normalizeStatus(
-                    member.status
+            dateJoined:
+                toInputDate(
+                    member.dateJoined
                 ),
 
-            dateJoined:
-                formatInputDate(
-                    member.dateJoined
-                ) ||
-                emptyForm.dateJoined,
+            status:
+                member.status || "ACTIVE",
 
-            occupation:
-                member.occupation || "",
-
-            notes:
-                member.notes || ""
+            photoPath:
+                member.photoPath || "",
         });
 
+        setError("");
         setMessage("");
-        setError("");
-        setShowModal(true);
+
+        setShowProfile(false);
+        setShowForm(true);
     };
 
-    /* =====================================================
-       CLOSE MODAL
-    ===================================================== */
+    // ========================================================
+    // UPDATE FORM
+    // ========================================================
 
-    const closeModal = () => {
-
-        if (saving) {
-            return;
-        }
-
-        setShowModal(false);
-        setEditingMember(null);
-        setForm(emptyForm);
-        setError("");
-    };
-
-    /* =====================================================
-       SAVE MEMBER
-    ===================================================== */
-
-    const saveMember = async (
-        event: React.FormEvent
+    const updateForm = (
+        field: keyof MemberForm,
+        value: string
     ) => {
 
-        event.preventDefault();
+        setForm(previous => ({
+            ...previous,
+            [field]: value,
+        }));
+    };
 
-        setError("");
-        setMessage("");
+    // ========================================================
+    // SAVE / UPDATE MEMBER
+    // ========================================================
 
-        const isEditing =
-            Boolean(editingMember);
-
-        /* ===============================================
-           PERMISSION CHECK
-        =============================================== */
+    const saveMember = async () => {
 
         if (
-            isEditing &&
-            !canEditMembers
+            !form.firstName.trim()
         ) {
-
             setError(
-                "Permission denied. You do not have permission to edit members."
+                "First name is required."
             );
 
             return;
         }
 
         if (
-            !isEditing &&
-            !canCreateMembers
-        ) {
-
-            setError(
-                "Permission denied. You do not have permission to create members."
-            );
-
-            return;
-        }
-
-        /* ===============================================
-           VALIDATION
-        =============================================== */
-
-        if (
-            !form.firstName.trim() ||
             !form.lastName.trim()
         ) {
-
             setError(
-                "First name and last name are required."
+                "Last name is required."
             );
 
             return;
         }
 
-        setSaving(true);
+        const isEdit =
+            editingId !== null;
 
         try {
 
-            const payload = {
+            setSaving(true);
 
+            setError("");
+            setMessage("");
+
+            console.log(
+                "MEMBER SAVE MODE:",
+                isEdit
+                    ? "UPDATE"
+                    : "CREATE"
+            );
+
+            console.log(
+                "MEMBER ID:",
+                editingId
+            );
+
+            // ==================================================
+            // UPDATE
+            // ==================================================
+
+            if (isEdit) {
+
+                const payload = {
+                    memberCode:
+                        form.memberCode.trim(),
+
+                    firstName:
+                        form.firstName.trim(),
+
+                    middleName:
+                        form.middleName.trim(),
+
+                    lastName:
+                        form.lastName.trim(),
+
+                    gender:
+                        form.gender,
+
+                    birthDate:
+                        form.birthDate ||
+                        null,
+
+                    contactNumber:
+                        form.contactNumber.trim(),
+
+                    address:
+                        form.address.trim(),
+
+                    civilStatus:
+                        form.civilStatus,
+
+                    ministry:
+                        form.ministry.trim(),
+
+                    dateJoined:
+                        form.dateJoined ||
+                        null,
+
+                    status:
+                        form.status,
+
+                    photoPath:
+                        form.photoPath.trim(),
+                };
+
+                console.log(
+                    "UPDATE MEMBER PAYLOAD:",
+                    payload
+                );
+
+                const response =
+                    await apiFetch(
+                        `${API_BASE_URL}/Members/${editingId}`,
+                        {
+                            method: "PUT",
+
+                            body:
+                                JSON.stringify(
+                                    payload
+                                ),
+                        }
+                    );
+
+                console.log(
+                    "UPDATE MEMBER RESPONSE:",
+                    response.status
+                );
+
+                setShowForm(false);
+
+                setEditingId(null);
+
+                setForm({
+                    ...emptyForm,
+                });
+
+                await loadMembers();
+
+                setMessage(
+                    "Member updated successfully."
+                );
+
+                return;
+            }
+
+            // ==================================================
+            // CREATE
+            // ==================================================
+
+            const payload = {
                 memberCode:
                     form.memberCode.trim(),
 
@@ -808,106 +702,72 @@ const Members: React.FC = () => {
                 lastName:
                     form.lastName.trim(),
 
-                suffix:
-                    form.suffix.trim(),
-
                 gender:
-                    form.gender || null,
+                    form.gender,
 
                 birthDate:
-                    form.birthDate || null,
-
-                civilStatus:
-                    form.civilStatus || null,
+                    form.birthDate ||
+                    null,
 
                 contactNumber:
                     form.contactNumber.trim(),
 
-                email:
-                    form.email.trim(),
-
                 address:
                     form.address.trim(),
+
+                civilStatus:
+                    form.civilStatus,
 
                 ministry:
                     form.ministry.trim(),
 
+                dateJoined:
+                    form.dateJoined ||
+                    null,
+
                 status:
                     form.status,
-
-                dateJoined:
-                    form.dateJoined || null,
-
-                occupation:
-                    form.occupation.trim(),
-
-                notes:
-                    form.notes.trim()
             };
 
-            const url =
-                isEditing
-                    ? `${API_BASE_URL}/Members/${editingMember?.memberId}`
-                    : `${API_BASE_URL}/Members`;
+            console.log(
+                "CREATE MEMBER PAYLOAD:",
+                payload
+            );
 
             const response =
                 await apiFetch(
-                    url,
+                    `${API_BASE_URL}/Members`,
                     {
-                        method:
-                            isEditing
-                                ? "PUT"
-                                : "POST",
+                        method: "POST",
 
                         body:
                             JSON.stringify(
                                 payload
-                            )
+                            ),
                     }
                 );
 
-            if (
-                response.status === 401
-            ) {
+            const createdMember =
+                await response.json();
 
-                throw new Error(
-                    "UNAUTHORIZED: Please login again."
-                );
-            }
-
-            if (
-                response.status === 403
-            ) {
-
-                throw new Error(
-                    isEditing
-                        ? "FORBIDDEN: You do not have permission to edit members."
-                        : "FORBIDDEN: You do not have permission to create members."
-                );
-            }
-
-            if (!response.ok) {
-
-                const text =
-                    await response.text();
-
-                throw new Error(
-                    text ||
-                    `Unable to save member. Server returned ${response.status}.`
-                );
-            }
-
-            setMessage(
-                isEditing
-                    ? "Member updated successfully."
-                    : "Member added successfully."
+            console.log(
+                "CREATED MEMBER:",
+                createdMember
             );
 
-            setShowModal(false);
-            setEditingMember(null);
-            setForm(emptyForm);
+            setShowForm(false);
+
+            setEditingId(null);
+
+            setForm({
+                ...emptyForm,
+            });
 
             await loadMembers();
+
+            setMessage(
+                "Member added successfully."
+            );
 
         } catch (err) {
 
@@ -928,407 +788,179 @@ const Members: React.FC = () => {
         }
     };
 
-    /* =====================================================
-       DELETE MEMBER
-    ===================================================== */
+    // ========================================================
+    // VIEW PROFILE
+    // ========================================================
 
-    const deleteMember = async (
+    const viewProfile = async (
+        memberId: number
+    ) => {
+
+        setProfileLoading(true);
+        setError("");
+
+        try {
+
+            const response =
+                await apiFetch(
+                    `${API_BASE_URL}/Members/${memberId}/complete-profile`
+                );
+
+            const data:
+                MemberProfile =
+                await response.json();
+
+            setSelectedMember(data);
+
+            setShowProfile(true);
+
+        } catch (err) {
+
+            console.error(
+                "PROFILE ERROR:",
+                err
+            );
+
+            setError(
+                err instanceof Error
+                    ? err.message
+                    : "Unable to load member profile."
+            );
+
+        } finally {
+
+            setProfileLoading(false);
+        }
+    };
+
+    // ========================================================
+    // DEACTIVATE MEMBER
+    // ========================================================
+
+    const deactivateMember = async (
         member: Member
     ) => {
 
-        if (!canDeleteMembers) {
-
-            setError(
-                "Permission denied. You do not have permission to delete members."
-            );
-
-            return;
-        }
-
         const confirmed =
             window.confirm(
-                `Are you sure you want to delete ${getFullName(member)}?`
+                `Are you sure you want to deactivate ${getFullName(
+                    member
+                )}?`
             );
 
         if (!confirmed) {
             return;
         }
 
-        setError("");
-        setMessage("");
-
         try {
 
-            const response =
-                await apiFetch(
-                    `${API_BASE_URL}/Members/${member.memberId}`,
-                    {
-                        method: "DELETE"
-                    }
-                );
+            setError("");
+            setMessage("");
 
-            if (
-                response.status === 401
-            ) {
-
-                throw new Error(
-                    "UNAUTHORIZED: Please login again."
-                );
-            }
-
-            if (
-                response.status === 403
-            ) {
-
-                throw new Error(
-                    "FORBIDDEN: You do not have permission to delete members."
-                );
-            }
-
-            if (!response.ok) {
-
-                const text =
-                    await response.text();
-
-                throw new Error(
-                    text ||
-                    `Unable to delete member. Server returned ${response.status}.`
-                );
-            }
-
-            setMessage(
-                `${getFullName(member)} was deleted successfully.`
+            await apiFetch(
+                `${API_BASE_URL}/Members/${member.memberId}`,
+                {
+                    method: "DELETE",
+                }
             );
 
             await loadMembers();
 
+            setMessage(
+                "Member deactivated successfully."
+            );
+
         } catch (err) {
 
             console.error(
-                "DELETE MEMBER ERROR:",
+                "DEACTIVATE MEMBER ERROR:",
                 err
             );
 
             setError(
                 err instanceof Error
                     ? err.message
-                    : "Unable to delete member."
+                    : "Unable to deactivate member."
             );
         }
     };
 
-    /* =====================================================
-       TOGGLE ACTIVE / INACTIVE
-    ===================================================== */
-
-    const toggleStatus = async (
-        member: Member
-    ) => {
-
-        if (!canEditMembers) {
-
-            setError(
-                "Permission denied. You do not have permission to change member status."
-            );
-
-            return;
-        }
-
-        const currentStatus =
-            normalizeStatus(
-                member.status
-            );
-
-        const newStatus =
-            currentStatus === "ACTIVE"
-                ? "INACTIVE"
-                : "ACTIVE";
-
-        setError("");
-        setMessage("");
-
-        try {
-
-            const payload = {
-
-                memberCode:
-                    member.memberCode || "",
-
-                firstName:
-                    member.firstName || "",
-
-                middleName:
-                    member.middleName || "",
-
-                lastName:
-                    member.lastName || "",
-
-                suffix:
-                    member.suffix || "",
-
-                gender:
-                    member.gender || null,
-
-                birthDate:
-                    member.birthDate || null,
-
-                civilStatus:
-                    member.civilStatus || null,
-
-                contactNumber:
-                    member.contactNumber || "",
-
-                email:
-                    member.email || "",
-
-                address:
-                    member.address || "",
-
-                ministry:
-                    member.ministry || "",
-
-                status:
-                    newStatus,
-
-                dateJoined:
-                    member.dateJoined || null,
-
-                occupation:
-                    member.occupation || "",
-
-                notes:
-                    member.notes || ""
-            };
-
-            const response =
-                await apiFetch(
-                    `${API_BASE_URL}/Members/${member.memberId}`,
-                    {
-                        method: "PUT",
-                        body:
-                            JSON.stringify(
-                                payload
-                            )
-                    }
-                );
-
-            if (
-                response.status === 401
-            ) {
-
-                throw new Error(
-                    "UNAUTHORIZED: Please login again."
-                );
-            }
-
-            if (
-                response.status === 403
-            ) {
-
-                throw new Error(
-                    "FORBIDDEN: You do not have permission to change member status."
-                );
-            }
-
-            if (!response.ok) {
-
-                const text =
-                    await response.text();
-
-                throw new Error(
-                    text ||
-                    "Unable to update member status."
-                );
-            }
-
-            setMessage(
-                `${getFullName(member)} is now ${newStatus.toLowerCase()}.`
-            );
-
-            await loadMembers();
-
-        } catch (err) {
-
-            console.error(
-                "STATUS UPDATE ERROR:",
-                err
-            );
-
-            setError(
-                err instanceof Error
-                    ? err.message
-                    : "Unable to update member status."
-            );
-        }
-    };
-
-    /* =====================================================
-       REFRESH
-    ===================================================== */
-
-    const refreshMembers = async () => {
-
-        setMessage("");
-        setError("");
-
-        await loadMembers();
-
-        setMessage(
-            "Members list refreshed successfully."
-        );
-    };
-
-    /* =====================================================
-       RENDER
-    ===================================================== */
+    // ========================================================
+    // RENDER
+    // ========================================================
 
     return (
-
         <div className="members-page">
 
-            {/* =================================================
-               HEADER
-            ================================================= */}
+            {/* ==================================================
+                HEADER
+            ================================================== */}
 
-            <div className="members-header">
+            <div className="module-header">
 
-                <div className="members-header-left">
+                <div className="module-title">
 
-                    <div className="members-header-icon">
-                        <span>♟</span>
+                    <div className="module-icon">
+                        <Users size={28} />
                     </div>
 
                     <div>
 
-                        <div className="members-eyebrow">
-                            EPIC CHURCH MANAGEMENT SYSTEM
-                        </div>
-
-                        <h1>
+                        <h2>
                             Members
-                        </h1>
+                        </h2>
 
                         <p>
-                            Manage church members,
-                            profiles, ministries,
-                            and membership status.
+                            Manage EPIC Church
+                            membership records
                         </p>
 
                     </div>
 
                 </div>
 
-                <div className="members-header-actions">
+                <div className="module-actions">
 
                     <button
                         type="button"
-                        className="members-refresh-btn"
-                        onClick={
-                            refreshMembers
-                        }
-                        disabled={
-                            loading
-                        }
+                        className="secondary-button"
+                        onClick={loadMembers}
+                        disabled={loading}
                     >
-                        <span>↻</span>
+                        <RefreshCw
+                            size={18}
+                            className={
+                                loading
+                                    ? "spin"
+                                    : ""
+                            }
+                        />
+
                         Refresh
                     </button>
 
-                    {/* =========================================
-                       CREATE BUTTON
-                       ONLY ADMIN / CREATE PERMISSION
-                    ========================================= */}
+                    <button
+                        type="button"
+                        className="primary-button"
+                        onClick={openAddForm}
+                    >
+                        <Plus size={18} />
 
-                    {canCreateMembers && (
-
-                        <button
-                            type="button"
-                            className="members-add-btn"
-                            onClick={
-                                openAddModal
-                            }
-                        >
-                            <span>＋</span>
-                            Add Member
-                        </button>
-
-                    )}
+                        Add Member
+                    </button>
 
                 </div>
 
             </div>
 
-            {/* =================================================
-               ROLE INFORMATION
-            ================================================= */}
-
-            <div
-                style={{
-                    marginBottom: "18px",
-                    padding: "10px 14px",
-                    borderRadius: "8px",
-
-                    background:
-                        isAdmin
-                            ? "#ecfdf5"
-                            : "#f3f4f6",
-
-                    border:
-                        isAdmin
-                            ? "1px solid #a7f3d0"
-                            : "1px solid #d1d5db",
-
-                    color:
-                        isAdmin
-                            ? "#065f46"
-                            : "#4b5563",
-
-                    fontSize: "13px"
-                }}
-            >
-
-                {isAdmin ? (
-
-                    <>
-                        <strong>
-                            ADMIN ACCESS:
-                        </strong>{" "}
-                        You can add, edit,
-                        update status,
-                        and delete members.
-                    </>
-
-                ) : (
-
-                    <>
-                        <strong>
-                            VIEW-ONLY ACCESS:
-                        </strong>{" "}
-                        You can view member
-                        records, but you cannot
-                        create, edit, delete,
-                        or change member status.
-                    </>
-
-                )}
-
-            </div>
-
-            {/* =================================================
-               ALERTS
-            ================================================= */}
+            {/* ==================================================
+                MESSAGE
+            ================================================== */}
 
             {message && (
-
-                <div className="members-alert members-alert-success">
-
-                    <span className="alert-symbol">
-                        ✓
-                    </span>
-
-                    <span>
-                        {message}
-                    </span>
+                <div className="module-success">
+                    <CheckCircle size={18} />
+                    {message}
 
                     <button
                         type="button"
@@ -1336,20 +968,19 @@ const Members: React.FC = () => {
                             setMessage("")
                         }
                     >
-                        ×
+                        <X size={15} />
                     </button>
-
                 </div>
-
             )}
 
+            {/* ==================================================
+                ERROR
+            ================================================== */}
+
             {error && (
+                <div className="module-error">
 
-                <div className="members-alert members-alert-error">
-
-                    <span className="alert-symbol">
-                        !
-                    </span>
+                    <AlertCircle size={18} />
 
                     <span>
                         {error}
@@ -1361,388 +992,130 @@ const Members: React.FC = () => {
                             setError("")
                         }
                     >
-                        ×
+                        <X size={16} />
                     </button>
 
                 </div>
-
             )}
 
-            {/* =================================================
-               STATISTICS
-            ================================================= */}
+            {/* ==================================================
+                SEARCH
+            ================================================== */}
 
-            <div className="members-stat-grid">
+            <div className="members-toolbar">
 
-                <div className="member-stat-card stat-blue">
+                <div className="search-box">
 
-                    <div className="member-stat-icon">
-                        👥
-                    </div>
-
-                    <div className="member-stat-content">
-
-                        <span>
-                            TOTAL MEMBERS
-                        </span>
-
-                        <strong>
-                            {totalMembers}
-                        </strong>
-
-                    </div>
-
-                </div>
-
-                <div className="member-stat-card stat-green">
-
-                    <div className="member-stat-icon">
-                        ✓
-                    </div>
-
-                    <div className="member-stat-content">
-
-                        <span>
-                            ACTIVE MEMBERS
-                        </span>
-
-                        <strong>
-                            {activeMembers}
-                        </strong>
-
-                    </div>
-
-                </div>
-
-                <div className="member-stat-card stat-orange">
-
-                    <div className="member-stat-icon">
-                        ◷
-                    </div>
-
-                    <div className="member-stat-content">
-
-                        <span>
-                            INACTIVE MEMBERS
-                        </span>
-
-                        <strong>
-                            {inactiveMembers}
-                        </strong>
-
-                    </div>
-
-                </div>
-
-                <div className="member-stat-card stat-purple">
-
-                    <div className="member-stat-icon">
-                        ♀
-                    </div>
-
-                    <div className="member-stat-content">
-
-                        <span>
-                            FEMALE MEMBERS
-                        </span>
-
-                        <strong>
-                            {femaleMembers}
-                        </strong>
-
-                    </div>
-
-                </div>
-
-                <div className="member-stat-card stat-indigo">
-
-                    <div className="member-stat-icon">
-                        ♂
-                    </div>
-
-                    <div className="member-stat-content">
-
-                        <span>
-                            MALE MEMBERS
-                        </span>
-
-                        <strong>
-                            {maleMembers}
-                        </strong>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-            {/* =================================================
-               FILTER CARD
-            ================================================= */}
-
-            <div className="members-filter-card">
-
-                <div className="members-search-box">
-
-                    <span className="search-icon">
-                        ⌕
-                    </span>
+                    <Search size={19} />
 
                     <input
                         type="text"
-                        placeholder="Search member name, code, ministry, or contact..."
-                        value={
-                            search
+                        value={search}
+                        onChange={e =>
+                            setSearch(
+                                e.target.value
+                            )
                         }
-                        onChange={
-                            event =>
-                                setSearch(
-                                    event.target.value
-                                )
-                        }
+                        placeholder="Search member name, code, contact, or ministry..."
                     />
 
                     {search && (
-
                         <button
                             type="button"
-                            className="clear-search"
                             onClick={() =>
                                 setSearch("")
                             }
                         >
-                            ×
+                            <X size={16} />
                         </button>
-
                     )}
 
                 </div>
 
-                <div className="members-filter-group">
-
-                    <label>
-                        STATUS
-                    </label>
-
-                    <select
-                        value={
-                            statusFilter
-                        }
-                        onChange={
-                            event =>
-                                setStatusFilter(
-                                    event.target.value
-                                )
-                        }
-                    >
-
-                        <option value="ALL">
-                            All Status
-                        </option>
-
-                        <option value="ACTIVE">
-                            Active
-                        </option>
-
-                        <option value="INACTIVE">
-                            Inactive
-                        </option>
-
-                    </select>
-
-                </div>
-
-                <div className="members-filter-group">
-
-                    <label>
-                        MINISTRY
-                    </label>
-
-                    <select
-                        value={
-                            ministryFilter
-                        }
-                        onChange={
-                            event =>
-                                setMinistryFilter(
-                                    event.target.value
-                                )
-                        }
-                    >
-
-                        <option value="ALL">
-                            All Ministries
-                        </option>
-
-                        {ministries.map(
-                            ministry => (
-
-                                <option
-                                    key={
-                                        ministry
-                                    }
-                                    value={
-                                        ministry
-                                    }
-                                >
-                                    {ministry}
-                                </option>
-
-                            )
-                        )}
-
-                    </select>
-
-                </div>
-
-                <div className="members-result-count">
+                <div className="member-count">
 
                     <strong>
-                        {filteredMembers.length}
+                        {
+                            filteredMembers.length
+                        }
                     </strong>
 
                     <span>
-                        member
-                        {filteredMembers.length !== 1
-                            ? "s"
-                            : ""}
+                        Members
                     </span>
 
                 </div>
 
             </div>
 
-            {/* =================================================
-               TABLE
-            ================================================= */}
+            {/* ==================================================
+                TABLE
+            ================================================== */}
 
             <div className="members-table-card">
 
-                <div className="members-table-heading">
-
-                    <div>
-
-                        <h2>
-                            Church Members
-                        </h2>
-
-                        <p>
-                            Complete list of registered
-                            church members.
-                        </p>
-
-                    </div>
-
-                    <div className="members-table-meta">
-
-                        Showing{" "}
-
-                        <strong>
-                            {filteredMembers.length}
-                        </strong>
-
-                        {" "}of{" "}
-
-                        <strong>
-                            {members.length}
-                        </strong>
-
-                    </div>
-
-                </div>
-
                 {loading ? (
 
-                    <div className="members-loading">
+                    <div className="table-loading">
 
-                        <div className="members-spinner" />
+                        <RefreshCw
+                            size={28}
+                            className="spin"
+                        />
 
-                        <h3>
-                            Loading members...
-                        </h3>
-
-                        <p>
-                            Please wait while the
-                            member database is loaded.
-                        </p>
+                        Loading members...
 
                     </div>
 
                 ) : filteredMembers.length === 0 ? (
 
-                    <div className="members-empty">
+                    <div className="table-empty">
 
-                        <div className="members-empty-icon">
-                            👥
-                        </div>
+                        <Users size={45} />
 
-                        <h3>
-                            No Members Found
-                        </h3>
+                        <strong>
+                            No members found
+                        </strong>
 
-                        <p>
-                            {members.length === 0
-                                ? "There are currently no members registered in the system."
-                                : "Try changing your search or filter settings."}
-                        </p>
-
-                        {members.length === 0 &&
-                            canCreateMembers && (
-
-                                <button
-                                    type="button"
-                                    className="members-empty-add"
-                                    onClick={
-                                        openAddModal
-                                    }
-                                >
-                                    ＋ Add First Member
-                                </button>
-
-                            )}
+                        <span>
+                            Add a new member
+                            to begin.
+                        </span>
 
                     </div>
 
                 ) : (
 
-                    <div className="members-table-wrapper">
+                    <div className="table-wrapper">
 
-                        <table className="members-table">
+                        <table>
 
                             <thead>
 
                                 <tr>
 
                                     <th>
-                                        #
+                                        Member
                                     </th>
 
                                     <th>
-                                        MEMBER
+                                        Contact
                                     </th>
 
                                     <th>
-                                        MEMBER CODE
+                                        Ministry
                                     </th>
 
                                     <th>
-                                        CONTACT
+                                        Date Joined
                                     </th>
 
                                     <th>
-                                        MINISTRY
+                                        Status
                                     </th>
 
                                     <th>
-                                        STATUS
-                                    </th>
-
-                                    <th>
-                                        DATE JOINED
-                                    </th>
-
-                                    <th className="actions-column">
-                                        ACTIONS
+                                        Actions
                                     </th>
 
                                 </tr>
@@ -1752,10 +1125,7 @@ const Members: React.FC = () => {
                             <tbody>
 
                                 {filteredMembers.map(
-                                    (
-                                        member,
-                                        index
-                                    ) => (
+                                    member => (
 
                                         <tr
                                             key={
@@ -1763,31 +1133,36 @@ const Members: React.FC = () => {
                                             }
                                         >
 
-                                            <td className="row-number">
-                                                {
-                                                    index + 1
-                                                }
-                                            </td>
-
                                             <td>
 
-                                                <div className="member-person">
+                                                <div className="member-cell">
 
-                                                    <div
-                                                        className={`member-avatar ${getAvatarClass(
-                                                            member
-                                                        )}`}
-                                                    >
-                                                        {
-                                                            getInitials(
-                                                                getFullName(
-                                                                    member
-                                                                )
-                                                            )
-                                                        }
+                                                    <div className="member-avatar">
+
+                                                        {member.photoPath ? (
+
+                                                            <img
+                                                                src={
+                                                                    member.photoPath
+                                                                }
+                                                                alt={
+                                                                    getFullName(
+                                                                        member
+                                                                    )
+                                                                }
+                                                            />
+
+                                                        ) : (
+
+                                                            <UserCircle
+                                                                size={34}
+                                                            />
+
+                                                        )}
+
                                                     </div>
 
-                                                    <div className="member-person-info">
+                                                    <div>
 
                                                         <strong>
                                                             {
@@ -1799,8 +1174,7 @@ const Members: React.FC = () => {
 
                                                         <span>
                                                             {
-                                                                member.email ||
-                                                                "No email registered"
+                                                                member.memberCode
                                                             }
                                                         </span>
 
@@ -1811,180 +1185,99 @@ const Members: React.FC = () => {
                                             </td>
 
                                             <td>
-
-                                                <span className="member-code-badge">
-
-                                                    {
-                                                        member.memberCode ||
-                                                        `MEM-${String(
-                                                            member.memberId
-                                                        ).padStart(
-                                                            4,
-                                                            "0"
-                                                        )}`
-                                                    }
-
-                                                </span>
-
+                                                {
+                                                    member.contactNumber ||
+                                                    "—"
+                                                }
                                             </td>
 
                                             <td>
-
-                                                <span className="member-contact">
-
-                                                    {
-                                                        member.contactNumber ||
-                                                        "—"
-                                                    }
-
-                                                </span>
-
+                                                {
+                                                    member.ministry ||
+                                                    "—"
+                                                }
                                             </td>
 
                                             <td>
-
-                                                <span className="ministry-badge">
-
-                                                    {
-                                                        member.ministry ||
-                                                        "General"
-                                                    }
-
-                                                </span>
-
-                                            </td>
-
-                                            <td>
-
-                                                {/* ===================================
-                                                    EDIT PERMISSION
-                                                =================================== */}
-
-                                                {canEditMembers ? (
-
-                                                    <button
-                                                        type="button"
-                                                        className={`member-status-badge status-${normalizeStatus(
-                                                            member.status
-                                                        ).toLowerCase()}`}
-                                                        onClick={() =>
-                                                            toggleStatus(
-                                                                member
-                                                            )
-                                                        }
-                                                        title="Click to change status"
-                                                    >
-
-                                                        <span>
-                                                            ●
-                                                        </span>
-
-                                                        {
-                                                            normalizeStatus(
-                                                                member.status
-                                                            )
-                                                        }
-
-                                                    </button>
-
-                                                ) : (
-
-                                                    <span
-                                                        className={`member-status-badge status-${normalizeStatus(
-                                                            member.status
-                                                        ).toLowerCase()}`}
-                                                        title="View only"
-                                                    >
-
-                                                        <span>
-                                                            ●
-                                                        </span>
-
-                                                        {
-                                                            normalizeStatus(
-                                                                member.status
-                                                            )
-                                                        }
-
-                                                    </span>
-
+                                                {formatDate(
+                                                    member.dateJoined
                                                 )}
-
                                             </td>
 
                                             <td>
 
-                                                <span className="date-text">
-
+                                                <span
+                                                    className={`status-badge ${(
+                                                        member.status ||
+                                                        "ACTIVE"
+                                                    ).toLowerCase()}`}
+                                                >
                                                     {
-                                                        formatDate(
-                                                            member.dateJoined
-                                                        )
+                                                        member.status
                                                     }
-
                                                 </span>
 
                                             </td>
 
                                             <td>
 
-                                                <div className="member-actions">
+                                                <div className="action-buttons">
 
-                                                    {/* =================================
-                                                        VIEW
-                                                    ================================= */}
+                                                    {/* VIEW */}
 
                                                     <button
                                                         type="button"
-                                                        className="member-action-btn view-action"
-                                                        title="View member"
+                                                        title="View Profile"
                                                         onClick={() =>
-                                                            openEditModal(
+                                                            viewProfile(
+                                                                member.memberId
+                                                            )
+                                                        }
+                                                    >
+                                                        <Eye
+                                                            size={17}
+                                                        />
+                                                    </button>
+
+                                                    {/* EDIT */}
+
+                                                    <button
+                                                        type="button"
+                                                        title="Edit Member"
+                                                        onClick={() =>
+                                                            openEditForm(
                                                                 member
                                                             )
                                                         }
                                                     >
-                                                        👁
+                                                        <Edit
+                                                            size={17}
+                                                        />
                                                     </button>
 
-                                                    {/* =================================
-                                                        EDIT
-                                                    ================================= */}
+                                                    {/* DEACTIVATE */}
 
-                                                    {canEditMembers && (
+                                                    {(
+                                                        member.status ||
+                                                        ""
+                                                    ).toUpperCase() ===
+                                                        "ACTIVE" && (
 
                                                         <button
                                                             type="button"
-                                                            className="member-action-btn edit-action"
-                                                            title="Edit member"
+                                                            title="Deactivate"
+                                                            className="danger"
                                                             onClick={() =>
-                                                                openEditModal(
+                                                                deactivateMember(
                                                                     member
                                                                 )
                                                             }
                                                         >
-                                                            ✎
-                                                        </button>
-
-                                                    )}
-
-                                                    {/* =================================
-                                                        DELETE
-                                                    ================================= */}
-
-                                                    {canDeleteMembers && (
-
-                                                        <button
-                                                            type="button"
-                                                            className="member-action-btn delete-action"
-                                                            title="Delete member"
-                                                            onClick={() =>
-                                                                deleteMember(
-                                                                    member
-                                                                )
-                                                            }
-                                                        >
-                                                            🗑
+                                                            <UserX
+                                                                size={
+                                                                    17
+                                                                }
+                                                            />
                                                         </button>
 
                                                     )}
@@ -2008,722 +1301,424 @@ const Members: React.FC = () => {
 
             </div>
 
-            {/* =================================================
-               MODAL
-            ================================================= */}
+            {/* ==================================================
+                ADD / EDIT MODAL
+            ================================================== */}
 
-            {showModal && (
+            {showForm && (
 
                 <div
-                    className="members-modal-overlay"
-                    onMouseDown={
-                        event => {
-
-                            if (
-                                event.target ===
-                                event.currentTarget
-                            ) {
-
-                                closeModal();
-                            }
-                        }
+                    className="modal-overlay"
+                    onMouseDown={() =>
+                        !saving &&
+                        setShowForm(false)
                     }
                 >
 
-                    <div className="members-modal">
+                    <div
+                        className="member-modal"
+                        onMouseDown={e =>
+                            e.stopPropagation()
+                        }
+                    >
 
-                        <div className="members-modal-header">
+                        <div className="modal-header">
 
                             <div>
 
-                                <div className="modal-eyebrow">
-                                    EPIC MEMBER MANAGEMENT
-                                </div>
-
-                                <h2>
-
-                                    {editingMember
-                                        ? canEditMembers
-                                            ? "Edit Member"
-                                            : "View Member"
+                                <h3>
+                                    {editingId !== null
+                                        ? "Edit Member"
                                         : "Add New Member"}
-
-                                </h2>
+                                </h3>
 
                                 <p>
-
-                                    {editingMember
-                                        ? canEditMembers
-                                            ? "Update the member's information below."
-                                            : "Member information is displayed in read-only mode."
-                                        : "Register a new member in the church database."}
-
+                                    {editingId !== null
+                                        ? "Update member information."
+                                        : "Register a new EPIC Church member."}
                                 </p>
 
                             </div>
 
                             <button
                                 type="button"
-                                className="modal-close-btn"
-                                onClick={
-                                    closeModal
+                                onClick={() =>
+                                    !saving &&
+                                    setShowForm(false)
                                 }
-                                disabled={
-                                    saving
-                                }
+                                disabled={saving}
                             >
-                                ×
+                                <X size={22} />
                             </button>
 
                         </div>
 
-                        <form
-                            onSubmit={
-                                saveMember
-                            }
-                        >
+                        <div className="modal-body">
 
-                            <div className="members-modal-body">
+                            {/* BASIC INFORMATION */}
 
-                                {/* =================================================
-                                   BASIC INFORMATION
-                                ================================================= */}
+                            <div className="form-section-title">
 
-                                <div className="form-section">
+                                <UserCircle
+                                    size={19}
+                                />
 
-                                    <div className="form-section-title">
+                                Basic Information
 
-                                        <span>
-                                            01
-                                        </span>
+                            </div>
 
-                                        <div>
+                            <div className="form-grid">
 
-                                            <h3>
-                                                Basic Information
-                                            </h3>
+                                <FormField
+                                    label="Member Code"
+                                    value={
+                                        form.memberCode
+                                    }
+                                    onChange={value =>
+                                        updateForm(
+                                            "memberCode",
+                                            value
+                                        )
+                                    }
+                                    placeholder="Auto-generated if blank"
+                                />
 
-                                            <p>
-                                                Member identification
-                                                and personal details.
-                                            </p>
+                                <FormField
+                                    label="First Name *"
+                                    value={
+                                        form.firstName
+                                    }
+                                    onChange={value =>
+                                        updateForm(
+                                            "firstName",
+                                            value
+                                        )
+                                    }
+                                    placeholder="First name"
+                                />
 
-                                        </div>
+                                <FormField
+                                    label="Middle Name"
+                                    value={
+                                        form.middleName
+                                    }
+                                    onChange={value =>
+                                        updateForm(
+                                            "middleName",
+                                            value
+                                        )
+                                    }
+                                    placeholder="Middle name"
+                                />
 
-                                    </div>
+                                <FormField
+                                    label="Last Name *"
+                                    value={
+                                        form.lastName
+                                    }
+                                    onChange={value =>
+                                        updateForm(
+                                            "lastName",
+                                            value
+                                        )
+                                    }
+                                    placeholder="Last name"
+                                />
 
-                                    <div className="form-grid form-grid-4">
+                                <div className="form-group">
 
-                                        <div className="form-field">
+                                    <label>
+                                        Gender
+                                    </label>
 
-                                            <label>
-                                                MEMBER CODE
-                                            </label>
+                                    <select
+                                        value={
+                                            form.gender
+                                        }
+                                        onChange={e =>
+                                            updateForm(
+                                                "gender",
+                                                e.target.value
+                                            )
+                                        }
+                                    >
 
-                                            <input
-                                                type="text"
-                                                value={
-                                                    form.memberCode
-                                                }
-                                                disabled={
-                                                    !canEditMembers &&
-                                                    !canCreateMembers
-                                                }
-                                                onChange={
-                                                    event =>
-                                                        handleInputChange(
-                                                            "memberCode",
-                                                            event.target.value.toUpperCase()
-                                                        )
-                                                }
-                                                placeholder="EPIC-0001"
-                                            />
+                                        <option value="">
+                                            Select gender
+                                        </option>
 
-                                        </div>
+                                        <option value="MALE">
+                                            Male
+                                        </option>
 
-                                        <div className="form-field required-field">
+                                        <option value="FEMALE">
+                                            Female
+                                        </option>
 
-                                            <label>
-                                                FIRST NAME
-                                            </label>
-
-                                            <input
-                                                type="text"
-                                                required
-                                                disabled={
-                                                    !canEditMembers &&
-                                                    !canCreateMembers
-                                                }
-                                                value={
-                                                    form.firstName
-                                                }
-                                                onChange={
-                                                    event =>
-                                                        handleInputChange(
-                                                            "firstName",
-                                                            event.target.value
-                                                        )
-                                                }
-                                                placeholder="First name"
-                                            />
-
-                                        </div>
-
-                                        <div className="form-field">
-
-                                            <label>
-                                                MIDDLE NAME
-                                            </label>
-
-                                            <input
-                                                type="text"
-                                                disabled={
-                                                    !canEditMembers &&
-                                                    !canCreateMembers
-                                                }
-                                                value={
-                                                    form.middleName
-                                                }
-                                                onChange={
-                                                    event =>
-                                                        handleInputChange(
-                                                            "middleName",
-                                                            event.target.value
-                                                        )
-                                                }
-                                                placeholder="Middle name"
-                                            />
-
-                                        </div>
-
-                                        <div className="form-field required-field">
-
-                                            <label>
-                                                LAST NAME
-                                            </label>
-
-                                            <input
-                                                type="text"
-                                                required
-                                                disabled={
-                                                    !canEditMembers &&
-                                                    !canCreateMembers
-                                                }
-                                                value={
-                                                    form.lastName
-                                                }
-                                                onChange={
-                                                    event =>
-                                                        handleInputChange(
-                                                            "lastName",
-                                                            event.target.value
-                                                        )
-                                                }
-                                                placeholder="Last name"
-                                            />
-
-                                        </div>
-
-                                        <div className="form-field">
-
-                                            <label>
-                                                SUFFIX
-                                            </label>
-
-                                            <input
-                                                type="text"
-                                                disabled={
-                                                    !canEditMembers &&
-                                                    !canCreateMembers
-                                                }
-                                                value={
-                                                    form.suffix
-                                                }
-                                                onChange={
-                                                    event =>
-                                                        handleInputChange(
-                                                            "suffix",
-                                                            event.target.value
-                                                        )
-                                                }
-                                                placeholder="Jr., Sr., III"
-                                            />
-
-                                        </div>
-
-                                        <div className="form-field">
-
-                                            <label>
-                                                GENDER
-                                            </label>
-
-                                            <select
-                                                disabled={
-                                                    !canEditMembers &&
-                                                    !canCreateMembers
-                                                }
-                                                value={
-                                                    form.gender
-                                                }
-                                                onChange={
-                                                    event =>
-                                                        handleInputChange(
-                                                            "gender",
-                                                            event.target.value
-                                                        )
-                                                }
-                                            >
-
-                                                <option value="">
-                                                    Select gender
-                                                </option>
-
-                                                <option value="MALE">
-                                                    Male
-                                                </option>
-
-                                                <option value="FEMALE">
-                                                    Female
-                                                </option>
-
-                                            </select>
-
-                                        </div>
-
-                                        <div className="form-field">
-
-                                            <label>
-                                                BIRTH DATE
-                                            </label>
-
-                                            <input
-                                                type="date"
-                                                disabled={
-                                                    !canEditMembers &&
-                                                    !canCreateMembers
-                                                }
-                                                value={
-                                                    form.birthDate
-                                                }
-                                                onChange={
-                                                    event =>
-                                                        handleInputChange(
-                                                            "birthDate",
-                                                            event.target.value
-                                                        )
-                                                }
-                                            />
-
-                                        </div>
-
-                                        <div className="form-field">
-
-                                            <label>
-                                                CIVIL STATUS
-                                            </label>
-
-                                            <select
-                                                disabled={
-                                                    !canEditMembers &&
-                                                    !canCreateMembers
-                                                }
-                                                value={
-                                                    form.civilStatus
-                                                }
-                                                onChange={
-                                                    event =>
-                                                        handleInputChange(
-                                                            "civilStatus",
-                                                            event.target.value
-                                                        )
-                                                }
-                                            >
-
-                                                <option value="">
-                                                    Select status
-                                                </option>
-
-                                                <option value="SINGLE">
-                                                    Single
-                                                </option>
-
-                                                <option value="MARRIED">
-                                                    Married
-                                                </option>
-
-                                                <option value="WIDOWED">
-                                                    Widowed
-                                                </option>
-
-                                                <option value="SEPARATED">
-                                                    Separated
-                                                </option>
-
-                                            </select>
-
-                                        </div>
-
-                                    </div>
+                                    </select>
 
                                 </div>
 
-                                {/* =================================================
-                                   CONTACT INFORMATION
-                                ================================================= */}
+                                <div className="form-group">
 
-                                <div className="form-section">
+                                    <label>
+                                        Birth Date
+                                    </label>
 
-                                    <div className="form-section-title">
-
-                                        <span>
-                                            02
-                                        </span>
-
-                                        <div>
-
-                                            <h3>
-                                                Contact Information
-                                            </h3>
-
-                                            <p>
-                                                Communication and
-                                                address details.
-                                            </p>
-
-                                        </div>
-
-                                    </div>
-
-                                    <div className="form-grid form-grid-2">
-
-                                        <div className="form-field">
-
-                                            <label>
-                                                CONTACT NUMBER
-                                            </label>
-
-                                            <input
-                                                type="tel"
-                                                disabled={
-                                                    !canEditMembers &&
-                                                    !canCreateMembers
-                                                }
-                                                value={
-                                                    form.contactNumber
-                                                }
-                                                onChange={
-                                                    event =>
-                                                        handleInputChange(
-                                                            "contactNumber",
-                                                            event.target.value
-                                                        )
-                                                }
-                                                placeholder="09XX XXX XXXX"
-                                            />
-
-                                        </div>
-
-                                        <div className="form-field">
-
-                                            <label>
-                                                EMAIL ADDRESS
-                                            </label>
-
-                                            <input
-                                                type="email"
-                                                disabled={
-                                                    !canEditMembers &&
-                                                    !canCreateMembers
-                                                }
-                                                value={
-                                                    form.email
-                                                }
-                                                onChange={
-                                                    event =>
-                                                        handleInputChange(
-                                                            "email",
-                                                            event.target.value
-                                                        )
-                                                }
-                                                placeholder="member@email.com"
-                                            />
-
-                                        </div>
-
-                                        <div className="form-field full-width">
-
-                                            <label>
-                                                ADDRESS
-                                            </label>
-
-                                            <textarea
-                                                disabled={
-                                                    !canEditMembers &&
-                                                    !canCreateMembers
-                                                }
-                                                value={
-                                                    form.address
-                                                }
-                                                onChange={
-                                                    event =>
-                                                        handleInputChange(
-                                                            "address",
-                                                            event.target.value
-                                                        )
-                                                }
-                                                placeholder="Complete residential address"
-                                                rows={3}
-                                            />
-
-                                        </div>
-
-                                    </div>
+                                    <input
+                                        type="date"
+                                        value={
+                                            form.birthDate
+                                        }
+                                        onChange={e =>
+                                            updateForm(
+                                                "birthDate",
+                                                e.target.value
+                                            )
+                                        }
+                                    />
 
                                 </div>
 
-                                {/* =================================================
-                                   CHURCH INFORMATION
-                                ================================================= */}
+                                <div className="form-group">
 
-                                <div className="form-section">
+                                    <label>
+                                        Civil Status
+                                    </label>
 
-                                    <div className="form-section-title">
+                                    <select
+                                        value={
+                                            form.civilStatus
+                                        }
+                                        onChange={e =>
+                                            updateForm(
+                                                "civilStatus",
+                                                e.target.value
+                                            )
+                                        }
+                                    >
 
-                                        <span>
-                                            03
-                                        </span>
+                                        <option value="">
+                                            Select status
+                                        </option>
 
-                                        <div>
+                                        <option value="SINGLE">
+                                            Single
+                                        </option>
 
-                                            <h3>
-                                                Church Information
-                                            </h3>
+                                        <option value="MARRIED">
+                                            Married
+                                        </option>
 
-                                            <p>
-                                                Membership and
-                                                ministry details.
-                                            </p>
+                                        <option value="WIDOWED">
+                                            Widowed
+                                        </option>
 
-                                        </div>
+                                        <option value="SEPARATED">
+                                            Separated
+                                        </option>
 
-                                    </div>
-
-                                    <div className="form-grid form-grid-4">
-
-                                        <div className="form-field">
-
-                                            <label>
-                                                MINISTRY
-                                            </label>
-
-                                            <input
-                                                type="text"
-                                                disabled={
-                                                    !canEditMembers &&
-                                                    !canCreateMembers
-                                                }
-                                                value={
-                                                    form.ministry
-                                                }
-                                                onChange={
-                                                    event =>
-                                                        handleInputChange(
-                                                            "ministry",
-                                                            event.target.value
-                                                        )
-                                                }
-                                                placeholder="e.g. EPIC V3"
-                                            />
-
-                                        </div>
-
-                                        <div className="form-field">
-
-                                            <label>
-                                                OCCUPATION
-                                            </label>
-
-                                            <input
-                                                type="text"
-                                                disabled={
-                                                    !canEditMembers &&
-                                                    !canCreateMembers
-                                                }
-                                                value={
-                                                    form.occupation
-                                                }
-                                                onChange={
-                                                    event =>
-                                                        handleInputChange(
-                                                            "occupation",
-                                                            event.target.value
-                                                        )
-                                                }
-                                                placeholder="Occupation"
-                                            />
-
-                                        </div>
-
-                                        <div className="form-field">
-
-                                            <label>
-                                                DATE JOINED
-                                            </label>
-
-                                            <input
-                                                type="date"
-                                                disabled={
-                                                    !canEditMembers &&
-                                                    !canCreateMembers
-                                                }
-                                                value={
-                                                    form.dateJoined
-                                                }
-                                                onChange={
-                                                    event =>
-                                                        handleInputChange(
-                                                            "dateJoined",
-                                                            event.target.value
-                                                        )
-                                                }
-                                            />
-
-                                        </div>
-
-                                        <div className="form-field">
-
-                                            <label>
-                                                MEMBERSHIP STATUS
-                                            </label>
-
-                                            <select
-                                                disabled={
-                                                    !canEditMembers &&
-                                                    !canCreateMembers
-                                                }
-                                                value={
-                                                    form.status
-                                                }
-                                                onChange={
-                                                    event =>
-                                                        handleInputChange(
-                                                            "status",
-                                                            event.target.value
-                                                        )
-                                                }
-                                            >
-
-                                                <option value="ACTIVE">
-                                                    Active
-                                                </option>
-
-                                                <option value="INACTIVE">
-                                                    Inactive
-                                                </option>
-
-                                            </select>
-
-                                        </div>
-
-                                        <div className="form-field full-width">
-
-                                            <label>
-                                                NOTES
-                                            </label>
-
-                                            <textarea
-                                                disabled={
-                                                    !canEditMembers &&
-                                                    !canCreateMembers
-                                                }
-                                                value={
-                                                    form.notes
-                                                }
-                                                onChange={
-                                                    event =>
-                                                        handleInputChange(
-                                                            "notes",
-                                                            event.target.value
-                                                        )
-                                                }
-                                                placeholder="Additional notes about this member..."
-                                                rows={3}
-                                            />
-
-                                        </div>
-
-                                    </div>
+                                    </select>
 
                                 </div>
 
                             </div>
 
-                            {/* =================================================
-                               MODAL FOOTER
-                            ================================================= */}
+                            {/* CONTACT */}
 
-                            <div className="members-modal-footer">
+                            <div className="form-section-title">
 
-                                <button
-                                    type="button"
-                                    className="modal-cancel-btn"
-                                    onClick={
-                                        closeModal
-                                    }
-                                    disabled={
-                                        saving
-                                    }
-                                >
-                                    {canEditMembers ||
-                                        canCreateMembers
-                                        ? "Cancel"
-                                        : "Close"}
-                                </button>
+                                <Phone size={19} />
 
-                                {/* =========================================
-                                   SAVE / UPDATE BUTTON
-                                   HIDDEN FOR VIEW-ONLY MEMBER
-                                ========================================= */}
-
-                                {(
-                                    editingMember
-                                        ? canEditMembers
-                                        : canCreateMembers
-                                ) && (
-
-                                        <button
-                                            type="submit"
-                                            className="modal-save-btn"
-                                            disabled={
-                                                saving
-                                            }
-                                        >
-
-                                            {saving ? (
-
-                                                <>
-                                                    <span className="button-spinner" />
-                                                    Saving...
-                                                </>
-
-                                            ) : (
-
-                                                <>
-                                                    ✓{" "}
-                                                    {editingMember
-                                                        ? "Update Member"
-                                                        : "Save Member"}
-                                                </>
-
-                                            )}
-
-                                        </button>
-
-                                    )}
+                                Contact Information
 
                             </div>
 
-                        </form>
+                            <div className="form-grid">
+
+                                <FormField
+                                    label="Contact Number"
+                                    value={
+                                        form.contactNumber
+                                    }
+                                    onChange={value =>
+                                        updateForm(
+                                            "contactNumber",
+                                            value
+                                        )
+                                    }
+                                    placeholder="09XXXXXXXXX"
+                                />
+
+                                <FormField
+                                    label="Ministry"
+                                    value={
+                                        form.ministry
+                                    }
+                                    onChange={value =>
+                                        updateForm(
+                                            "ministry",
+                                            value
+                                        )
+                                    }
+                                    placeholder="e.g. Worship, Youth, Ushering"
+                                />
+
+                                <div className="form-group full">
+
+                                    <label>
+                                        Address
+                                    </label>
+
+                                    <textarea
+                                        rows={3}
+                                        value={
+                                            form.address
+                                        }
+                                        onChange={e =>
+                                            updateForm(
+                                                "address",
+                                                e.target.value
+                                            )
+                                        }
+                                        placeholder="Complete address"
+                                    />
+
+                                </div>
+
+                            </div>
+
+                            {/* CHURCH INFORMATION */}
+
+                            <div className="form-section-title">
+
+                                <Church size={19} />
+
+                                Church Information
+
+                            </div>
+
+                            <div className="form-grid">
+
+                                <div className="form-group">
+
+                                    <label>
+                                        Date Joined
+                                    </label>
+
+                                    <input
+                                        type="date"
+                                        value={
+                                            form.dateJoined
+                                        }
+                                        onChange={e =>
+                                            updateForm(
+                                                "dateJoined",
+                                                e.target.value
+                                            )
+                                        }
+                                    />
+
+                                </div>
+
+                                <div className="form-group">
+
+                                    <label>
+                                        Status
+                                    </label>
+
+                                    <select
+                                        value={
+                                            form.status
+                                        }
+                                        onChange={e =>
+                                            updateForm(
+                                                "status",
+                                                e.target.value
+                                            )
+                                        }
+                                    >
+
+                                        <option value="ACTIVE">
+                                            ACTIVE
+                                        </option>
+
+                                        <option value="INACTIVE">
+                                            INACTIVE
+                                        </option>
+
+                                    </select>
+
+                                </div>
+
+                                <FormField
+                                    label="Photo Path"
+                                    value={
+                                        form.photoPath
+                                    }
+                                    onChange={value =>
+                                        updateForm(
+                                            "photoPath",
+                                            value
+                                        )
+                                    }
+                                    placeholder="Optional"
+                                />
+
+                            </div>
+
+                        </div>
+
+                        {/* MODAL FOOTER */}
+
+                        <div className="modal-footer">
+
+                            <button
+                                type="button"
+                                className="secondary-button"
+                                onClick={() =>
+                                    setShowForm(false)
+                                }
+                                disabled={saving}
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                type="button"
+                                className="primary-button"
+                                onClick={saveMember}
+                                disabled={saving}
+                            >
+
+                                {saving ? (
+
+                                    <>
+                                        <RefreshCw
+                                            size={18}
+                                            className="spin"
+                                        />
+
+                                        Saving...
+                                    </>
+
+                                ) : (
+
+                                    <>
+                                        <Save
+                                            size={18}
+                                        />
+
+                                        {editingId !== null
+                                            ? "Update Member"
+                                            : "Save Member"}
+                                    </>
+
+                                )}
+
+                            </button>
+
+                        </div>
 
                     </div>
 
@@ -2731,203 +1726,670 @@ const Members: React.FC = () => {
 
             )}
 
+            {/* ==================================================
+                PROFILE MODAL
+            ================================================== */}
+
+            {(showProfile ||
+                profileLoading) && (
+
+                <MemberProfileModal
+                    profile={
+                        selectedMember
+                    }
+                    loading={
+                        profileLoading
+                    }
+                    onClose={() => {
+                        setShowProfile(false);
+                        setSelectedMember(null);
+                    }}
+                    onEdit={() => {
+
+                        if (
+                            selectedMember
+                        ) {
+                            openEditForm(
+                                selectedMember.member
+                            );
+                        }
+
+                    }}
+                />
+
+            )}
+
         </div>
     );
 };
 
-/* =========================================================
-   HELPERS
-========================================================= */
+// ============================================================
+// FORM FIELD
+// ============================================================
 
-const getFullName = (
+function FormField({
+    label,
+    value,
+    onChange,
+    placeholder,
+}: {
+    label: string;
+    value: string;
+    onChange: (
+        value: string
+    ) => void;
+    placeholder?: string;
+}) {
+
+    return (
+        <div className="form-group">
+
+            <label>
+                {label}
+            </label>
+
+            <input
+                type="text"
+                value={value}
+                placeholder={
+                    placeholder
+                }
+                onChange={e =>
+                    onChange(
+                        e.target.value
+                    )
+                }
+            />
+
+        </div>
+    );
+}
+
+// ============================================================
+// PROFILE MODAL
+// ============================================================
+
+function MemberProfileModal({
+    profile,
+    loading,
+    onClose,
+    onEdit,
+}: {
+    profile:
+        MemberProfile | null;
+
+    loading: boolean;
+
+    onClose: () => void;
+
+    onEdit: () => void;
+}) {
+
+    return (
+        <div
+            className="modal-overlay"
+            onMouseDown={onClose}
+        >
+
+            <div
+                className="profile-modal"
+                onMouseDown={e =>
+                    e.stopPropagation()
+                }
+            >
+
+                {loading ? (
+
+                    <div className="profile-loading">
+
+                        <RefreshCw
+                            size={35}
+                            className="spin"
+                        />
+
+                        <span>
+                            Loading member
+                            profile...
+                        </span>
+
+                    </div>
+
+                ) : profile ? (
+
+                    <>
+
+                        <div className="modal-header">
+
+                            <div>
+
+                                <h3>
+                                    Member Profile
+                                </h3>
+
+                                <p>
+                                    Complete EPIC
+                                    membership
+                                    record
+                                </p>
+
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={onClose}
+                            >
+                                <X size={22} />
+                            </button>
+
+                        </div>
+
+                        <div className="profile-body">
+
+                            {/* PROFILE HEADER */}
+
+                            <div className="profile-header">
+
+                                <div className="profile-photo">
+
+                                    {profile.member.photoPath ? (
+
+                                        <img
+                                            src={
+                                                profile
+                                                    .member
+                                                    .photoPath
+                                            }
+                                            alt={
+                                                getFullName(
+                                                    profile.member
+                                                )
+                                            }
+                                        />
+
+                                    ) : (
+
+                                        <UserCircle
+                                            size={70}
+                                        />
+
+                                    )}
+
+                                </div>
+
+                                <div>
+
+                                    <span className="profile-code">
+                                        {
+                                            profile
+                                                .member
+                                                .memberCode
+                                        }
+                                    </span>
+
+                                    <h2>
+                                        {
+                                            getFullName(
+                                                profile.member
+                                            )
+                                        }
+                                    </h2>
+
+                                    <span
+                                        className={`status-badge ${
+                                            (
+                                                profile
+                                                    .member
+                                                    .status ||
+                                                "ACTIVE"
+                                            ).toLowerCase()
+                                        }`}
+                                    >
+                                        {
+                                            profile
+                                                .member
+                                                .status
+                                        }
+                                    </span>
+
+                                </div>
+
+                            </div>
+
+                            {/* INFORMATION */}
+
+                            <div className="profile-info-grid">
+
+                                <ProfileInfo
+                                    icon={
+                                        <Phone
+                                            size={18}
+                                        />
+                                    }
+                                    label="Contact"
+                                    value={
+                                        profile.member
+                                            .contactNumber ||
+                                        "—"
+                                    }
+                                />
+
+                                <ProfileInfo
+                                    icon={
+                                        <MapPin
+                                            size={18}
+                                        />
+                                    }
+                                    label="Address"
+                                    value={
+                                        profile.member
+                                            .address ||
+                                        "—"
+                                    }
+                                />
+
+                                <ProfileInfo
+                                    icon={
+                                        <CalendarDays
+                                            size={18}
+                                        />
+                                    }
+                                    label="Birth Date"
+                                    value={
+                                        formatDate(
+                                            profile.member
+                                                .birthDate
+                                        )
+                                    }
+                                />
+
+                                <ProfileInfo
+                                    icon={
+                                        <Church
+                                            size={18}
+                                        />
+                                    }
+                                    label="Ministry"
+                                    value={
+                                        profile.member
+                                            .ministry ||
+                                        "—"
+                                    }
+                                />
+
+                            </div>
+
+                            {/* ATTENDANCE */}
+
+                            <div className="profile-section">
+
+                                <div className="profile-section-title">
+
+                                    <ClipboardCheck
+                                        size={20}
+                                    />
+
+                                    <h3>
+                                        Attendance
+                                        Summary
+                                    </h3>
+
+                                </div>
+
+                                <div className="profile-stats">
+
+                                    <ProfileStat
+                                        label="Records"
+                                        value={
+                                            profile
+                                                .attendanceSummary
+                                                .totalRecords
+                                        }
+                                    />
+
+                                    <ProfileStat
+                                        label="Present"
+                                        value={
+                                            profile
+                                                .attendanceSummary
+                                                .present
+                                        }
+                                    />
+
+                                    <ProfileStat
+                                        label="Late"
+                                        value={
+                                            profile
+                                                .attendanceSummary
+                                                .late
+                                        }
+                                    />
+
+                                    <ProfileStat
+                                        label="Absent"
+                                        value={
+                                            profile
+                                                .attendanceSummary
+                                                .absent
+                                        }
+                                    />
+
+                                    <ProfileStat
+                                        label="Rate"
+                                        value={`${profile.attendanceSummary.attendanceRate}%`}
+                                    />
+
+                                </div>
+
+                            </div>
+
+                            {/* MINISTRIES */}
+
+                            <div className="profile-section">
+
+                                <div className="profile-section-title">
+
+                                    <Church
+                                        size={20}
+                                    />
+
+                                    <h3>
+                                        Ministry
+                                        Assignments
+                                    </h3>
+
+                                </div>
+
+                                {profile.ministries
+                                    .length ===
+                                0 ? (
+
+                                    <p className="empty-text">
+                                        No ministry
+                                        assignments
+                                        recorded.
+                                    </p>
+
+                                ) : (
+
+                                    <div className="profile-list">
+
+                                        {profile.ministries.map(
+                                            ministry => (
+
+                                                <div
+                                                    className="profile-list-row"
+                                                    key={
+                                                        ministry.ministryMemberId
+                                                    }
+                                                >
+
+                                                    <div>
+
+                                                        <strong>
+                                                            {
+                                                                ministry.ministryName
+                                                            }
+                                                        </strong>
+
+                                                        <span>
+                                                            {
+                                                                ministry.role
+                                                            }
+                                                        </span>
+
+                                                    </div>
+
+                                                    <span
+                                                        className={`status-badge ${
+                                                            (
+                                                                ministry.status ||
+                                                                ""
+                                                            ).toLowerCase()
+                                                        }`}
+                                                    >
+                                                        {
+                                                            ministry.status
+                                                        }
+                                                    </span>
+
+                                                </div>
+
+                                            )
+                                        )}
+
+                                    </div>
+
+                                )}
+
+                            </div>
+
+                            {/* VISITOR CONVERSION */}
+
+                            <div className="profile-section">
+
+                                <div className="profile-section-title">
+
+                                    <Users
+                                        size={20}
+                                    />
+
+                                    <h3>
+                                        Visitor
+                                        Conversion
+                                    </h3>
+
+                                </div>
+
+                                {profile.visitorConversion ? (
+
+                                    <div className="conversion-card">
+
+                                        <strong>
+                                            Converted
+                                            Visitor
+                                        </strong>
+
+                                        <span>
+                                            Code:{" "}
+                                            {
+                                                profile
+                                                    .visitorConversion
+                                                    .visitorCode
+                                            }
+                                        </span>
+
+                                        <span>
+                                            Visits:{" "}
+                                            {
+                                                profile
+                                                    .visitorConversion
+                                                    .visitCount
+                                            }
+                                        </span>
+
+                                        <span>
+                                            Conversion
+                                            Date:{" "}
+                                            {formatDate(
+                                                profile
+                                                    .visitorConversion
+                                                    .conversionDate
+                                            )}
+                                        </span>
+
+                                    </div>
+
+                                ) : (
+
+                                    <p className="empty-text">
+                                        No visitor
+                                        conversion
+                                        record.
+                                    </p>
+
+                                )}
+
+                            </div>
+
+                        </div>
+
+                        <div className="modal-footer">
+
+                            <button
+                                type="button"
+                                className="secondary-button"
+                                onClick={onClose}
+                            >
+                                Close
+                            </button>
+
+                            <button
+                                type="button"
+                                className="primary-button"
+                                onClick={onEdit}
+                            >
+                                <Edit
+                                    size={17}
+                                />
+
+                                Edit Member
+                            </button>
+
+                        </div>
+
+                    </>
+
+                ) : null}
+
+            </div>
+
+        </div>
+    );
+}
+
+// ============================================================
+// PROFILE INFO
+// ============================================================
+
+function ProfileInfo({
+    icon,
+    label,
+    value,
+}: {
+    icon: React.ReactNode;
+    label: string;
+    value: string;
+}) {
+
+    return (
+        <div className="profile-info">
+
+            <div className="profile-info-icon">
+                {icon}
+            </div>
+
+            <div>
+
+                <span>
+                    {label}
+                </span>
+
+                <strong>
+                    {value}
+                </strong>
+
+            </div>
+
+        </div>
+    );
+}
+
+// ============================================================
+// PROFILE STAT
+// ============================================================
+
+function ProfileStat({
+    label,
+    value,
+}: {
+    label: string;
+    value: number | string;
+}) {
+
+    return (
+        <div className="profile-stat">
+
+            <span>
+                {label}
+            </span>
+
+            <strong>
+                {value}
+            </strong>
+
+        </div>
+    );
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+
+function getFullName(
     member: Member
-): string => {
+): string {
 
-    const parts = [
+    return [
         member.firstName,
         member.middleName,
         member.lastName,
-        member.suffix
     ]
-        .filter(
-            value =>
-                Boolean(
-                    value &&
-                    value.trim()
-                )
-        )
-        .map(
-            value =>
-                value!.trim()
-        );
+        .filter(Boolean)
+        .join(" ")
+        .trim();
+}
 
-    return (
-        parts.join(" ") ||
-        member.memberCode ||
-        "Unnamed Member"
+function toInputDate(
+    date: string | null
+): string {
+
+    if (!date) {
+        return "";
+    }
+
+    return date.substring(
+        0,
+        10
     );
-};
+}
 
-/* =========================================================
-   INITIALS
-========================================================= */
+function formatDate(
+    date: string | null
+): string {
 
-const getInitials = (
-    name: string
-): string => {
-
-    const parts =
-        name
-            .trim()
-            .split(/\s+/)
-            .filter(Boolean);
-
-    if (parts.length === 0) {
-        return "?";
-    }
-
-    if (parts.length === 1) {
-
-        return parts[0]
-            .substring(0, 2)
-            .toUpperCase();
-    }
-
-    return (
-        parts[0][0] +
-        parts[parts.length - 1][0]
-    ).toUpperCase();
-};
-
-/* =========================================================
-   STATUS
-========================================================= */
-
-const normalizeStatus = (
-    status?: string
-): string => {
-
-    const normalized =
-        status
-            ?.trim()
-            .toUpperCase();
-
-    if (
-        normalized === "INACTIVE"
-    ) {
-
-        return "INACTIVE";
-    }
-
-    return "ACTIVE";
-};
-
-/* =========================================================
-   FORMAT DATE
-========================================================= */
-
-const formatDate = (
-    value?: string
-): string => {
-
-    if (!value) {
+    if (!date) {
         return "—";
     }
 
-    const date =
-        new Date(value);
+    const parsed =
+        new Date(date);
 
     if (
         Number.isNaN(
-            date.getTime()
+            parsed.getTime()
         )
     ) {
-
-        return value;
+        return "—";
     }
 
-    return date.toLocaleDateString(
-        "en-US",
+    return parsed.toLocaleDateString(
+        "en-PH",
         {
+            year: "numeric",
             month: "short",
             day: "numeric",
-            year: "numeric"
         }
     );
-};
-
-/* =========================================================
-   FORMAT INPUT DATE
-========================================================= */
-
-const formatInputDate = (
-    value?: string
-): string => {
-
-    if (!value) {
-        return "";
-    }
-
-    if (
-        /^\d{4}-\d{2}-\d{2}$/.test(
-            value
-        )
-    ) {
-
-        return value;
-    }
-
-    const date =
-        new Date(value);
-
-    if (
-        Number.isNaN(
-            date.getTime()
-        )
-    ) {
-
-        return "";
-    }
-
-    return date
-        .toISOString()
-        .split("T")[0];
-};
-
-/* =========================================================
-   GENERATE MEMBER CODE
-========================================================= */
-
-const generateMemberCode = (): string => {
-
-    const number =
-        Math.floor(
-            1000 +
-            Math.random() * 9000
-        );
-
-    return `EPIC-${number}`;
-};
-
-/* =========================================================
-   AVATAR CLASS
-========================================================= */
-
-const getAvatarClass = (
-    member: Member
-): string => {
-
-    const name =
-        getFullName(member);
-
-    const first =
-        name.charCodeAt(0);
-
-    return `avatar-${first % 6}`;
-};
-
-/* =========================================================
-   EXPORT
-========================================================= */
+}
 
 export default Members;
