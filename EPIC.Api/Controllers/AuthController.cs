@@ -1,6 +1,7 @@
 ﻿using BCrypt.Net;
 using EPIC.Api.Data;
 using EPIC.Api.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -27,17 +28,13 @@ namespace EPIC.Api.Controllers
 
         // =========================================================
         // REGISTER
-        // POST: api/auth/register
+        // POST: api/Auth/register
         // =========================================================
 
         [HttpPost("register")]
         public async Task<IActionResult> Register(
             UserRegisterRequest request)
         {
-            // -----------------------------------------------------
-            // VALIDATION
-            // -----------------------------------------------------
-
             if (string.IsNullOrWhiteSpace(request.Username))
                 return BadRequest("Username is required.");
 
@@ -47,68 +44,112 @@ namespace EPIC.Api.Controllers
             if (string.IsNullOrWhiteSpace(request.FullName))
                 return BadRequest("Full name is required.");
 
-            // -----------------------------------------------------
-            // CHECK USERNAME
-            // -----------------------------------------------------
-
             string username = request.Username.Trim();
 
             bool usernameExists = await _context.Users
                 .AnyAsync(u => u.Username == username);
 
             if (usernameExists)
-                return Conflict("Username already exists.");
+            {
+                return Conflict(new
+                {
+                    message = "Username already exists."
+                });
+            }
 
-            // -----------------------------------------------------
-            // DETERMINE ROLE
-            // -----------------------------------------------------
-
-            string roleName = string.IsNullOrWhiteSpace(request.Role)
-                ? "STAFF"
-                : request.Role.Trim().ToUpper();
-
-            // -----------------------------------------------------
-            // FIND ROLE
-            // -----------------------------------------------------
+            string roleName =
+                string.IsNullOrWhiteSpace(request.Role)
+                    ? "STAFF"
+                    : request.Role.Trim().ToUpper();
 
             var role = await _context.Roles
                 .FirstOrDefaultAsync(r =>
-                    r.RoleName == roleName &&
+                    r.RoleName.ToUpper() == roleName &&
                     r.IsActive);
 
             if (role == null)
             {
                 return BadRequest(new
                 {
-                    message = $"Role '{roleName}' does not exist or is inactive."
+                    message =
+                        $"Role '{roleName}' does not exist or is inactive."
                 });
             }
 
-            // -----------------------------------------------------
-            // HASH PASSWORD
-            // -----------------------------------------------------
+            int? memberId = request.MemberId;
+
+            // =====================================================
+            // MEMBER ACCOUNT
+            // =====================================================
+
+            if (roleName == "MEMBER")
+            {
+                if (!memberId.HasValue)
+                {
+                    return BadRequest(new
+                    {
+                        message =
+                            "A MEMBER account must be linked to a registered member."
+                    });
+                }
+
+                var member = await _context.Members
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(m =>
+                        m.MemberId == memberId.Value);
+
+                if (member == null)
+                {
+                    return BadRequest(new
+                    {
+                        message =
+                            "The selected member does not exist."
+                    });
+                }
+
+                if (!string.Equals(
+                        member.Status,
+                        "ACTIVE",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    return BadRequest(new
+                    {
+                        message =
+                            "Only active members can have a MEMBER account."
+                    });
+                }
+
+                bool memberAlreadyHasAccount =
+                    await _context.Users.AnyAsync(u =>
+                        u.MemberId == memberId.Value &&
+                        u.IsActive);
+
+                if (memberAlreadyHasAccount)
+                {
+                    return Conflict(new
+                    {
+                        message =
+                            "This member already has an active account."
+                    });
+                }
+            }
+            else
+            {
+                memberId = null;
+            }
 
             string passwordHash =
-                BCrypt.Net.BCrypt.HashPassword(request.Password);
-
-            // -----------------------------------------------------
-            // CREATE USER
-            // -----------------------------------------------------
+                BCrypt.Net.BCrypt.HashPassword(
+                    request.Password);
 
             var user = new User
             {
                 Username = username,
-
                 PasswordHash = passwordHash,
-
                 FullName = request.FullName.Trim(),
-
-                // IMPORTANT:
-                // Store RoleId, NOT the Role object
                 RoleId = role.RoleId,
-
+                MemberId = memberId,
                 IsActive = true,
-
                 CreatedDate = DateTime.Now
             };
 
@@ -116,40 +157,27 @@ namespace EPIC.Api.Controllers
 
             await _context.SaveChangesAsync();
 
-            // -----------------------------------------------------
-            // RESPONSE
-            // -----------------------------------------------------
-
             return Ok(new
             {
                 message = "USER REGISTERED SUCCESSFULLY.",
-
                 userId = user.UserId,
-
                 username = user.Username,
-
                 fullName = user.FullName,
-
                 roleId = role.RoleId,
-
-                role = role.RoleName
+                role = role.RoleName,
+                memberId = user.MemberId
             });
         }
 
-
         // =========================================================
         // LOGIN
-        // POST: api/auth/login
+        // POST: api/Auth/login
         // =========================================================
 
         [HttpPost("login")]
         public async Task<IActionResult> Login(
             UserLoginRequest request)
         {
-            // -----------------------------------------------------
-            // VALIDATION
-            // -----------------------------------------------------
-
             if (string.IsNullOrWhiteSpace(request.Username))
                 return BadRequest("Username is required.");
 
@@ -158,46 +186,34 @@ namespace EPIC.Api.Controllers
 
             string username = request.Username.Trim();
 
-            // -----------------------------------------------------
-            // FIND USER + LOAD ROLE
-            // -----------------------------------------------------
-
             var user = await _context.Users
+                .AsNoTracking()
                 .Include(u => u.Role)
                 .FirstOrDefaultAsync(u =>
                     u.Username == username);
 
-            // -----------------------------------------------------
-            // USER NOT FOUND
-            // -----------------------------------------------------
-
             if (user == null)
+            {
                 return Unauthorized(
                     "INVALID USERNAME OR PASSWORD.");
-
-            // -----------------------------------------------------
-            // CHECK ACTIVE
-            // -----------------------------------------------------
+            }
 
             if (!user.IsActive)
+            {
                 return Unauthorized(
                     "THIS ACCOUNT IS INACTIVE.");
+            }
 
-            // -----------------------------------------------------
-            // CHECK PASSWORD
-            // -----------------------------------------------------
-
-            bool passwordValid = BCrypt.Net.BCrypt.Verify(
-                request.Password,
-                user.PasswordHash);
+            bool passwordValid =
+                BCrypt.Net.BCrypt.Verify(
+                    request.Password,
+                    user.PasswordHash);
 
             if (!passwordValid)
+            {
                 return Unauthorized(
                     "INVALID USERNAME OR PASSWORD.");
-
-            // -----------------------------------------------------
-            // CHECK ROLE
-            // -----------------------------------------------------
+            }
 
             if (user.Role == null)
             {
@@ -205,29 +221,98 @@ namespace EPIC.Api.Controllers
                     "USER ROLE IS NOT CONFIGURED.");
             }
 
-            // -----------------------------------------------------
-            // GENERATE JWT
-            // -----------------------------------------------------
+            string roleName =
+                user.Role.RoleName?.Trim().ToUpper() ?? "";
 
-            string token = GenerateJwtToken(user);
+            // =====================================================
+            // LOAD MEMBER DIRECTLY USING MemberId
+            // =====================================================
 
-            // -----------------------------------------------------
-            // RESPONSE
-            // -----------------------------------------------------
+            Member? member = null;
+
+            if (user.MemberId.HasValue)
+            {
+                member = await _context.Members
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(m =>
+                        m.MemberId == user.MemberId.Value);
+            }
+
+            // =====================================================
+            // MEMBER VALIDATION
+            // =====================================================
+
+            if (roleName == "MEMBER")
+            {
+                if (!user.MemberId.HasValue)
+                {
+                    return Unauthorized(new
+                    {
+                        message =
+                            "This MEMBER account is not linked to a member record.",
+                        userId = user.UserId,
+                        username = user.Username,
+                        memberId = (int?)null
+                    });
+                }
+
+                if (member == null)
+                {
+                    return Unauthorized(new
+                    {
+                        message =
+                            "The linked member record could not be found.",
+                        userId = user.UserId,
+                        memberId = user.MemberId
+                    });
+                }
+
+                if (!string.Equals(
+                        member.Status,
+                        "ACTIVE",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    return Unauthorized(new
+                    {
+                        message =
+                            "The linked member account is inactive.",
+                        userId = user.UserId,
+                        memberId = user.MemberId
+                    });
+                }
+            }
+
+            string token =
+                GenerateJwtToken(user);
 
             return Ok(new
             {
                 message = "LOGIN SUCCESSFUL.",
-
                 userId = user.UserId,
-
                 username = user.Username,
-
                 fullName = user.FullName,
-
                 roleId = user.RoleId,
-
                 role = user.Role.RoleName,
+                memberId = user.MemberId,
+
+                member = member == null
+                    ? null
+                    : new
+                    {
+                        memberId = member.MemberId,
+                        memberCode = member.MemberCode,
+                        firstName = member.FirstName,
+                        middleName = member.MiddleName,
+                        lastName = member.LastName,
+                        fullName =
+                            (
+                                member.FirstName + " " +
+                                member.MiddleName + " " +
+                                member.LastName
+                            ).Trim(),
+                        status = member.Status,
+                        photoPath = member.PhotoPath
+                    },
 
                 token = token
             });
@@ -235,26 +320,24 @@ namespace EPIC.Api.Controllers
 
         // =========================================================
         // GET CURRENT USER PERMISSIONS
-        // GET: api/auth/permissions
+        // GET: api/Auth/permissions
         // =========================================================
 
         [HttpGet("permissions")]
-        [Microsoft.AspNetCore.Authorization.Authorize]
-        public async Task<IActionResult> GetCurrentUserPermissions()
+        [Authorize]
+        public async Task<IActionResult>
+            GetCurrentUserPermissions()
         {
-            // -----------------------------------------------------
-            // GET USER ID FROM JWT
-            // -----------------------------------------------------
-
             var userIdClaim =
                 User.FindFirst(
-                    System.Security.Claims.ClaimTypes.NameIdentifier);
+                    ClaimTypes.NameIdentifier);
 
             if (userIdClaim == null)
             {
                 return Unauthorized(new
                 {
-                    message = "User ID claim is missing."
+                    message =
+                        "USER ID CLAIM IS MISSING."
                 });
             }
 
@@ -264,83 +347,186 @@ namespace EPIC.Api.Controllers
             {
                 return Unauthorized(new
                 {
-                    message = "Invalid User ID claim."
+                    message =
+                        "INVALID USER ID CLAIM."
                 });
             }
-
-            // -----------------------------------------------------
-            // GET USER + ROLE
-            // -----------------------------------------------------
 
             var user = await _context.Users
                 .AsNoTracking()
                 .Include(u => u.Role)
-                .FirstOrDefaultAsync(
-                    u => u.UserId == userId);
+                .FirstOrDefaultAsync(u =>
+                    u.UserId == userId);
 
             if (user == null)
             {
                 return Unauthorized(new
                 {
-                    message = "USER NOT FOUND."
+                    message =
+                        "USER NOT FOUND."
                 });
             }
 
-            // -----------------------------------------------------
-            // GET ROLE PERMISSIONS
-            // -----------------------------------------------------
+            if (!user.IsActive)
+            {
+                return Unauthorized(new
+                {
+                    message =
+                        "USER ACCOUNT IS INACTIVE."
+                });
+            }
+
+            string roleName =
+                user.Role?.RoleName?.Trim() ?? "";
+
+            // =====================================================
+            // MEMBER ID
+            // =====================================================
+
+            int? memberId =
+                user.MemberId;
+
+            // =====================================================
+            // LOAD MEMBER DIRECTLY
+            // =====================================================
+
+            Member? member = null;
+
+            if (memberId.HasValue)
+            {
+                member = await _context.Members
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(m =>
+                        m.MemberId == memberId.Value);
+            }
+
+            // =====================================================
+            // MEMBER ACCOUNT VALIDATION
+            // =====================================================
+
+            if (string.Equals(
+                    roleName,
+                    "MEMBER",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                if (!memberId.HasValue)
+                {
+                    return Unauthorized(new
+                    {
+                        message =
+                            "This MEMBER account is not linked to a member record.",
+                        userId = user.UserId,
+                        username = user.Username,
+                        role = roleName,
+                        memberId = (int?)null
+                    });
+                }
+
+                if (member == null)
+                {
+                    return Unauthorized(new
+                    {
+                        message =
+                            "The MEMBER ID exists, but the member record could not be found.",
+                        userId = user.UserId,
+                        username = user.Username,
+                        role = roleName,
+                        memberId = memberId
+                    });
+                }
+
+                if (!string.Equals(
+                        member.Status,
+                        "ACTIVE",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    return Unauthorized(new
+                    {
+                        message =
+                            "The linked member account is inactive.",
+                        userId = user.UserId,
+                        memberId = memberId
+                    });
+                }
+            }
+
+            // =====================================================
+            // GET PERMISSIONS
+            // =====================================================
 
             var permissions =
-                await _context.Permissions
-                    .AsNoTracking()
-                    .Where(p =>
-                        p.RoleId == user.RoleId)
-                    .Select(p => new
-                    {
-                        module = p.Module,
+                await GetPermissionsForRole(
+                    user.RoleId);
 
-                        view = p.CanView,
-
-                        create = p.CanCreate,
-
-                        edit = p.CanEdit,
-
-                        delete = p.CanDelete,
-
-                        export = p.CanExport
-                    })
-                    .ToListAsync();
-
-            // -----------------------------------------------------
+            // =====================================================
             // RESPONSE
-            // -----------------------------------------------------
+            // =====================================================
 
             return Ok(new
             {
                 userId = user.UserId,
-
                 username = user.Username,
-
                 fullName = user.FullName,
-
                 roleId = user.RoleId,
+                role = roleName,
+                memberId = memberId,
 
-                role = user.Role?.RoleName,
+                member = member == null
+                    ? null
+                    : new
+                    {
+                        memberId = member.MemberId,
+                        memberCode = member.MemberCode,
+                        firstName = member.FirstName,
+                        middleName = member.MiddleName,
+                        lastName = member.LastName,
+                        fullName =
+                            (
+                                member.FirstName + " " +
+                                member.MiddleName + " " +
+                                member.LastName
+                            ).Trim(),
+                        status = member.Status,
+                        photoPath = member.PhotoPath
+                    },
 
-                permissions
+                permissions = permissions
             });
         }
+
         // =========================================================
-        // GENERATE JWT TOKEN
+        // GET PERMISSIONS FOR ROLE
         // =========================================================
 
-        private string GenerateJwtToken(User user)
+        private async Task<List<PermissionResponse>>
+            GetPermissionsForRole(
+                int roleId)
         {
-            // -----------------------------------------------------
-            // JWT SETTINGS
-            // -----------------------------------------------------
+            return await _context.Permissions
+                .AsNoTracking()
+                .Where(p =>
+                    p.RoleId == roleId)
+                .Select(p => new PermissionResponse
+                {
+                    module = p.Module,
+                    view = p.CanView,
+                    create = p.CanCreate,
+                    edit = p.CanEdit,
+                    delete = p.CanDelete,
+                    export = p.CanExport
+                })
+                .ToListAsync();
+        }
 
-            var key = _configuration["Jwt:Key"];
+        // =========================================================
+        // GENERATE JWT
+        // =========================================================
+
+        private string GenerateJwtToken(
+            User user)
+        {
+            var key =
+                _configuration["Jwt:Key"];
 
             if (string.IsNullOrWhiteSpace(key))
             {
@@ -348,90 +534,94 @@ namespace EPIC.Api.Controllers
                     "JWT Key is not configured.");
             }
 
-            var issuer = _configuration["Jwt:Issuer"];
+            var issuer =
+                _configuration["Jwt:Issuer"];
 
-            var audience = _configuration["Jwt:Audience"];
+            var audience =
+                _configuration["Jwt:Audience"];
 
             var expirationMinutes =
                 _configuration.GetValue<int>(
                     "Jwt:ExpirationMinutes");
 
-            // -----------------------------------------------------
-            // ROLE NAME
-            // -----------------------------------------------------
-
             string roleName =
                 user.Role?.RoleName ?? "STAFF";
 
-            // -----------------------------------------------------
-            // CLAIMS
-            // -----------------------------------------------------
+            var claims =
+                new List<Claim>
+                {
+                    new Claim(
+                        ClaimTypes.NameIdentifier,
+                        user.UserId.ToString()),
 
-            var claims = new List<Claim>
+                    new Claim(
+                        ClaimTypes.Name,
+                        user.Username),
+
+                    new Claim(
+                        ClaimTypes.GivenName,
+                        user.FullName),
+
+                    new Claim(
+                        ClaimTypes.Role,
+                        roleName)
+                };
+
+            // =====================================================
+            // MEMBER ID CLAIM
+            // =====================================================
+
+            if (user.MemberId.HasValue)
             {
-                // User ID
-                new Claim(
-                    ClaimTypes.NameIdentifier,
-                    user.UserId.ToString()),
-
-                // Username
-                new Claim(
-                    ClaimTypes.Name,
-                    user.Username),
-
-                // Full Name
-                new Claim(
-                    ClaimTypes.GivenName,
-                    user.FullName),
-
-                // Role
-                new Claim(
-                    ClaimTypes.Role,
-                    roleName)
-            };
-
-            // -----------------------------------------------------
-            // SECURITY KEY
-            // -----------------------------------------------------
+                claims.Add(
+                    new Claim(
+                        "MemberId",
+                        user.MemberId.Value.ToString()));
+            }
 
             var securityKey =
                 new SymmetricSecurityKey(
                     Encoding.UTF8.GetBytes(key));
-
-            // -----------------------------------------------------
-            // SIGNING CREDENTIALS
-            // -----------------------------------------------------
 
             var credentials =
                 new SigningCredentials(
                     securityKey,
                     SecurityAlgorithms.HmacSha256);
 
-            // -----------------------------------------------------
-            // CREATE TOKEN
-            // -----------------------------------------------------
-
-            var token = new JwtSecurityToken(
-                issuer: issuer,
-
-                audience: audience,
-
-                claims: claims,
-
-                expires: DateTime.UtcNow.AddMinutes(
-                    expirationMinutes),
-
-                signingCredentials: credentials);
-
-            // -----------------------------------------------------
-            // RETURN TOKEN STRING
-            // -----------------------------------------------------
+            var token =
+                new JwtSecurityToken(
+                    issuer: issuer,
+                    audience: audience,
+                    claims: claims,
+                    expires:
+                        DateTime.UtcNow.AddMinutes(
+                            expirationMinutes),
+                    signingCredentials:
+                        credentials);
 
             return new JwtSecurityTokenHandler()
                 .WriteToken(token);
         }
     }
 
+    // =============================================================
+    // PERMISSION RESPONSE
+    // =============================================================
+
+    public class PermissionResponse
+    {
+        public string module { get; set; } = "";
+
+        public bool view { get; set; }
+
+        public bool create { get; set; }
+
+        public bool edit { get; set; }
+
+        public bool delete { get; set; }
+
+        public bool export { get; set; }
+    }
 
     // =============================================================
     // REGISTER REQUEST
@@ -450,8 +640,9 @@ namespace EPIC.Api.Controllers
 
         public string Role { get; set; }
             = "STAFF";
-    }
 
+        public int? MemberId { get; set; }
+    }
 
     // =============================================================
     // LOGIN REQUEST
