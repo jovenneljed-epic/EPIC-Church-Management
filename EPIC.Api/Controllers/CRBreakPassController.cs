@@ -4,6 +4,7 @@ using EPIC.Api.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 using System.Security.Cryptography;
 
 namespace EPIC.Api.Controllers
@@ -55,7 +56,163 @@ namespace EPIC.Api.Controllers
             return Ok(passes);
         }
 
+// =========================================================
+// GET MY CR PASS
+//
+// GET: /api/CRBreakPass/me
+//
+// MEMBER:
+// Automatically gets MemberId from Users.MemberId.
+// =========================================================
 
+[HttpGet("me")]
+public async Task<IActionResult> GetMyPass()
+{
+    var userIdClaim =
+        User.FindFirst(ClaimTypes.NameIdentifier);
+
+    if (userIdClaim == null ||
+        !int.TryParse(userIdClaim.Value, out int userId))
+    {
+        return Unauthorized(new
+        {
+            message = "USER ID CLAIM IS MISSING OR INVALID."
+        });
+    }
+
+    var user = await _context.Users
+        .AsNoTracking()
+        .Include(u => u.Role)
+        .Include(u => u.Member)
+        .FirstOrDefaultAsync(u =>
+            u.UserId == userId);
+
+    if (user == null)
+    {
+        return Unauthorized(new
+        {
+            message = "USER ACCOUNT NOT FOUND."
+        });
+    }
+
+    if (user.Role == null ||
+        !string.Equals(
+            user.Role.RoleName,
+            "MEMBER",
+            StringComparison.OrdinalIgnoreCase))
+    {
+        return Forbid();
+    }
+
+    if (!user.MemberId.HasValue)
+    {
+        return BadRequest(new
+        {
+            message =
+                "This MEMBER account is not linked to a member record."
+        });
+    }
+
+    if (user.Member == null)
+    {
+        return NotFound(new
+        {
+            message =
+                "The linked member record could not be found."
+        });
+    }
+
+    if (!string.Equals(
+        user.Member.Status,
+        "ACTIVE",
+        StringComparison.OrdinalIgnoreCase))
+    {
+        return Unauthorized(new
+        {
+            message =
+                "Your member account is inactive."
+        });
+    }
+
+    int memberId = user.MemberId.Value;
+
+    var pass = await _context.CRBreakPasses
+        .AsNoTracking()
+        .FirstOrDefaultAsync(p =>
+            p.MemberId == memberId &&
+            p.Status == "ACTIVE");
+
+    // =====================================================
+    // MEMBER DOES NOT HAVE A PASS YET
+    // =====================================================
+
+    if (pass == null)
+    {
+        return Ok(new
+        {
+            hasPass = false,
+
+            memberId = user.Member.MemberId,
+
+            memberCode = user.Member.MemberCode,
+
+            firstName = user.Member.FirstName,
+
+            middleName = user.Member.MiddleName,
+
+            lastName = user.Member.LastName,
+
+            fullName =
+                (
+                    user.Member.FirstName + " " +
+                    user.Member.MiddleName + " " +
+                    user.Member.LastName
+                ).Trim()
+        });
+    }
+
+    // =====================================================
+    // MEMBER HAS ACTIVE PASS
+    // =====================================================
+
+    return Ok(new
+    {
+        hasPass = true,
+
+        crBreakPassId = pass.CRBreakPassId,
+
+        memberId = user.Member.MemberId,
+
+        memberCode = user.Member.MemberCode,
+
+        firstName = user.Member.FirstName,
+
+        middleName = user.Member.MiddleName,
+
+        lastName = user.Member.LastName,
+
+        fullName =
+            (
+                user.Member.FirstName + " " +
+                user.Member.MiddleName + " " +
+                user.Member.LastName
+            ).Trim(),
+
+        passCode = pass.PassCode,
+
+        qrToken = pass.QrToken,
+
+        status = pass.Status,
+
+        issuedAt = pass.IssuedAt,
+
+        timeOut = pass.TimeOut,
+
+        timeIn = pass.TimeIn,
+
+        expiresAt = pass.ExpiresAt
+    });
+}
         // =========================================================
         // GET PASS FOR ONE MEMBER
         // GET: /api/CRBreakPass/member/1038
