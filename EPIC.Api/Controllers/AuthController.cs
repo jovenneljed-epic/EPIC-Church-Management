@@ -27,12 +27,11 @@ namespace EPIC.Api.Controllers
         }
 
         // =========================================================
-        // REGISTER MEMBER ACCOUNT
+        // REGISTER
         // POST: api/Auth/register
         // =========================================================
 
         [HttpPost("register")]
-        [AllowAnonymous]
         public async Task<IActionResult> Register(
             [FromBody] UserRegisterRequest request)
         {
@@ -43,10 +42,6 @@ namespace EPIC.Api.Controllers
                     message = "Registration data is required."
                 });
             }
-
-            // =====================================================
-            // VALIDATION
-            // =====================================================
 
             if (string.IsNullOrWhiteSpace(request.Username))
             {
@@ -94,16 +89,11 @@ namespace EPIC.Api.Controllers
 
             // =====================================================
             // USERNAME CHECK
-            // Case-insensitive
             // =====================================================
-
-            string normalizedUsername =
-                username.ToLower();
 
             bool usernameExists =
                 await _context.Users.AnyAsync(u =>
-                    u.Username != null &&
-                    u.Username.ToLower() == normalizedUsername);
+                    u.Username.ToLower() == username.ToLower());
 
             if (usernameExists)
             {
@@ -115,27 +105,14 @@ namespace EPIC.Api.Controllers
 
             // =====================================================
             // FIND MEMBER
-            //
-            // MemberCode + LastName identify the member.
-            //
-            // MemberId supplied by client is NEVER trusted.
             // =====================================================
-
-            string normalizedMemberCode =
-                memberCode.ToLower();
-
-            string normalizedLastName =
-                lastName.ToLower();
 
             var member =
                 await _context.Members
                     .FirstOrDefaultAsync(m =>
-                        m.MemberCode != null &&
+                        m.MemberCode == memberCode &&
                         m.LastName != null &&
-                        m.MemberCode.ToLower() ==
-                            normalizedMemberCode &&
-                        m.LastName.ToLower() ==
-                            normalizedLastName);
+                        m.LastName.ToLower() == lastName.ToLower());
 
             if (member == null)
             {
@@ -163,13 +140,12 @@ namespace EPIC.Api.Controllers
             }
 
             // =====================================================
-            // CHECK EXISTING MEMBER ACCOUNT
+            // EXISTING ACCOUNT
             // =====================================================
 
             bool memberAlreadyHasAccount =
                 await _context.Users.AnyAsync(u =>
-                    u.MemberId.HasValue &&
-                    u.MemberId.Value == member.MemberId);
+                    u.MemberId == member.MemberId);
 
             if (memberAlreadyHasAccount)
             {
@@ -188,7 +164,7 @@ namespace EPIC.Api.Controllers
                 await _context.Roles
                     .FirstOrDefaultAsync(r =>
                         r.RoleName != null &&
-                        r.RoleName.ToLower() == "member" &&
+                        r.RoleName.ToUpper() == "MEMBER" &&
                         r.IsActive);
 
             if (role == null)
@@ -209,23 +185,19 @@ namespace EPIC.Api.Controllers
                     request.Password);
 
             // =====================================================
-            // CREATE PENDING USER
+            // CREATE USER
             // =====================================================
 
             var user = new User
             {
                 Username = username,
-
                 PasswordHash = passwordHash,
-
                 FullName = request.FullName.Trim(),
-
                 RoleId = role.RoleId,
-
                 MemberId = member.MemberId,
 
+                // Member accounts must be approved by admin.
                 IsActive = false,
-
                 ApprovalStatus = "PENDING",
 
                 CreatedDate = DateTime.Now
@@ -234,10 +206,6 @@ namespace EPIC.Api.Controllers
             _context.Users.Add(user);
 
             await _context.SaveChangesAsync();
-
-            // =====================================================
-            // RESPONSE
-            // =====================================================
 
             return Ok(new
             {
@@ -268,7 +236,6 @@ namespace EPIC.Api.Controllers
         // =========================================================
 
         [HttpPost("login")]
-        [AllowAnonymous]
         public async Task<IActionResult> Login(
             [FromBody] UserLoginRequest request)
         {
@@ -296,32 +263,18 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            string username =
-                request.Username.Trim();
-
-            // IMPORTANT:
-            // Do NOT trim the password.
-            //
-            // Passwords may intentionally contain spaces.
-
-            string password =
-                request.Password;
+            string username = request.Username.Trim();
 
             // =====================================================
             // FIND USER
-            // Case-insensitive username
             // =====================================================
-
-            string normalizedUsername =
-                username.ToLower();
 
             var user =
                 await _context.Users
                     .Include(u => u.Role)
                     .FirstOrDefaultAsync(u =>
-                        u.Username != null &&
                         u.Username.ToLower() ==
-                            normalizedUsername);
+                        username.ToLower());
 
             if (user == null)
             {
@@ -333,17 +286,43 @@ namespace EPIC.Api.Controllers
             }
 
             // =====================================================
-            // PASSWORD HASH CHECK
+            // APPROVAL STATUS
             // =====================================================
 
-            if (string.IsNullOrWhiteSpace(user.PasswordHash))
+            string approvalStatus =
+                string.IsNullOrWhiteSpace(user.ApprovalStatus)
+                    ? "APPROVED"
+                    : user.ApprovalStatus.Trim().ToUpper();
+
+            if (approvalStatus == "PENDING")
             {
                 return Unauthorized(new
                 {
                     message =
-                        "INVALID USERNAME OR PASSWORD."
+                        "YOUR ACCOUNT IS PENDING ADMIN APPROVAL.",
+
+                    status = "PENDING",
+
+                    userId = user.UserId,
+
+                    username = user.Username
                 });
             }
+
+            if (approvalStatus == "REJECTED")
+            {
+                return Unauthorized(new
+                {
+                    message =
+                        "YOUR ACCOUNT REGISTRATION WAS REJECTED BY THE ADMIN.",
+
+                    status = "REJECTED"
+                });
+            }
+
+            // =====================================================
+            // PASSWORD
+            // =====================================================
 
             bool passwordValid;
 
@@ -351,7 +330,7 @@ namespace EPIC.Api.Controllers
             {
                 passwordValid =
                     BCrypt.Net.BCrypt.Verify(
-                        password,
+                        request.Password,
                         user.PasswordHash);
             }
             catch
@@ -369,49 +348,6 @@ namespace EPIC.Api.Controllers
             }
 
             // =====================================================
-            // APPROVAL STATUS
-            //
-            // Existing ADMIN/STAFF accounts may have NULL
-            // ApprovalStatus. Those accounts are treated as
-            // already approved.
-            // =====================================================
-
-            string approvalStatus =
-                string.IsNullOrWhiteSpace(user.ApprovalStatus)
-                    ? "APPROVED"
-                    : user.ApprovalStatus.Trim().ToUpper();
-
-            // =====================================================
-            // PENDING
-            // =====================================================
-
-            if (approvalStatus == "PENDING")
-            {
-                return Unauthorized(new
-                {
-                    message =
-                        "YOUR ACCOUNT IS PENDING ADMIN APPROVAL.",
-
-                    status = "PENDING"
-                });
-            }
-
-            // =====================================================
-            // REJECTED
-            // =====================================================
-
-            if (approvalStatus == "REJECTED")
-            {
-                return Unauthorized(new
-                {
-                    message =
-                        "YOUR ACCOUNT REGISTRATION WAS REJECTED BY THE ADMIN.",
-
-                    status = "REJECTED"
-                });
-            }
-
-            // =====================================================
             // ACTIVE CHECK
             // =====================================================
 
@@ -425,7 +361,7 @@ namespace EPIC.Api.Controllers
             }
 
             // =====================================================
-            // ROLE CHECK
+            // ROLE
             // =====================================================
 
             if (user.Role == null)
@@ -517,14 +453,14 @@ namespace EPIC.Api.Controllers
             }
 
             // =====================================================
-            // GENERATE JWT
+            // GENERATE TOKEN
             // =====================================================
 
             string token =
                 GenerateJwtToken(user);
 
             // =====================================================
-            // LOGIN RESPONSE
+            // RESPONSE
             // =====================================================
 
             return Ok(new
@@ -574,10 +510,11 @@ namespace EPIC.Api.Controllers
                                 member.LastName,
 
                             fullName =
-                                BuildMemberFullName(
-                                    member.FirstName,
-                                    member.MiddleName,
-                                    member.LastName),
+                                (
+                                    member.FirstName + " " +
+                                    (member.MiddleName ?? "") + " " +
+                                    member.LastName
+                                ).Trim(),
 
                             status =
                                 member.Status,
@@ -592,9 +529,72 @@ namespace EPIC.Api.Controllers
         }
 
         // =========================================================
+        // TEMPORARY PASSWORD RESET
+        //
+        // POST:
+        // api/Auth/reset-member-password/{userId}
+        //
+        // REMOVE THIS AFTER TESTING
+        // =========================================================
+
+        [HttpPost("reset-member-password/{userId:int}")]
+        [AllowAnonymous]
+        public async Task<IActionResult>
+            ResetMemberPassword(int userId)
+        {
+            var user =
+                await _context.Users
+                    .FirstOrDefaultAsync(u =>
+                        u.UserId == userId);
+
+            if (user == null)
+            {
+                return NotFound(new
+                {
+                    message =
+                        "USER NOT FOUND."
+                });
+            }
+
+            const string newPassword =
+                "Temp1234!";
+
+            user.PasswordHash =
+                BCrypt.Net.BCrypt.HashPassword(
+                    newPassword);
+
+            user.IsActive = true;
+            user.ApprovalStatus = "APPROVED";
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                message =
+                    "PASSWORD RESET SUCCESSFULLY.",
+
+                userId =
+                    user.UserId,
+
+                username =
+                    user.Username,
+
+                password =
+                    newPassword,
+
+                approvalStatus =
+                    user.ApprovalStatus,
+
+                isActive =
+                    user.IsActive
+            });
+        }
+
+        // =========================================================
         // GET PENDING MEMBER ACCOUNTS
         //
-        // GET: api/Auth/pending-members
+        // GET:
+        // api/Auth/pending-members
         //
         // ADMIN ONLY
         // =========================================================
@@ -653,6 +653,9 @@ namespace EPIC.Api.Controllers
                         approvalStatus =
                             u.ApprovalStatus,
 
+                        isActive =
+                            u.IsActive,
+
                         createdDate =
                             u.CreatedDate
                     })
@@ -662,9 +665,10 @@ namespace EPIC.Api.Controllers
         }
 
         // =========================================================
-        // APPROVE MEMBER ACCOUNT
+        // APPROVE MEMBER
         //
-        // POST: api/Auth/approve-member/{userId}
+        // POST:
+        // api/Auth/approve-member/{userId}
         //
         // ADMIN ONLY
         // =========================================================
@@ -703,17 +707,17 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            string approvalStatus =
-                string.IsNullOrWhiteSpace(user.ApprovalStatus)
-                    ? "APPROVED"
-                    : user.ApprovalStatus.Trim().ToUpper();
+            string currentStatus =
+                user.ApprovalStatus?
+                    .Trim()
+                    .ToUpper() ?? "";
 
-            if (approvalStatus != "PENDING")
+            if (currentStatus != "PENDING")
             {
                 return BadRequest(new
                 {
                     message =
-                        $"This account is already {approvalStatus}."
+                        $"This account is already {user.ApprovalStatus}."
                 });
             }
 
@@ -757,8 +761,11 @@ namespace EPIC.Api.Controllers
             // APPROVE
             // =====================================================
 
-            user.ApprovalStatus = "APPROVED";
-            user.IsActive = true;
+            user.ApprovalStatus =
+                "APPROVED";
+
+            user.IsActive =
+                true;
 
             await _context.SaveChangesAsync();
 
@@ -777,14 +784,18 @@ namespace EPIC.Api.Controllers
                     user.MemberId,
 
                 approvalStatus =
-                    user.ApprovalStatus
+                    user.ApprovalStatus,
+
+                isActive =
+                    user.IsActive
             });
         }
 
         // =========================================================
-        // REJECT MEMBER ACCOUNT
+        // REJECT MEMBER
         //
-        // POST: api/Auth/reject-member/{userId}
+        // POST:
+        // api/Auth/reject-member/{userId}
         //
         // ADMIN ONLY
         // =========================================================
@@ -823,17 +834,17 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            string approvalStatus =
-                string.IsNullOrWhiteSpace(user.ApprovalStatus)
-                    ? "APPROVED"
-                    : user.ApprovalStatus.Trim().ToUpper();
+            string currentStatus =
+                user.ApprovalStatus?
+                    .Trim()
+                    .ToUpper() ?? "";
 
-            if (approvalStatus != "PENDING")
+            if (currentStatus != "PENDING")
             {
                 return BadRequest(new
                 {
                     message =
-                        $"This account is already {approvalStatus}."
+                        $"This account is already {user.ApprovalStatus}."
                 });
             }
 
@@ -841,8 +852,11 @@ namespace EPIC.Api.Controllers
             // REJECT
             // =====================================================
 
-            user.ApprovalStatus = "REJECTED";
-            user.IsActive = false;
+            user.ApprovalStatus =
+                "REJECTED";
+
+            user.IsActive =
+                false;
 
             await _context.SaveChangesAsync();
 
@@ -861,16 +875,18 @@ namespace EPIC.Api.Controllers
                     user.MemberId,
 
                 approvalStatus =
-                    user.ApprovalStatus
+                    user.ApprovalStatus,
+
+                isActive =
+                    user.IsActive
             });
         }
 
         // =========================================================
-        // GET CURRENT USER PERMISSIONS
+        // CURRENT USER PERMISSIONS
         //
-        // GET: api/Auth/permissions
-        //
-        // AUTHENTICATED USERS
+        // GET:
+        // api/Auth/permissions
         // =========================================================
 
         [HttpGet("permissions")]
@@ -878,10 +894,6 @@ namespace EPIC.Api.Controllers
         public async Task<IActionResult>
             GetCurrentUserPermissions()
         {
-            // =====================================================
-            // GET USER ID FROM JWT
-            // =====================================================
-
             var userIdClaim =
                 User.FindFirst(
                     ClaimTypes.NameIdentifier);
@@ -906,10 +918,6 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            // =====================================================
-            // LOAD USER
-            // =====================================================
-
             var user =
                 await _context.Users
                     .AsNoTracking()
@@ -926,10 +934,6 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            // =====================================================
-            // ACTIVE CHECK
-            // =====================================================
-
             if (!user.IsActive)
             {
                 return Unauthorized(new
@@ -940,16 +944,13 @@ namespace EPIC.Api.Controllers
             }
 
             // =====================================================
-            // APPROVAL CHECK
-            //
-            // Existing ADMIN/STAFF accounts with NULL
-            // ApprovalStatus are treated as APPROVED.
+            // APPROVAL
             // =====================================================
 
             string approvalStatus =
-                string.IsNullOrWhiteSpace(user.ApprovalStatus)
-                    ? "APPROVED"
-                    : user.ApprovalStatus.Trim().ToUpper();
+                user.ApprovalStatus?
+                    .Trim()
+                    .ToUpper() ?? "APPROVED";
 
             if (approvalStatus != "APPROVED")
             {
@@ -959,13 +960,9 @@ namespace EPIC.Api.Controllers
                         "USER ACCOUNT IS NOT APPROVED.",
 
                     approvalStatus =
-                        approvalStatus
+                        user.ApprovalStatus
                 });
             }
-
-            // =====================================================
-            // ROLE
-            // =====================================================
 
             string roleName =
                 user.Role?.RoleName?
@@ -1061,7 +1058,7 @@ namespace EPIC.Api.Controllers
             }
 
             // =====================================================
-            // GET PERMISSIONS
+            // PERMISSIONS
             // =====================================================
 
             var permissions =
@@ -1116,10 +1113,11 @@ namespace EPIC.Api.Controllers
                                 member.LastName,
 
                             fullName =
-                                BuildMemberFullName(
-                                    member.FirstName,
-                                    member.MiddleName,
-                                    member.LastName),
+                                (
+                                    member.FirstName + " " +
+                                    (member.MiddleName ?? "") + " " +
+                                    member.LastName
+                                ).Trim(),
 
                             status =
                                 member.Status,
@@ -1160,10 +1158,9 @@ namespace EPIC.Api.Controllers
         // GENERATE JWT
         // =========================================================
 
-        private string GenerateJwtToken(
-            User user)
+        private string GenerateJwtToken(User user)
         {
-            string? key =
+            var key =
                 _configuration["Jwt:Key"];
 
             if (string.IsNullOrWhiteSpace(key))
@@ -1172,10 +1169,10 @@ namespace EPIC.Api.Controllers
                     "JWT Key is not configured.");
             }
 
-            string? issuer =
+            var issuer =
                 _configuration["Jwt:Issuer"];
 
-            string? audience =
+            var audience =
                 _configuration["Jwt:Audience"];
 
             int expirationMinutes =
@@ -1188,8 +1185,7 @@ namespace EPIC.Api.Controllers
             }
 
             string roleName =
-                user.Role?.RoleName?.Trim()
-                ?? "STAFF";
+                user.Role?.RoleName ?? "STAFF";
 
             var claims =
                 new List<Claim>
@@ -1200,20 +1196,16 @@ namespace EPIC.Api.Controllers
 
                     new Claim(
                         ClaimTypes.Name,
-                        user.Username ?? ""),
+                        user.Username),
 
                     new Claim(
                         ClaimTypes.GivenName,
-                        user.FullName ?? ""),
+                        user.FullName),
 
                     new Claim(
                         ClaimTypes.Role,
                         roleName)
                 };
-
-            // =====================================================
-            // MEMBER ID CLAIM
-            // =====================================================
 
             if (user.MemberId.HasValue)
             {
@@ -1223,24 +1215,6 @@ namespace EPIC.Api.Controllers
                         user.MemberId.Value.ToString()));
             }
 
-            // =====================================================
-            // APPROVAL STATUS CLAIM
-            // =====================================================
-
-            string approvalStatus =
-                string.IsNullOrWhiteSpace(user.ApprovalStatus)
-                    ? "APPROVED"
-                    : user.ApprovalStatus.Trim().ToUpper();
-
-            claims.Add(
-                new Claim(
-                    "ApprovalStatus",
-                    approvalStatus));
-
-            // =====================================================
-            // SECURITY KEY
-            // =====================================================
-
             var securityKey =
                 new SymmetricSecurityKey(
                     Encoding.UTF8.GetBytes(key));
@@ -1249,10 +1223,6 @@ namespace EPIC.Api.Controllers
                 new SigningCredentials(
                     securityKey,
                     SecurityAlgorithms.HmacSha256);
-
-            // =====================================================
-            // TOKEN
-            // =====================================================
 
             var token =
                 new JwtSecurityToken(
@@ -1267,29 +1237,6 @@ namespace EPIC.Api.Controllers
 
             return new JwtSecurityTokenHandler()
                 .WriteToken(token);
-        }
-
-        // =========================================================
-        // BUILD MEMBER FULL NAME
-        // =========================================================
-
-        private static string BuildMemberFullName(
-            string? firstName,
-            string? middleName,
-            string? lastName)
-        {
-            return string.Join(
-                " ",
-                new[]
-                {
-                    firstName,
-                    middleName,
-                    lastName
-                }
-                .Where(x =>
-                    !string.IsNullOrWhiteSpace(x))
-                .Select(x =>
-                    x!.Trim()));
         }
     }
 
@@ -1327,19 +1274,11 @@ namespace EPIC.Api.Controllers
         public string FullName { get; set; }
             = string.Empty;
 
-        // =========================================================
-        // MEMBER VERIFICATION
-        // =========================================================
-
         public string MemberCode { get; set; }
             = string.Empty;
 
         public string LastName { get; set; }
             = string.Empty;
-
-        // =========================================================
-        // OPTIONAL COMPATIBILITY FIELDS
-        // =========================================================
 
         public string Role { get; set; }
             = "MEMBER";
@@ -1360,3 +1299,4 @@ namespace EPIC.Api.Controllers
             = string.Empty;
     }
 }
+
