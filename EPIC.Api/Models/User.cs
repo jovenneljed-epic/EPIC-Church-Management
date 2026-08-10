@@ -19,17 +19,33 @@ namespace EPIC.Api.Models
         [MaxLength(150)]
         public string FullName { get; set; } = "";
 
+        // =====================================================
+        // ROLE
+        // =====================================================
+
         public int RoleId { get; set; }
 
         public Role? Role { get; set; }
 
-        // Links MEMBER user account to Members.MemberId
+        // =====================================================
+        // MEMBER LINK
+        // =====================================================
+
+        // NULL for ADMIN / STAFF
+        // Contains Members.MemberId for MEMBER accounts.
         public int? MemberId { get; set; }
 
         public Member? Member { get; set; }
 
-        public bool IsActive { get; set; } = true;
+        // =====================================================
+        // ACCOUNT STATUS
+        // =====================================================
 
-        public DateTime CreatedDate { get; set; } = DateTime.Now;
+        // false = waiting for Admin approval
+        // true  = approved and allowed to login
+        public bool IsActive { get; set; } = true;
+public string ApprovalStatus { get; set; } = "APPROVED";
+public DateTime CreatedDate { get; set; } = DateTime.Now;
     }
 }
+

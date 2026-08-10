@@ -27,7 +27,7 @@ namespace EPIC.Api.Controllers
         }
 
         // =========================================================
-        // REGISTER
+        // REGISTER MEMBER ACCOUNT
         // POST: api/Auth/register
         // =========================================================
 
@@ -35,19 +35,65 @@ namespace EPIC.Api.Controllers
         public async Task<IActionResult> Register(
             UserRegisterRequest request)
         {
+            if (request == null)
+            {
+                return BadRequest(new
+                {
+                    message = "Registration data is required."
+                });
+            }
+
             if (string.IsNullOrWhiteSpace(request.Username))
-                return BadRequest("Username is required.");
+            {
+                return BadRequest(new
+                {
+                    message = "Username is required."
+                });
+            }
 
             if (string.IsNullOrWhiteSpace(request.Password))
-                return BadRequest("Password is required.");
+            {
+                return BadRequest(new
+                {
+                    message = "Password is required."
+                });
+            }
 
             if (string.IsNullOrWhiteSpace(request.FullName))
-                return BadRequest("Full name is required.");
+            {
+                return BadRequest(new
+                {
+                    message = "Full name is required."
+                });
+            }
+
+            if (string.IsNullOrWhiteSpace(request.MemberCode))
+            {
+                return BadRequest(new
+                {
+                    message = "Member Code is required."
+                });
+            }
+
+            if (string.IsNullOrWhiteSpace(request.LastName))
+            {
+                return BadRequest(new
+                {
+                    message = "Last name is required."
+                });
+            }
 
             string username = request.Username.Trim();
+            string memberCode = request.MemberCode.Trim();
+            string lastName = request.LastName.Trim();
 
-            bool usernameExists = await _context.Users
-                .AnyAsync(u => u.Username == username);
+            // =====================================================
+            // USERNAME CHECK
+            // =====================================================
+
+            bool usernameExists =
+                await _context.Users.AnyAsync(u =>
+                    u.Username == username);
 
             if (usernameExists)
             {
@@ -57,99 +103,107 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            string roleName =
-                string.IsNullOrWhiteSpace(request.Role)
-                    ? "STAFF"
-                    : request.Role.Trim().ToUpper();
+            // =====================================================
+            // FIND MEMBER
+            // =====================================================
 
-            var role = await _context.Roles
-                .FirstOrDefaultAsync(r =>
-                    r.RoleName.ToUpper() == roleName &&
-                    r.IsActive);
+            var member =
+                await _context.Members
+                    .FirstOrDefaultAsync(m =>
+                        m.MemberCode == memberCode &&
+                        m.LastName != null &&
+                        m.LastName.ToLower() == lastName.ToLower());
+
+            if (member == null)
+            {
+                return BadRequest(new
+                {
+                    message =
+                        "Member Code and Last Name do not match any registered member."
+                });
+            }
+
+            // =====================================================
+            // MEMBER STATUS
+            // =====================================================
+
+            if (!string.Equals(
+                    member.Status,
+                    "ACTIVE",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest(new
+                {
+                    message =
+                        "Only ACTIVE members can create an account."
+                });
+            }
+
+            // =====================================================
+            // CHECK EXISTING ACCOUNT
+            // =====================================================
+
+            bool memberAlreadyHasAccount =
+                await _context.Users.AnyAsync(u =>
+                    u.MemberId == member.MemberId);
+
+            if (memberAlreadyHasAccount)
+            {
+                return Conflict(new
+                {
+                    message =
+                        "This member already has an account or has a pending account approval."
+                });
+            }
+
+            // =====================================================
+            // FIND MEMBER ROLE
+            // =====================================================
+
+            var role =
+                await _context.Roles
+                    .FirstOrDefaultAsync(r =>
+                        r.RoleName != null &&
+                        r.RoleName.ToUpper() == "MEMBER" &&
+                        r.IsActive);
 
             if (role == null)
             {
                 return BadRequest(new
                 {
                     message =
-                        $"Role '{roleName}' does not exist or is inactive."
+                        "MEMBER role does not exist or is inactive."
                 });
             }
 
-            int? memberId = request.MemberId;
-
             // =====================================================
-            // MEMBER ACCOUNT
+            // PASSWORD HASH
             // =====================================================
-
-            if (roleName == "MEMBER")
-            {
-                if (!memberId.HasValue)
-                {
-                    return BadRequest(new
-                    {
-                        message =
-                            "A MEMBER account must be linked to a registered member."
-                    });
-                }
-
-                var member = await _context.Members
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(m =>
-                        m.MemberId == memberId.Value);
-
-                if (member == null)
-                {
-                    return BadRequest(new
-                    {
-                        message =
-                            "The selected member does not exist."
-                    });
-                }
-
-                if (!string.Equals(
-                        member.Status,
-                        "ACTIVE",
-                        StringComparison.OrdinalIgnoreCase))
-                {
-                    return BadRequest(new
-                    {
-                        message =
-                            "Only active members can have a MEMBER account."
-                    });
-                }
-
-                bool memberAlreadyHasAccount =
-                    await _context.Users.AnyAsync(u =>
-                        u.MemberId == memberId.Value &&
-                        u.IsActive);
-
-                if (memberAlreadyHasAccount)
-                {
-                    return Conflict(new
-                    {
-                        message =
-                            "This member already has an active account."
-                    });
-                }
-            }
-            else
-            {
-                memberId = null;
-            }
 
             string passwordHash =
                 BCrypt.Net.BCrypt.HashPassword(
                     request.Password);
 
+            // =====================================================
+            // CREATE PENDING USER
+            // =====================================================
+
             var user = new User
             {
                 Username = username,
+
                 PasswordHash = passwordHash,
+
                 FullName = request.FullName.Trim(),
+
                 RoleId = role.RoleId,
-                MemberId = memberId,
-                IsActive = true,
+
+                MemberId = member.MemberId,
+
+                IsActive = false,
+
+                ApprovalStatus = "PENDING",
+
                 CreatedDate = DateTime.Now
             };
 
@@ -157,15 +211,30 @@ namespace EPIC.Api.Controllers
 
             await _context.SaveChangesAsync();
 
+            // =====================================================
+            // RESPONSE
+            // =====================================================
+
             return Ok(new
             {
-                message = "USER REGISTERED SUCCESSFULLY.",
+                message =
+                    "ACCOUNT CREATED SUCCESSFULLY. YOUR ACCOUNT IS WAITING FOR ADMIN APPROVAL.",
+
+                status = "PENDING",
+
                 userId = user.UserId,
+
                 username = user.Username,
+
                 fullName = user.FullName,
+
                 roleId = role.RoleId,
+
                 role = role.RoleName,
-                memberId = user.MemberId
+
+                memberId = member.MemberId,
+
+                memberCode = member.MemberCode
             });
         }
 
@@ -178,31 +247,97 @@ namespace EPIC.Api.Controllers
         public async Task<IActionResult> Login(
             UserLoginRequest request)
         {
+            if (request == null)
+            {
+                return BadRequest(new
+                {
+                    message = "Login data is required."
+                });
+            }
+
             if (string.IsNullOrWhiteSpace(request.Username))
-                return BadRequest("Username is required.");
+            {
+                return BadRequest(new
+                {
+                    message = "Username is required."
+                });
+            }
 
             if (string.IsNullOrWhiteSpace(request.Password))
-                return BadRequest("Password is required.");
+            {
+                return BadRequest(new
+                {
+                    message = "Password is required."
+                });
+            }
 
             string username = request.Username.Trim();
 
-            var user = await _context.Users
-                .AsNoTracking()
-                .Include(u => u.Role)
-                .FirstOrDefaultAsync(u =>
-                    u.Username == username);
+            // =====================================================
+            // FIND USER
+            // =====================================================
+
+            var user =
+                await _context.Users
+                    .AsNoTracking()
+                    .Include(u => u.Role)
+                    .FirstOrDefaultAsync(u =>
+                        u.Username == username);
 
             if (user == null)
             {
-                return Unauthorized(
-                    "INVALID USERNAME OR PASSWORD.");
+                return Unauthorized(new
+                {
+                    message =
+                        "INVALID USERNAME OR PASSWORD."
+                });
             }
+
+            // =====================================================
+            // ADMIN APPROVAL CHECK
+            // =====================================================
+
+            string approvalStatus =
+                user.ApprovalStatus?
+                    .Trim()
+                    .ToUpper() ?? "APPROVED";
+
+            if (approvalStatus == "PENDING")
+            {
+                return Unauthorized(new
+                {
+                    message =
+                        "YOUR ACCOUNT IS PENDING ADMIN APPROVAL.",
+                    status = "PENDING"
+                });
+            }
+
+            if (approvalStatus == "REJECTED")
+            {
+                return Unauthorized(new
+                {
+                    message =
+                        "YOUR ACCOUNT REGISTRATION WAS REJECTED BY THE ADMIN.",
+                    status = "REJECTED"
+                });
+            }
+
+            // =====================================================
+            // ACTIVE CHECK
+            // =====================================================
 
             if (!user.IsActive)
             {
-                return Unauthorized(
-                    "THIS ACCOUNT IS INACTIVE.");
+                return Unauthorized(new
+                {
+                    message =
+                        "THIS ACCOUNT IS INACTIVE."
+                });
             }
+
+            // =====================================================
+            // PASSWORD
+            // =====================================================
 
             bool passwordValid =
                 BCrypt.Net.BCrypt.Verify(
@@ -211,31 +346,45 @@ namespace EPIC.Api.Controllers
 
             if (!passwordValid)
             {
-                return Unauthorized(
-                    "INVALID USERNAME OR PASSWORD.");
+                return Unauthorized(new
+                {
+                    message =
+                        "INVALID USERNAME OR PASSWORD."
+                });
             }
+
+            // =====================================================
+            // ROLE
+            // =====================================================
 
             if (user.Role == null)
             {
-                return Unauthorized(
-                    "USER ROLE IS NOT CONFIGURED.");
+                return Unauthorized(new
+                {
+                    message =
+                        "USER ROLE IS NOT CONFIGURED."
+                });
             }
 
             string roleName =
-                user.Role.RoleName?.Trim().ToUpper() ?? "";
+                user.Role.RoleName?
+                    .Trim()
+                    .ToUpper() ?? "";
 
             // =====================================================
-            // LOAD MEMBER DIRECTLY USING MemberId
+            // LOAD MEMBER
             // =====================================================
 
             Member? member = null;
 
             if (user.MemberId.HasValue)
             {
-                member = await _context.Members
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(m =>
-                        m.MemberId == user.MemberId.Value);
+                member =
+                    await _context.Members
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(m =>
+                            m.MemberId ==
+                            user.MemberId.Value);
             }
 
             // =====================================================
@@ -250,8 +399,11 @@ namespace EPIC.Api.Controllers
                     {
                         message =
                             "This MEMBER account is not linked to a member record.",
+
                         userId = user.UserId,
+
                         username = user.Username,
+
                         memberId = (int?)null
                     });
                 }
@@ -262,7 +414,9 @@ namespace EPIC.Api.Controllers
                     {
                         message =
                             "The linked member record could not be found.",
+
                         userId = user.UserId,
+
                         memberId = user.MemberId
                     });
                 }
@@ -276,45 +430,348 @@ namespace EPIC.Api.Controllers
                     {
                         message =
                             "The linked member account is inactive.",
+
                         userId = user.UserId,
+
                         memberId = user.MemberId
                     });
                 }
             }
 
+            // =====================================================
+            // GENERATE JWT
+            // =====================================================
+
             string token =
                 GenerateJwtToken(user);
 
+            // =====================================================
+            // LOGIN RESPONSE
+            // =====================================================
+
             return Ok(new
             {
-                message = "LOGIN SUCCESSFUL.",
-                userId = user.UserId,
-                username = user.Username,
-                fullName = user.FullName,
-                roleId = user.RoleId,
-                role = user.Role.RoleName,
-                memberId = user.MemberId,
+                message =
+                    "LOGIN SUCCESSFUL.",
 
-                member = member == null
-                    ? null
-                    : new
+                userId =
+                    user.UserId,
+
+                username =
+                    user.Username,
+
+                fullName =
+                    user.FullName,
+
+                roleId =
+                    user.RoleId,
+
+                role =
+                    user.Role.RoleName,
+
+                memberId =
+                    user.MemberId,
+
+                approvalStatus =
+                    approvalStatus,
+
+                member =
+                    member == null
+                        ? null
+                        : new
+                        {
+                            memberId =
+                                member.MemberId,
+
+                            memberCode =
+                                member.MemberCode,
+
+                            firstName =
+                                member.FirstName,
+
+                            middleName =
+                                member.MiddleName,
+
+                            lastName =
+                                member.LastName,
+
+                            fullName =
+                                (
+                                    member.FirstName + " " +
+                                    member.MiddleName + " " +
+                                    member.LastName
+                                ).Trim(),
+
+                            status =
+                                member.Status,
+
+                            photoPath =
+                                member.PhotoPath
+                        },
+
+                token =
+                    token
+            });
+        }
+
+        // =========================================================
+        // GET PENDING MEMBER ACCOUNTS
+        // ADMIN ONLY
+        //
+        // GET: api/Auth/pending-members
+        // =========================================================
+
+        [HttpGet("pending-members")]
+        [Authorize(Roles = "ADMIN")]
+        public async Task<IActionResult>
+            GetPendingMemberAccounts()
+        {
+            var pendingUsers =
+                await _context.Users
+                    .AsNoTracking()
+                    .Include(u => u.Role)
+                    .Include(u => u.Member)
+                    .Where(u =>
+                        u.ApprovalStatus == "PENDING" &&
+                        u.Role != null &&
+                        u.Role.RoleName != null &&
+                        u.Role.RoleName.ToUpper() == "MEMBER")
+                    .OrderBy(u => u.CreatedDate)
+                    .Select(u => new
                     {
-                        memberId = member.MemberId,
-                        memberCode = member.MemberCode,
-                        firstName = member.FirstName,
-                        middleName = member.MiddleName,
-                        lastName = member.LastName,
-                        fullName =
-                            (
-                                member.FirstName + " " +
-                                member.MiddleName + " " +
-                                member.LastName
-                            ).Trim(),
-                        status = member.Status,
-                        photoPath = member.PhotoPath
-                    },
+                        userId =
+                            u.UserId,
 
-                token = token
+                        username =
+                            u.Username,
+
+                        fullName =
+                            u.FullName,
+
+                        memberId =
+                            u.MemberId,
+
+                        memberCode =
+                            u.Member != null
+                                ? u.Member.MemberCode
+                                : null,
+
+                        firstName =
+                            u.Member != null
+                                ? u.Member.FirstName
+                                : null,
+
+                        lastName =
+                            u.Member != null
+                                ? u.Member.LastName
+                                : null,
+
+                        approvalStatus =
+                            u.ApprovalStatus,
+
+                        createdDate =
+                            u.CreatedDate
+                    })
+                    .ToListAsync();
+
+            return Ok(pendingUsers);
+        }
+
+        // =========================================================
+        // APPROVE MEMBER ACCOUNT
+        // ADMIN ONLY
+        //
+        // POST: api/Auth/approve-member/{userId}
+        // =========================================================
+
+        [HttpPost("approve-member/{userId:int}")]
+        [Authorize(Roles = "ADMIN")]
+        public async Task<IActionResult>
+            ApproveMemberAccount(int userId)
+        {
+            var user =
+                await _context.Users
+                    .Include(u => u.Role)
+                    .FirstOrDefaultAsync(u =>
+                        u.UserId == userId);
+
+            if (user == null)
+            {
+                return NotFound(new
+                {
+                    message =
+                        "USER ACCOUNT NOT FOUND."
+                });
+            }
+
+            string roleName =
+                user.Role?.RoleName?
+                    .Trim()
+                    .ToUpper() ?? "";
+
+            if (roleName != "MEMBER")
+            {
+                return BadRequest(new
+                {
+                    message =
+                        "Only MEMBER accounts can be approved here."
+                });
+            }
+
+            if (!string.Equals(
+                    user.ApprovalStatus,
+                    "PENDING",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest(new
+                {
+                    message =
+                        $"This account is already {user.ApprovalStatus}."
+                });
+            }
+
+            if (!user.MemberId.HasValue)
+            {
+                return BadRequest(new
+                {
+                    message =
+                        "This MEMBER account is not linked to a member."
+                });
+            }
+
+            var member =
+                await _context.Members
+                    .FirstOrDefaultAsync(m =>
+                        m.MemberId ==
+                        user.MemberId.Value);
+
+            if (member == null)
+            {
+                return BadRequest(new
+                {
+                    message =
+                        "The linked member record could not be found."
+                });
+            }
+
+            if (!string.Equals(
+                    member.Status,
+                    "ACTIVE",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest(new
+                {
+                    message =
+                        "The linked member is not ACTIVE."
+                });
+            }
+
+            // =====================================================
+            // APPROVE
+            // =====================================================
+
+            user.ApprovalStatus = "APPROVED";
+            user.IsActive = true;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                message =
+                    "MEMBER ACCOUNT APPROVED SUCCESSFULLY.",
+
+                userId =
+                    user.UserId,
+
+                username =
+                    user.Username,
+
+                memberId =
+                    user.MemberId,
+
+                approvalStatus =
+                    user.ApprovalStatus
+            });
+        }
+
+        // =========================================================
+        // REJECT MEMBER ACCOUNT
+        // ADMIN ONLY
+        //
+        // POST: api/Auth/reject-member/{userId}
+        // =========================================================
+
+        [HttpPost("reject-member/{userId:int}")]
+        [Authorize(Roles = "ADMIN")]
+        public async Task<IActionResult>
+            RejectMemberAccount(int userId)
+        {
+            var user =
+                await _context.Users
+                    .Include(u => u.Role)
+                    .FirstOrDefaultAsync(u =>
+                        u.UserId == userId);
+
+            if (user == null)
+            {
+                return NotFound(new
+                {
+                    message =
+                        "USER ACCOUNT NOT FOUND."
+                });
+            }
+
+            string roleName =
+                user.Role?.RoleName?
+                    .Trim()
+                    .ToUpper() ?? "";
+
+            if (roleName != "MEMBER")
+            {
+                return BadRequest(new
+                {
+                    message =
+                        "Only MEMBER accounts can be rejected here."
+                });
+            }
+
+            if (!string.Equals(
+                    user.ApprovalStatus,
+                    "PENDING",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest(new
+                {
+                    message =
+                        $"This account is already {user.ApprovalStatus}."
+                });
+            }
+
+            // =====================================================
+            // REJECT
+            // =====================================================
+
+            user.ApprovalStatus = "REJECTED";
+            user.IsActive = false;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                message =
+                    "MEMBER ACCOUNT REJECTED.",
+
+                userId =
+                    user.UserId,
+
+                username =
+                    user.Username,
+
+                memberId =
+                    user.MemberId,
+
+                approvalStatus =
+                    user.ApprovalStatus
             });
         }
 
@@ -352,11 +809,12 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            var user = await _context.Users
-                .AsNoTracking()
-                .Include(u => u.Role)
-                .FirstOrDefaultAsync(u =>
-                    u.UserId == userId);
+            var user =
+                await _context.Users
+                    .AsNoTracking()
+                    .Include(u => u.Role)
+                    .FirstOrDefaultAsync(u =>
+                        u.UserId == userId);
 
             if (user == null)
             {
@@ -376,32 +834,50 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            string roleName =
-                user.Role?.RoleName?.Trim() ?? "";
+            // =====================================================
+            // APPROVAL CHECK
+            // =====================================================
 
-            // =====================================================
-            // MEMBER ID
-            // =====================================================
+            if (!string.Equals(
+                    user.ApprovalStatus,
+                    "APPROVED",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return Unauthorized(new
+                {
+                    message =
+                        "USER ACCOUNT IS NOT APPROVED.",
+
+                    approvalStatus =
+                        user.ApprovalStatus
+                });
+            }
+
+            string roleName =
+                user.Role?.RoleName?
+                    .Trim() ?? "";
 
             int? memberId =
                 user.MemberId;
 
             // =====================================================
-            // LOAD MEMBER DIRECTLY
+            // LOAD MEMBER
             // =====================================================
 
             Member? member = null;
 
             if (memberId.HasValue)
             {
-                member = await _context.Members
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(m =>
-                        m.MemberId == memberId.Value);
+                member =
+                    await _context.Members
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(m =>
+                            m.MemberId ==
+                            memberId.Value);
             }
 
             // =====================================================
-            // MEMBER ACCOUNT VALIDATION
+            // MEMBER VALIDATION
             // =====================================================
 
             if (string.Equals(
@@ -415,10 +891,18 @@ namespace EPIC.Api.Controllers
                     {
                         message =
                             "This MEMBER account is not linked to a member record.",
-                        userId = user.UserId,
-                        username = user.Username,
-                        role = roleName,
-                        memberId = (int?)null
+
+                        userId =
+                            user.UserId,
+
+                        username =
+                            user.Username,
+
+                        role =
+                            roleName,
+
+                        memberId =
+                            (int?)null
                     });
                 }
 
@@ -428,10 +912,18 @@ namespace EPIC.Api.Controllers
                     {
                         message =
                             "The MEMBER ID exists, but the member record could not be found.",
-                        userId = user.UserId,
-                        username = user.Username,
-                        role = roleName,
-                        memberId = memberId
+
+                        userId =
+                            user.UserId,
+
+                        username =
+                            user.Username,
+
+                        role =
+                            roleName,
+
+                        memberId =
+                            memberId
                     });
                 }
 
@@ -444,8 +936,12 @@ namespace EPIC.Api.Controllers
                     {
                         message =
                             "The linked member account is inactive.",
-                        userId = user.UserId,
-                        memberId = memberId
+
+                        userId =
+                            user.UserId,
+
+                        memberId =
+                            memberId
                     });
                 }
             }
@@ -464,33 +960,63 @@ namespace EPIC.Api.Controllers
 
             return Ok(new
             {
-                userId = user.UserId,
-                username = user.Username,
-                fullName = user.FullName,
-                roleId = user.RoleId,
-                role = roleName,
-                memberId = memberId,
+                userId =
+                    user.UserId,
 
-                member = member == null
-                    ? null
-                    : new
-                    {
-                        memberId = member.MemberId,
-                        memberCode = member.MemberCode,
-                        firstName = member.FirstName,
-                        middleName = member.MiddleName,
-                        lastName = member.LastName,
-                        fullName =
-                            (
-                                member.FirstName + " " +
-                                member.MiddleName + " " +
-                                member.LastName
-                            ).Trim(),
-                        status = member.Status,
-                        photoPath = member.PhotoPath
-                    },
+                username =
+                    user.Username,
 
-                permissions = permissions
+                fullName =
+                    user.FullName,
+
+                roleId =
+                    user.RoleId,
+
+                role =
+                    roleName,
+
+                memberId =
+                    memberId,
+
+                approvalStatus =
+                    user.ApprovalStatus,
+
+                member =
+                    member == null
+                        ? null
+                        : new
+                        {
+                            memberId =
+                                member.MemberId,
+
+                            memberCode =
+                                member.MemberCode,
+
+                            firstName =
+                                member.FirstName,
+
+                            middleName =
+                                member.MiddleName,
+
+                            lastName =
+                                member.LastName,
+
+                            fullName =
+                                (
+                                    member.FirstName + " " +
+                                    member.MiddleName + " " +
+                                    member.LastName
+                                ).Trim(),
+
+                            status =
+                                member.Status,
+
+                            photoPath =
+                                member.PhotoPath
+                        },
+
+                permissions =
+                    permissions
             });
         }
 
@@ -543,6 +1069,12 @@ namespace EPIC.Api.Controllers
             var expirationMinutes =
                 _configuration.GetValue<int>(
                     "Jwt:ExpirationMinutes");
+
+            // Safe default if not configured
+            if (expirationMinutes <= 0)
+            {
+                expirationMinutes = 60;
+            }
 
             string roleName =
                 user.Role?.RoleName ?? "STAFF";
@@ -638,8 +1170,25 @@ namespace EPIC.Api.Controllers
         public string FullName { get; set; }
             = string.Empty;
 
+        // =====================================================
+        // MEMBER SIGNUP VERIFICATION
+        // =====================================================
+
+        public string MemberCode { get; set; }
+            = string.Empty;
+
+        public string LastName { get; set; }
+            = string.Empty;
+
+        // =====================================================
+        // OPTIONAL
+        // =====================================================
+
+        // Kept for compatibility with existing requests.
+        // The REGISTER endpoint does NOT trust these values.
+
         public string Role { get; set; }
-            = "STAFF";
+            = "MEMBER";
 
         public int? MemberId { get; set; }
     }
