@@ -14,12 +14,15 @@ import Ministries from "./pages/Ministries";
 import Expenses from "./pages/Expenses";
 import Settings from "./pages/Settings";
 
+// EPIC LEARNING
+import LearningPage from "./pages/learning/LearningPage";
+
 import PermissionService from "./PermissionService";
 import PermissionFilter from "./PermissionFilter";
 
-
 type Page =
     | "dashboard"
+    | "learning"
     | "members"
     | "attendance"
     | "member-attendance-report"
@@ -91,7 +94,6 @@ const App: React.FC = () => {
 
         setIsAuthenticated(false);
         setActivePage("dashboard");
-
     };
 
     // =========================================================
@@ -105,7 +107,6 @@ const App: React.FC = () => {
         if (window.innerWidth <= 900) {
             setSidebarOpen(false);
         }
-
     };
 
     // =========================================================
@@ -146,14 +147,15 @@ const App: React.FC = () => {
             case "expenses":
                 return "Expenses Management";
 
+            case "learning":
+                return "EPIC Learning";
+
             case "settings":
                 return "System Settings";
 
             default:
                 return "Dashboard";
-
         }
-
     };
 
     // =========================================================
@@ -194,14 +196,15 @@ const App: React.FC = () => {
             case "expenses":
                 return "Manage church expenses";
 
+            case "learning":
+                return "Grow in faith, develop leaders and strengthen discipleship";
+
             case "settings":
                 return "Manage system configuration";
 
             default:
                 return "Church management overview";
-
         }
-
     };
 
     // =========================================================
@@ -242,14 +245,15 @@ const App: React.FC = () => {
             case "expenses":
                 return <Expenses />;
 
+            case "learning":
+                return <LearningPage />;
+
             case "settings":
                 return <Settings />;
 
             default:
                 return <Dashboard />;
-
         }
-
     };
 
     // =========================================================
@@ -263,7 +267,6 @@ const App: React.FC = () => {
                 <Login />
             </div>
         );
-
     }
 
     // =========================================================
@@ -274,9 +277,10 @@ const App: React.FC = () => {
 
         <div
             className={
-                `epic-app ${sidebarOpen
-                    ? "sidebar-open"
-                    : "sidebar-closed"
+                `epic-app ${
+                    sidebarOpen
+                        ? "sidebar-open"
+                        : "sidebar-closed"
                 }`
             }
         >
@@ -354,15 +358,15 @@ const App: React.FC = () => {
 
                 <nav className="epic-navigation">
 
+                    {/* =================================================
+                        MAIN MENU
+                    ================================================= */}
 
                     <div className="epic-nav-section">
                         MAIN MENU
                     </div>
 
-                    {/* =================================================
-                        DASHBOARD
-                        Dashboard View
-                    ================================================= */}
+                    {/* DASHBOARD */}
 
                     <PermissionFilter
                         module="Dashboard"
@@ -371,16 +375,16 @@ const App: React.FC = () => {
                         <button
                             type="button"
                             className={
-                                `epic-nav-item ${activePage === "dashboard"
-                                    ? "active"
-                                    : ""
+                                `epic-nav-item ${
+                                    activePage === "dashboard"
+                                        ? "active"
+                                        : ""
                                 }`
                             }
                             onClick={() =>
                                 navigate("dashboard")
                             }
                         >
-
                             <span className="epic-nav-icon">
                                 ▦
                             </span>
@@ -388,30 +392,36 @@ const App: React.FC = () => {
                             <span>
                                 Dashboard
                             </span>
-
                         </button>
                     </PermissionFilter>
 
-                    {/* =================================================
-                        CHURCH SERVICES
-                        Church Services View
-                    ================================================= */}
+                    {/* CHURCH SERVICES */}
 
                     {PermissionService.canView("Church Services") && (
                         <button
                             type="button"
-                            className={`epic-nav-item ${activePage === "services" ? "active" : ""
-                                }`}
-                            onClick={() => navigate("services")}
+                            className={
+                                `epic-nav-item ${
+                                    activePage === "services"
+                                        ? "active"
+                                        : ""
+                                }`
+                            }
+                            onClick={() =>
+                                navigate("services")
+                            }
                         >
-                            <span className="epic-nav-icon">⛪</span>
-                            <span>Church Services</span>
+                            <span className="epic-nav-icon">
+                                ⛪
+                            </span>
+
+                            <span>
+                                Church Services
+                            </span>
                         </button>
                     )}
-                    {/* =================================================
-                        MEMBER ATTENDANCE REPORT
-                        Uses Attendance View permission
-                    ================================================= */}
+
+                    {/* MEMBER ATTENDANCE REPORT */}
 
                     <PermissionFilter
                         module="Attendance"
@@ -420,10 +430,11 @@ const App: React.FC = () => {
                         <button
                             type="button"
                             className={
-                                `epic-nav-item ${activePage ===
+                                `epic-nav-item ${
+                                    activePage ===
                                     "member-attendance-report"
-                                    ? "active"
-                                    : ""
+                                        ? "active"
+                                        : ""
                                 }`
                             }
                             onClick={() =>
@@ -432,7 +443,6 @@ const App: React.FC = () => {
                                 )
                             }
                         >
-
                             <span className="epic-nav-icon">
                                 📊
                             </span>
@@ -440,40 +450,67 @@ const App: React.FC = () => {
                             <span>
                                 Member Attendance Report
                             </span>
-
                         </button>
                     </PermissionFilter>
 
-                    {/* =================================================
-                        MEMBERS
-                    ================================================= */}
+                    {/* MEMBERS */}
 
-                    <PermissionFilter module="Members" action="view">
+                    <PermissionFilter
+                        module="Members"
+                        action="view"
+                    >
                         <button
                             type="button"
-                            className={`epic-nav-item ${activePage === "members" ? "active" : ""
-                                }`}
-                            onClick={() => navigate("members")}
+                            className={
+                                `epic-nav-item ${
+                                    activePage === "members"
+                                        ? "active"
+                                        : ""
+                                }`
+                            }
+                            onClick={() =>
+                                navigate("members")
+                            }
                         >
-                            <span className="epic-nav-icon">♟</span>
-                            <span>Members</span>
+                            <span className="epic-nav-icon">
+                                ♟
+                            </span>
+
+                            <span>
+                                Members
+                            </span>
                         </button>
                     </PermissionFilter>
-                    {/* =================================================
-                        ATTENDANCE
-                    ================================================= */}
 
-                    <PermissionFilter module="Attendance" action="view">
+                    {/* ATTENDANCE */}
+
+                    <PermissionFilter
+                        module="Attendance"
+                        action="view"
+                    >
                         <button
                             type="button"
-                            className={`epic-nav-item ${activePage === "attendance" ? "active" : ""
-                                }`}
-                            onClick={() => navigate("attendance")}
+                            className={
+                                `epic-nav-item ${
+                                    activePage === "attendance"
+                                        ? "active"
+                                        : ""
+                                }`
+                            }
+                            onClick={() =>
+                                navigate("attendance")
+                            }
                         >
-                            <span className="epic-nav-icon">✓</span>
-                            <span>Attendance</span>
+                            <span className="epic-nav-icon">
+                                ✓
+                            </span>
+
+                            <span>
+                                Attendance
+                            </span>
                         </button>
                     </PermissionFilter>
+
                     {/* =================================================
                         MANAGEMENT
                     ================================================= */}
@@ -482,23 +519,36 @@ const App: React.FC = () => {
                         MANAGEMENT
                     </div>
 
-                    {/* =================================================
-                        MINISTRIES
-                    ================================================= */}
-                    <PermissionFilter module="Ministries" action="view">
+                    {/* MINISTRIES */}
+
+                    <PermissionFilter
+                        module="Ministries"
+                        action="view"
+                    >
                         <button
                             type="button"
-                            className={`epic-nav-item ${activePage === "ministries" ? "active" : ""
-                                }`}
-                            onClick={() => navigate("ministries")}
+                            className={
+                                `epic-nav-item ${
+                                    activePage === "ministries"
+                                        ? "active"
+                                        : ""
+                                }`
+                            }
+                            onClick={() =>
+                                navigate("ministries")
+                            }
                         >
-                            <span className="epic-nav-icon">♫</span>
-                            <span>Ministries</span>
+                            <span className="epic-nav-icon">
+                                ♫
+                            </span>
+
+                            <span>
+                                Ministries
+                            </span>
                         </button>
                     </PermissionFilter>
-                    {/* =================================================
-                        VISITORS
-                    ================================================= */}
+
+                    {/* VISITORS */}
 
                     <PermissionFilter
                         module="Visitors"
@@ -507,16 +557,16 @@ const App: React.FC = () => {
                         <button
                             type="button"
                             className={
-                                `epic-nav-item ${activePage === "visitors"
-                                    ? "active"
-                                    : ""
+                                `epic-nav-item ${
+                                    activePage === "visitors"
+                                        ? "active"
+                                        : ""
                                 }`
                             }
                             onClick={() =>
                                 navigate("visitors")
                             }
                         >
-
                             <span className="epic-nav-icon">
                                 👤
                             </span>
@@ -524,13 +574,10 @@ const App: React.FC = () => {
                             <span>
                                 Visitors
                             </span>
-
                         </button>
                     </PermissionFilter>
 
-                    {/* =================================================
-                        GIVING
-                    ================================================= */}
+                    {/* GIVING */}
 
                     <PermissionFilter
                         module="Giving"
@@ -539,16 +586,16 @@ const App: React.FC = () => {
                         <button
                             type="button"
                             className={
-                                `epic-nav-item ${activePage === "giving"
-                                    ? "active"
-                                    : ""
+                                `epic-nav-item ${
+                                    activePage === "giving"
+                                        ? "active"
+                                        : ""
                                 }`
                             }
                             onClick={() =>
                                 navigate("giving")
                             }
                         >
-
                             <span className="epic-nav-icon">
                                 ₱
                             </span>
@@ -556,13 +603,10 @@ const App: React.FC = () => {
                             <span>
                                 Giving
                             </span>
-
                         </button>
                     </PermissionFilter>
 
-                    {/* =================================================
-                        INCOME
-                    ================================================= */}
+                    {/* INCOME */}
 
                     <PermissionFilter
                         module="Income"
@@ -571,16 +615,16 @@ const App: React.FC = () => {
                         <button
                             type="button"
                             className={
-                                `epic-nav-item ${activePage === "income"
-                                    ? "active"
-                                    : ""
+                                `epic-nav-item ${
+                                    activePage === "income"
+                                        ? "active"
+                                        : ""
                                 }`
                             }
                             onClick={() =>
                                 navigate("income")
                             }
                         >
-
                             <span className="epic-nav-icon">
                                 ↗
                             </span>
@@ -588,13 +632,10 @@ const App: React.FC = () => {
                             <span>
                                 Income
                             </span>
-
                         </button>
                     </PermissionFilter>
 
-                    {/* =================================================
-                        EXPENSES
-                    ================================================= */}
+                    {/* EXPENSES */}
 
                     <PermissionFilter
                         module="Expenses"
@@ -603,16 +644,16 @@ const App: React.FC = () => {
                         <button
                             type="button"
                             className={
-                                `epic-nav-item ${activePage === "expenses"
-                                    ? "active"
-                                    : ""
+                                `epic-nav-item ${
+                                    activePage === "expenses"
+                                        ? "active"
+                                        : ""
                                 }`
                             }
                             onClick={() =>
                                 navigate("expenses")
                             }
                         >
-
                             <span className="epic-nav-icon">
                                 −
                             </span>
@@ -620,9 +661,38 @@ const App: React.FC = () => {
                             <span>
                                 Expenses
                             </span>
-
                         </button>
                     </PermissionFilter>
+
+                    {/* =================================================
+                        EPIC LEARNING
+                    ================================================= */}
+
+                    <div className="epic-nav-section epic-nav-section-space">
+                        EPIC LEARNING
+                    </div>
+
+                    <button
+                        type="button"
+                        className={
+                            `epic-nav-item ${
+                                activePage === "learning"
+                                    ? "active"
+                                    : ""
+                            }`
+                        }
+                        onClick={() =>
+                            navigate("learning")
+                        }
+                    >
+                        <span className="epic-nav-icon">
+                            📚
+                        </span>
+
+                        <span>
+                            EPIC Learning
+                        </span>
+                    </button>
 
                     {/* =================================================
                         SYSTEM
@@ -632,9 +702,7 @@ const App: React.FC = () => {
                         SYSTEM
                     </div>
 
-                    {/* =================================================
-                        SETTINGS
-                    ================================================= */}
+                    {/* SETTINGS */}
 
                     <PermissionFilter
                         module="Church Settings"
@@ -643,16 +711,16 @@ const App: React.FC = () => {
                         <button
                             type="button"
                             className={
-                                `epic-nav-item ${activePage === "settings"
-                                    ? "active"
-                                    : ""
+                                `epic-nav-item ${
+                                    activePage === "settings"
+                                        ? "active"
+                                        : ""
                                 }`
                             }
                             onClick={() =>
                                 navigate("settings")
                             }
                         >
-
                             <span className="epic-nav-icon">
                                 ⚙
                             </span>
@@ -660,7 +728,6 @@ const App: React.FC = () => {
                             <span>
                                 Settings
                             </span>
-
                         </button>
                     </PermissionFilter>
 
@@ -726,13 +793,11 @@ const App: React.FC = () => {
                         className="epic-logout-button"
                         onClick={handleLogout}
                     >
-
                         <span>
                             ⇥
                         </span>
 
                         Logout
-
                     </button>
 
                 </div>
@@ -878,9 +943,7 @@ const App: React.FC = () => {
             </main>
 
         </div>
-
     );
-
 };
 
 export default App;
