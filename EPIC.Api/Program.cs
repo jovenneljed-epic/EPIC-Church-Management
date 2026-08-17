@@ -7,16 +7,18 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.Extensions.Configuration;
 using System.Text;
 
 var options = new WebApplicationOptions
 {
-    Args = args,
-    EnvironmentName = Environments.Production
+    Args = args
 };
 
 var builder = WebApplication.CreateBuilder(options);
+
+// ============================================================
+// CONFIGURATION
+// ============================================================
 
 builder.Configuration.Sources
     .OfType<Microsoft.Extensions.Configuration.Json.JsonConfigurationSource>()
@@ -25,6 +27,7 @@ builder.Configuration.Sources
     {
         source.ReloadOnChange = false;
     });
+
 builder.Configuration.Sources.Clear();
 
 builder.Configuration
@@ -40,15 +43,10 @@ builder.Configuration
     )
     .AddEnvironmentVariables();
 
-// ============================================================
-// 1. CONFIGURATION
-// ============================================================
-
 var configuration = builder.Configuration;
 
-
 // ============================================================
-// 2. DATABASE
+// 1. DATABASE
 // ============================================================
 
 var connectionString =
@@ -66,39 +64,19 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(connectionString);
 });
 
-
 // ============================================================
-// 3. CONTROLLERS
+// 2. CONTROLLERS
 // ============================================================
 
 builder.Services.AddControllers();
 
+// ============================================================
+// 3. CORS
+// ============================================================
+
 
 // ============================================================
-// 4. CORS
-// ============================================================
-//
-// EPIC FRONTEND
-//
-// Local development:
-// http://localhost:5173
-// http://localhost:5174
-// http://localhost:5175
-// http://localhost:5176
-//
-// LAN development:
-// http://192.168.1.10:5173
-// http://192.168.1.10:5174
-// http://192.168.1.10:5175
-// http://192.168.1.10:5176
-//
-// Preview:
-// http://localhost:4173
-// http://192.168.1.10:4173
-//
-// EPIC API:
-// http://192.168.1.10:5109
-//
+// 3. CORS
 // ============================================================
 
 builder.Services.AddCors(options =>
@@ -106,41 +84,52 @@ builder.Services.AddCors(options =>
     options.AddPolicy("EPICWebPolicy", policy =>
     {
         policy
-            .WithOrigins(
-          
+            .SetIsOriginAllowed(origin =>
+            {
+                // Localhost development
+                if (origin.StartsWith(
+                    "http://localhost:",
+                    StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
 
-                "http://localhost:5173",
-                "http://localhost:5174",
-                "http://localhost:5175",
-                "http://localhost:5176",
-                "http://localhost:5177",
+                // LAN development
+                if (origin.StartsWith(
+                    "http://192.168.1.10:",
+                    StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
 
-                "http://192.168.1.10:5173",
-                "http://192.168.1.10:5174",
-                "http://192.168.1.10:5175",
-                "http://192.168.1.10:5176",
-                "http://192.168.1.10:5177",
+                // Production frontend
+                if (origin.Equals(
+                    "https://epic-cms.vercel.app",
+                    StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
 
-                "http://localhost:4173",
-                "http://192.168.1.10:4173",
-                "https://epic-cms.vercel.app"
-            )
+                return false;
+            })
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
     });
 });
+
+
+
 // ============================================================
-// 5. APPLICATION SERVICES
+// 4. APPLICATION SERVICES
 // ============================================================
 
 builder.Services.AddScoped<
     IPermissionService,
     PermissionService>();
 
-
 // ============================================================
-// 6. JWT CONFIGURATION
+// 5. JWT CONFIGURATION
 // ============================================================
 
 var jwtKey =
@@ -151,7 +140,6 @@ var jwtIssuer =
 
 var jwtAudience =
     configuration["Jwt:Audience"];
-
 
 if (string.IsNullOrWhiteSpace(jwtKey))
 {
@@ -174,9 +162,8 @@ if (string.IsNullOrWhiteSpace(jwtAudience))
     );
 }
 
-
 // ============================================================
-// 7. AUTHENTICATION
+// 6. AUTHENTICATION
 // ============================================================
 
 builder.Services
@@ -211,16 +198,14 @@ builder.Services
             };
     });
 
-
 // ============================================================
-// 8. AUTHORIZATION
+// 7. AUTHORIZATION
 // ============================================================
 
 builder.Services.AddAuthorization();
 
-
 // ============================================================
-// 9. SWAGGER
+// 8. SWAGGER
 // ============================================================
 
 builder.Services.AddEndpointsApiExplorer();
@@ -241,7 +226,6 @@ builder.Services.AddSwaggerGen(options =>
                 "EPIC Church Management System API"
         }
     );
-
 
     // --------------------------------------------------------
     // JWT AUTHORIZATION
@@ -271,7 +255,6 @@ builder.Services.AddSwaggerGen(options =>
         }
     );
 
-
     options.AddSecurityRequirement(
         document =>
             new Microsoft.OpenApi.OpenApiSecurityRequirement
@@ -288,16 +271,14 @@ builder.Services.AddSwaggerGen(options =>
     );
 });
 
-
 // ============================================================
-// 10. BUILD APPLICATION
+// 9. BUILD APPLICATION
 // ============================================================
 
 var app = builder.Build();
 
-
 // ============================================================
-// 11. MEMBER PHOTO STORAGE
+// 10. MEMBER PHOTO STORAGE
 // ============================================================
 
 var memberPhotoFolder =
@@ -310,11 +291,8 @@ Directory.CreateDirectory(
     memberPhotoFolder
 );
 
-
 // ============================================================
-// ============================================================
-// ============================================================
-// 12. SWAGGER
+// 11. SWAGGER
 // ============================================================
 
 app.UseSwagger();
@@ -331,21 +309,26 @@ app.UseSwaggerUI(options =>
 });
 
 // ============================================================
-// 13. CORS
+// 12. CORS
 // ============================================================
 //
-// MUST COME BEFORE AUTHENTICATION/AUTHORIZATION
+// IMPORTANT:
 //
-// This allows:
-// React :5176
-//     ↓
-// API  :5109
+// CORS MUST RUN BEFORE AUTHENTICATION/AUTHORIZATION.
+//
+// React
+// http://localhost:5173
+//       |
+//       v
+// EPIC API
+// http://localhost:5109
 //
 // ============================================================
 
 app.UseCors("EPICWebPolicy");
+
 // ============================================================
-// 14. STATIC FILES - MEMBER PHOTOS
+// 13. STATIC FILES - MEMBER PHOTOS
 // ============================================================
 
 app.UseStaticFiles(
@@ -355,51 +338,51 @@ app.UseStaticFiles(
             new PhysicalFileProvider(
                 memberPhotoFolder
             ),
+
         RequestPath =
             "/member-photos"
     }
 );
 
-
 // ============================================================
-// 15. HTTPS REDIRECTION
+// 14. HTTPS REDIRECTION
 // ============================================================
 //
-// INTENTIONALLY DISABLED
+// INTENTIONALLY DISABLED.
 //
-// EPIC is currently using:
+// EPIC currently uses:
+//
+// http://localhost:5109
+//
+// and
 //
 // http://192.168.1.10:5109
 //
-// Do NOT enable UseHttpsRedirection() while testing
-// the LAN HTTP API.
+// Do NOT enable UseHttpsRedirection()
+// during LAN HTTP development.
 //
 // ============================================================
 
-
 // ============================================================
-// 16. AUTHENTICATION
+// 15. AUTHENTICATION
 // ============================================================
 
 app.UseAuthentication();
 
-
 // ============================================================
-// 17. AUTHORIZATION
+// 16. AUTHORIZATION
 // ============================================================
 
 app.UseAuthorization();
 
-
 // ============================================================
-// 18. CONTROLLERS
+// 17. CONTROLLERS
 // ============================================================
 
 app.MapControllers();
 
-
 // ============================================================
-// 19. START APPLICATION
+// 18. START APPLICATION
 // ============================================================
 
 app.Run();

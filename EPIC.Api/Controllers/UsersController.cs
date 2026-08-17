@@ -37,7 +37,6 @@ namespace EPIC.Api.Controllers
                     userId = u.UserId,
                     username = u.Username,
                     fullName = u.FullName,
-
                     roleId = u.RoleId,
 
                     role = u.Role != null
@@ -45,7 +44,6 @@ namespace EPIC.Api.Controllers
                         : null,
 
                     isActive = u.IsActive,
-
                     createdDate = u.CreatedDate
                 })
                 .ToListAsync();
@@ -95,36 +93,82 @@ namespace EPIC.Api.Controllers
         // =========================================================
         // CREATE USER
         // POST: api/users
+        // ADMIN ONLY
         // =========================================================
 
         [HttpPost]
+        [Authorize(Roles = "ADMIN")]
         public async Task<IActionResult> CreateUser(
             CreateUserRequest request)
         {
+            // -----------------------------------------------------
+            // Validate request
+            // -----------------------------------------------------
+
             if (string.IsNullOrWhiteSpace(request.Username))
-                return BadRequest("Username is required.");
+            {
+                return BadRequest(new
+                {
+                    message = "Username is required."
+                });
+            }
 
             if (string.IsNullOrWhiteSpace(request.Password))
-                return BadRequest("Password is required.");
+            {
+                return BadRequest(new
+                {
+                    message = "Password is required."
+                });
+            }
+
+            if (request.Password.Length < 6)
+            {
+                return BadRequest(new
+                {
+                    message = "Password must be at least 6 characters."
+                });
+            }
 
             if (string.IsNullOrWhiteSpace(request.FullName))
-                return BadRequest("Full name is required.");
+            {
+                return BadRequest(new
+                {
+                    message = "Full name is required."
+                });
+            }
 
             if (request.RoleId <= 0)
-                return BadRequest("Role is required.");
+            {
+                return BadRequest(new
+                {
+                    message = "Role is required."
+                });
+            }
+
+            // -----------------------------------------------------
+            // Normalize username
+            // -----------------------------------------------------
 
             var username = request.Username.Trim();
 
-            var exists = await _context.Users
+            // -----------------------------------------------------
+            // Check duplicate username
+            // -----------------------------------------------------
+
+            var usernameExists = await _context.Users
                 .AnyAsync(u => u.Username == username);
 
-            if (exists)
+            if (usernameExists)
             {
                 return Conflict(new
                 {
                     message = "Username already exists."
                 });
             }
+
+            // -----------------------------------------------------
+            // Validate role
+            // -----------------------------------------------------
 
             var role = await _context.Roles
                 .FirstOrDefaultAsync(r =>
@@ -135,9 +179,14 @@ namespace EPIC.Api.Controllers
             {
                 return BadRequest(new
                 {
-                    message = "Selected role does not exist or is inactive."
+                    message =
+                        "Selected role does not exist or is inactive."
                 });
             }
+
+            // -----------------------------------------------------
+            // Create user
+            // -----------------------------------------------------
 
             var user = new User
             {
@@ -160,6 +209,10 @@ namespace EPIC.Api.Controllers
 
             await _context.SaveChangesAsync();
 
+            // -----------------------------------------------------
+            // Return created user
+            // -----------------------------------------------------
+
             return CreatedAtAction(
                 nameof(GetUser),
                 new { id = user.UserId },
@@ -170,21 +223,29 @@ namespace EPIC.Api.Controllers
                     fullName = user.FullName,
                     roleId = role.RoleId,
                     role = role.RoleName,
-                    isActive = user.IsActive
+                    isActive = user.IsActive,
+                    createdDate = user.CreatedDate
                 });
         }
 
         // =========================================================
         // UPDATE USER
         // PUT: api/users/1
+        // ADMIN ONLY
         // =========================================================
 
         [HttpPut("{id:int}")]
+        [Authorize(Roles = "ADMIN")]
         public async Task<IActionResult> UpdateUser(
             int id,
             UpdateUserRequest request)
         {
+            // -----------------------------------------------------
+            // Find user
+            // -----------------------------------------------------
+
             var user = await _context.Users
+                .Include(u => u.Role)
                 .FirstOrDefaultAsync(u => u.UserId == id);
 
             if (user == null)
@@ -195,10 +256,21 @@ namespace EPIC.Api.Controllers
                 });
             }
 
+            // -----------------------------------------------------
+            // Validate full name
+            // -----------------------------------------------------
+
             if (string.IsNullOrWhiteSpace(request.FullName))
             {
-                return BadRequest("Full name is required.");
+                return BadRequest(new
+                {
+                    message = "Full name is required."
+                });
             }
+
+            // -----------------------------------------------------
+            // Validate role
+            // -----------------------------------------------------
 
             var role = await _context.Roles
                 .FirstOrDefaultAsync(r =>
@@ -209,13 +281,18 @@ namespace EPIC.Api.Controllers
             {
                 return BadRequest(new
                 {
-                    message = "Selected role does not exist or is inactive."
+                    message =
+                        "Selected role does not exist or is inactive."
                 });
             }
 
+            // -----------------------------------------------------
+            // Update user
+            // -----------------------------------------------------
+
             user.FullName = request.FullName.Trim();
 
-            user.RoleId = request.RoleId;
+            user.RoleId = role.RoleId;
 
             if (request.IsActive.HasValue)
             {
@@ -245,23 +322,39 @@ namespace EPIC.Api.Controllers
         // =========================================================
         // CHANGE PASSWORD
         // PUT: api/users/1/password
+        // ADMIN ONLY
         // =========================================================
 
         [HttpPut("{id:int}/password")]
+        [Authorize(Roles = "ADMIN")]
         public async Task<IActionResult> ChangePassword(
             int id,
             ChangePasswordRequest request)
         {
+            // -----------------------------------------------------
+            // Validate password
+            // -----------------------------------------------------
+
             if (string.IsNullOrWhiteSpace(request.NewPassword))
             {
-                return BadRequest("New password is required.");
+                return BadRequest(new
+                {
+                    message = "New password is required."
+                });
             }
 
             if (request.NewPassword.Length < 6)
             {
-                return BadRequest(
-                    "Password must be at least 6 characters.");
+                return BadRequest(new
+                {
+                    message =
+                        "Password must be at least 6 characters."
+                });
             }
+
+            // -----------------------------------------------------
+            // Find user
+            // -----------------------------------------------------
 
             var user = await _context.Users
                 .FirstOrDefaultAsync(u => u.UserId == id);
@@ -273,6 +366,10 @@ namespace EPIC.Api.Controllers
                     message = "User not found."
                 });
             }
+
+            // -----------------------------------------------------
+            // Hash new password
+            // -----------------------------------------------------
 
             user.PasswordHash =
                 BCrypt.Net.BCrypt.HashPassword(
@@ -282,20 +379,30 @@ namespace EPIC.Api.Controllers
 
             return Ok(new
             {
-                message = "PASSWORD UPDATED SUCCESSFULLY."
+                message = "PASSWORD UPDATED SUCCESSFULLY.",
+
+                userId = user.UserId,
+
+                username = user.Username
             });
         }
 
         // =========================================================
         // ACTIVATE / DEACTIVATE USER
         // PUT: api/users/1/status
+        // ADMIN ONLY
         // =========================================================
 
         [HttpPut("{id:int}/status")]
+        [Authorize(Roles = "ADMIN")]
         public async Task<IActionResult> UpdateStatus(
             int id,
             UpdateUserStatusRequest request)
         {
+            // -----------------------------------------------------
+            // Find user
+            // -----------------------------------------------------
+
             var user = await _context.Users
                 .FirstOrDefaultAsync(u => u.UserId == id);
 
@@ -306,6 +413,27 @@ namespace EPIC.Api.Controllers
                     message = "User not found."
                 });
             }
+
+            // -----------------------------------------------------
+            // Prevent administrator from deactivating themselves
+            // -----------------------------------------------------
+
+            var currentUserId = GetCurrentUserId();
+
+            if (currentUserId.HasValue &&
+                currentUserId.Value == id &&
+                !request.IsActive)
+            {
+                return BadRequest(new
+                {
+                    message =
+                        "You cannot deactivate your own administrator account."
+                });
+            }
+
+            // -----------------------------------------------------
+            // Update status
+            // -----------------------------------------------------
 
             user.IsActive = request.IsActive;
 
@@ -321,6 +449,146 @@ namespace EPIC.Api.Controllers
 
                 isActive = user.IsActive
             });
+        }
+
+        // =========================================================
+        // DELETE USER
+        // DELETE: api/users/1
+        // ADMIN ONLY
+        // =========================================================
+
+        [HttpDelete("{id:int}")]
+        [Authorize(Roles = "ADMIN")]
+        public async Task<IActionResult> DeleteUser(int id)
+        {
+            // -----------------------------------------------------
+            // Find user
+            // -----------------------------------------------------
+
+            var user = await _context.Users
+                .Include(u => u.Role)
+                .FirstOrDefaultAsync(u => u.UserId == id);
+
+            if (user == null)
+            {
+                return NotFound(new
+                {
+                    message = "User not found."
+                });
+            }
+
+            // -----------------------------------------------------
+            // Get currently logged-in user
+            // -----------------------------------------------------
+
+            var currentUserId = GetCurrentUserId();
+
+            // -----------------------------------------------------
+            // Prevent self-deletion
+            // -----------------------------------------------------
+
+            if (currentUserId.HasValue &&
+                currentUserId.Value == id)
+            {
+                return BadRequest(new
+                {
+                    message =
+                        "You cannot delete your own administrator account."
+                });
+            }
+
+            // -----------------------------------------------------
+            // Prevent deleting the last administrator
+            // -----------------------------------------------------
+
+            if (user.Role != null &&
+                user.Role.RoleName.Equals(
+                    "ADMIN",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                var adminCount = await _context.Users
+                    .Include(u => u.Role)
+                    .CountAsync(u =>
+                        u.Role != null &&
+                        u.Role.RoleName.ToUpper() == "ADMIN");
+
+                if (adminCount <= 1)
+                {
+                    return BadRequest(new
+                    {
+                        message =
+                            "The last administrator account cannot be deleted."
+                    });
+                }
+            }
+
+            // -----------------------------------------------------
+            // Delete user
+            // -----------------------------------------------------
+
+            _context.Users.Remove(user);
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                return Conflict(new
+                {
+                    message =
+                        "This user cannot be deleted because the account is associated with other records in the system."
+                });
+            }
+
+            return Ok(new
+            {
+                message = "USER DELETED SUCCESSFULLY.",
+
+                userId = user.UserId,
+
+                username = user.Username,
+
+                fullName = user.FullName
+            });
+        }
+
+        // =========================================================
+        // CURRENT USER ID
+        // =========================================================
+
+        private int? GetCurrentUserId()
+        {
+            // -----------------------------------------------------
+            // Try NameIdentifier
+            // -----------------------------------------------------
+
+            var userIdClaim =
+                User.FindFirstValue(
+                    ClaimTypes.NameIdentifier);
+
+            if (int.TryParse(
+                userIdClaim,
+                out var userId))
+            {
+                return userId;
+            }
+
+            // -----------------------------------------------------
+            // Try JWT "sub"
+            // -----------------------------------------------------
+
+            var subjectClaim =
+                User.FindFirstValue("sub");
+
+            if (int.TryParse(
+                subjectClaim,
+                out userId))
+            {
+                return userId;
+            }
+
+            return null;
         }
     }
 
