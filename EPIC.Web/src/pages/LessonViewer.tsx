@@ -388,7 +388,6 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
         videoUrl &&
         !youtubeId &&
         !vimeoId;
-
     // =====================================================
     // VIDEO COMPLETE
     // =====================================================
@@ -401,26 +400,12 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
         );
 
         /*
-         * We intentionally do not automatically
-         * complete the lesson here.
+         * Video completion does NOT automatically
+         * complete the lesson.
          *
-         * The learner will still need to click
+         * The learner must still click
          * Mark Lesson Complete.
          */
-
-        if (lesson) {
-
-            setLesson({
-                ...lesson,
-
-                progress: {
-                    ...(lesson.progress || {}),
-
-                    progressPercentage: 100
-                }
-            });
-
-        }
     };
 
     // =====================================================
@@ -1056,3 +1041,5 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
 };
 
 export default LessonViewer;
+
+
