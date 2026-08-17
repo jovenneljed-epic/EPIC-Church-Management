@@ -1,0 +1,1102 @@
+﻿/* =========================================================
+   EPIC LEARNING
+   MODERN LMS DESIGN
+========================================================= */
+
+.epic-learning-page {
+    width: 100%;
+    max-width: 1500px;
+    margin: 0 auto;
+    padding: 0 4px 40px;
+    color: #10295a;
+}
+
+/* =========================================================
+   HERO
+========================================================= */
+
+.learning-hero {
+    position: relative;
+    min-height: 440px;
+    border-radius: 0 0 30px 30px;
+    overflow: hidden;
+
+    display: flex;
+    align-items: center;
+
+    padding: 60px 56px;
+
+    background:
+        radial-gradient(
+            circle at 78% 25%,
+            rgba(255, 220, 145, 0.55),
+            transparent 32%
+        ),
+        linear-gradient(
+            115deg,
+            #ffffff 0%,
+            #f8f5ee 48%,
+            #e9dfc7 100%
+        );
+
+    box-shadow:
+        0 18px 45px rgba(16, 41, 90, 0.08);
+}
+
+/* Decorative light */
+
+.learning-hero::before {
+    content: "";
+    position: absolute;
+
+    width: 520px;
+    height: 520px;
+
+    right: -130px;
+    top: -160px;
+
+    border-radius: 50%;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(255, 255, 255, 0.9),
+            rgba(255, 224, 157, 0.1) 60%,
+            transparent 72%
+        );
+}
+
+/* =========================================================
+   HERO CONTENT
+========================================================= */
+
+.learning-hero-content {
+    position: relative;
+    z-index: 2;
+
+    width: 58%;
+    max-width: 720px;
+}
+
+.learning-eyebrow {
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 2.4px;
+    color: #3567ad;
+
+    margin-bottom: 14px;
+}
+
+.learning-hero h1 {
+    margin: 0;
+
+    font-family:
+        Georgia,
+        "Times New Roman",
+        serif;
+
+    font-size: clamp(48px, 5vw, 76px);
+
+    line-height: 0.98;
+
+    letter-spacing: -2px;
+
+    color: #102f68;
+}
+
+.learning-hero-description {
+    max-width: 650px;
+
+    margin: 25px 0 14px;
+
+    font-size: 19px;
+    line-height: 1.65;
+
+    color: #33445f;
+}
+
+.learning-verse {
+    max-width: 650px;
+
+    margin: 0 0 30px;
+
+    font-size: 16px;
+    line-height: 1.7;
+
+    font-style: italic;
+
+    color: #53627a;
+}
+
+.learning-verse strong {
+    display: inline-block;
+    margin-left: 6px;
+
+    font-style: normal;
+    color: #203c70;
+}
+
+/* =========================================================
+   HERO BUTTONS
+========================================================= */
+
+.learning-hero-buttons {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.learning-primary-btn,
+.learning-secondary-btn {
+    min-height: 52px;
+
+    padding: 0 24px;
+
+    border-radius: 11px;
+
+    font-size: 15px;
+    font-weight: 700;
+
+    cursor: pointer;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: 10px;
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.learning-primary-btn {
+    border: none;
+
+    background: #123b7a;
+    color: white;
+
+    box-shadow:
+        0 10px 20px rgba(18, 59, 122, 0.22);
+}
+
+.learning-secondary-btn {
+    border: 1px solid #123b7a;
+
+    background: rgba(255, 255, 255, 0.8);
+
+    color: #123b7a;
+}
+
+.learning-primary-btn:hover,
+.learning-secondary-btn:hover {
+    transform: translateY(-2px);
+}
+
+/* =========================================================
+   HERO VISUAL
+========================================================= */
+
+.learning-hero-visual {
+    position: absolute;
+
+    right: 45px;
+    bottom: 40px;
+
+    width: 38%;
+    max-width: 520px;
+    height: 310px;
+
+    border-radius: 20px;
+
+    overflow: hidden;
+
+    transform: rotate(1deg);
+
+    box-shadow:
+        0 25px 45px rgba(35, 47, 70, 0.18);
+
+    background:
+        linear-gradient(
+            135deg,
+            #f7f0df,
+            #e4d5b5
+        );
+}
+
+.learning-hero-visual img {
+    width: 100%;
+    height: 100%;
+
+    display: block;
+
+    object-fit: cover;
+}
+
+.learning-book-placeholder {
+    width: 100%;
+    height: 100%;
+
+    display: flex;
+    flex-direction: column;
+
+    align-items: center;
+    justify-content: center;
+
+    gap: 14px;
+
+    background:
+        radial-gradient(
+            circle at 50% 35%,
+            #fffdf8,
+            #e9dcc2
+        );
+
+    color: #163b78;
+}
+
+.learning-book-icon {
+    font-size: 100px;
+
+    filter:
+        drop-shadow(
+            0 15px 15px rgba(0, 0, 0, 0.15)
+        );
+}
+
+.learning-book-placeholder span {
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: 2px;
+}
+
+/* =========================================================
+   STATISTICS CARD
+========================================================= */
+
+.learning-stat-card {
+    position: relative;
+    z-index: 5;
+
+    margin: -38px 28px 32px;
+
+    min-height: 145px;
+
+    background: white;
+
+    border-radius: 20px;
+
+    display: grid;
+    grid-template-columns:
+        1fr auto
+        1fr auto
+        1fr auto
+        1fr;
+
+    align-items: center;
+
+    box-shadow:
+        0 15px 40px rgba(19, 44, 84, 0.11);
+
+    border: 1px solid rgba(20, 45, 85, 0.06);
+}
+
+.learning-stat {
+    display: flex;
+    align-items: center;
+
+    gap: 16px;
+
+    padding: 22px 28px;
+}
+
+.learning-stat-icon {
+    width: 62px;
+    height: 62px;
+
+    flex: 0 0 62px;
+
+    border-radius: 50%;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 27px;
+    font-weight: 800;
+}
+
+.learning-stat-icon.blue {
+    background: #e9f1fc;
+    color: #1d4e91;
+}
+
+.learning-stat-icon.green {
+    background: #e9f7ed;
+    color: #279152;
+}
+
+.learning-stat-icon.yellow {
+    background: #fff6d9;
+    color: #d89d00;
+}
+
+.learning-stat-icon.purple {
+    background: #f0eafd;
+    color: #7755b8;
+}
+
+.learning-stat-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.learning-stat-info span {
+    font-size: 13px;
+    font-weight: 700;
+    color: #53617a;
+}
+
+.learning-stat-info strong {
+    margin: 2px 0;
+
+    font-size: 30px;
+    line-height: 1.15;
+
+    color: #163b78;
+}
+
+.learning-stat-info small {
+    font-size: 12px;
+    color: #68758a;
+}
+
+.learning-status-text {
+    font-size: 25px !important;
+}
+
+.learning-stat-divider {
+    width: 1px;
+    height: 65px;
+    background: #dfe4eb;
+}
+
+/* =========================================================
+   MY LEARNING
+========================================================= */
+
+.my-learning-section {
+    padding: 0 28px;
+}
+
+.learning-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    margin-bottom: 20px;
+}
+
+.learning-section-title {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.learning-section-title > span {
+    font-size: 30px;
+}
+
+.learning-section-title h2 {
+    margin: 0;
+
+    font-size: 25px;
+    color: #102f68;
+}
+
+.learning-section-title p {
+    margin: 3px 0 0;
+
+    color: #647187;
+    font-size: 14px;
+}
+
+.learning-course-count {
+    font-size: 14px;
+    font-weight: 700;
+
+    color: #4269a2;
+}
+
+/* =========================================================
+   COURSE GRID
+========================================================= */
+
+.learning-course-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr));
+
+    gap: 22px;
+}
+
+.learning-course-card {
+    overflow: hidden;
+
+    background: white;
+
+    border: 1px solid #e4e8ee;
+
+    border-radius: 18px;
+
+    box-shadow:
+        0 8px 25px rgba(21, 43, 75, 0.06);
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.learning-course-card:hover {
+    transform: translateY(-4px);
+
+    box-shadow:
+        0 16px 35px rgba(21, 43, 75, 0.12);
+}
+
+/* =========================================================
+   COURSE IMAGE
+========================================================= */
+
+.learning-course-image {
+    position: relative;
+
+    height: 190px;
+
+    overflow: hidden;
+
+    background: #edf1f6;
+}
+
+.learning-course-image img {
+    width: 100%;
+    height: 100%;
+
+    display: block;
+
+    object-fit: cover;
+
+    transition:
+        transform 0.35s ease;
+}
+
+.learning-course-card:hover
+.learning-course-image img {
+    transform: scale(1.04);
+}
+
+.learning-course-image-placeholder {
+    width: 100%;
+    height: 100%;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 65px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #edf3fb,
+            #d9e5f5
+        );
+}
+
+.course-status {
+    position: absolute;
+
+    right: 12px;
+    top: 12px;
+
+    padding: 6px 12px;
+
+    border-radius: 20px;
+
+    background: #2876ca;
+
+    color: white;
+
+    font-size: 11px;
+    font-weight: 800;
+
+    box-shadow:
+        0 4px 10px rgba(0, 0, 0, 0.12);
+}
+
+.course-status.completed {
+    background: #28a762;
+}
+
+/* =========================================================
+   COURSE CONTENT
+========================================================= */
+
+.learning-course-content {
+    padding: 20px;
+}
+
+.learning-course-content h3 {
+    margin: 0 0 8px;
+
+    min-height: 48px;
+
+    font-size: 19px;
+    line-height: 1.25;
+
+    color: #132e63;
+}
+
+.learning-course-description {
+    min-height: 44px;
+
+    margin: 0 0 18px;
+
+    font-size: 13px;
+    line-height: 1.55;
+
+    color: #66748b;
+
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+
+    overflow: hidden;
+}
+
+/* =========================================================
+   PROGRESS
+========================================================= */
+
+.course-progress-row {
+    display: flex;
+    align-items: center;
+
+    gap: 10px;
+
+    margin-bottom: 15px;
+}
+
+.course-progress-bar {
+    flex: 1;
+
+    height: 8px;
+
+    overflow: hidden;
+
+    border-radius: 10px;
+
+    background: #e4e9ef;
+}
+
+.course-progress-fill {
+    height: 100%;
+
+    border-radius: inherit;
+
+    background: #3688d8;
+
+    transition:
+        width 0.5s ease;
+}
+
+.course-progress-fill.completed {
+    background: #2eaa64;
+}
+
+.course-progress-row strong {
+    min-width: 38px;
+
+    text-align: right;
+
+    font-size: 12px;
+
+    color: #273f68;
+}
+
+/* =========================================================
+   COURSE META
+========================================================= */
+
+.course-meta {
+    display: flex;
+    flex-wrap: wrap;
+
+    gap: 10px;
+
+    margin-bottom: 17px;
+
+    font-size: 12px;
+
+    color: #68758a;
+}
+
+.course-meta span {
+    white-space: nowrap;
+}
+
+/* =========================================================
+   COURSE ACTION
+========================================================= */
+
+.course-action-btn {
+    width: 100%;
+
+    min-height: 43px;
+
+    border: 1px solid #cbd7e7;
+
+    border-radius: 9px;
+
+    background: white;
+
+    color: #163b78;
+
+    font-size: 13px;
+    font-weight: 800;
+
+    cursor: pointer;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 0 15px;
+
+    transition:
+        background 0.2s ease,
+        border-color 0.2s ease;
+}
+
+.course-action-btn:hover {
+    background: #f4f8fd;
+    border-color: #8eabd0;
+}
+
+/* =========================================================
+   VALUES
+========================================================= */
+
+.learning-values {
+    margin: 32px 28px 0;
+
+    padding: 25px 30px;
+
+    border-radius: 18px;
+
+    display: grid;
+    grid-template-columns:
+        repeat(4, 1fr);
+
+    gap: 25px;
+
+    background:
+        linear-gradient(
+            100deg,
+            #f1f6fc,
+            #f7f8fb
+        );
+
+    border: 1px solid #e3e9f1;
+}
+
+.learning-value {
+    display: flex;
+    align-items: center;
+
+    gap: 14px;
+}
+
+.learning-value-icon {
+    width: 53px;
+    height: 53px;
+
+    flex: 0 0 53px;
+
+    border-radius: 50%;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 23px;
+}
+
+.learning-value-icon.blue {
+    background: #dceafd;
+}
+
+.learning-value-icon.green {
+    background: #dff4e6;
+}
+
+.learning-value-icon.yellow {
+    background: #fff0c5;
+}
+
+.learning-value-icon.purple {
+    background: #e9e0fa;
+}
+
+.learning-value h3 {
+    margin: 0 0 3px;
+
+    font-size: 15px;
+
+    color: #142e5d;
+}
+
+.learning-value p {
+    margin: 0;
+
+    font-size: 12px;
+    line-height: 1.45;
+
+    color: #647187;
+}
+
+/* =========================================================
+   LAST ACTIVITY
+========================================================= */
+
+.learning-last-activity {
+    margin: 22px 28px 0;
+
+    padding: 14px 18px;
+
+    border-radius: 10px;
+
+    background: #f8fafc;
+
+    border: 1px solid #e5eaf0;
+
+    display: flex;
+    align-items: center;
+
+    gap: 8px;
+
+    font-size: 12px;
+
+    color: #6a778b;
+}
+
+.learning-last-activity strong {
+    color: #244778;
+}
+
+/* =========================================================
+   EMPTY STATE
+========================================================= */
+
+.learning-empty {
+    padding: 65px 20px;
+
+    text-align: center;
+
+    border-radius: 18px;
+
+    background: white;
+
+    border: 1px dashed #cbd5e2;
+}
+
+.learning-empty > div {
+    font-size: 55px;
+    margin-bottom: 10px;
+}
+
+.learning-empty h3 {
+    margin: 0 0 6px;
+
+    color: #163b78;
+}
+
+.learning-empty p {
+    margin: 0;
+
+    color: #6b7789;
+}
+
+/* =========================================================
+   LOADING
+========================================================= */
+
+.learning-page-loading {
+    min-height: 500px;
+
+    display: flex;
+    flex-direction: column;
+
+    align-items: center;
+    justify-content: center;
+
+    text-align: center;
+
+    color: #173b76;
+}
+
+.learning-page-loading h2 {
+    margin: 18px 0 5px;
+}
+
+.learning-page-loading p {
+    margin: 0;
+
+    color: #6a778b;
+}
+
+.learning-loading-spinner {
+    width: 42px;
+    height: 42px;
+
+    border: 4px solid #e1e8f2;
+
+    border-top-color: #173b76;
+
+    border-radius: 50%;
+
+    animation:
+        epic-learning-spin
+        0.8s linear infinite;
+}
+
+@keyframes epic-learning-spin {
+
+    to {
+        transform: rotate(360deg);
+    }
+
+}
+
+/* =========================================================
+   ERROR
+========================================================= */
+
+.learning-error {
+    min-height: 500px;
+
+    display: flex;
+    flex-direction: column;
+
+    align-items: center;
+    justify-content: center;
+
+    text-align: center;
+}
+
+.learning-error-icon {
+    width: 60px;
+    height: 60px;
+
+    border-radius: 50%;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: #fff0f0;
+
+    color: #d33;
+
+    font-size: 25px;
+    font-weight: 800;
+}
+
+.learning-error h2 {
+    margin: 15px 0 5px;
+
+    color: #163b78;
+}
+
+.learning-error p {
+    color: #6b7789;
+}
+
+.learning-retry-btn {
+    padding: 11px 22px;
+
+    border: none;
+    border-radius: 8px;
+
+    background: #163b78;
+
+    color: white;
+
+    font-weight: 700;
+
+    cursor: pointer;
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 1200px) {
+
+    .learning-hero {
+        padding: 45px;
+    }
+
+    .learning-hero-content {
+        width: 60%;
+    }
+
+    .learning-hero-visual {
+        width: 35%;
+        right: 30px;
+    }
+
+    .learning-stat-card {
+        margin-left: 15px;
+        margin-right: 15px;
+    }
+
+    .learning-stat {
+        padding: 18px;
+    }
+
+    .learning-stat-icon {
+        width: 52px;
+        height: 52px;
+        flex-basis: 52px;
+    }
+
+    .learning-values {
+        margin-left: 15px;
+        margin-right: 15px;
+    }
+
+    .my-learning-section {
+        padding: 0 15px;
+    }
+
+}
+
+@media (max-width: 950px) {
+
+    .learning-hero {
+        min-height: auto;
+
+        padding: 45px 35px 230px;
+    }
+
+    .learning-hero-content {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .learning-hero-visual {
+        width: 55%;
+        height: 190px;
+
+        right: 30px;
+        bottom: 25px;
+    }
+
+    .learning-stat-card {
+        grid-template-columns:
+            1fr 1fr;
+
+        margin-top: -20px;
+    }
+
+    .learning-stat-divider {
+        display: none;
+    }
+
+    .learning-course-grid {
+        grid-template-columns:
+            repeat(2, 1fr);
+    }
+
+    .learning-values {
+        grid-template-columns:
+            repeat(2, 1fr);
+    }
+
+}
+
+@media (max-width: 650px) {
+
+    .epic-learning-page {
+        padding-bottom: 25px;
+    }
+
+    .learning-hero {
+        padding: 35px 22px 210px;
+
+        border-radius: 0 0 20px 20px;
+    }
+
+    .learning-hero h1 {
+        font-size: 46px;
+    }
+
+    .learning-hero-description {
+        font-size: 16px;
+    }
+
+    .learning-verse {
+        font-size: 14px;
+    }
+
+    .learning-hero-visual {
+        width: calc(100% - 44px);
+        height: 155px;
+
+        right: 22px;
+        bottom: 25px;
+    }
+
+    .learning-stat-card {
+        grid-template-columns: 1fr;
+
+        margin:
+            -10px 10px 25px;
+    }
+
+    .learning-stat {
+        padding: 18px 20px;
+    }
+
+    .learning-course-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .learning-section-header {
+        align-items: flex-start;
+    }
+
+    .learning-values {
+        grid-template-columns: 1fr;
+
+        margin-left: 10px;
+        margin-right: 10px;
+
+        padding: 22px;
+    }
+
+    .my-learning-section {
+        padding: 0 10px;
+    }
+
+    .learning-last-activity {
+        margin-left: 10px;
+        margin-right: 10px;
+
+        flex-wrap: wrap;
+    }
+
+}

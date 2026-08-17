@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from "react";
 import "./App.css";
 
+// =========================================================
+// MAIN PAGES
+// =========================================================
+
 import Login from "./Login";
 import Dashboard from "./Dashboard";
 import Members from "./Members";
@@ -14,20 +18,34 @@ import Ministries from "./pages/Ministries";
 import Expenses from "./pages/Expenses";
 import Settings from "./pages/Settings";
 
+// =========================================================
 // EPIC LEARNING
+// =========================================================
+
 import LearningPage from "./pages/learning/LearningPage";
+import ViewCourse from "./pages/learning/ViewCourse";
+import LessonPage from "./pages/learning/LessonPage";
+
+// =========================================================
+// PERMISSIONS
+// =========================================================
 
 import PermissionService from "./PermissionService";
 import PermissionFilter from "./PermissionFilter";
 
+// =========================================================
+// PAGE TYPES
+// =========================================================
+
 type Page =
     | "dashboard"
     | "learning"
+    | "view-course"
+    | "lesson"
     | "members"
     | "attendance"
     | "member-attendance-report"
     | "services"
-    | "event-attendance"
     | "ministries"
     | "visitors"
     | "giving"
@@ -35,14 +53,22 @@ type Page =
     | "expenses"
     | "settings";
 
+// =========================================================
+// APP
+// =========================================================
+
 const App: React.FC = () => {
 
-    // =========================================================
-    // STATE
-    // =========================================================
+    // =====================================================
+    // AUTHENTICATION
+    // =====================================================
 
     const [isAuthenticated, setIsAuthenticated] =
         useState<boolean>(false);
+
+    // =====================================================
+    // NAVIGATION
+    // =====================================================
 
     const [activePage, setActivePage] =
         useState<Page>("dashboard");
@@ -50,9 +76,19 @@ const App: React.FC = () => {
     const [sidebarOpen, setSidebarOpen] =
         useState<boolean>(true);
 
-    // =========================================================
-    // CHECK LOGIN
-    // =========================================================
+    // =====================================================
+    // EPIC LEARNING STATE
+    // =====================================================
+
+    const [selectedCourseId, setSelectedCourseId] =
+        useState<number | null>(null);
+
+    const [selectedLessonId, setSelectedLessonId] =
+        useState<number | null>(null);
+
+    // =====================================================
+    // AUTH CHECK
+    // =====================================================
 
     useEffect(() => {
 
@@ -71,194 +107,589 @@ const App: React.FC = () => {
 
     }, []);
 
-    // =========================================================
+    // =====================================================
+    // GLOBAL COURSE / LESSON EVENTS
+    // =====================================================
+
+    useEffect(() => {
+
+        // -------------------------------------------------
+        // OPEN COURSE EVENT
+        // -------------------------------------------------
+
+        const handleOpenCourse = (event: Event) => {
+
+            const customEvent =
+                event as CustomEvent<{
+                    courseId: number;
+                }>;
+
+            const courseId =
+                customEvent.detail?.courseId;
+
+            console.log(
+                "APP: Opening course:",
+                courseId
+            );
+
+            if (!courseId) {
+                console.warn(
+                    "APP: Course ID missing."
+                );
+                return;
+            }
+
+            setSelectedCourseId(courseId);
+            setSelectedLessonId(null);
+            setActivePage("view-course");
+
+        };
+
+        // -------------------------------------------------
+        // OPEN LESSON EVENT
+        // -------------------------------------------------
+
+        const handleOpenLesson = (event: Event) => {
+
+            const customEvent =
+                event as CustomEvent<{
+                    courseId?: number;
+                    lessonId: number;
+                }>;
+
+            const courseId =
+                customEvent.detail?.courseId;
+
+            const lessonId =
+                customEvent.detail?.lessonId;
+
+            console.log(
+                "APP: Opening lesson:",
+                {
+                    courseId,
+                    lessonId
+                }
+            );
+
+            if (!lessonId) {
+                console.warn(
+                    "APP: Lesson ID missing."
+                );
+                return;
+            }
+
+            if (courseId) {
+                setSelectedCourseId(courseId);
+            }
+
+            setSelectedLessonId(lessonId);
+            setActivePage("lesson");
+
+        };
+
+        window.addEventListener(
+            "epic-open-course",
+            handleOpenCourse
+        );
+
+        window.addEventListener(
+            "epic-open-lesson",
+            handleOpenLesson
+        );
+
+        return () => {
+
+            window.removeEventListener(
+                "epic-open-course",
+                handleOpenCourse
+            );
+
+            window.removeEventListener(
+                "epic-open-lesson",
+                handleOpenLesson
+            );
+
+        };
+
+    }, []);
+
+    // =====================================================
     // LOGOUT
-    // =========================================================
+    // =====================================================
 
     const handleLogout = () => {
 
-        localStorage.removeItem("token");
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("jwt");
-        localStorage.removeItem("authToken");
-        localStorage.removeItem("epicToken");
+        const authKeys = [
+            "token",
+            "accessToken",
+            "jwt",
+            "authToken",
+            "epicToken"
+        ];
 
-        localStorage.removeItem("currentUser");
-        localStorage.removeItem("currentFullName");
-        localStorage.removeItem("currentRole");
-        localStorage.removeItem("currentRoleId");
-        localStorage.removeItem("roleId");
-        localStorage.removeItem("userId");
+        const userKeys = [
+            "currentUser",
+            "currentFullName",
+            "currentRole",
+            "currentRoleId",
+            "roleId",
+            "userId",
+            "permissions"
+        ];
 
-        localStorage.removeItem("permissions");
+        [
+            ...authKeys,
+            ...userKeys
+        ].forEach(key => {
+            localStorage.removeItem(key);
+        });
 
-        setIsAuthenticated(false);
+        setSelectedCourseId(null);
+        setSelectedLessonId(null);
+
         setActivePage("dashboard");
+        setIsAuthenticated(false);
+
     };
 
-    // =========================================================
-    // NAVIGATION
-    // =========================================================
+    // =====================================================
+    // GENERIC NAVIGATION
+    // =====================================================
 
     const navigate = (page: Page) => {
+
+        console.log(
+            "APP: Navigate:",
+            page
+        );
 
         setActivePage(page);
 
         if (window.innerWidth <= 900) {
             setSidebarOpen(false);
         }
+
     };
 
-    // =========================================================
+    // =====================================================
+    // OPEN LEARNING HOME
+    // =====================================================
+
+    const handleOpenLearning = () => {
+
+        console.log(
+            "APP: Opening EPIC Learning home"
+        );
+
+        setSelectedCourseId(null);
+        setSelectedLessonId(null);
+
+        setActivePage("learning");
+
+        if (window.innerWidth <= 900) {
+            setSidebarOpen(false);
+        }
+
+    };
+
+    // =====================================================
+    // OPEN COURSE
+    // =====================================================
+
+    const handleViewCourse = (
+        courseId: number
+    ) => {
+
+        console.log(
+            "APP: Opening course:",
+            courseId
+        );
+
+        setSelectedCourseId(courseId);
+        setSelectedLessonId(null);
+        setActivePage("view-course");
+
+    };
+
+    // =====================================================
+    // OPEN LESSON
+    // =====================================================
+
+    const handleViewLesson = (
+        courseId: number,
+        lessonId: number
+    ) => {
+
+        console.log(
+            "APP: Opening lesson:",
+            {
+                courseId,
+                lessonId
+            }
+        );
+
+        setSelectedCourseId(courseId);
+        setSelectedLessonId(lessonId);
+        setActivePage("lesson");
+
+    };
+
+    // =====================================================
+    // BACK TO COURSE
+    // =====================================================
+
+    const handleBackToCourse = () => {
+
+        setSelectedLessonId(null);
+        setActivePage("view-course");
+
+    };
+
+    // =====================================================
+    // BACK TO LEARNING
+    // =====================================================
+
+    const handleBackToLearning = () => {
+
+        setSelectedCourseId(null);
+        setSelectedLessonId(null);
+        setActivePage("learning");
+
+    };
+
+    // =====================================================
     // PAGE TITLE
-    // =========================================================
+    // =====================================================
 
     const getPageTitle = (): string => {
 
-        switch (activePage) {
+        const titles: Record<Page, string> = {
 
-            case "dashboard":
-                return "Dashboard";
+            dashboard:
+                "Dashboard",
 
-            case "services":
-                return "Church Services";
+            services:
+                "Church Services",
 
-            case "member-attendance-report":
-                return "Member Attendance Report";
+            "member-attendance-report":
+                "Member Attendance Report",
 
-            case "members":
-                return "Members Management";
+            members:
+                "Members Management",
 
-            case "attendance":
-                return "Attendance Management";
+            attendance:
+                "Attendance Management",
 
-            case "ministries":
-                return "Ministries Management";
+            ministries:
+                "Ministries Management",
 
-            case "visitors":
-                return "Visitors Management";
+            visitors:
+                "Visitors Management",
 
-            case "giving":
-                return "Giving Management";
+            giving:
+                "Giving Management",
 
-            case "income":
-                return "Income Management";
+            income:
+                "Income Management",
 
-            case "expenses":
-                return "Expenses Management";
+            expenses:
+                "Expenses Management",
 
-            case "learning":
-                return "EPIC Learning";
+            learning:
+                "EPIC Learning",
 
-            case "settings":
-                return "System Settings";
+            "view-course":
+                "Course Details",
 
-            default:
-                return "Dashboard";
-        }
+            lesson:
+                "Lesson",
+
+            settings:
+                "System Settings"
+
+        };
+
+        return titles[activePage];
+
     };
 
-    // =========================================================
+    // =====================================================
     // PAGE SUBTITLE
-    // =========================================================
+    // =====================================================
 
     const getPageSubtitle = (): string => {
 
-        switch (activePage) {
+        const subtitles: Record<Page, string> = {
 
-            case "dashboard":
-                return "Church management overview";
+            dashboard:
+                "Church management overview",
 
-            case "services":
-                return "Schedule and manage church services and events";
+            services:
+                "Schedule and manage church services and events",
 
-            case "member-attendance-report":
-                return "Attendance performance, member history and pastoral follow-up";
+            "member-attendance-report":
+                "Attendance performance, member history and pastoral follow-up",
 
-            case "members":
-                return "Manage church members and member information";
+            members:
+                "Manage church members and member information",
 
-            case "attendance":
-                return "Monitor and record church attendance";
+            attendance:
+                "Monitor and record church attendance",
 
-            case "ministries":
-                return "Manage ministries and ministry assignments";
+            ministries:
+                "Manage ministries and ministry assignments",
 
-            case "visitors":
-                return "Manage visitors, follow-ups, attendance and connections";
+            visitors:
+                "Manage visitors, follow-ups, attendance and connections",
 
-            case "giving":
-                return "Monitor tithes, offerings and church giving";
+            giving:
+                "Monitor tithes, offerings and church giving",
 
-            case "income":
-                return "Manage church income records";
+            income:
+                "Manage church income records",
 
-            case "expenses":
-                return "Manage church expenses";
+            expenses:
+                "Manage church expenses",
 
-            case "learning":
-                return "Grow in faith, develop leaders and strengthen discipleship";
+            learning:
+                "Grow in faith, develop leaders and strengthen discipleship",
 
-            case "settings":
-                return "Manage system configuration";
+            "view-course":
+                "Explore course modules and lessons",
 
-            default:
-                return "Church management overview";
-        }
+            lesson:
+                "Study the lesson and track your progress",
+
+            settings:
+                "Manage system configuration"
+
+        };
+
+        return subtitles[activePage];
+
     };
 
-    // =========================================================
+    // =====================================================
     // PAGE CONTENT
-    // =========================================================
+    // =====================================================
 
     const renderPage = () => {
 
         switch (activePage) {
 
+            // =================================================
+            // DASHBOARD
+            // =================================================
+
             case "dashboard":
                 return <Dashboard />;
+
+            // =================================================
+            // CHURCH SERVICES
+            // =================================================
 
             case "services":
                 return <ChurchServicesPage />;
 
+            // =================================================
+            // MEMBER ATTENDANCE REPORT
+            // =================================================
+
             case "member-attendance-report":
                 return <MemberAttendanceReport />;
+
+            // =================================================
+            // MEMBERS
+            // =================================================
 
             case "members":
                 return <Members />;
 
+            // =================================================
+            // ATTENDANCE
+            // =================================================
+
             case "attendance":
                 return <Attendance />;
+
+            // =================================================
+            // MINISTRIES
+            // =================================================
 
             case "ministries":
                 return <Ministries />;
 
+            // =================================================
+            // VISITORS
+            // =================================================
+
             case "visitors":
                 return <Visitors />;
+
+            // =================================================
+            // GIVING
+            // =================================================
 
             case "giving":
                 return <Giving />;
 
+            // =================================================
+            // INCOME
+            // =================================================
+
             case "income":
                 return <Income />;
+
+            // =================================================
+            // EXPENSES
+            // =================================================
 
             case "expenses":
                 return <Expenses />;
 
+            // =================================================
+            // EPIC LEARNING HOME
+            // =================================================
+
             case "learning":
-                return <LearningPage />;
+
+                return (
+                    <LearningPage
+                        onViewCourse={
+                            handleViewCourse
+                        }
+                    />
+                );
+
+            // =================================================
+            // COURSE DETAILS
+            // =================================================
+
+            case "view-course":
+
+                if (!selectedCourseId) {
+
+                    return (
+                        <div className="epic-empty-state">
+
+                            <h2>
+                                Course Not Selected
+                            </h2>
+
+                            <p>
+                                Please select a course
+                                from EPIC Learning.
+                            </p>
+
+                            <button
+                                type="button"
+                                onClick={
+                                    handleBackToLearning
+                                }
+                            >
+                                Back to EPIC Learning
+                            </button>
+
+                        </div>
+                    );
+
+                }
+
+                return (
+                    <ViewCourse
+                        courseId={
+                            selectedCourseId
+                        }
+
+                        onBack={
+                            handleBackToLearning
+                        }
+
+                        onLessonSelect={
+                            (lessonId: number) => {
+
+                                handleViewLesson(
+                                    selectedCourseId,
+                                    lessonId
+                                );
+
+                            }
+                        }
+                    />
+                );
+
+            // =================================================
+            // LESSON
+            // =================================================
+
+            case "lesson":
+
+                if (
+                    !selectedCourseId ||
+                    !selectedLessonId
+                ) {
+
+                    return (
+                        <div className="epic-empty-state">
+
+                            <h2>
+                                Lesson Not Selected
+                            </h2>
+
+                            <p>
+                                Please select a lesson
+                                from the course.
+                            </p>
+
+                            <button
+                                type="button"
+                                onClick={
+                                    handleBackToLearning
+                                }
+                            >
+                                Back to EPIC Learning
+                            </button>
+
+                        </div>
+                    );
+
+                }
+
+                return (
+                    <LessonPage
+                        courseId={
+                            selectedCourseId
+                        }
+                        lessonId={
+                            selectedLessonId
+                        }
+                        onBack={
+                            handleBackToCourse
+                        }
+                    />
+                );
+
+            // =================================================
+            // SETTINGS
+            // =================================================
 
             case "settings":
                 return <Settings />;
 
+            // =================================================
+            // FALLBACK
+            // =================================================
+
             default:
                 return <Dashboard />;
+
         }
+
     };
 
-    // =========================================================
-    // LOGIN SCREEN
-    // =========================================================
+    // =====================================================
+    // LOGIN
+    // =====================================================
 
     if (!isAuthenticated) {
 
@@ -267,11 +698,36 @@ const App: React.FC = () => {
                 <Login />
             </div>
         );
+
     }
 
-    // =========================================================
+    // =====================================================
+    // USER INFORMATION
+    // =====================================================
+
+    const fullName =
+        localStorage.getItem(
+            "currentFullName"
+        ) ||
+        localStorage.getItem(
+            "currentUser"
+        ) ||
+        "Administrator";
+
+    const role =
+        localStorage.getItem(
+            "currentRole"
+        ) ||
+        "Church Admin";
+
+    const avatarLetter =
+        fullName
+            .charAt(0)
+            .toUpperCase();
+
+    // =====================================================
     // MAIN APPLICATION
-    // =========================================================
+    // =====================================================
 
     return (
 
@@ -290,12 +746,14 @@ const App: React.FC = () => {
             ================================================= */}
 
             {sidebarOpen && (
+
                 <div
                     className="epic-mobile-overlay"
                     onClick={() =>
                         setSidebarOpen(false)
                     }
                 />
+
             )}
 
             {/* =================================================
@@ -329,7 +787,7 @@ const App: React.FC = () => {
                 </div>
 
                 {/* =================================================
-                    CHURCH NAME
+                    CHURCH
                 ================================================= */}
 
                 <div className="epic-church-name">
@@ -358,33 +816,36 @@ const App: React.FC = () => {
 
                 <nav className="epic-navigation">
 
-                    {/* =================================================
-                        MAIN MENU
-                    ================================================= */}
-
                     <div className="epic-nav-section">
                         MAIN MENU
                     </div>
 
-                    {/* DASHBOARD */}
+                    {/* =================================================
+                        DASHBOARD
+                    ================================================= */}
 
                     <PermissionFilter
                         module="Dashboard"
                         action="view"
                     >
+
                         <button
                             type="button"
                             className={
                                 `epic-nav-item ${
-                                    activePage === "dashboard"
+                                    activePage ===
+                                    "dashboard"
                                         ? "active"
                                         : ""
                                 }`
                             }
                             onClick={() =>
-                                navigate("dashboard")
+                                navigate(
+                                    "dashboard"
+                                )
                             }
                         >
+
                             <span className="epic-nav-icon">
                                 ▦
                             </span>
@@ -392,25 +853,36 @@ const App: React.FC = () => {
                             <span>
                                 Dashboard
                             </span>
+
                         </button>
+
                     </PermissionFilter>
 
-                    {/* CHURCH SERVICES */}
+                    {/* =================================================
+                        CHURCH SERVICES
+                    ================================================= */}
 
-                    {PermissionService.canView("Church Services") && (
+                    {PermissionService.canView(
+                        "Church Services"
+                    ) && (
+
                         <button
                             type="button"
                             className={
                                 `epic-nav-item ${
-                                    activePage === "services"
+                                    activePage ===
+                                    "services"
                                         ? "active"
                                         : ""
                                 }`
                             }
                             onClick={() =>
-                                navigate("services")
+                                navigate(
+                                    "services"
+                                )
                             }
                         >
+
                             <span className="epic-nav-icon">
                                 ⛪
                             </span>
@@ -418,15 +890,20 @@ const App: React.FC = () => {
                             <span>
                                 Church Services
                             </span>
+
                         </button>
+
                     )}
 
-                    {/* MEMBER ATTENDANCE REPORT */}
+                    {/* =================================================
+                        ATTENDANCE REPORT
+                    ================================================= */}
 
                     <PermissionFilter
                         module="Attendance"
                         action="view"
                     >
+
                         <button
                             type="button"
                             className={
@@ -443,6 +920,7 @@ const App: React.FC = () => {
                                 )
                             }
                         >
+
                             <span className="epic-nav-icon">
                                 📊
                             </span>
@@ -450,28 +928,37 @@ const App: React.FC = () => {
                             <span>
                                 Member Attendance Report
                             </span>
+
                         </button>
+
                     </PermissionFilter>
 
-                    {/* MEMBERS */}
+                    {/* =================================================
+                        MEMBERS
+                    ================================================= */}
 
                     <PermissionFilter
                         module="Members"
                         action="view"
                     >
+
                         <button
                             type="button"
                             className={
                                 `epic-nav-item ${
-                                    activePage === "members"
+                                    activePage ===
+                                    "members"
                                         ? "active"
                                         : ""
                                 }`
                             }
                             onClick={() =>
-                                navigate("members")
+                                navigate(
+                                    "members"
+                                )
                             }
                         >
+
                             <span className="epic-nav-icon">
                                 ♟
                             </span>
@@ -479,28 +966,37 @@ const App: React.FC = () => {
                             <span>
                                 Members
                             </span>
+
                         </button>
+
                     </PermissionFilter>
 
-                    {/* ATTENDANCE */}
+                    {/* =================================================
+                        ATTENDANCE
+                    ================================================= */}
 
                     <PermissionFilter
                         module="Attendance"
                         action="view"
                     >
+
                         <button
                             type="button"
                             className={
                                 `epic-nav-item ${
-                                    activePage === "attendance"
+                                    activePage ===
+                                    "attendance"
                                         ? "active"
                                         : ""
                                 }`
                             }
                             onClick={() =>
-                                navigate("attendance")
+                                navigate(
+                                    "attendance"
+                                )
                             }
                         >
+
                             <span className="epic-nav-icon">
                                 ✓
                             </span>
@@ -508,7 +1004,9 @@ const App: React.FC = () => {
                             <span>
                                 Attendance
                             </span>
+
                         </button>
+
                     </PermissionFilter>
 
                     {/* =================================================
@@ -519,25 +1017,32 @@ const App: React.FC = () => {
                         MANAGEMENT
                     </div>
 
-                    {/* MINISTRIES */}
+                    {/* =================================================
+                        MINISTRIES
+                    ================================================= */}
 
                     <PermissionFilter
                         module="Ministries"
                         action="view"
                     >
+
                         <button
                             type="button"
                             className={
                                 `epic-nav-item ${
-                                    activePage === "ministries"
+                                    activePage ===
+                                    "ministries"
                                         ? "active"
                                         : ""
                                 }`
                             }
                             onClick={() =>
-                                navigate("ministries")
+                                navigate(
+                                    "ministries"
+                                )
                             }
                         >
+
                             <span className="epic-nav-icon">
                                 ♫
                             </span>
@@ -545,28 +1050,37 @@ const App: React.FC = () => {
                             <span>
                                 Ministries
                             </span>
+
                         </button>
+
                     </PermissionFilter>
 
-                    {/* VISITORS */}
+                    {/* =================================================
+                        VISITORS
+                    ================================================= */}
 
                     <PermissionFilter
                         module="Visitors"
                         action="view"
                     >
+
                         <button
                             type="button"
                             className={
                                 `epic-nav-item ${
-                                    activePage === "visitors"
+                                    activePage ===
+                                    "visitors"
                                         ? "active"
                                         : ""
                                 }`
                             }
                             onClick={() =>
-                                navigate("visitors")
+                                navigate(
+                                    "visitors"
+                                )
                             }
                         >
+
                             <span className="epic-nav-icon">
                                 👤
                             </span>
@@ -574,28 +1088,37 @@ const App: React.FC = () => {
                             <span>
                                 Visitors
                             </span>
+
                         </button>
+
                     </PermissionFilter>
 
-                    {/* GIVING */}
+                    {/* =================================================
+                        GIVING
+                    ================================================= */}
 
                     <PermissionFilter
                         module="Giving"
                         action="view"
                     >
+
                         <button
                             type="button"
                             className={
                                 `epic-nav-item ${
-                                    activePage === "giving"
+                                    activePage ===
+                                    "giving"
                                         ? "active"
                                         : ""
                                 }`
                             }
                             onClick={() =>
-                                navigate("giving")
+                                navigate(
+                                    "giving"
+                                )
                             }
                         >
+
                             <span className="epic-nav-icon">
                                 ₱
                             </span>
@@ -603,28 +1126,37 @@ const App: React.FC = () => {
                             <span>
                                 Giving
                             </span>
+
                         </button>
+
                     </PermissionFilter>
 
-                    {/* INCOME */}
+                    {/* =================================================
+                        INCOME
+                    ================================================= */}
 
                     <PermissionFilter
                         module="Income"
                         action="view"
                     >
+
                         <button
                             type="button"
                             className={
                                 `epic-nav-item ${
-                                    activePage === "income"
+                                    activePage ===
+                                    "income"
                                         ? "active"
                                         : ""
                                 }`
                             }
                             onClick={() =>
-                                navigate("income")
+                                navigate(
+                                    "income"
+                                )
                             }
                         >
+
                             <span className="epic-nav-icon">
                                 ↗
                             </span>
@@ -632,28 +1164,37 @@ const App: React.FC = () => {
                             <span>
                                 Income
                             </span>
+
                         </button>
+
                     </PermissionFilter>
 
-                    {/* EXPENSES */}
+                    {/* =================================================
+                        EXPENSES
+                    ================================================= */}
 
                     <PermissionFilter
                         module="Expenses"
                         action="view"
                     >
+
                         <button
                             type="button"
                             className={
                                 `epic-nav-item ${
-                                    activePage === "expenses"
+                                    activePage ===
+                                    "expenses"
                                         ? "active"
                                         : ""
                                 }`
                             }
                             onClick={() =>
-                                navigate("expenses")
+                                navigate(
+                                    "expenses"
+                                )
                             }
                         >
+
                             <span className="epic-nav-icon">
                                 −
                             </span>
@@ -661,7 +1202,9 @@ const App: React.FC = () => {
                             <span>
                                 Expenses
                             </span>
+
                         </button>
+
                     </PermissionFilter>
 
                     {/* =================================================
@@ -676,15 +1219,21 @@ const App: React.FC = () => {
                         type="button"
                         className={
                             `epic-nav-item ${
-                                activePage === "learning"
+                                activePage ===
+                                    "learning" ||
+                                activePage ===
+                                    "view-course" ||
+                                activePage ===
+                                    "lesson"
                                     ? "active"
                                     : ""
                             }`
                         }
-                        onClick={() =>
-                            navigate("learning")
+                        onClick={
+                            handleOpenLearning
                         }
                     >
+
                         <span className="epic-nav-icon">
                             📚
                         </span>
@@ -692,6 +1241,7 @@ const App: React.FC = () => {
                         <span>
                             EPIC Learning
                         </span>
+
                     </button>
 
                     {/* =================================================
@@ -702,25 +1252,28 @@ const App: React.FC = () => {
                         SYSTEM
                     </div>
 
-                    {/* SETTINGS */}
-
                     <PermissionFilter
                         module="Church Settings"
                         action="view"
                     >
+
                         <button
                             type="button"
                             className={
                                 `epic-nav-item ${
-                                    activePage === "settings"
+                                    activePage ===
+                                    "settings"
                                         ? "active"
                                         : ""
                                 }`
                             }
                             onClick={() =>
-                                navigate("settings")
+                                navigate(
+                                    "settings"
+                                )
                             }
                         >
+
                             <span className="epic-nav-icon">
                                 ⚙
                             </span>
@@ -728,7 +1281,9 @@ const App: React.FC = () => {
                             <span>
                                 Settings
                             </span>
+
                         </button>
+
                     </PermissionFilter>
 
                 </nav>
@@ -739,65 +1294,40 @@ const App: React.FC = () => {
 
                 <div className="epic-sidebar-footer">
 
-                    {/* USER */}
-
                     <div className="epic-user-card">
 
                         <div className="epic-user-avatar">
-
-                            {(
-                                localStorage.getItem(
-                                    "currentFullName"
-                                ) ||
-                                localStorage.getItem(
-                                    "currentUser"
-                                ) ||
-                                "A"
-                            )
-                                .charAt(0)
-                                .toUpperCase()}
-
+                            {avatarLetter}
                         </div>
 
                         <div className="epic-user-info">
 
                             <strong>
-                                {
-                                    localStorage.getItem(
-                                        "currentFullName"
-                                    ) ||
-                                    localStorage.getItem(
-                                        "currentUser"
-                                    ) ||
-                                    "Administrator"
-                                }
+                                {fullName}
                             </strong>
 
                             <span>
-                                {
-                                    localStorage.getItem(
-                                        "currentRole"
-                                    ) ||
-                                    "System Admin"
-                                }
+                                {role}
                             </span>
 
                         </div>
 
                     </div>
 
-                    {/* LOGOUT */}
-
                     <button
                         type="button"
                         className="epic-logout-button"
-                        onClick={handleLogout}
+                        onClick={
+                            handleLogout
+                        }
                     >
+
                         <span>
                             ⇥
                         </span>
 
                         Logout
+
                     </button>
 
                 </div>
@@ -805,7 +1335,7 @@ const App: React.FC = () => {
             </aside>
 
             {/* =================================================
-                MAIN AREA
+                MAIN
             ================================================= */}
 
             <main className="epic-main">
@@ -823,7 +1353,8 @@ const App: React.FC = () => {
                             className="epic-menu-button"
                             onClick={() =>
                                 setSidebarOpen(
-                                    !sidebarOpen
+                                    previous =>
+                                        !previous
                                 )
                             }
                             aria-label="Toggle menu"
@@ -845,65 +1376,41 @@ const App: React.FC = () => {
 
                     </div>
 
-                    {/* =================================================
-                        TOP RIGHT
-                    ================================================= */}
-
                     <div className="epic-topbar-right">
 
                         <div className="epic-date">
 
-                            {new Date().toLocaleDateString(
-                                "en-US",
-                                {
-                                    weekday: "short",
-                                    month: "short",
-                                    day: "numeric",
-                                    year: "numeric"
-                                }
-                            )}
+                            {new Date()
+                                .toLocaleDateString(
+                                    "en-US",
+                                    {
+                                        weekday:
+                                            "short",
+                                        month:
+                                            "short",
+                                        day:
+                                            "numeric",
+                                        year:
+                                            "numeric"
+                                    }
+                                )}
 
                         </div>
 
                         <div className="epic-top-user">
 
                             <div className="epic-top-avatar">
-
-                                {(
-                                    localStorage.getItem(
-                                        "currentFullName"
-                                    ) ||
-                                    localStorage.getItem(
-                                        "currentUser"
-                                    ) ||
-                                    "A"
-                                )
-                                    .charAt(0)
-                                    .toUpperCase()}
-
+                                {avatarLetter}
                             </div>
 
                             <div className="epic-top-user-info">
 
                                 <strong>
-                                    {
-                                        localStorage.getItem(
-                                            "currentFullName"
-                                        ) ||
-                                        localStorage.getItem(
-                                            "currentUser"
-                                        ) ||
-                                        "Administrator"
-                                    }
+                                    {fullName}
                                 </strong>
 
                                 <span>
-                                    {
-                                        localStorage.getItem(
-                                            "currentRole"
-                                        ) ||
-                                        "Church Admin"
-                                    }
+                                    {role}
                                 </span>
 
                             </div>
@@ -931,7 +1438,9 @@ const App: React.FC = () => {
                 <footer className="epic-footer">
 
                     <span>
-                        © {new Date().getFullYear()} EPIC Church Management System
+                        ©{" "}
+                        {new Date().getFullYear()}{" "}
+                        EPIC Church Management System
                     </span>
 
                     <span>
@@ -943,7 +1452,9 @@ const App: React.FC = () => {
             </main>
 
         </div>
+
     );
+
 };
 
 export default App;

@@ -600,18 +600,16 @@ const Settings: React.FC = () => {
     // OPEN PASSWORD MODAL
     // ========================================================
 
-    const openPasswordModal = (user: User) => {
+   const openPasswordModal = (user: User) => {
 
-        clearNotifications();
+    clearNotifications();
 
-        setSelectedUser(user);
-        setNewPassword("");
+    setSelectedUser(user);
+    setNewPassword("");
+    setShowNewPasswordValue(false);
 
-        setShowPassword(false);
-
-    };
-
-
+    setShowPassword(true);
+};
     // ========================================================
     // CHANGE PASSWORD
     // ========================================================
@@ -1271,6 +1269,49 @@ const Settings: React.FC = () => {
 
 
     // ========================================================
+    // ========================================================
+    // DELETE USER
+    // ========================================================
+
+    const deleteUser = async (user: User) => {
+
+        clearNotifications();
+
+        const confirmed = window.confirm(
+            `DELETE USER?\n\n` +
+            `Name: ${user.fullName}\n` +
+            `Username: ${user.username}\n` +
+            `Role: ${user.role || "NO ROLE"}\n\n` +
+            `This action permanently removes the user account.\n\n` +
+            `Click OK to permanently delete this user.`
+        );
+
+        if (!confirmed) return;
+
+        try {
+            setProcessing(true);
+
+            await apiRequest(
+                `/Users/${user.userId}`,
+                {
+                    method: "DELETE",
+                }
+            );
+
+            setMessage("USER DELETED SUCCESSFULLY.");
+            await loadUsers();
+
+        } catch (err: any) {
+            setError(
+                err?.message ||
+                "Unable to delete user."
+            );
+        } finally {
+            setProcessing(false);
+        }
+    };
+
+
     // RENDER
     // ========================================================
 
@@ -1675,13 +1716,18 @@ const Settings: React.FC = () => {
             )}
 
 
-            {/* ==================================================
-                USERS
-            ================================================== */}
+
+            // ============================================================
+            // USERS
+            // ============================================================
 
             {activeTab === "users" && (
 
                 <div className="settings-panel">
+
+                    {/* ====================================================
+            TOOLBAR
+        ==================================================== */}
 
                     <div className="panel-toolbar">
 
@@ -1697,7 +1743,10 @@ const Settings: React.FC = () => {
 
                         </div>
 
+
                         <div className="toolbar-actions">
+
+                            {/* SEARCH */}
 
                             <div className="search-box">
 
@@ -1717,7 +1766,11 @@ const Settings: React.FC = () => {
 
                             </div>
 
+
+                            {/* ADD USER */}
+
                             <button
+                                type="button"
                                 className="primary-button"
                                 onClick={() => {
 
@@ -1741,6 +1794,10 @@ const Settings: React.FC = () => {
 
                     </div>
 
+
+                    {/* ====================================================
+            USER TABLE
+        ==================================================== */}
 
                     <div className="table-container">
 
@@ -1778,7 +1835,12 @@ const Settings: React.FC = () => {
 
                             </thead>
 
+
                             <tbody>
+
+                                {/* ==================================================
+                        LOADING
+                    ================================================== */}
 
                                 {loadingUsers ? (
 
@@ -1795,6 +1857,10 @@ const Settings: React.FC = () => {
 
                                 ) : filteredUsers.length === 0 ? (
 
+                                    /* ==================================================
+                                       EMPTY
+                                    ================================================== */
+
                                     <tr>
 
                                         <td
@@ -1808,21 +1874,34 @@ const Settings: React.FC = () => {
 
                                 ) : (
 
+                                    /* ==================================================
+                                       USERS
+                                    ================================================== */
+
                                     filteredUsers.map(user => (
 
                                         <tr
                                             key={user.userId}
                                         >
 
+                                            {/* ==================================================
+                                    USER
+                                ================================================== */}
+
                                             <td>
 
                                                 <div className="user-cell">
 
                                                     <div className="user-avatar">
+
                                                         {user.fullName
-                                                            .charAt(0)
-                                                            .toUpperCase()}
+                                                            ? user.fullName
+                                                                .charAt(0)
+                                                                .toUpperCase()
+                                                            : "U"}
+
                                                     </div>
+
 
                                                     <div>
 
@@ -1841,6 +1920,10 @@ const Settings: React.FC = () => {
                                             </td>
 
 
+                                            {/* ==================================================
+                                    USERNAME
+                                ================================================== */}
+
                                             <td>
 
                                                 <code>
@@ -1850,14 +1933,25 @@ const Settings: React.FC = () => {
                                             </td>
 
 
+                                            {/* ==================================================
+                                    ROLE
+                                ================================================== */}
+
                                             <td>
 
                                                 <span className="role-chip">
-                                                    {user.role || "NO ROLE"}
+
+                                                    {user.role ||
+                                                        "NO ROLE"}
+
                                                 </span>
 
                                             </td>
 
+
+                                            {/* ==================================================
+                                    STATUS
+                                ================================================== */}
 
                                             <td>
 
@@ -1880,58 +1974,70 @@ const Settings: React.FC = () => {
                                             </td>
 
 
+                                            {/* ==================================================
+                                    CREATED
+                                ================================================== */}
+
                                             <td>
 
-                                                {new Date(
-                                                    user.createdDate
-                                                ).toLocaleDateString()}
+                                                {user.createdDate
+                                                    ? new Date(
+                                                        user.createdDate
+                                                    ).toLocaleDateString()
+                                                    : "—"}
 
                                             </td>
 
 
-                                            <td>
+                                            {/* ==================================================
+                                    ACTIONS
+                                ================================================== */}
 
+                                            <td>
                                                 <div className="action-buttons">
 
+                                                    {/* EDIT */}
                                                     <button
+                                                        type="button"
                                                         title="Edit user"
-                                                        onClick={() =>
-                                                            openEditUser(user)
-                                                        }
+                                                        onClick={() => openEditUser(user)}
                                                     >
                                                         ✎
                                                     </button>
 
+                                                    {/* CHANGE PASSWORD */}
                                                     <button
+                                                        type="button"
                                                         title="Change password"
-                                                        onClick={() =>
-                                                            openPasswordModal(
-                                                                user
-                                                            )
-                                                        }
+                                                        onClick={() => openPasswordModal(user)}
                                                     >
                                                         🔑
                                                     </button>
 
+                                                    {/* ACTIVATE / DEACTIVATE */}
                                                     <button
+                                                        type="button"
                                                         title={
                                                             user.isActive
                                                                 ? "Deactivate"
                                                                 : "Activate"
                                                         }
-                                                        onClick={() =>
-                                                            toggleUserStatus(
-                                                                user
-                                                            )
-                                                        }
+                                                        onClick={() => toggleUserStatus(user)}
                                                     >
-                                                        {user.isActive
-                                                            ? "◉"
-                                                            : "○"}
+                                                        {user.isActive ? "◉" : "○"}
+                                                    </button>
+
+                                                    {/* DELETE */}
+                                                    <button
+                                                        type="button"
+                                                        className="delete-user-button"
+                                                        title="Delete user permanently"
+                                                        onClick={() => deleteUser(user)}
+                                                    >
+                                                        🗑
                                                     </button>
 
                                                 </div>
-
                                             </td>
 
                                         </tr>
@@ -1947,12 +2053,13 @@ const Settings: React.FC = () => {
                     </div>
 
                 </div>
+
             )}
 
 
-            {/* ==================================================
-                ROLES
-            ================================================== */}
+            {/* ============================================================
+    ROLES
+============================================================ */}
 
             {activeTab === "roles" && (
 
@@ -1972,7 +2079,10 @@ const Settings: React.FC = () => {
 
                         </div>
 
+
                         <div className="toolbar-actions">
+
+                            {/* SEARCH ROLES */}
 
                             <div className="search-box">
 
@@ -1992,7 +2102,11 @@ const Settings: React.FC = () => {
 
                             </div>
 
+
+                            {/* ADD ROLE */}
+
                             <button
+                                type="button"
                                 className="primary-button"
                                 onClick={() => {
 
@@ -2015,6 +2129,10 @@ const Settings: React.FC = () => {
 
                     </div>
 
+
+                    {/* ====================================================
+            ROLE GRID
+        ==================================================== */}
 
                     <div className="role-grid">
 
@@ -2044,11 +2162,14 @@ const Settings: React.FC = () => {
                                     key={role.roleId}
                                 >
 
+                                    {/* ROLE HEADER */}
+
                                     <div className="role-card-top">
 
                                         <div className="role-symbol">
                                             ◆
                                         </div>
+
 
                                         <span
                                             className={
@@ -2057,23 +2178,34 @@ const Settings: React.FC = () => {
                                                     : "status-chip inactive"
                                             }
                                         >
+
                                             {role.isActive
                                                 ? "ACTIVE"
                                                 : "INACTIVE"}
+
                                         </span>
 
                                     </div>
 
 
+                                    {/* ROLE NAME */}
+
                                     <h3>
                                         {role.roleName}
                                     </h3>
 
+
+                                    {/* DESCRIPTION */}
+
                                     <p>
+
                                         {role.description ||
                                             "No description provided."}
+
                                     </p>
 
+
+                                    {/* META */}
 
                                     <div className="role-meta">
 
@@ -2088,9 +2220,14 @@ const Settings: React.FC = () => {
                                     </div>
 
 
+                                    {/* ACTIONS */}
+
                                     <div className="role-card-actions">
 
+                                        {/* EDIT */}
+
                                         <button
+                                            type="button"
                                             onClick={() =>
                                                 openEditRole(
                                                     role
@@ -2100,7 +2237,11 @@ const Settings: React.FC = () => {
                                             ✎ Edit
                                         </button>
 
+
+                                        {/* PERMISSIONS */}
+
                                         <button
+                                            type="button"
                                             onClick={() =>
                                                 loadPermissions(
                                                     role
@@ -2110,9 +2251,13 @@ const Settings: React.FC = () => {
                                             ⛨ Permissions
                                         </button>
 
+
+                                        {/* DEACTIVATE */}
+
                                         {role.isActive && (
 
                                             <button
+                                                type="button"
                                                 className="danger-action"
                                                 onClick={() =>
                                                     deactivateRole(
@@ -2136,7 +2281,9 @@ const Settings: React.FC = () => {
                     </div>
 
                 </div>
+
             )}
+
 
 
             {/* ==================================================
@@ -3743,6 +3890,7 @@ const styles = `
 
 /* USER CELL */
 
+
 .user-cell {
     display: flex;
     align-items: center;
@@ -3845,7 +3993,20 @@ code {
     color: #5edfff;
     border-color: rgba(75,210,255,.3);
 }
+/* DELETE USER */
 
+.action-buttons .delete-user-button {
+    color: #ff7181;
+    border-color: rgba(255,91,109,.16);
+    background: rgba(255,91,109,.06);
+}
+
+.action-buttons .delete-user-button:hover {
+    color: #ffffff;
+    background: rgba(255,91,109,.18);
+    border-color: rgba(255,91,109,.45);
+    box-shadow: 0 0 14px rgba(255,91,109,.12);
+}
 
 /* OVERVIEW */
 

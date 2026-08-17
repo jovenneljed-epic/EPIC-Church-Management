@@ -5,15 +5,11 @@
    CLEAN REFACTORED VERSION
    ========================================================= */
 
-/* =========================================================
-   ROOT VARIABLES
-   ========================================================= */
-
 :root {
+    --epic-sidebar-width: 270px;
+
     --epic-navy: #0f172a;
     --epic-navy-2: #111827;
-    --epic-navy-3: #172554;
-
     --epic-blue: #2563eb;
     --epic-blue-dark: #1d4ed8;
     --epic-indigo: #4f46e5;
@@ -30,13 +26,12 @@
     --epic-success: #16a34a;
     --epic-danger: #dc2626;
 
-    --epic-sidebar-width: 260px;
+    --epic-sidebar-text: rgba(255, 255, 255, 0.72);
+    --epic-sidebar-muted: rgba(255, 255, 255, 0.42);
 
-    --epic-shadow:
-        0 10px 35px rgba(15, 23, 42, 0.07);
+    --epic-shadow: 0 10px 35px rgba(15, 23, 42, 0.08);
 
-    --epic-transition:
-        all 0.2s ease;
+    --epic-transition: 0.2s ease;
 }
 
 /* =========================================================
@@ -62,7 +57,6 @@ html {
 body {
     background: var(--epic-bg);
     color: var(--epic-text);
-
     font-family:
         Inter,
         ui-sans-serif,
@@ -81,13 +75,12 @@ textarea {
 }
 
 /* =========================================================
-   APPLICATION
+   APP SHELL
    ========================================================= */
 
 .epic-app {
     min-height: 100vh;
     width: 100%;
-    display: flex;
     background: var(--epic-bg);
 }
 
@@ -97,13 +90,11 @@ textarea {
 
 .epic-sidebar {
     position: fixed;
-
     top: 0;
     left: 0;
     bottom: 0;
 
     width: var(--epic-sidebar-width);
-    height: 100vh;
 
     display: flex;
     flex-direction: column;
@@ -111,19 +102,19 @@ textarea {
     background:
         linear-gradient(
             180deg,
-            var(--epic-navy) 0%,
-            var(--epic-navy-2) 55%,
-            var(--epic-navy-3) 100%
+            #0f172a 0%,
+            #111827 55%,
+            #172554 100%
         );
 
     color: #ffffff;
+
+    padding: 18px 14px;
 
     z-index: 1000;
 
     box-shadow:
         12px 0 35px rgba(15, 23, 42, 0.14);
-
-    overflow: hidden;
 
     transform: translateX(0);
 
@@ -131,62 +122,16 @@ textarea {
         transform 0.25s ease;
 }
 
-/*
-   IMPORTANT:
+/* Desktop closed state */
 
-   On desktop the sidebar is ALWAYS visible.
-   The sidebar toggle is mainly useful for mobile.
-*/
-
-@media (min-width: 901px) {
-
-    .epic-sidebar {
-        transform: translateX(0);
-    }
-
+.epic-app.sidebar-closed .epic-sidebar {
+    transform: translateX(-100%);
 }
 
-/* =========================================================
-   SIDEBAR SCROLL AREA
-   ========================================================= */
+/* Desktop open state */
 
-.epic-navigation {
-    flex: 1 1 auto;
-
-    min-height: 0;
-
-    display: flex;
-    flex-direction: column;
-
-    gap: 4px;
-
-    overflow-y: auto;
-    overflow-x: hidden;
-
-    padding: 4px 12px 18px;
-
-    scrollbar-width: thin;
-
-    scrollbar-color:
-        rgba(255, 255, 255, 0.16)
-        transparent;
-}
-
-.epic-navigation::-webkit-scrollbar {
-    width: 5px;
-}
-
-.epic-navigation::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.epic-navigation::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.16);
-    border-radius: 20px;
-}
-
-.epic-navigation::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.25);
+.epic-app.sidebar-open .epic-sidebar {
+    transform: translateX(0);
 }
 
 /* =========================================================
@@ -196,29 +141,31 @@ textarea {
 .epic-brand {
     flex: 0 0 auto;
 
-    min-height: 76px;
-
     display: flex;
     align-items: center;
 
     gap: 12px;
 
-    padding: 14px 18px;
+    padding:
+        5px
+        8px
+        18px;
 
     border-bottom:
-        1px solid rgba(255, 255, 255, 0.08);
+        1px solid
+        rgba(255, 255, 255, 0.08);
 }
 
 .epic-logo {
-    width: 46px;
-    height: 46px;
+    width: 47px;
+    height: 47px;
 
-    flex: 0 0 46px;
+    flex: 0 0 47px;
 
     display: grid;
     place-items: center;
 
-    border-radius: 13px;
+    border-radius: 14px;
 
     background:
         linear-gradient(
@@ -235,7 +182,8 @@ textarea {
     letter-spacing: 0.5px;
 
     box-shadow:
-        0 10px 25px rgba(37, 99, 235, 0.32);
+        0 10px 25px
+        rgba(37, 99, 235, 0.32);
 }
 
 .epic-brand-text {
@@ -254,9 +202,9 @@ textarea {
 .epic-brand-subtitle {
     margin-top: 3px;
 
-    font-size: 9px;
-
     color: var(--epic-light);
+
+    font-size: 9px;
 
     letter-spacing: 0.8px;
 
@@ -275,13 +223,9 @@ textarea {
 
     gap: 10px;
 
-    margin: 12px;
-    padding: 12px;
+    margin: 10px 0;
 
-    border-radius: 12px;
-
-    background:
-        rgba(255, 255, 255, 0.06);
+    padding: 12px 8px;
 }
 
 .epic-church-icon {
@@ -296,7 +240,7 @@ textarea {
     border-radius: 10px;
 
     background:
-        rgba(37, 99, 235, 0.25);
+        rgba(255, 255, 255, 0.08);
 
     color: #93c5fd;
 
@@ -306,45 +250,92 @@ textarea {
 .epic-church-name strong {
     display: block;
 
-    font-size: 11px;
-
     color: #e2e8f0;
 
-    white-space: nowrap;
+    font-size: 11px;
 
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .epic-church-name span {
     display: block;
 
-    margin-top: 3px;
-
-    font-size: 9px;
+    margin-top: 2px;
 
     color: #64748b;
 
-    white-space: nowrap;
+    font-size: 9px;
 
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* =========================================================
-   NAVIGATION SECTION
+   NAVIGATION
+   ========================================================= */
+
+.epic-navigation {
+    flex: 1 1 auto;
+
+    min-height: 0;
+
+    display: flex;
+    flex-direction: column;
+
+    gap: 4px;
+
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    padding:
+        2px
+        2px
+        14px;
+
+    scrollbar-width: thin;
+
+    scrollbar-color:
+        rgba(255, 255, 255, 0.16)
+        transparent;
+}
+
+.epic-navigation::-webkit-scrollbar {
+    width: 5px;
+}
+
+.epic-navigation::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.epic-navigation::-webkit-scrollbar-thumb {
+    background:
+        rgba(255, 255, 255, 0.16);
+
+    border-radius: 20px;
+}
+
+.epic-navigation::-webkit-scrollbar-thumb:hover {
+    background:
+        rgba(255, 255, 255, 0.25);
+}
+
+/* =========================================================
+   NAV SECTION
    ========================================================= */
 
 .epic-nav-section {
     flex: 0 0 auto;
 
-    padding: 11px 10px 6px;
+    padding:
+        11px
+        10px
+        6px;
+
+    color:
+        rgba(255, 255, 255, 0.38);
 
     font-size: 9px;
 
     font-weight: 850;
-
-    color: #64748b;
 
     letter-spacing: 1px;
 }
@@ -354,7 +345,7 @@ textarea {
 }
 
 /* =========================================================
-   NAVIGATION ITEMS
+   NAV ITEM
    ========================================================= */
 
 .epic-nav-item {
@@ -364,19 +355,22 @@ textarea {
 
     flex: 0 0 auto;
 
+    border: 0;
+
+    background: transparent;
+
+    color: var(--epic-sidebar-text);
+
+    padding:
+        10px
+        12px;
+
+    border-radius: 10px;
+
     display: flex;
     align-items: center;
 
     gap: 11px;
-
-    padding: 10px 12px;
-
-    border: 0;
-    border-radius: 10px;
-
-    background: transparent;
-
-    color: #94a3b8;
 
     cursor: pointer;
 
@@ -387,10 +381,10 @@ textarea {
     font-weight: 650;
 
     transition:
-        background 0.18s ease,
-        color 0.18s ease,
-        transform 0.18s ease,
-        box-shadow 0.18s ease;
+        background var(--epic-transition),
+        color var(--epic-transition),
+        transform var(--epic-transition),
+        box-shadow var(--epic-transition);
 }
 
 .epic-nav-item:hover {
@@ -420,12 +414,14 @@ textarea {
         );
 
     box-shadow:
-        0 8px 20px rgba(37, 99, 235, 0.24);
+        0 8px 20px
+        rgba(37, 99, 235, 0.24);
 }
 
 .epic-nav-icon {
     width: 24px;
-    min-width: 24px;
+
+    flex: 0 0 24px;
 
     display: grid;
     place-items: center;
@@ -435,20 +431,14 @@ textarea {
     font-size: 16px;
 }
 
-.epic-nav-item span:last-child {
+.epic-nav-item > span:last-child {
     flex: 1;
 
     min-width: 0;
-
-    white-space: nowrap;
-
-    overflow: hidden;
-
-    text-overflow: ellipsis;
 }
 
 /* =========================================================
-   DISABLED NAVIGATION
+   DISABLED NAV
    ========================================================= */
 
 .disabled-nav {
@@ -462,7 +452,12 @@ textarea {
 
     background: transparent;
 
-    color: #94a3b8;
+    color:
+        var(--epic-sidebar-text);
+}
+
+.disabled-nav:active {
+    transform: none;
 }
 
 /* =========================================================
@@ -472,16 +467,15 @@ textarea {
 .epic-sidebar-footer {
     flex: 0 0 auto;
 
-    padding: 10px 12px 14px;
+    margin-top: auto;
 
-    border-top:
-        1px solid rgba(255, 255, 255, 0.08);
+    padding-top: 10px;
 
     background:
         linear-gradient(
             180deg,
             rgba(15, 23, 42, 0),
-            rgba(15, 23, 42, 0.18)
+            rgba(15, 23, 42, 0.15)
         );
 }
 
@@ -491,13 +485,22 @@ textarea {
 
 .epic-user-card {
     display: flex;
+
     align-items: center;
 
     gap: 10px;
 
-    padding: 10px 8px;
+    padding:
+        11px
+        8px;
 
-    margin-bottom: 8px;
+    border-top:
+        1px solid
+        rgba(255, 255, 255, 0.08);
+
+    border-bottom:
+        1px solid
+        rgba(255, 255, 255, 0.08);
 }
 
 .epic-user-avatar {
@@ -506,10 +509,10 @@ textarea {
 
     flex: 0 0 36px;
 
+    border-radius: 50%;
+
     display: grid;
     place-items: center;
-
-    border-radius: 50%;
 
     background: #dbeafe;
 
@@ -543,11 +546,11 @@ textarea {
 .epic-user-info span {
     display: block;
 
-    margin-top: 2px;
-
     color: #64748b;
 
     font-size: 9px;
+
+    margin-top: 2px;
 
     white-space: nowrap;
 
@@ -565,33 +568,40 @@ textarea {
 
     height: 40px;
 
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    gap: 8px;
+    margin-top: 9px;
 
     border:
-        1px solid rgba(255, 255, 255, 0.08);
-
-    border-radius: 9px;
+        1px solid
+        rgba(255, 255, 255, 0.08);
 
     background:
         rgba(255, 255, 255, 0.04);
 
     color: #94a3b8;
 
+    padding: 10px;
+
+    border-radius: 9px;
+
     cursor: pointer;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    gap: 8px;
 
     font-size: 11px;
 
     font-weight: 700;
 
     transition:
-        background 0.2s ease,
-        color 0.2s ease,
-        border-color 0.2s ease,
-        transform 0.2s ease;
+        background var(--epic-transition),
+        color var(--epic-transition),
+        border-color var(--epic-transition),
+        transform var(--epic-transition);
 }
 
 .epic-logout-button:hover {
@@ -608,15 +618,14 @@ textarea {
 }
 
 /* =========================================================
-   MAIN AREA
+   MAIN
    ========================================================= */
 
 .epic-main {
-    width: calc(
-        100% - var(--epic-sidebar-width)
-    );
-
     min-height: 100vh;
+
+    width:
+        calc(100% - var(--epic-sidebar-width));
 
     margin-left:
         var(--epic-sidebar-width);
@@ -630,21 +639,12 @@ textarea {
         margin-left 0.25s ease;
 }
 
-/*
-   Desktop sidebar is always visible.
-*/
+/* Sidebar closed */
 
-@media (min-width: 901px) {
+.epic-app.sidebar-closed .epic-main {
+    width: 100%;
 
-    .epic-main {
-        width: calc(
-            100% - var(--epic-sidebar-width)
-        );
-
-        margin-left:
-            var(--epic-sidebar-width);
-    }
-
+    margin-left: 0;
 }
 
 /* =========================================================
@@ -652,15 +652,15 @@ textarea {
    ========================================================= */
 
 .epic-topbar {
-    min-height: 76px;
+    height: 76px;
 
     flex: 0 0 76px;
 
-    position: sticky;
+    background: #ffffff;
 
-    top: 0;
-
-    z-index: 50;
+    border-bottom:
+        1px solid
+        var(--epic-border);
 
     display: flex;
 
@@ -668,13 +668,14 @@ textarea {
 
     justify-content: space-between;
 
-    padding: 0 30px;
+    padding:
+        0 30px;
 
-    background:
-        #ffffff;
+    position: sticky;
 
-    border-bottom:
-        1px solid var(--epic-border);
+    top: 0;
+
+    z-index: 50;
 }
 
 .epic-topbar-left {
@@ -688,40 +689,39 @@ textarea {
 }
 
 .epic-menu-button {
-    width: 40px;
-    height: 40px;
+    width: 38px;
+    height: 38px;
 
-    flex: 0 0 40px;
-
-    display: grid;
-    place-items: center;
+    flex: 0 0 38px;
 
     border:
-        1px solid var(--epic-border);
+        1px solid
+        var(--epic-border);
+
+    background: #ffffff;
 
     border-radius: 9px;
-
-    background:
-        #ffffff;
 
     color: #475569;
 
     cursor: pointer;
 
-    font-size: 17px;
+    display: grid;
+
+    place-items: center;
+
+    font-size: 16px;
 
     transition:
-        background 0.2s ease,
-        border-color 0.2s ease,
-        transform 0.2s ease;
+        background var(--epic-transition),
+        border-color var(--epic-transition),
+        transform var(--epic-transition);
 }
 
 .epic-menu-button:hover {
-    background:
-        #f8fafc;
+    background: #f8fafc;
 
-    border-color:
-        #cbd5e1;
+    border-color: #cbd5e1;
 }
 
 .epic-menu-button:active {
@@ -736,7 +736,7 @@ textarea {
 .epic-topbar-title strong {
     display: block;
 
-    font-size: 15px;
+    font-size: 14px;
 
     font-weight: 850;
 
@@ -754,7 +754,8 @@ textarea {
 
     font-size: 10px;
 
-    color: var(--epic-muted);
+    color:
+        var(--epic-muted);
 
     white-space: nowrap;
 
@@ -762,10 +763,6 @@ textarea {
 
     text-overflow: ellipsis;
 }
-
-/* =========================================================
-   TOP RIGHT
-   ========================================================= */
 
 .epic-topbar-right {
     display: flex;
@@ -780,7 +777,8 @@ textarea {
 .epic-date {
     font-size: 11px;
 
-    color: var(--epic-muted);
+    color:
+        var(--epic-muted);
 }
 
 .epic-top-user {
@@ -793,23 +791,23 @@ textarea {
     padding-left: 18px;
 
     border-left:
-        1px solid var(--epic-border);
+        1px solid
+        var(--epic-border);
 }
 
 .epic-top-avatar {
     width: 38px;
     height: 38px;
 
-    display: grid;
-    place-items: center;
-
     border-radius: 50%;
 
-    background:
-        #e0e7ff;
+    display: grid;
 
-    color:
-        #3730a3;
+    place-items: center;
+
+    background: #e0e7ff;
+
+    color: #3730a3;
 
     font-size: 12px;
 
@@ -827,7 +825,8 @@ textarea {
 
     margin-top: 2px;
 
-    color: var(--epic-muted);
+    color:
+        var(--epic-muted);
 
     font-size: 9px;
 }
@@ -844,7 +843,9 @@ textarea {
     margin: 0 auto;
 
     padding:
-        30px 32px 35px;
+        30px
+        32px
+        35px;
 
     flex: 1 1 auto;
 }
@@ -856,25 +857,23 @@ textarea {
 .epic-footer {
     flex: 0 0 auto;
 
-    display: flex;
+    padding:
+        14px
+        32px;
 
-    align-items: center;
+    border-top:
+        1px solid
+        var(--epic-border);
+
+    background: #ffffff;
+
+    display: flex;
 
     justify-content: space-between;
 
     gap: 20px;
 
-    padding:
-        14px 32px;
-
-    border-top:
-        1px solid var(--epic-border);
-
-    background:
-        #ffffff;
-
-    color:
-        #94a3b8;
+    color: #94a3b8;
 
     font-size: 9px;
 }
@@ -888,7 +887,7 @@ textarea {
 }
 
 /* =========================================================
-   MOBILE SIDEBAR
+   TABLET / MOBILE
    ========================================================= */
 
 @media (max-width: 900px) {
@@ -898,43 +897,39 @@ textarea {
 
         transform:
             translateX(-100%);
-
-        box-shadow:
-            15px 0 40px rgba(15, 23, 42, 0.25);
     }
 
-    .epic-app.sidebar-open
-    .epic-sidebar {
+    .epic-app.sidebar-open .epic-sidebar {
         transform:
             translateX(0);
     }
 
-    .epic-app.sidebar-closed
-    .epic-sidebar {
+    .epic-app.sidebar-closed .epic-sidebar {
         transform:
             translateX(-100%);
     }
 
-    .epic-main {
+    .epic-main,
+    .epic-app.sidebar-closed .epic-main {
         width: 100%;
 
         margin-left: 0;
     }
 
     .epic-mobile-overlay {
+        display: block;
+
         position: fixed;
 
         inset: 0;
 
-        display: block;
-
         background:
             rgba(15, 23, 42, 0.5);
 
+        z-index: 900;
+
         backdrop-filter:
             blur(2px);
-
-        z-index: 900;
     }
 
     .epic-app.sidebar-closed
@@ -943,17 +938,15 @@ textarea {
     }
 
     .epic-topbar {
-        min-height: 70px;
-
-        flex-basis: 70px;
-
         padding:
             0 18px;
     }
 
     .epic-content {
         padding:
-            22px 18px 30px;
+            22px
+            18px
+            30px;
     }
 
     .epic-date,
@@ -963,7 +956,8 @@ textarea {
 
     .epic-footer {
         padding:
-            14px 18px;
+            14px
+            18px;
     }
 }
 
@@ -978,12 +972,9 @@ textarea {
     }
 
     .epic-topbar {
-        min-height: 66px;
+        height: 66px;
 
         flex-basis: 66px;
-
-        padding:
-            0 14px;
     }
 
     .epic-topbar-title span {
@@ -995,7 +986,7 @@ textarea {
     }
 
     .epic-top-user {
-        padding-left: 0;
+        padding-left: 8px;
 
         border-left: 0;
     }
@@ -1007,14 +998,17 @@ textarea {
 
     .epic-content {
         padding:
-            18px 14px 25px;
+            18px
+            14px
+            25px;
     }
 
     .epic-footer {
         display: block;
 
         padding:
-            12px 14px;
+            12px
+            14px;
 
         text-align: center;
     }
@@ -1030,58 +1024,52 @@ textarea {
    SHORT DESKTOP SCREENS
    ========================================================= */
 
-@media (
-    max-height: 650px
-) and (
-    min-width: 901px
-) {
+@media (max-height: 650px) and (min-width: 901px) {
 
     .epic-sidebar {
-        padding-top: 0;
+        padding-top: 12px;
+
+        padding-bottom: 10px;
     }
 
     .epic-brand {
-        min-height: 64px;
-
-        padding:
-            9px 14px;
-    }
-
-    .epic-logo {
-        width: 40px;
-        height: 40px;
+        padding-bottom: 12px;
     }
 
     .epic-church-name {
-        margin: 8px 10px;
-
-        padding: 8px;
+        padding:
+            9px
+            8px;
     }
 
     .epic-nav-section {
-        padding:
-            6px 10px 4px;
+        padding-top: 6px;
+
+        padding-bottom: 4px;
     }
 
     .epic-nav-item {
         min-height: 38px;
 
         padding:
-            7px 10px;
+            7px
+            10px;
     }
 
     .epic-sidebar-footer {
-        padding:
-            6px 10px 8px;
+        padding-top: 6px;
     }
 
     .epic-user-card {
         padding:
-            6px 8px;
+            7px
+            8px;
     }
 
     .epic-logout-button {
         height: 36px;
+
+        margin-top: 6px;
     }
 }
 
@@ -1136,7 +1124,8 @@ textarea {
     border-radius: 8px;
 
     padding:
-        11px 18px;
+        11px
+        18px;
 
     font-size: 14px;
 
@@ -1144,16 +1133,14 @@ textarea {
 
     cursor: pointer;
 
-    transition:
-        0.2s;
+    transition: 0.2s;
 }
 
 .epic-primary-button {
     background:
-        #1d4ed8;
+        var(--epic-blue-dark);
 
-    color:
-        white;
+    color: white;
 }
 
 .epic-primary-button:hover {
@@ -1164,34 +1151,28 @@ textarea {
 .epic-primary-button:disabled {
     opacity: 0.6;
 
-    cursor:
-        not-allowed;
+    cursor: not-allowed;
 }
 
 .epic-secondary-button {
-    background:
-        #f3f4f6;
+    background: #f3f4f6;
 
-    color:
-        #374151;
+    color: #374151;
 }
 
 .epic-secondary-button:hover {
-    background:
-        #e5e7eb;
+    background: #e5e7eb;
 }
 
 .epic-danger-button {
     background:
-        #dc2626;
+        var(--epic-danger);
 
-    color:
-        white;
+    color: white;
 }
 
 .epic-danger-button:hover {
-    background:
-        #b91c1c;
+    background: #b91c1c;
 }
 
 /* =========================================================
@@ -1200,281 +1181,224 @@ textarea {
 
 .epic-alert {
     padding:
-        13px 16px;
+        13px
+        16px;
 
-    border-radius:
-        8px;
+    border-radius: 8px;
 
-    margin-bottom:
-        18px;
+    margin-bottom: 18px;
 
-    font-size:
-        14px;
+    font-size: 14px;
 
-    display:
-        flex;
+    display: flex;
 
-    align-items:
-        center;
+    align-items: center;
 
-    justify-content:
-        space-between;
+    justify-content: space-between;
 }
 
 .epic-alert-success {
-    background:
-        #ecfdf5;
+    background: #ecfdf5;
 
-    color:
-        #047857;
+    color: #047857;
 
     border:
-        1px solid #a7f3d0;
+        1px solid
+        #a7f3d0;
 }
 
 .epic-alert-error {
-    background:
-        #fef2f2;
+    background: #fef2f2;
 
-    color:
-        #b91c1c;
+    color: #b91c1c;
 
     border:
-        1px solid #fecaca;
+        1px solid
+        #fecaca;
 }
 
 .epic-alert button {
     border: none;
 
-    background:
-        transparent;
+    background: transparent;
 
-    font-size:
-        20px;
+    font-size: 20px;
 
-    cursor:
-        pointer;
+    cursor: pointer;
 
-    color:
-        inherit;
+    color: inherit;
 }
 
 /* =========================================================
-   SERVICE SUMMARY
+   SUMMARY
    ========================================================= */
 
 .epic-service-summary {
-    display:
-        grid;
+    display: grid;
 
     grid-template-columns:
         repeat(4, 1fr);
 
-    gap:
-        16px;
+    gap: 16px;
 
-    margin-bottom:
-        20px;
+    margin-bottom: 20px;
 }
 
 .epic-summary-card {
-    background:
-        white;
+    background: white;
 
     border:
-        1px solid #e5e7eb;
+        1px solid
+        #e5e7eb;
 
-    border-radius:
-        12px;
+    border-radius: 12px;
 
-    padding:
-        18px;
+    padding: 18px;
 
-    display:
-        flex;
+    display: flex;
 
-    align-items:
-        center;
+    align-items: center;
 
-    gap:
-        14px;
+    gap: 14px;
 
     box-shadow:
-        0 2px 7px rgba(0, 0, 0, 0.04);
+        0 2px 7px
+        rgba(0, 0, 0, 0.04);
 }
 
 .epic-summary-icon {
-    width:
-        45px;
+    width: 45px;
+    height: 45px;
 
-    height:
-        45px;
+    border-radius: 10px;
 
-    border-radius:
-        10px;
+    background: #eff6ff;
 
-    background:
-        #eff6ff;
+    display: flex;
 
-    display:
-        flex;
+    align-items: center;
 
-    align-items:
-        center;
+    justify-content: center;
 
-    justify-content:
-        center;
-
-    font-size:
-        21px;
+    font-size: 21px;
 }
 
 .epic-summary-card span {
-    display:
-        block;
+    display: block;
 
-    color:
-        #6b7280;
+    color: #6b7280;
 
-    font-size:
-        12px;
+    font-size: 12px;
 
-    margin-bottom:
-        4px;
+    margin-bottom: 4px;
 }
 
 .epic-summary-card strong {
-    display:
-        block;
+    display: block;
 
-    font-size:
-        23px;
+    font-size: 23px;
 }
 
 /* =========================================================
-   SERVICE TOOLBAR
+   SERVICES TOOLBAR
    ========================================================= */
 
 .epic-services-toolbar {
-    background:
-        white;
+    background: white;
 
     border:
-        1px solid #e5e7eb;
+        1px solid
+        #e5e7eb;
 
-    padding:
-        15px;
+    padding: 15px;
 
-    border-radius:
-        10px;
+    border-radius: 10px;
 
-    display:
-        flex;
+    display: flex;
 
-    justify-content:
-        space-between;
+    justify-content: space-between;
 
-    gap:
-        15px;
+    gap: 15px;
 
-    margin-bottom:
-        16px;
+    margin-bottom: 16px;
 }
 
 .epic-search-box {
-    display:
-        flex;
+    display: flex;
 
-    align-items:
-        center;
+    align-items: center;
 
-    gap:
-        8px;
+    gap: 8px;
 
     border:
-        1px solid #d1d5db;
+        1px solid
+        #d1d5db;
 
-    border-radius:
-        8px;
+    border-radius: 8px;
 
     padding:
         0 11px;
 
-    width:
-        350px;
+    width: 350px;
 
-    background:
-        white;
+    background: white;
 }
 
 .epic-search-box input {
-    border:
-        none;
+    border: none;
 
-    outline:
-        none;
+    outline: none;
 
-    width:
-        100%;
+    width: 100%;
 
     padding:
         10px 0;
 
-    font-size:
-        14px;
+    font-size: 14px;
 }
 
 .epic-search-box button {
-    border:
-        none;
+    border: none;
 
-    background:
-        transparent;
+    background: transparent;
 
-    cursor:
-        pointer;
+    cursor: pointer;
 
-    font-size:
-        18px;
+    font-size: 18px;
 }
 
 .epic-filter-buttons {
-    display:
-        flex;
+    display: flex;
 
-    gap:
-        6px;
+    gap: 6px;
 }
 
 .epic-filter-buttons button {
     border:
-        1px solid #d1d5db;
+        1px solid
+        #d1d5db;
 
-    background:
-        white;
+    background: white;
 
     padding:
-        8px 15px;
+        8px
+        15px;
 
-    border-radius:
-        7px;
+    border-radius: 7px;
 
-    cursor:
-        pointer;
+    cursor: pointer;
 
-    font-size:
-        13px;
+    font-size: 13px;
 }
 
 .epic-filter-buttons button.active {
     background:
-        #1d4ed8;
+        var(--epic-blue-dark);
 
-    color:
-        white;
+    color: white;
 
     border-color:
-        #1d4ed8;
+        var(--epic-blue-dark);
 }
 
 /* =========================================================
@@ -1482,73 +1406,66 @@ textarea {
    ========================================================= */
 
 .epic-services-card {
-    background:
-        white;
+    background: white;
 
     border:
-        1px solid #e5e7eb;
+        1px solid
+        #e5e7eb;
 
-    border-radius:
-        12px;
+    border-radius: 12px;
 
-    overflow:
-        hidden;
+    overflow: hidden;
 
     box-shadow:
-        0 2px 7px rgba(0, 0, 0, 0.04);
+        0 2px 7px
+        rgba(0, 0, 0, 0.04);
 }
 
 .epic-card-header {
-    display:
-        flex;
+    display: flex;
 
-    justify-content:
-        space-between;
+    justify-content: space-between;
 
-    align-items:
-        center;
+    align-items: center;
 
     padding:
-        18px 20px;
+        18px
+        20px;
 
     border-bottom:
-        1px solid #e5e7eb;
+        1px solid
+        #e5e7eb;
 }
 
 .epic-card-header h2 {
     margin:
         0 0 4px;
 
-    font-size:
-        18px;
+    font-size: 18px;
 }
 
 .epic-card-header p {
-    margin:
-        0;
+    margin: 0;
 
-    color:
-        #6b7280;
+    color: #6b7280;
 
-    font-size:
-        13px;
+    font-size: 13px;
 }
 
 .epic-refresh-button {
     border:
-        1px solid #d1d5db;
+        1px solid
+        #d1d5db;
 
-    background:
-        white;
+    background: white;
 
     padding:
-        8px 13px;
+        8px
+        13px;
 
-    border-radius:
-        7px;
+    border-radius: 7px;
 
-    cursor:
-        pointer;
+    cursor: pointer;
 }
 
 /* =========================================================
@@ -1556,227 +1473,190 @@ textarea {
    ========================================================= */
 
 .epic-table-wrapper {
-    width:
-        100%;
+    width: 100%;
 
-    overflow-x:
-        auto;
+    overflow-x: auto;
 }
 
 .epic-services-table {
-    width:
-        100%;
+    width: 100%;
 
-    border-collapse:
-        collapse;
+    border-collapse: collapse;
 
-    min-width:
-        1050px;
+    min-width: 1050px;
 }
 
 .epic-services-table th {
-    text-align:
-        left;
+    text-align: left;
 
-    background:
-        #f9fafb;
+    background: #f9fafb;
 
     padding:
-        12px 15px;
+        12px
+        15px;
 
-    color:
-        #6b7280;
+    color: #6b7280;
 
-    font-size:
-        11px;
+    font-size: 11px;
 
-    letter-spacing:
-        0.04em;
+    letter-spacing: 0.04em;
 
     border-bottom:
-        1px solid #e5e7eb;
+        1px solid
+        #e5e7eb;
 }
 
 .epic-services-table td {
-    padding:
-        15px;
+    padding: 15px;
 
     border-bottom:
-        1px solid #f0f0f0;
+        1px solid
+        #f0f0f0;
 
-    vertical-align:
-        middle;
+    vertical-align: middle;
 
-    font-size:
-        13px;
+    font-size: 13px;
 }
 
 .epic-services-table tbody tr:hover {
-    background:
-        #fafafa;
+    background: #fafafa;
 }
 
 .epic-service-name strong {
-    display:
-        block;
+    display: block;
 
-    font-size:
-        14px;
+    font-size: 14px;
 
-    margin-bottom:
-        4px;
+    margin-bottom: 4px;
 }
 
 .epic-service-name span {
-    color:
-        #6b7280;
+    color: #6b7280;
 
-    font-size:
-        12px;
+    font-size: 12px;
 }
 
 .epic-service-time {
-    white-space:
-        nowrap;
+    white-space: nowrap;
 
-    font-weight:
-        600;
+    font-weight: 600;
 }
 
 .epic-leader-info span {
-    display:
-        block;
+    display: block;
 
-    font-size:
-        12px;
+    font-size: 12px;
 
-    margin-bottom:
-        3px;
+    margin-bottom: 3px;
 }
 
 .epic-leader-info b {
-    color:
-        #374151;
+    color: #374151;
 }
 
 /* =========================================================
-   SERVICE STATUS
+   STATUS
    ========================================================= */
 
 .epic-status-select {
-    border-radius:
-        20px;
+    border-radius: 20px;
 
     padding:
-        6px 10px;
+        6px
+        10px;
 
-    font-size:
-        11px;
+    font-size: 11px;
 
-    font-weight:
-        700;
+    font-weight: 700;
 
-    cursor:
-        pointer;
+    cursor: pointer;
 
-    outline:
-        none;
+    outline: none;
 }
 
 .epic-status-scheduled {
-    background:
-        #eff6ff;
+    background: #eff6ff;
 
-    color:
-        #1d4ed8;
+    color: #1d4ed8;
 
     border:
-        1px solid #bfdbfe;
+        1px solid
+        #bfdbfe;
 }
 
 .epic-status-completed {
-    background:
-        #ecfdf5;
+    background: #ecfdf5;
 
-    color:
-        #047857;
+    color: #047857;
 
     border:
-        1px solid #a7f3d0;
+        1px solid
+        #a7f3d0;
 }
 
 .epic-status-cancelled {
-    background:
-        #fef2f2;
+    background: #fef2f2;
 
-    color:
-        #b91c1c;
+    color: #b91c1c;
 
     border:
-        1px solid #fecaca;
+        1px solid
+        #fecaca;
 }
 
 .epic-status-postponed {
-    background:
-        #fffbeb;
+    background: #fffbeb;
 
-    color:
-        #b45309;
+    color: #b45309;
 
     border:
-        1px solid #fde68a;
+        1px solid
+        #fde68a;
 }
 
 /* =========================================================
-   SERVICE ACTIONS
+   ACTIONS
    ========================================================= */
 
 .epic-action-buttons {
-    display:
-        flex;
+    display: flex;
 
-    gap:
-        6px;
+    gap: 6px;
 }
 
 .epic-edit-button,
 .epic-delete-button {
-    border-radius:
-        6px;
+    border-radius: 6px;
 
     padding:
-        7px 10px;
+        7px
+        10px;
 
-    cursor:
-        pointer;
+    cursor: pointer;
 
-    font-size:
-        12px;
+    font-size: 12px;
 
-    font-weight:
-        600;
+    font-weight: 600;
 }
 
 .epic-edit-button {
     border:
-        1px solid #bfdbfe;
+        1px solid
+        #bfdbfe;
 
-    color:
-        #1d4ed8;
+    color: #1d4ed8;
 
-    background:
-        #eff6ff;
+    background: #eff6ff;
 }
 
 .epic-delete-button {
     border:
-        1px solid #fecaca;
+        1px solid
+        #fecaca;
 
-    color:
-        #b91c1c;
+    color: #b91c1c;
 
-    background:
-        #fef2f2;
+    background: #fef2f2;
 }
 
 /* =========================================================
@@ -1784,27 +1664,23 @@ textarea {
    ========================================================= */
 
 .epic-empty-state {
-    text-align:
-        center;
+    text-align: center;
 
     padding:
-        70px 20px;
+        70px
+        20px;
 }
 
 .epic-empty-icon {
-    font-size:
-        45px;
+    font-size: 45px;
 
-    margin-bottom:
-        10px;
+    margin-bottom: 10px;
 }
 
 .epic-loading-spinner {
-    font-size:
-        35px;
+    font-size: 35px;
 
-    margin-bottom:
-        10px;
+    margin-bottom: 10px;
 
     animation:
         epic-spin 1s linear infinite;
@@ -1813,13 +1689,11 @@ textarea {
 @keyframes epic-spin {
 
     from {
-        transform:
-            rotate(0deg);
+        transform: rotate(0deg);
     }
 
     to {
-        transform:
-            rotate(360deg);
+        transform: rotate(360deg);
     }
 }
 
@@ -1829,78 +1703,65 @@ textarea {
 }
 
 .epic-empty-state p {
-    color:
-        #6b7280;
+    color: #6b7280;
 
-    margin-bottom:
-        20px;
+    margin-bottom: 20px;
 }
 
 /* =========================================================
-   MODAL
+   MODALS
    ========================================================= */
 
 .epic-modal-overlay {
-    position:
-        fixed;
+    position: fixed;
 
-    inset:
-        0;
+    inset: 0;
 
     background:
         rgba(15, 23, 42, 0.55);
 
-    display:
-        flex;
+    display: flex;
 
-    align-items:
-        center;
+    align-items: center;
 
-    justify-content:
-        center;
+    justify-content: center;
 
-    padding:
-        20px;
+    padding: 20px;
 
-    z-index:
-        9999;
+    z-index: 9999;
 }
 
 .epic-service-modal {
     width:
         min(800px, 100%);
 
-    max-height:
-        92vh;
+    max-height: 92vh;
 
-    overflow-y:
-        auto;
+    overflow-y: auto;
 
-    background:
-        white;
+    background: white;
 
-    border-radius:
-        14px;
+    border-radius: 14px;
 
     box-shadow:
-        0 25px 60px rgba(0, 0, 0, 0.25);
+        0 25px 60px
+        rgba(0, 0, 0, 0.25);
 }
 
 .epic-modal-header {
-    display:
-        flex;
+    display: flex;
 
-    justify-content:
-        space-between;
+    justify-content: space-between;
 
-    align-items:
-        flex-start;
+    align-items: flex-start;
 
     padding:
-        20px 22px;
+        20px
+        22px;
 
     border-bottom:
-        1px solid #e5e7eb;
+        1px solid
+        #e5e7eb;
 }
 
 .epic-modal-header h2 {
@@ -1909,119 +1770,89 @@ textarea {
 }
 
 .epic-modal-header p {
-    margin:
-        0;
+    margin: 0;
 
-    color:
-        #6b7280;
+    color: #6b7280;
 
-    font-size:
-        13px;
+    font-size: 13px;
 }
 
 .epic-modal-close {
-    border:
-        none;
+    border: none;
 
-    background:
-        transparent;
+    background: transparent;
 
-    font-size:
-        27px;
+    font-size: 27px;
 
-    cursor:
-        pointer;
+    cursor: pointer;
 
-    color:
-        #6b7280;
+    color: #6b7280;
 }
 
-/* =========================================================
-   FORM
-   ========================================================= */
-
 .epic-form-grid {
-    padding:
-        22px;
+    padding: 22px;
 
-    display:
-        grid;
+    display: grid;
 
     grid-template-columns:
         1fr 1fr;
 
-    gap:
-        17px;
+    gap: 17px;
 }
 
 .epic-form-full {
-    grid-column:
-        1 / -1;
+    grid-column: 1 / -1;
 }
 
 .epic-form-group {
-    display:
-        flex;
+    display: flex;
 
-    flex-direction:
-        column;
+    flex-direction: column;
 
-    gap:
-        7px;
+    gap: 7px;
 }
 
 .epic-form-group label {
-    font-size:
-        13px;
+    font-size: 13px;
 
-    font-weight:
-        600;
+    font-weight: 600;
 
-    color:
-        #374151;
+    color: #374151;
 }
 
 .epic-form-group label span {
-    color:
-        #dc2626;
+    color: #dc2626;
 
-    margin-left:
-        3px;
+    margin-left: 3px;
 }
 
 .epic-form-group input,
 .epic-form-group select,
 .epic-form-group textarea {
-    width:
-        100%;
-
-    box-sizing:
-        border-box;
+    width: 100%;
 
     border:
-        1px solid #d1d5db;
+        1px solid
+        #d1d5db;
 
-    border-radius:
-        7px;
+    border-radius: 7px;
 
     padding:
-        10px 11px;
+        10px
+        11px;
 
-    font-family:
-        inherit;
+    font-family: inherit;
 
-    font-size:
-        14px;
+    font-size: 14px;
 
-    outline:
-        none;
+    outline: none;
 }
 
 .epic-form-group input:focus,
 .epic-form-group select:focus,
 .epic-form-group textarea:focus {
     border-color:
-        #2563eb;
+        var(--epic-blue);
 
     box-shadow:
         0 0 0 3px
@@ -2029,25 +1860,23 @@ textarea {
 }
 
 .epic-form-group textarea {
-    resize:
-        vertical;
+    resize: vertical;
 }
 
 .epic-modal-footer {
-    display:
-        flex;
+    display: flex;
 
-    justify-content:
-        flex-end;
+    justify-content: flex-end;
 
-    gap:
-        10px;
+    gap: 10px;
 
     padding:
-        17px 22px;
+        17px
+        22px;
 
     border-top:
-        1px solid #e5e7eb;
+        1px solid
+        #e5e7eb;
 }
 
 /* =========================================================
@@ -2055,49 +1884,36 @@ textarea {
    ========================================================= */
 
 .epic-delete-modal {
-    background:
-        white;
+    background: white;
 
-    border-radius:
-        14px;
+    border-radius: 14px;
 
-    padding:
-        30px;
+    padding: 30px;
 
     width:
         min(430px, 100%);
 
-    text-align:
-        center;
+    text-align: center;
 }
 
 .epic-delete-icon {
-    width:
-        55px;
+    width: 55px;
+    height: 55px;
 
-    height:
-        55px;
+    border-radius: 50%;
 
-    border-radius:
-        50%;
+    background: #fef2f2;
 
-    background:
-        #fef2f2;
+    display: flex;
 
-    display:
-        flex;
+    align-items: center;
 
-    align-items:
-        center;
-
-    justify-content:
-        center;
+    justify-content: center;
 
     margin:
         0 auto 15px;
 
-    font-size:
-        25px;
+    font-size: 25px;
 }
 
 .epic-delete-modal h2 {
@@ -2106,11 +1922,9 @@ textarea {
 }
 
 .epic-delete-modal p {
-    color:
-        #6b7280;
+    color: #6b7280;
 
-    line-height:
-        1.5;
+    line-height: 1.5;
 }
 
 /* =========================================================
@@ -2123,88 +1937,45 @@ textarea {
         grid-template-columns:
             repeat(2, 1fr);
     }
-
 }
 
 @media (max-width: 700px) {
 
     .epic-services-header {
-        flex-direction:
-            column;
+        flex-direction: column;
     }
 
     .epic-services-header
     .epic-primary-button {
-        width:
-            100%;
+        width: 100%;
     }
 
     .epic-service-summary {
-        grid-template-columns:
-            1fr;
+        grid-template-columns: 1fr;
     }
 
     .epic-services-toolbar {
-        flex-direction:
-            column;
+        flex-direction: column;
     }
 
     .epic-search-box {
-        width:
-            100%;
-
-        box-sizing:
-            border-box;
+        width: 100%;
     }
 
     .epic-filter-buttons {
-        width:
-            100%;
+        width: 100%;
     }
 
     .epic-filter-buttons button {
-        flex:
-            1;
+        flex: 1;
     }
 
     .epic-form-grid {
-        grid-template-columns:
-            1fr;
+        grid-template-columns: 1fr;
     }
 
     .epic-form-full {
-        grid-column:
-            auto;
+        grid-column: auto;
     }
-
-}
-
-/* =========================================================
-   VERY SMALL DEVICES
-   ========================================================= */
-
-@media (max-width: 420px) {
-
-    .epic-topbar-title strong {
-        font-size:
-            13px;
-    }
-
-    .epic-menu-button {
-        width:
-            36px;
-
-        height:
-            36px;
-
-        flex-basis:
-            36px;
-    }
-
-    .epic-content {
-        padding:
-            14px 10px 20px;
-    }
-
 }
 
