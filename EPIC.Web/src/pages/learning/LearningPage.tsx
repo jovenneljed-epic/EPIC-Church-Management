@@ -37,29 +37,36 @@ interface Enrollment {
     lessonProgresses?: any[];
 }
 
+interface LearningPageProps {
+    onViewCourse?: (courseId: number) => void;
+}
+
 // =========================================================
 // COMPONENT
 // =========================================================
 
-const LearningPage: React.FC = () => {
+const LearningPage: React.FC<LearningPageProps> = ({
+    onViewCourse
+}) => {
 
     // =====================================================
-    // AUTH
+    // AUTH TOKEN
     // =====================================================
 
-    const token =
-        localStorage.getItem("token") ||
-        localStorage.getItem("accessToken") ||
-        localStorage.getItem("jwt") ||
-        localStorage.getItem("authToken") ||
-        localStorage.getItem("epicToken");
+    const getToken = (): string | null => {
+
+        return (
+            localStorage.getItem("token") ||
+            localStorage.getItem("accessToken") ||
+            localStorage.getItem("jwt") ||
+            localStorage.getItem("authToken") ||
+            localStorage.getItem("epicToken")
+        );
+    };
 
     // =====================================================
     // STATE
     // =====================================================
-
-    const [courses, setCourses] =
-        useState<Course[]>([]);
 
     const [enrollments, setEnrollments] =
         useState<Enrollment[]>([]);
@@ -74,11 +81,6 @@ const LearningPage: React.FC = () => {
      * null = LMS homepage
      *
      * number = ViewCourse page
-     *
-     * Example:
-     * selectedCourseId = 1
-     * means:
-     * <ViewCourse courseId={1} />
      */
     const [selectedCourseId, setSelectedCourseId] =
         useState<number | null>(null);
@@ -99,25 +101,32 @@ const LearningPage: React.FC = () => {
     const apiRequest = async (
         url: string,
         options: RequestInit = {}
-    ) => {
+    ): Promise<any> => {
 
-        const response =
-            await fetch(
-                `${API_BASE_URL}${url}`,
-                {
-                    ...options,
+        const token = getToken();
 
-                    headers: {
-                        Authorization:
-                            `Bearer ${token}`,
-
-                        "Content-Type":
-                            "application/json",
-
-                        ...(options.headers || {})
-                    }
-                }
+        if (!token) {
+            throw new Error(
+                "Authentication token not found."
             );
+        }
+
+        const response = await fetch(
+            `${API_BASE_URL}${url}`,
+            {
+                ...options,
+
+                headers: {
+                    Authorization:
+                        `Bearer ${token}`,
+
+                    "Content-Type":
+                        "application/json",
+
+                    ...(options.headers || {})
+                }
+            }
+        );
 
         if (!response.ok) {
 
@@ -125,7 +134,7 @@ const LearningPage: React.FC = () => {
                 await response.text();
 
             console.error(
-                "API ERROR:",
+                "EPIC API ERROR:",
                 response.status,
                 errorText
             );
@@ -139,7 +148,7 @@ const LearningPage: React.FC = () => {
     };
 
     // =====================================================
-    // LOAD COURSES + ENROLLMENTS
+    // LOAD LEARNING DATA
     // =====================================================
 
     const loadLearningData = async () => {
@@ -149,9 +158,9 @@ const LearningPage: React.FC = () => {
             setLoading(true);
             setError("");
 
-            // ---------------------------------------------
-            // GET ALL COURSES
-            // ---------------------------------------------
+            // -------------------------------------------------
+            // GET COURSES
+            // -------------------------------------------------
 
             const courseData =
                 await apiRequest("/Courses");
@@ -166,11 +175,9 @@ const LearningPage: React.FC = () => {
                 courseList
             );
 
-            setCourses(courseList);
-
-            // ---------------------------------------------
-            // GET CURRENT USER ENROLLMENTS
-            // ---------------------------------------------
+            // -------------------------------------------------
+            // GET USER ENROLLMENTS
+            // -------------------------------------------------
 
             const enrollmentResults =
                 await Promise.all(
@@ -192,15 +199,14 @@ const LearningPage: React.FC = () => {
                                 return {
                                     ...enrollment,
                                     course
-                                };
+                                } as Enrollment;
 
-                            }
-                            catch (err) {
+                            } catch (err) {
 
                                 /*
-                                 * 404 normally means the
-                                 * current user is not enrolled
-                                 * in this course.
+                                 * A 404 normally means that
+                                 * the current user is not
+                                 * enrolled in this course.
                                  */
 
                                 console.log(
@@ -209,7 +215,6 @@ const LearningPage: React.FC = () => {
 
                                 return null;
                             }
-
                         }
                     )
                 );
@@ -231,8 +236,7 @@ const LearningPage: React.FC = () => {
                 validEnrollments
             );
 
-        }
-        catch (err) {
+        } catch (err) {
 
             console.error(
                 "EPIC Learning loading error:",
@@ -240,16 +244,16 @@ const LearningPage: React.FC = () => {
             );
 
             setError(
-                "Unable to load your learning information."
+                err instanceof Error
+                    ? err.message
+                    : "Unable to load your learning information."
             );
 
-        }
-        finally {
+        } finally {
 
             setLoading(false);
 
         }
-
     };
 
     // =====================================================
@@ -272,7 +276,7 @@ const LearningPage: React.FC = () => {
     const completedCount =
         enrollments.filter(
             enrollment =>
-                enrollment.isCompleted ||
+                enrollment.isCompleted === true ||
                 Number(
                     enrollment.progressPercentage || 0
                 ) >= 100
@@ -298,7 +302,7 @@ const LearningPage: React.FC = () => {
     const inProgressCount =
         enrollments.filter(
             enrollment =>
-                !enrollment.isCompleted &&
+                enrollment.isCompleted !== true &&
                 Number(
                     enrollment.progressPercentage || 0
                 ) > 0
@@ -315,9 +319,7 @@ const LearningPage: React.FC = () => {
                 return null;
             }
 
-            return [
-                ...enrollments
-            ].sort(
+            return [...enrollments].sort(
                 (a, b) => {
 
                     const dateA =
@@ -335,7 +337,6 @@ const LearningPage: React.FC = () => {
                         ).getTime();
 
                     return dateB - dateA;
-
                 }
             )[0];
 
@@ -352,15 +353,10 @@ const LearningPage: React.FC = () => {
                 return null;
             }
 
-            /*
-             * First priority:
-             * currently in-progress course
-             */
-
             const inProgress =
                 enrollments.find(
                     enrollment =>
-                        !enrollment.isCompleted &&
+                        enrollment.isCompleted !== true &&
                         Number(
                             enrollment.progressPercentage || 0
                         ) > 0
@@ -369,11 +365,6 @@ const LearningPage: React.FC = () => {
             if (inProgress) {
                 return inProgress;
             }
-
-            /*
-             * Otherwise use the first
-             * enrolled course.
-             */
 
             return enrollments[0];
 
@@ -385,7 +376,7 @@ const LearningPage: React.FC = () => {
 
     const formatDate = (
         date?: string | null
-    ) => {
+    ): string => {
 
         if (!date) {
             return "—";
@@ -410,16 +401,15 @@ const LearningPage: React.FC = () => {
                 year: "numeric"
             }
         );
-
     };
 
     // =====================================================
-    // COURSE THUMBNAIL
+    // THUMBNAIL
     // =====================================================
 
     const getThumbnail = (
         enrollment: Enrollment
-    ) => {
+    ): string | null => {
 
         const thumbnail =
             enrollment.course?.thumbnailUrl;
@@ -435,27 +425,28 @@ const LearningPage: React.FC = () => {
             return thumbnail;
         }
 
-        return (
-            `${API_BASE_URL.replace("/api", "")}` +
-            `${thumbnail.startsWith("/") ? "" : "/"}` +
-            thumbnail
-        );
+        const apiRoot =
+            API_BASE_URL.replace(
+                "/api",
+                ""
+            );
 
+        return (
+            `${apiRoot}` +
+            `${thumbnail.startsWith("/")
+                ? ""
+                : "/"}` +
+            `${thumbnail}`
+        );
     };
 
     // =====================================================
-    // OPEN VIEW COURSE
+    // OPEN COURSE
     // =====================================================
 
     const openCourse = (
         enrollment: Enrollment
     ) => {
-
-        /*
-         * IMPORTANT:
-         * We use the actual courseId returned
-         * from the database enrollment.
-         */
 
         const courseId =
             Number(
@@ -501,16 +492,27 @@ const LearningPage: React.FC = () => {
         }
 
         /*
-         * This changes the LearningPage state.
-         *
-         * React will re-render and the
-         * ViewCourse block below will display.
+         * If parent component supplied
+         * onViewCourse, use it.
+         */
+
+        if (onViewCourse) {
+
+            onViewCourse(
+                courseId
+            );
+
+            return;
+        }
+
+        /*
+         * Otherwise display ViewCourse
+         * internally.
          */
 
         setSelectedCourseId(
             courseId
         );
-
     };
 
     // =====================================================
@@ -527,30 +529,16 @@ const LearningPage: React.FC = () => {
             null
         );
 
-        /*
-         * Reload database progress after
-         * returning from ViewCourse.
-         */
-
         loadLearningData();
-
     };
 
     // =====================================================
-    // VIEW COURSE PAGE
-    //
-    // VERY IMPORTANT:
-    // This MUST be BEFORE the main LMS return.
+    // VIEW COURSE
     // =====================================================
 
     if (
         selectedCourseId !== null
     ) {
-
-        console.log(
-            "Rendering ViewCourse:",
-            selectedCourseId
-        );
 
         return (
             <ViewCourse
@@ -562,7 +550,6 @@ const LearningPage: React.FC = () => {
                 }
             />
         );
-
     }
 
     // =====================================================
@@ -586,7 +573,6 @@ const LearningPage: React.FC = () => {
 
             </div>
         );
-
     }
 
     // =====================================================
@@ -622,11 +608,10 @@ const LearningPage: React.FC = () => {
 
             </div>
         );
-
     }
 
     // =====================================================
-    // MAIN LMS PAGE
+    // MAIN LMS
     // =====================================================
 
     return (
@@ -953,10 +938,6 @@ const LearningPage: React.FC = () => {
 
                 ) : (
 
-                    /* =================================================
-                       COURSE GRID
-                    ================================================= */
-
                     <div className="learning-course-grid">
 
                         {enrollments.map(
@@ -974,7 +955,7 @@ const LearningPage: React.FC = () => {
                                     );
 
                                 const completed =
-                                    enrollment.isCompleted ||
+                                    enrollment.isCompleted === true ||
                                     progress >= 100;
 
                                 const course =
@@ -998,9 +979,7 @@ const LearningPage: React.FC = () => {
                                         }
                                     >
 
-                                        {/* =================================================
-                                            COURSE IMAGE
-                                        ================================================= */}
+                                        {/* COURSE IMAGE */}
 
                                         <div className="learning-course-image">
 
@@ -1045,9 +1024,7 @@ const LearningPage: React.FC = () => {
 
                                         </div>
 
-                                        {/* =================================================
-                                            COURSE CONTENT
-                                        ================================================= */}
+                                        {/* COURSE CONTENT */}
 
                                         <div className="learning-course-content">
 
@@ -1069,9 +1046,7 @@ const LearningPage: React.FC = () => {
 
                                             </p>
 
-                                            {/* =================================================
-                                                PROGRESS
-                                            ================================================= */}
+                                            {/* PROGRESS */}
 
                                             <div className="course-progress-row">
 
@@ -1097,9 +1072,7 @@ const LearningPage: React.FC = () => {
 
                                             </div>
 
-                                            {/* =================================================
-                                                COURSE META
-                                            ================================================= */}
+                                            {/* META */}
 
                                             <div className="course-meta">
 
@@ -1130,9 +1103,7 @@ const LearningPage: React.FC = () => {
 
                                             </div>
 
-                                            {/* =================================================
-                                                VIEW / CONTINUE / START BUTTON
-                                            ================================================= */}
+                                            {/* ACTION */}
 
                                             <button
                                                 type="button"
@@ -1163,14 +1134,11 @@ const LearningPage: React.FC = () => {
                                         </div>
 
                                     </article>
-
                                 );
-
                             }
                         )}
 
                     </div>
-
                 )}
 
             </section>
@@ -1296,9 +1264,7 @@ const LearningPage: React.FC = () => {
             )}
 
         </div>
-
     );
-
 };
 
 export default LearningPage;

@@ -36,6 +36,7 @@ interface NavigationLesson {
 }
 
 interface LessonPageProps {
+    courseId?: number;
     lessonId: number;
     onBack: () => void;
     onLessonSelect?: (lessonId: number) => void;
@@ -46,11 +47,11 @@ interface LessonPageProps {
 // =========================================================
 
 const LessonPage: React.FC<LessonPageProps> = ({
+    courseId,
     lessonId,
     onBack,
     onLessonSelect
 }) => {
-
     const [lesson, setLesson] =
         useState<LessonData | null>(null);
 
@@ -81,19 +82,17 @@ const LessonPage: React.FC<LessonPageProps> = ({
         localStorage.getItem("epicToken");
 
     // =========================================================
-    // LOAD LESSON
+    // LOAD LESSON WHEN LESSON ID CHANGES
     // =========================================================
 
     useEffect(() => {
-
         if (!lessonId) {
             setError("Invalid lesson.");
             setLoading(false);
             return;
         }
 
-        loadLesson();
-
+        void loadLesson();
     }, [lessonId]);
 
     // =========================================================
@@ -101,9 +100,7 @@ const LessonPage: React.FC<LessonPageProps> = ({
     // =========================================================
 
     const loadLesson = async () => {
-
         try {
-
             setLoading(true);
             setError("");
             setNavigationLoading(true);
@@ -128,7 +125,6 @@ const LessonPage: React.FC<LessonPageProps> = ({
                     headers: {
                         Authorization:
                             `Bearer ${token}`,
-
                         Accept:
                             "application/json"
                     }
@@ -141,12 +137,10 @@ const LessonPage: React.FC<LessonPageProps> = ({
             );
 
             if (!response.ok) {
-
                 let message =
                     `Unable to load lesson. Status: ${response.status}`;
 
                 try {
-
                     const errorData =
                         await response.json();
 
@@ -154,7 +148,6 @@ const LessonPage: React.FC<LessonPageProps> = ({
                         message =
                             errorData.message;
                     }
-
                 } catch {
                     // Ignore invalid JSON
                 }
@@ -176,14 +169,12 @@ const LessonPage: React.FC<LessonPageProps> = ({
             );
 
             if (!data || !data.lessonId) {
-
                 throw new Error(
                     "Lesson content could not be found."
                 );
             }
 
             const loadedLesson: LessonData = {
-
                 lessonId:
                     data.lessonId,
 
@@ -228,7 +219,8 @@ const LessonPage: React.FC<LessonPageProps> = ({
                     null,
 
                 courseId:
-                    data.courseId,
+                    data.courseId ??
+                    courseId,
 
                 courseModuleId:
                     data.courseModuleId,
@@ -237,28 +229,25 @@ const LessonPage: React.FC<LessonPageProps> = ({
                     data.moduleTitle
             };
 
-            setLesson(
-                loadedLesson
-            );
+            setLesson(loadedLesson);
 
             // =====================================================
             // LOAD COURSE NAVIGATION
             // =====================================================
 
-            if (data.courseId) {
+            const navigationCourseId =
+                loadedLesson.courseId ??
+                courseId;
 
+            if (navigationCourseId) {
                 await loadNavigation(
-                    data.courseId
+                    navigationCourseId
                 );
-
             } else {
-
                 setNavigationLoading(false);
-
             }
 
         } catch (err) {
-
             console.error(
                 "Lesson loading error:",
                 err
@@ -273,7 +262,6 @@ const LessonPage: React.FC<LessonPageProps> = ({
             setNavigationLoading(false);
 
         } finally {
-
             setLoading(false);
         }
     };
@@ -283,11 +271,9 @@ const LessonPage: React.FC<LessonPageProps> = ({
     // =========================================================
 
     const loadNavigation = async (
-        courseId: number
+        currentCourseId: number
     ) => {
-
         try {
-
             setNavigationLoading(true);
 
             const token = getToken();
@@ -299,11 +285,11 @@ const LessonPage: React.FC<LessonPageProps> = ({
 
             console.log(
                 "Loading course navigation:",
-                courseId
+                currentCourseId
             );
 
             const response = await fetch(
-                `${API_BASE_URL}/LessonProgress/course/${courseId}`,
+                `${API_BASE_URL}/LessonProgress/course/${currentCourseId}`,
                 {
                     method: "GET",
 
@@ -323,13 +309,11 @@ const LessonPage: React.FC<LessonPageProps> = ({
             );
 
             if (!response.ok) {
-
                 console.error(
                     "Unable to load course navigation."
                 );
 
                 setNavigationLessons([]);
-
                 return;
             }
 
@@ -345,7 +329,6 @@ const LessonPage: React.FC<LessonPageProps> = ({
             if (
                 Array.isArray(data.modules)
             ) {
-
                 const sortedModules =
                     [...data.modules].sort(
                         (
@@ -388,7 +371,6 @@ const LessonPage: React.FC<LessonPageProps> = ({
                                 }
 
                                 lessons.push({
-
                                     lessonId:
                                         item.lessonId,
 
@@ -405,10 +387,8 @@ const LessonPage: React.FC<LessonPageProps> = ({
                                             ?.isCompleted ===
                                         true
                                 });
-
                             }
                         );
-
                     }
                 );
             }
@@ -423,7 +403,6 @@ const LessonPage: React.FC<LessonPageProps> = ({
             );
 
         } catch (err) {
-
             console.error(
                 "Navigation loading error:",
                 err
@@ -432,7 +411,6 @@ const LessonPage: React.FC<LessonPageProps> = ({
             setNavigationLessons([]);
 
         } finally {
-
             setNavigationLoading(false);
         }
     };
@@ -450,10 +428,6 @@ const LessonPage: React.FC<LessonPageProps> = ({
     const hasCurrentLesson =
         currentIndex >= 0;
 
-    const isFirstLesson =
-        hasCurrentLesson &&
-        currentIndex === 0;
-
     const isLastLesson =
         hasCurrentLesson &&
         currentIndex ===
@@ -461,7 +435,7 @@ const LessonPage: React.FC<LessonPageProps> = ({
 
     const previousLesson =
         hasCurrentLesson &&
-            currentIndex > 0
+        currentIndex > 0
             ? navigationLessons[
                 currentIndex - 1
             ]
@@ -469,7 +443,7 @@ const LessonPage: React.FC<LessonPageProps> = ({
 
     const nextLesson =
         hasCurrentLesson &&
-            currentIndex <
+        currentIndex <
             navigationLessons.length - 1
             ? navigationLessons[
                 currentIndex + 1
@@ -482,17 +456,6 @@ const LessonPage: React.FC<LessonPageProps> = ({
 
     const currentLessonCompleted =
         lesson?.isCompleted === true;
-
-    // =========================================================
-    // COURSE COMPLETE
-    // =========================================================
-
-    const courseCompleted =
-        navigationLessons.length > 0 &&
-        navigationLessons.every(
-            item =>
-                item.isCompleted === true
-        );
 
     // =========================================================
     // NEXT ENABLED
@@ -509,7 +472,6 @@ const LessonPage: React.FC<LessonPageProps> = ({
     const openLesson = (
         targetLessonId: number
     ) => {
-
         console.log(
             "Opening lesson:",
             targetLessonId
@@ -522,7 +484,6 @@ const LessonPage: React.FC<LessonPageProps> = ({
         }
 
         if (onLessonSelect) {
-
             onLessonSelect(
                 targetLessonId
             );
@@ -535,13 +496,12 @@ const LessonPage: React.FC<LessonPageProps> = ({
                 "epic-open-lesson",
                 {
                     detail: {
-
                         lessonId:
                             targetLessonId,
 
                         courseId:
-                            lesson?.courseId
-
+                            lesson?.courseId ??
+                            courseId
                     }
                 }
             )
@@ -553,13 +513,10 @@ const LessonPage: React.FC<LessonPageProps> = ({
     // =========================================================
 
     const startLesson = async () => {
-
         try {
-
             const token = getToken();
 
             if (!token) {
-
                 throw new Error(
                     "Authentication token not found."
                 );
@@ -581,7 +538,6 @@ const LessonPage: React.FC<LessonPageProps> = ({
             );
 
             if (!response.ok) {
-
                 throw new Error(
                     `Unable to start lesson. Status: ${response.status}`
                 );
@@ -613,17 +569,17 @@ const LessonPage: React.FC<LessonPageProps> = ({
                     : prev
             );
 
-            // Refresh navigation
+            const currentCourseId =
+                lesson?.courseId ??
+                courseId;
 
-            if (lesson?.courseId) {
-
+            if (currentCourseId) {
                 await loadNavigation(
-                    lesson.courseId
+                    currentCourseId
                 );
             }
 
         } catch (err) {
-
             console.error(
                 "Start lesson error:",
                 err
@@ -642,15 +598,12 @@ const LessonPage: React.FC<LessonPageProps> = ({
     // =========================================================
 
     const completeLesson = async () => {
-
         try {
-
             setCompleting(true);
 
             const token = getToken();
 
             if (!token) {
-
                 throw new Error(
                     "Authentication token not found."
                 );
@@ -672,21 +625,17 @@ const LessonPage: React.FC<LessonPageProps> = ({
             );
 
             if (!response.ok) {
-
                 let message =
                     `Unable to complete lesson. Status: ${response.status}`;
 
                 try {
-
                     const errorData =
                         await response.json();
 
                     if (errorData?.message) {
-
                         message =
                             errorData.message;
                     }
-
                 } catch {
                     // Ignore invalid JSON
                 }
@@ -729,19 +678,17 @@ const LessonPage: React.FC<LessonPageProps> = ({
                     : prev
             );
 
-            // =====================================================
-            // REFRESH NAVIGATION
-            // =====================================================
+            const currentCourseId =
+                lesson?.courseId ??
+                courseId;
 
-            if (lesson?.courseId) {
-
+            if (currentCourseId) {
                 await loadNavigation(
-                    lesson.courseId
+                    currentCourseId
                 );
             }
 
         } catch (err) {
-
             console.error(
                 "Complete lesson error:",
                 err
@@ -754,7 +701,6 @@ const LessonPage: React.FC<LessonPageProps> = ({
             );
 
         } finally {
-
             setCompleting(false);
         }
     };
@@ -764,7 +710,6 @@ const LessonPage: React.FC<LessonPageProps> = ({
     // =========================================================
 
     if (loading) {
-
         return (
             <div className="lesson-page-loading">
 
@@ -783,7 +728,6 @@ const LessonPage: React.FC<LessonPageProps> = ({
     // =========================================================
 
     if (error) {
-
         return (
             <div className="lesson-page-error">
 
@@ -811,7 +755,6 @@ const LessonPage: React.FC<LessonPageProps> = ({
     // =========================================================
 
     if (!lesson) {
-
         return (
             <div className="lesson-page-error">
 
@@ -835,7 +778,6 @@ const LessonPage: React.FC<LessonPageProps> = ({
     // =========================================================
 
     return (
-
         <div className="lesson-page">
 
             {/* =================================================
@@ -850,7 +792,6 @@ const LessonPage: React.FC<LessonPageProps> = ({
                 ← Back to Course
             </button>
 
-
             {/* =================================================
                 HEADER
             ================================================= */}
@@ -862,11 +803,9 @@ const LessonPage: React.FC<LessonPageProps> = ({
                 </span>
 
                 {lesson.moduleTitle && (
-
                     <span className="lesson-module">
                         {lesson.moduleTitle}
                     </span>
-
                 )}
 
                 <h1>
@@ -880,25 +819,20 @@ const LessonPage: React.FC<LessonPageProps> = ({
                     </span>
 
                     {lesson.isFreePreview && (
-
                         <span className="lesson-header-preview">
                             Preview Lesson
                         </span>
-
                     )}
 
                     {lesson.isCompleted && (
-
                         <span className="lesson-header-completed">
                             ✓ Completed
                         </span>
-
                     )}
 
                 </div>
 
             </div>
-
 
             {/* =================================================
                 PROGRESS
@@ -931,13 +865,11 @@ const LessonPage: React.FC<LessonPageProps> = ({
 
             </div>
 
-
             {/* =================================================
                 VIDEO
             ================================================= */}
 
             {lesson.videoUrl && (
-
                 <div className="lesson-video-card">
 
                     <div className="lesson-video-wrapper">
@@ -951,9 +883,7 @@ const LessonPage: React.FC<LessonPageProps> = ({
                     </div>
 
                 </div>
-
             )}
-
 
             {/* =================================================
                 CONTENT
@@ -964,7 +894,6 @@ const LessonPage: React.FC<LessonPageProps> = ({
                 <div className="lesson-content-inner">
 
                     {lesson.content ? (
-
                         <div
                             className="lesson-content-text"
                             dangerouslySetInnerHTML={{
@@ -972,9 +901,7 @@ const LessonPage: React.FC<LessonPageProps> = ({
                                     lesson.content
                             }}
                         />
-
                     ) : (
-
                         <div className="lesson-empty-content">
 
                             <h3>
@@ -987,20 +914,17 @@ const LessonPage: React.FC<LessonPageProps> = ({
                             </p>
 
                         </div>
-
                     )}
 
                 </div>
 
             </article>
 
-
             {/* =================================================
                 RESOURCE
             ================================================= */}
 
             {lesson.resourceUrl && (
-
                 <div className="lesson-resource-card">
 
                     <div>
@@ -1025,9 +949,7 @@ const LessonPage: React.FC<LessonPageProps> = ({
                     </a>
 
                 </div>
-
             )}
-
 
             {/* =================================================
                 ACTION
@@ -1065,7 +987,6 @@ const LessonPage: React.FC<LessonPageProps> = ({
                     )}
 
                 {lesson.isCompleted && (
-
                     <div className="lesson-completed-banner">
 
                         <span>
@@ -1086,11 +1007,9 @@ const LessonPage: React.FC<LessonPageProps> = ({
                         </div>
 
                     </div>
-
                 )}
 
             </div>
-
 
             {/* =================================================
                 LESSON NAVIGATION
@@ -1109,15 +1028,11 @@ const LessonPage: React.FC<LessonPageProps> = ({
                             type="button"
                             className="lesson-navigation-button previous"
                             onClick={() => {
-
                                 if (previousLesson) {
-
                                     openLesson(
                                         previousLesson.lessonId
                                     );
-
                                 }
-
                             }}
                             disabled={
                                 !previousLesson
@@ -1143,7 +1058,6 @@ const LessonPage: React.FC<LessonPageProps> = ({
                             </span>
 
                         </button>
-
 
                         {/* =================================================
                             POSITION
@@ -1171,7 +1085,6 @@ const LessonPage: React.FC<LessonPageProps> = ({
 
                         </div>
 
-
                         {/* =================================================
                             NEXT
                         ================================================= */}
@@ -1180,18 +1093,14 @@ const LessonPage: React.FC<LessonPageProps> = ({
                             type="button"
                             className="lesson-navigation-button next"
                             onClick={() => {
-
                                 if (
                                     nextLesson &&
                                     currentLessonCompleted
                                 ) {
-
                                     openLesson(
                                         nextLesson.lessonId
                                     );
-
                                 }
-
                             }}
                             disabled={
                                 !canGoNext
@@ -1205,13 +1114,11 @@ const LessonPage: React.FC<LessonPageProps> = ({
                                 </small>
 
                                 <strong>
-
                                     {!currentLessonCompleted
                                         ? "Complete this lesson first"
                                         : nextLesson
                                             ? nextLesson.title
                                             : "Course Complete"}
-
                                 </strong>
 
                             </span>
@@ -1221,7 +1128,6 @@ const LessonPage: React.FC<LessonPageProps> = ({
                             </span>
 
                         </button>
-
 
                         {/* =================================================
                             COURSE COMPLETE MESSAGE

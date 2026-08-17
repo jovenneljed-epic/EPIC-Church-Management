@@ -1,8 +1,4 @@
-import React, {
-    useEffect,
-    useState
-} from "react";
-
+import React, { useEffect, useState } from "react";
 import "./LessonViewer.css";
 
 // =========================================================
@@ -18,89 +14,65 @@ const API_BASE_URL =
 // =========================================================
 
 interface LessonData {
-
     lessonId: number;
-
     courseId: number;
-
     courseTitle?: string | null;
 
     title: string;
-
     content?: string | null;
 
     videoUrl?: string | null;
-
     resourceUrl?: string | null;
 
     estimatedMinutes?: number;
-
     isFreePreview?: boolean;
 
     lessonProgressId?: number;
-
     courseEnrollmentId?: number;
 
-    progressPercentage?: number;
-
-    isCompleted?: boolean;
+    progressPercentage: number;
+    isCompleted: boolean;
 
     startedDate?: string | null;
-
     completedDate?: string | null;
 }
 
 interface CompleteResponse {
-
     message?: string;
 
     lessonProgress?: {
+        lessonProgressId?: number;
+        courseEnrollmentId?: number;
+        lessonId?: number;
 
-        lessonProgressId: number;
-
-        courseEnrollmentId: number;
-
-        lessonId: number;
-
-        progressPercentage: number;
-
-        isCompleted: boolean;
+        progressPercentage?: number;
+        isCompleted?: boolean;
 
         startedDate?: string | null;
-
         completedDate?: string | null;
-
     };
 
     courseProgress?: {
+        courseEnrollmentId?: number;
+        courseId?: number;
 
-        courseEnrollmentId: number;
-
-        courseId: number;
-
-        progressPercentage: number;
-
-        isCompleted: boolean;
+        progressPercentage?: number;
+        isCompleted?: boolean;
 
         completedDate?: string | null;
-
     };
 }
 
 interface LessonViewerProps {
-
     lessonId: number;
-
     courseId: number;
 
     onBack: () => void;
 
     onPrevious?: () => void;
-
     onNext?: () => void;
 
     hasPrevious?: boolean;
-
     hasNext?: boolean;
 
     onProgressUpdated?: (
@@ -120,7 +92,7 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
     onNext,
     hasPrevious = false,
     hasNext = false,
-    onProgressUpdated
+    onProgressUpdated,
 }) => {
 
     // =====================================================
@@ -131,19 +103,19 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
         useState<LessonData | null>(null);
 
     const [loading, setLoading] =
-        useState(true);
+        useState<boolean>(true);
 
     const [error, setError] =
-        useState("");
+        useState<string>("");
 
     const [completing, setCompleting] =
-        useState(false);
+        useState<boolean>(false);
 
     const [completeMessage, setCompleteMessage] =
-        useState("");
+        useState<string>("");
 
     const [completeError, setCompleteError] =
-        useState("");
+        useState<string>("");
 
     // =====================================================
     // TOKEN
@@ -158,7 +130,6 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
             localStorage.getItem("authToken") ||
             localStorage.getItem("epicToken")
         );
-
     };
 
     // =====================================================
@@ -167,22 +138,84 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
 
     const getHeaders = (): HeadersInit => {
 
-        const token =
-            getToken();
+        const token = getToken();
+
+        return {
+            Authorization: token
+                ? `Bearer ${token}`
+                : "",
+
+            Accept: "application/json",
+
+            "Content-Type":
+                "application/json",
+        };
+    };
+
+    // =====================================================
+    // NORMALIZE LESSON
+    // =====================================================
+
+    const normalizeLesson = (
+        data: LessonData
+    ): LessonData => {
+
+        const rawProgress =
+            Number(
+                data.progressPercentage ?? 0
+            );
+
+        const progressPercentage =
+            Number.isFinite(rawProgress)
+                ? Math.min(
+                    100,
+                    Math.max(
+                        0,
+                        rawProgress
+                    )
+                )
+                : 0;
 
         return {
 
-            Authorization:
-                `Bearer ${token}`,
+            ...data,
 
-            Accept:
-                "application/json",
+            lessonId:
+                Number(
+                    data.lessonId
+                ),
 
-            "Content-Type":
-                "application/json"
+            courseId:
+                Number(
+                    data.courseId ||
+                    courseId
+                ),
 
+            title:
+                data.title?.trim() ||
+                "Untitled Lesson",
+
+            progressPercentage,
+
+            isCompleted:
+                data.isCompleted === true,
+
+            isFreePreview:
+                data.isFreePreview === true,
+
+            estimatedMinutes:
+                Number(
+                    data.estimatedMinutes ?? 0
+                ),
+
+            startedDate:
+                data.startedDate ??
+                null,
+
+            completedDate:
+                data.completedDate ??
+                null,
         };
-
     };
 
     // =====================================================
@@ -193,187 +226,152 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
 
         let cancelled = false;
 
-        const loadLesson =
-            async () => {
+        const loadLesson = async () => {
 
-                try {
+            try {
 
-                    setLoading(true);
+                setLoading(true);
+                setError("");
+                setCompleteError("");
+                setCompleteMessage("");
+                setLesson(null);
 
-                    setError("");
+                const token =
+                    getToken();
 
-                    setCompleteError("");
+                if (!token) {
 
-                    setCompleteMessage("");
-
-                    setLesson(null);
-
-                    const token =
-                        getToken();
-
-                    if (!token) {
-
-                        throw new Error(
-                            "Authentication token not found."
-                        );
-
-                    }
-
-                    console.log(
-                        "================================="
+                    throw new Error(
+                        "Authentication token not found."
                     );
+                }
 
-                    console.log(
-                        "EPIC LESSON VIEWER"
-                    );
+                console.log(
+                    "================================="
+                );
 
-                    console.log(
-                        "Course ID:",
-                        courseId
-                    );
+                console.log(
+                    "EPIC LESSON VIEWER"
+                );
 
-                    console.log(
-                        "Lesson ID:",
-                        lessonId
-                    );
+                console.log(
+                    "Course ID:",
+                    courseId
+                );
 
-                    console.log(
-                        "================================="
-                    );
+                console.log(
+                    "Lesson ID:",
+                    lessonId
+                );
 
-                    const response =
-                        await fetch(
-                            `${API_BASE_URL}/LessonProgress/lesson/${lessonId}`,
-                            {
-                                method: "GET",
-                                headers:
-                                    getHeaders()
-                            }
-                        );
+                console.log(
+                    "================================="
+                );
 
-                    console.log(
-                        "Lesson response:",
-                        response.status
-                    );
-
-                    if (!response.ok) {
-
-                        let message =
-                            `Failed to load lesson. Status: ${response.status}`;
-
-                        try {
-
-                            const errorData =
-                                await response.json();
-
-                            if (
-                                typeof errorData?.message ===
-                                "string" &&
-                                errorData.message.trim()
-                            ) {
-
-                                message =
-                                    errorData.message;
-
-                            }
-
-                        } catch {
-                            // Ignore invalid JSON
+                const response =
+                    await fetch(
+                        `${API_BASE_URL}/LessonProgress/lesson/${lessonId}`,
+                        {
+                            method: "GET",
+                            headers: getHeaders(),
                         }
-
-                        throw new Error(
-                            message
-                        );
-
-                    }
-
-                    const data:
-                        LessonData =
-                        await response.json();
-
-                    console.log(
-                        "EPIC LESSON DATA:",
-                        data
                     );
 
-                    console.log(
-                        "Lesson completed:",
-                        data.isCompleted
-                    );
+                console.log(
+                    "Lesson response:",
+                    response.status
+                );
 
-                    if (!cancelled) {
+                if (!response.ok) {
 
-                        setLesson(
-                            data
-                        );
-
-                    }
-
-                    // =================================================
-                    // START LESSON
-                    // =================================================
+                    let message =
+                        `Failed to load lesson. Status: ${response.status}`;
 
                     try {
 
-                        await fetch(
-                            `${API_BASE_URL}/LessonProgress/start/${lessonId}`,
-                            {
-                                method: "POST",
-                                headers:
-                                    getHeaders()
-                            }
-                        );
+                        const errorData =
+                            await response.json();
 
-                    } catch (startError) {
+                        if (
+                            typeof errorData?.message ===
+                            "string" &&
+                            errorData.message.trim()
+                        ) {
 
-                        console.warn(
-                            "Unable to start lesson:",
-                            startError
-                        );
+                            message =
+                                errorData.message;
+                        }
 
+                    } catch {
+                        // Ignore invalid JSON
                     }
 
-                } catch (err) {
-
-                    console.error(
-                        "Error loading lesson:",
-                        err
+                    throw new Error(
+                        message
                     );
-
-                    if (!cancelled) {
-
-                        setError(
-                            err instanceof Error
-                                ? err.message
-                                : "Failed to load lesson."
-                        );
-
-                    }
-
-                } finally {
-
-                    if (!cancelled) {
-
-                        setLoading(false);
-
-                    }
-
                 }
 
-            };
+                const data =
+                    (await response.json()) as LessonData;
+
+                console.log(
+                    "EPIC LESSON DATA:",
+                    data
+                );
+
+                const normalizedLesson =
+                    normalizeLesson(data);
+
+                console.log(
+                    "NORMALIZED LESSON:",
+                    normalizedLesson
+                );
+
+                console.log(
+                    "Lesson completed:",
+                    normalizedLesson.isCompleted
+                );
+
+                if (!cancelled) {
+
+                    setLesson(
+                        normalizedLesson
+                    );
+                }
+
+            } catch (err) {
+
+                console.error(
+                    "Error loading lesson:",
+                    err
+                );
+
+                if (!cancelled) {
+
+                    setError(
+                        err instanceof Error
+                            ? err.message
+                            : "Failed to load lesson."
+                    );
+                }
+
+            } finally {
+
+                if (!cancelled) {
+
+                    setLoading(false);
+                }
+            }
+        };
 
         loadLesson();
 
         return () => {
 
             cancelled = true;
-
         };
 
-    }, [
-        lessonId,
-        courseId
-    ]);
+    }, [lessonId, courseId]);
 
     // =====================================================
     // COMPLETE LESSON
@@ -389,17 +387,13 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
             if (
                 lesson.isCompleted === true
             ) {
-
                 return;
-
             }
 
             try {
 
                 setCompleting(true);
-
                 setCompleteError("");
-
                 setCompleteMessage("");
 
                 const token =
@@ -410,7 +404,6 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
                     throw new Error(
                         "Authentication token not found."
                     );
-
                 }
 
                 console.log(
@@ -435,8 +428,7 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
                         `${API_BASE_URL}/LessonProgress/complete/${lesson.lessonId}`,
                         {
                             method: "POST",
-                            headers:
-                                getHeaders()
+                            headers: getHeaders(),
                         }
                     );
 
@@ -463,7 +455,6 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
 
                             message =
                                 errorData.message;
-
                         }
 
                     } catch {
@@ -473,60 +464,92 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
                     throw new Error(
                         message
                     );
-
                 }
 
-                const data:
-                    CompleteResponse =
-                    await response.json();
+                const data =
+                    (await response.json()) as CompleteResponse;
 
                 console.log(
                     "LESSON COMPLETION RESPONSE:",
                     data
                 );
 
+                const apiProgress =
+                    data.lessonProgress;
+
+                const rawProgress =
+                    Number(
+                        apiProgress?.progressPercentage ??
+                        100
+                    );
+
+                const progressPercentage =
+                    Number.isFinite(rawProgress)
+                        ? Math.min(
+                            100,
+                            Math.max(
+                                0,
+                                rawProgress
+                            )
+                        )
+                        : 100;
+
+                const lessonProgressId =
+                    apiProgress?.lessonProgressId ??
+                    lesson.lessonProgressId;
+
+                const courseEnrollmentId =
+                    apiProgress?.courseEnrollmentId ??
+                    lesson.courseEnrollmentId;
+
+                const completedLessonId =
+                    apiProgress?.lessonId ??
+                    lesson.lessonId;
+
+                const startedDate =
+                    apiProgress?.startedDate ??
+                    lesson.startedDate ??
+                    null;
+
+                const completedDate =
+                    apiProgress?.completedDate ??
+                    new Date().toISOString();
+
                 // =================================================
-                // IMPORTANT
-                //
-                // Immediately mark THIS lesson complete
-                // in LessonViewer.
+                // UPDATE LESSON
                 // =================================================
 
-                setLesson(
-                    previous => {
+                setLesson(previous => {
 
-                        if (!previous) {
-                            return previous;
-                        }
-
-                        return {
-
-                            ...previous,
-
-                            lessonProgressId:
-                                data.lessonProgress
-                                    ?.lessonProgressId ??
-                                previous.lessonProgressId,
-
-                            progressPercentage:
-                                data.lessonProgress
-                                    ?.progressPercentage ??
-                                100,
-
-                            isCompleted:
-                                data.lessonProgress
-                                    ?.isCompleted ??
-                                true,
-
-                            completedDate:
-                                data.lessonProgress
-                                    ?.completedDate ??
-                                new Date().toISOString()
-
-                        };
-
+                    if (!previous) {
+                        return null;
                     }
-                );
+
+                    const updatedLesson: LessonData = {
+
+                        ...previous,
+
+                        lessonProgressId:
+                            lessonProgressId,
+
+                        courseEnrollmentId:
+                            courseEnrollmentId,
+
+                        progressPercentage:
+                            progressPercentage,
+
+                        isCompleted:
+                            true,
+
+                        startedDate:
+                            startedDate,
+
+                        completedDate:
+                            completedDate,
+                    };
+
+                    return updatedLesson;
+                });
 
                 // =================================================
                 // SUCCESS MESSAGE
@@ -537,19 +560,16 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
                 );
 
                 // =================================================
-                // IMPORTANT
-                //
-                // Tell ViewCourse EXACTLY which lesson
-                // was completed.
+                // NOTIFY PARENT
                 // =================================================
 
-                if (onProgressUpdated) {
+                onProgressUpdated?.(
+                    completedLessonId
+                );
 
-                    onProgressUpdated(
-                        lesson.lessonId
-                    );
-
-                }
+                console.log(
+                    "Lesson successfully completed."
+                );
 
             } catch (err) {
 
@@ -567,164 +587,134 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
             } finally {
 
                 setCompleting(false);
-
             }
-
         };
 
     // =====================================================
-    // YOUTUBE
+    // YOUTUBE EMBED
     // =====================================================
 
-    const getYouTubeEmbedUrl =
-        (
-            url?: string | null
-        ): string | null => {
+    const getYouTubeEmbedUrl = (
+        url?: string | null
+    ): string | null => {
 
-            if (!url) {
-                return null;
-            }
+        if (!url) {
+            return null;
+        }
 
-            const trimmed =
-                url.trim();
+        const trimmed =
+            url.trim();
 
-            if (!trimmed) {
-                return null;
-            }
+        if (!trimmed) {
+            return null;
+        }
 
-            try {
+        try {
 
-                const parsed =
-                    new URL(trimmed);
+            const parsed =
+                new URL(trimmed);
 
-                const hostname =
-                    parsed.hostname.toLowerCase();
+            const hostname =
+                parsed.hostname.toLowerCase();
 
-                // youtube.com/watch?v=
+            if (
+                hostname === "youtube.com" ||
+                hostname === "www.youtube.com" ||
+                hostname.endsWith(".youtube.com")
+            ) {
+
+                const videoId =
+                    parsed.searchParams.get("v");
+
+                if (videoId) {
+
+                    return (
+                        `https://www.youtube.com/embed/${videoId}`
+                    );
+                }
+
                 if (
-                    hostname ===
-                    "youtube.com" ||
-                    hostname ===
-                    "www.youtube.com" ||
-                    hostname.endsWith(
-                        ".youtube.com"
+                    parsed.pathname.startsWith(
+                        "/embed/"
                     )
                 ) {
 
-                    const videoId =
-                        parsed.searchParams.get(
-                            "v"
-                        );
+                    return trimmed;
+                }
+            }
 
-                    if (videoId) {
+            if (
+                hostname === "youtu.be" ||
+                hostname.endsWith(".youtu.be")
+            ) {
 
-                        return (
-                            `https://www.youtube.com/embed/${videoId}`
-                        );
-
-                    }
-
-                    if (
-                        parsed.pathname.startsWith(
-                            "/embed/"
+                const videoId =
+                    parsed.pathname
+                        .replace(
+                            /^\/+/,
+                            ""
                         )
-                    ) {
+                        .split("/")[0]
+                        .trim();
 
-                        return trimmed;
+                if (videoId) {
 
-                    }
-
+                    return (
+                        `https://www.youtube.com/embed/${videoId}`
+                    );
                 }
-
-                // youtu.be
-                if (
-                    hostname ===
-                    "youtu.be" ||
-                    hostname.endsWith(
-                        ".youtu.be"
-                    )
-                ) {
-
-                    const videoId =
-                        parsed.pathname
-                            .replace(
-                                /^\/+/,
-                                ""
-                            )
-                            .split(
-                                "/"
-                            )[0]
-                            .trim();
-
-                    if (videoId) {
-
-                        return (
-                            `https://www.youtube.com/embed/${videoId}`
-                        );
-
-                    }
-
-                }
-
-                return null;
-
-            } catch {
-
-                return null;
-
             }
 
-        };
+            return null;
+
+        } catch {
+
+            return null;
+        }
+    };
 
     // =====================================================
     // RESOURCE URL
     // =====================================================
 
-    const buildResourceUrl =
-        (
-            resourceUrl?: string | null
-        ): string | null => {
+    const buildResourceUrl = (
+        resourceUrl?: string | null
+    ): string | null => {
 
-            if (!resourceUrl) {
-                return null;
-            }
+        if (!resourceUrl) {
+            return null;
+        }
 
-            const trimmed =
-                resourceUrl.trim();
+        const trimmed =
+            resourceUrl.trim();
 
-            if (!trimmed) {
-                return null;
-            }
+        if (!trimmed) {
+            return null;
+        }
 
-            if (
-                trimmed.startsWith(
-                    "http://"
-                ) ||
-                trimmed.startsWith(
-                    "https://"
-                )
-            ) {
+        if (
+            trimmed.startsWith("http://") ||
+            trimmed.startsWith("https://")
+        ) {
 
-                return trimmed;
+            return trimmed;
+        }
 
-            }
-
-            const apiRoot =
-                API_BASE_URL.replace(
-                    /\/api\/?$/,
-                    ""
-                );
-
-            const cleanPath =
-                trimmed.startsWith("/")
-                    ? trimmed
-                    : `/${trimmed}`;
-
-            return (
-                `${apiRoot}${cleanPath}`
+        const apiRoot =
+            API_BASE_URL.replace(
+                /\/api\/?$/,
+                ""
             );
 
-        };
+        const cleanPath =
+            trimmed.startsWith("/")
+                ? trimmed
+                : `/${trimmed}`;
+
+        return (
+            `${apiRoot}${cleanPath}`
+        );
+    };
 
     // =====================================================
     // LOADING
@@ -747,9 +737,7 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
                 </p>
 
             </div>
-
         );
-
     }
 
     // =====================================================
@@ -782,9 +770,7 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
                 </button>
 
             </div>
-
         );
-
     }
 
     // =====================================================
@@ -809,9 +795,7 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
                 </button>
 
             </div>
-
         );
-
     }
 
     // =====================================================
@@ -829,29 +813,24 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
         );
 
     // =====================================================
-    // CURRENT COMPLETION
-    //
-    // THIS IS THE AUTHORITATIVE STATE.
+    // COMPLETION
     // =====================================================
 
     const isCompleted =
-        lesson.isCompleted === true;
+        lesson.isCompleted;
 
     // =====================================================
     // NAVIGATION
-    //
-    // NEXT IS ENABLED BASED ON THIS COMPONENT'S
-    // CURRENT LESSON STATE.
     // =====================================================
 
     const canGoNext =
         isCompleted &&
         hasNext &&
-        !!onNext;
+        typeof onNext === "function";
 
     const canGoPrevious =
         hasPrevious &&
-        !!onPrevious;
+        typeof onPrevious === "function";
 
     // =====================================================
     // VIEW
@@ -861,9 +840,9 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
 
         <div className="lesson-viewer">
 
-            {/* =============================================
+            {/* =================================================
                 TOP BAR
-            ============================================= */}
+            ================================================= */}
 
             <div className="lesson-viewer-topbar">
 
@@ -881,9 +860,9 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
 
             </div>
 
-            {/* =============================================
+            {/* =================================================
                 HEADER
-            ============================================= */}
+            ================================================= */}
 
             <section className="lesson-viewer-header">
 
@@ -894,7 +873,6 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
                         {lesson.courseTitle}
 
                     </div>
-
                 )}
 
                 <h1>
@@ -907,13 +885,12 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
                         "number" && (
 
                             <span>
-                                ⏱{" "}
-                                {
-                                    lesson.estimatedMinutes
-                                }{" "}
-                                min
-                            </span>
 
+                                ⏱{" "}
+                                {lesson.estimatedMinutes}{" "}
+                                min
+
+                            </span>
                         )}
 
                     {lesson.isFreePreview && (
@@ -923,7 +900,6 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
                             Preview Lesson
 
                         </span>
-
                     )}
 
                     {isCompleted && (
@@ -933,16 +909,15 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
                             ✓ Completed
 
                         </span>
-
                     )}
 
                 </div>
 
             </section>
 
-            {/* =============================================
+            {/* =================================================
                 VIDEO
-            ============================================= */}
+            ================================================= */}
 
             <section className="lesson-video-section">
 
@@ -973,16 +948,9 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
                         <div className="lesson-video-wrapper">
 
                             <iframe
-                                src={
-                                    videoEmbedUrl
-                                }
-
-                                title={
-                                    lesson.title
-                                }
-
+                                src={videoEmbedUrl}
+                                title={lesson.title}
                                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-
                                 allowFullScreen
                             />
 
@@ -1007,14 +975,13 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
                         </p>
 
                     </div>
-
                 )}
 
             </section>
 
-            {/* =============================================
+            {/* =================================================
                 CONTENT
-            ============================================= */}
+            ================================================= */}
 
             {lesson.content && (
 
@@ -1034,7 +1001,6 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
 
                     <div
                         className="lesson-content-body"
-
                         dangerouslySetInnerHTML={{
                             __html:
                                 lesson.content
@@ -1042,38 +1008,31 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
                     />
 
                 </section>
-
             )}
 
-            {/* =============================================
+            {/* =================================================
                 RESOURCE
-            ============================================= */}
+            ================================================= */}
 
             {resourceUrl && (
 
                 <section className="lesson-resource-section">
 
                     <a
-                        href={
-                            resourceUrl
-                        }
-
+                        href={resourceUrl}
                         target="_blank"
-
                         rel="noopener noreferrer"
-
                         className="lesson-resource-button"
                     >
                         📎 Open Lesson Resource
                     </a>
 
                 </section>
-
             )}
 
-            {/* =============================================
+            {/* =================================================
                 COMPLETION
-            ============================================= */}
+            ================================================= */}
 
             <section className="lesson-completion-section">
 
@@ -1101,13 +1060,10 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
 
                             <button
                                 type="button"
-
                                 className="lesson-complete-button"
-
                                 onClick={
                                     handleCompleteLesson
                                 }
-
                                 disabled={
                                     completing
                                 }
@@ -1128,7 +1084,6 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
                                 {completeError}
 
                             </div>
-
                         )}
 
                     </>
@@ -1154,7 +1109,6 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
                         </div>
 
                     </div>
-
                 )}
 
                 {completeMessage && (
@@ -1165,30 +1119,26 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
                         {completeMessage}
 
                     </div>
-
                 )}
 
             </section>
 
-            {/* =============================================
+            {/* =================================================
                 NAVIGATION
-            ============================================= */}
+            ================================================= */}
 
             <div className="lesson-viewer-navigation">
 
-                {/* =========================================
-                    PREVIOUS
-                ========================================= */}
+                {/* PREVIOUS */}
 
                 <button
                     type="button"
-
                     className="lesson-nav-button lesson-nav-back"
-
                     onClick={
-                        onPrevious
+                        canGoPrevious
+                            ? onPrevious
+                            : undefined
                     }
-
                     disabled={
                         !canGoPrevious
                     }
@@ -1212,41 +1162,29 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
 
                 </button>
 
-                {/* =========================================
-                    COURSE
-                ========================================= */}
+                {/* COURSE */}
 
                 <button
                     type="button"
-
                     className="lesson-nav-course"
-
-                    onClick={
-                        onBack
-                    }
+                    onClick={onBack}
                 >
                     ← Back to Course
                 </button>
 
-                {/* =========================================
-                    NEXT
-                ========================================= */}
+                {/* NEXT */}
 
                 <button
                     type="button"
-
                     className="lesson-nav-button lesson-nav-next"
-
                     onClick={
                         canGoNext
                             ? onNext
                             : undefined
                     }
-
                     disabled={
                         !canGoNext
                     }
-
                     aria-disabled={
                         !canGoNext
                     }
@@ -1280,9 +1218,9 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
 
             </div>
 
-            {/* =============================================
+            {/* =================================================
                 LOCK MESSAGE
-            ============================================= */}
+            ================================================= */}
 
             {!isCompleted &&
                 hasNext && (
@@ -1306,13 +1244,10 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
                         </div>
 
                     </div>
-
                 )}
 
         </div>
-
     );
-
 };
 
 export default LessonViewer;
