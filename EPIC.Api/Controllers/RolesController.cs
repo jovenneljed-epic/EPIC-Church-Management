@@ -1,4 +1,4 @@
-```csharp
+
 using EPIC.Api.Data;
 using EPIC.Api.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -697,4 +697,4 @@ namespace EPIC.Api.Controllers
         public bool CanExport { get; set; }
     }
 }
-```
+
