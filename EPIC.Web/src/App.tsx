@@ -9,6 +9,7 @@ import Login from "./Login";
 import Dashboard from "./Dashboard";
 import Members from "./Members";
 import Attendance from "./Attendance";
+
 import ChurchServicesPage from "./pages/ChurchServicesPage";
 import MemberAttendanceReport from "./pages/MemberAttendanceReport";
 import Visitors from "./pages/Visitors";
@@ -17,6 +18,9 @@ import Income from "./pages/Income";
 import Ministries from "./pages/Ministries";
 import Expenses from "./pages/Expenses";
 import Settings from "./pages/Settings";
+
+import LandingPage from "./pages/LandingPage";
+import DemoRequests from "./pages/DemoRequests";
 
 // =========================================================
 // EPIC LEARNING
@@ -39,6 +43,7 @@ import PermissionFilter from "./PermissionFilter";
 
 type Page =
     | "dashboard"
+    | "demo-requests"
     | "learning"
     | "view-course"
     | "lesson"
@@ -54,6 +59,63 @@ type Page =
     | "settings";
 
 // =========================================================
+// AUTH HELPERS
+// =========================================================
+
+const AUTH_KEYS = [
+    "token",
+    "accessToken",
+    "jwt",
+    "authToken",
+    "epicToken"
+];
+
+const USER_KEYS = [
+    "currentUser",
+    "currentFullName",
+    "currentRole",
+    "currentRoleId",
+    "roleId",
+    "userId",
+    "permissions",
+    "epicPermissions"
+];
+
+const getAuthToken = (): string | null => {
+
+    for (const key of AUTH_KEYS) {
+
+        const value = localStorage.getItem(key);
+
+        if (value) {
+            return value;
+        }
+    }
+
+    return null;
+};
+
+const isLoggedIn = (): boolean => {
+    return Boolean(getAuthToken());
+};
+
+// =========================================================
+// NORMALIZE PATH
+// =========================================================
+
+const normalizePath = (path: string): string => {
+
+    if (!path) {
+        return "/";
+    }
+
+    const normalized =
+        path.replace(/\/+$/, "");
+
+    return normalized || "/";
+};
+
+// =========================================================
 // APP
 // =========================================================
 
@@ -64,7 +126,16 @@ const App: React.FC = () => {
     // =====================================================
 
     const [isAuthenticated, setIsAuthenticated] =
-        useState<boolean>(false);
+        useState<boolean>(() => isLoggedIn());
+
+    // =====================================================
+    // URL
+    // =====================================================
+
+    const [currentPath, setCurrentPath] =
+        useState<string>(() =>
+            normalizePath(window.location.pathname)
+        );
 
     // =====================================================
     // NAVIGATION
@@ -77,7 +148,7 @@ const App: React.FC = () => {
         useState<boolean>(true);
 
     // =====================================================
-    // EPIC LEARNING STATE
+    // EPIC LEARNING
     // =====================================================
 
     const [selectedCourseId, setSelectedCourseId] =
@@ -87,25 +158,229 @@ const App: React.FC = () => {
         useState<number | null>(null);
 
     // =====================================================
-    // AUTH CHECK
+    // USER INFORMATION
+    // =====================================================
+
+    const fullName =
+        localStorage.getItem("currentFullName") ||
+        localStorage.getItem("currentUser") ||
+        "Administrator";
+
+    const role =
+        localStorage.getItem("currentRole") ||
+        "Church Admin";
+
+    const avatarLetter =
+        fullName.charAt(0).toUpperCase();
+
+    // =====================================================
+    // ROUTE FLAGS
+    // =====================================================
+
+    const normalizedPath =
+        normalizePath(currentPath);
+
+    const isLandingPage =
+        normalizedPath === "/";
+
+    const isLoginPage =
+        normalizedPath === "/login";
+
+    const isDashboardPath =
+        normalizedPath === "/dashboard";
+
+    // =====================================================
+    // NAVIGATE URL
+    // =====================================================
+
+    const navigateToUrl = (path: string) => {
+
+        const normalized =
+            normalizePath(path);
+
+        if (
+            normalizePath(window.location.pathname) !==
+            normalized
+        ) {
+
+            window.history.pushState(
+                {},
+                "",
+                normalized
+            );
+        }
+
+        setCurrentPath(normalized);
+    };
+
+    // =====================================================
+    // BROWSER BACK / FORWARD
     // =====================================================
 
     useEffect(() => {
 
-        const token =
-            localStorage.getItem("token") ||
-            localStorage.getItem("accessToken") ||
-            localStorage.getItem("jwt") ||
-            localStorage.getItem("authToken") ||
-            localStorage.getItem("epicToken");
+        const handlePopState = () => {
 
-        setIsAuthenticated(Boolean(token));
+            setCurrentPath(
+                normalizePath(
+                    window.location.pathname
+                )
+            );
 
-        if (token) {
+        };
+
+        window.addEventListener(
+            "popstate",
+            handlePopState
+        );
+
+        return () => {
+
+            window.removeEventListener(
+                "popstate",
+                handlePopState
+            );
+
+        };
+
+    }, []);
+
+    // =====================================================
+    // AUTHENTICATION CHECK
+    // =====================================================
+
+    useEffect(() => {
+
+        const authenticated =
+            isLoggedIn();
+
+        setIsAuthenticated(
+            authenticated
+        );
+
+        if (authenticated) {
+
             PermissionService.debugPermissions();
+
         }
 
     }, []);
+
+    // =====================================================
+    // LANDING → LOGIN
+    // =====================================================
+
+    const handleLandingLogin = () => {
+
+        navigateToUrl("/login");
+
+    };
+
+    // =====================================================
+    // LOGIN SUCCESS
+    // =====================================================
+
+    const handleLoginSuccess = () => {
+
+        const token =
+            getAuthToken();
+
+        if (!token) {
+
+            console.warn(
+                "APP: Login reported success, but no authentication token was found."
+            );
+
+            return;
+        }
+
+        setIsAuthenticated(true);
+
+        setSelectedCourseId(null);
+        setSelectedLessonId(null);
+
+        setActivePage("dashboard");
+
+        navigateToUrl("/dashboard");
+
+        PermissionService.debugPermissions();
+
+    };
+
+    // =====================================================
+    // LOGOUT
+    // =====================================================
+
+    const handleLogout = () => {
+
+        AUTH_KEYS
+            .concat(USER_KEYS)
+            .forEach((key) => {
+
+                localStorage.removeItem(key);
+
+            });
+
+        setSelectedCourseId(null);
+        setSelectedLessonId(null);
+
+        setActivePage("dashboard");
+
+        setIsAuthenticated(false);
+
+        navigateToUrl("/");
+
+    };
+
+    // =====================================================
+    // PROTECT DASHBOARD
+    // =====================================================
+
+    useEffect(() => {
+
+        /*
+         * If the user is not authenticated and tries
+         * to access /dashboard, send them to /login.
+         */
+
+        if (
+            isDashboardPath &&
+            !isAuthenticated
+        ) {
+
+            navigateToUrl("/login");
+
+        }
+
+    }, [
+        isDashboardPath,
+        isAuthenticated
+    ]);
+
+    // =====================================================
+    // LOGIN ROUTE FOR AUTHENTICATED USER
+    // =====================================================
+
+    useEffect(() => {
+
+        /*
+         * If an authenticated user manually opens /login,
+         * send them to the dashboard.
+         */
+
+        if (
+            isLoginPage &&
+            isAuthenticated
+        ) {
+
+            navigateToUrl("/dashboard");
+
+        }
+
+    }, [
+        isLoginPage,
+        isAuthenticated
+    ]);
 
     // =====================================================
     // GLOBAL COURSE / LESSON EVENTS
@@ -113,11 +388,9 @@ const App: React.FC = () => {
 
     useEffect(() => {
 
-        // -------------------------------------------------
-        // OPEN COURSE EVENT
-        // -------------------------------------------------
-
-        const handleOpenCourse = (event: Event) => {
+        const handleOpenCourse = (
+            event: Event
+        ) => {
 
             const customEvent =
                 event as CustomEvent<{
@@ -127,15 +400,12 @@ const App: React.FC = () => {
             const courseId =
                 customEvent.detail?.courseId;
 
-            console.log(
-                "APP: Opening course:",
-                courseId
-            );
-
             if (!courseId) {
+
                 console.warn(
                     "APP: Course ID missing."
                 );
+
                 return;
             }
 
@@ -145,11 +415,9 @@ const App: React.FC = () => {
 
         };
 
-        // -------------------------------------------------
-        // OPEN LESSON EVENT
-        // -------------------------------------------------
-
-        const handleOpenLesson = (event: Event) => {
+        const handleOpenLesson = (
+            event: Event
+        ) => {
 
             const customEvent =
                 event as CustomEvent<{
@@ -163,27 +431,30 @@ const App: React.FC = () => {
             const lessonId =
                 customEvent.detail?.lessonId;
 
-            console.log(
-                "APP: Opening lesson:",
-                {
-                    courseId,
-                    lessonId
-                }
-            );
-
             if (!lessonId) {
+
                 console.warn(
                     "APP: Lesson ID missing."
                 );
+
                 return;
             }
 
             if (courseId) {
-                setSelectedCourseId(courseId);
+
+                setSelectedCourseId(
+                    courseId
+                );
+
             }
 
-            setSelectedLessonId(lessonId);
-            setActivePage("lesson");
+            setSelectedLessonId(
+                lessonId
+            );
+
+            setActivePage(
+                "lesson"
+            );
 
         };
 
@@ -214,80 +485,56 @@ const App: React.FC = () => {
     }, []);
 
     // =====================================================
-    // LOGOUT
-    // =====================================================
-
-    const handleLogout = () => {
-
-        const authKeys = [
-            "token",
-            "accessToken",
-            "jwt",
-            "authToken",
-            "epicToken"
-        ];
-
-        const userKeys = [
-            "currentUser",
-            "currentFullName",
-            "currentRole",
-            "currentRoleId",
-            "roleId",
-            "userId",
-            "permissions"
-        ];
-
-        [
-            ...authKeys,
-            ...userKeys
-        ].forEach(key => {
-            localStorage.removeItem(key);
-        });
-
-        setSelectedCourseId(null);
-        setSelectedLessonId(null);
-
-        setActivePage("dashboard");
-        setIsAuthenticated(false);
-
-    };
-
-    // =====================================================
     // GENERIC NAVIGATION
     // =====================================================
 
     const navigate = (page: Page) => {
 
-        console.log(
-            "APP: Navigate:",
-            page
-        );
-
         setActivePage(page);
 
         if (window.innerWidth <= 900) {
+
             setSidebarOpen(false);
+
         }
 
     };
 
     // =====================================================
-    // OPEN LEARNING HOME
+    // OPEN LEARNING
     // =====================================================
 
     const handleOpenLearning = () => {
 
-        console.log(
-            "APP: Opening EPIC Learning home"
-        );
+        const currentRole =
+            (
+                localStorage.getItem(
+                    "currentRole"
+                ) ||
+                "Church Admin"
+            ).toLowerCase();
+
+        if (
+            currentRole === "member"
+        ) {
+
+            return;
+
+        }
 
         setSelectedCourseId(null);
         setSelectedLessonId(null);
 
-        setActivePage("learning");
+        setActivePage(
+            "learning"
+        );
 
-        if (window.innerWidth <= 900) {
+        if (
+            window.innerWidth <= 900
+        ) {
+
             setSidebarOpen(false);
+
         }
 
     };
@@ -300,14 +547,17 @@ const App: React.FC = () => {
         courseId: number
     ) => {
 
-        console.log(
-            "APP: Opening course:",
+        setSelectedCourseId(
             courseId
         );
 
-        setSelectedCourseId(courseId);
-        setSelectedLessonId(null);
-        setActivePage("view-course");
+        setSelectedLessonId(
+            null
+        );
+
+        setActivePage(
+            "view-course"
+        );
 
     };
 
@@ -320,17 +570,17 @@ const App: React.FC = () => {
         lessonId: number
     ) => {
 
-        console.log(
-            "APP: Opening lesson:",
-            {
-                courseId,
-                lessonId
-            }
+        setSelectedCourseId(
+            courseId
         );
 
-        setSelectedCourseId(courseId);
-        setSelectedLessonId(lessonId);
-        setActivePage("lesson");
+        setSelectedLessonId(
+            lessonId
+        );
+
+        setActivePage(
+            "lesson"
+        );
 
     };
 
@@ -340,8 +590,13 @@ const App: React.FC = () => {
 
     const handleBackToCourse = () => {
 
-        setSelectedLessonId(null);
-        setActivePage("view-course");
+        setSelectedLessonId(
+            null
+        );
+
+        setActivePage(
+            "view-course"
+        );
 
     };
 
@@ -351,126 +606,128 @@ const App: React.FC = () => {
 
     const handleBackToLearning = () => {
 
-        setSelectedCourseId(null);
-        setSelectedLessonId(null);
-        setActivePage("learning");
+        setSelectedCourseId(
+            null
+        );
+
+        setSelectedLessonId(
+            null
+        );
+
+        setActivePage(
+            "learning"
+        );
 
     };
 
     // =====================================================
-    // PAGE TITLE
+    // PAGE TITLES
     // =====================================================
 
-    const getPageTitle = (): string => {
+    const pageTitles: Record<Page, string> = {
 
-        const titles: Record<Page, string> = {
+        dashboard:
+            "Dashboard",
 
-            dashboard:
-                "Dashboard",
+        "demo-requests":
+            "Demo Requests",
 
-            services:
-                "Church Services",
+        services:
+            "Church Services",
 
-            "member-attendance-report":
-                "Member Attendance Report",
+        "member-attendance-report":
+            "Member Attendance Report",
 
-            members:
-                "Members Management",
+        members:
+            "Members Management",
 
-            attendance:
-                "Attendance Management",
+        attendance:
+            "Attendance Management",
 
-            ministries:
-                "Ministries Management",
+        ministries:
+            "Ministries Management",
 
-            visitors:
-                "Visitors Management",
+        visitors:
+            "Visitors Management",
 
-            giving:
-                "Giving Management",
+        giving:
+            "Giving Management",
 
-            income:
-                "Income Management",
+        income:
+            "Income Management",
 
-            expenses:
-                "Expenses Management",
+        expenses:
+            "Expenses Management",
 
-            learning:
-                "EPIC Learning",
+        learning:
+            "EPIC Learning",
 
-            "view-course":
-                "Course Details",
+        "view-course":
+            "Course Details",
 
-            lesson:
-                "Lesson",
+        lesson:
+            "Lesson",
 
-            settings:
-                "System Settings"
-
-        };
-
-        return titles[activePage];
+        settings:
+            "System Settings"
 
     };
 
     // =====================================================
-    // PAGE SUBTITLE
+    // PAGE SUBTITLES
     // =====================================================
 
-    const getPageSubtitle = (): string => {
+    const pageSubtitles: Record<Page, string> = {
 
-        const subtitles: Record<Page, string> = {
+        dashboard:
+            "Church management overview",
 
-            dashboard:
-                "Church management overview",
+        "demo-requests":
+            "Manage churches requesting an EPIC system demonstration",
 
-            services:
-                "Schedule and manage church services and events",
+        services:
+            "Schedule and manage church services and events",
 
-            "member-attendance-report":
-                "Attendance performance, member history and pastoral follow-up",
+        "member-attendance-report":
+            "Attendance performance, member history and pastoral follow-up",
 
-            members:
-                "Manage church members and member information",
+        members:
+            "Manage church members and member information",
 
-            attendance:
-                "Monitor and record church attendance",
+        attendance:
+            "Monitor and record church attendance",
 
-            ministries:
-                "Manage ministries and ministry assignments",
+        ministries:
+            "Manage ministries and ministry assignments",
 
-            visitors:
-                "Manage visitors, follow-ups, attendance and connections",
+        visitors:
+            "Manage visitors, follow-ups, attendance and connections",
 
-            giving:
-                "Monitor tithes, offerings and church giving",
+        giving:
+            "Monitor tithes, offerings and church giving",
 
-            income:
-                "Manage church income records",
+        income:
+            "Manage church income records",
 
-            expenses:
-                "Manage church expenses",
+        expenses:
+            "Manage church expenses",
 
-            learning:
-                "Grow in faith, develop leaders and strengthen discipleship",
+        learning:
+            "Grow in faith, develop leaders and strengthen discipleship",
 
-            "view-course":
-                "Explore course modules and lessons",
+        "view-course":
+            "Explore course modules and lessons",
 
-            lesson:
-                "Study the lesson and track your progress",
+        lesson:
+            "Study the lesson and track your progress",
 
-            settings:
-                "Manage system configuration"
-
-        };
-
-        return subtitles[activePage];
+        settings:
+            "Manage system configuration"
 
     };
 
     // =====================================================
-    // PAGE CONTENT
+    // RENDER PAGE
     // =====================================================
 
     const renderPage = () => {
@@ -482,73 +739,113 @@ const App: React.FC = () => {
             // =================================================
 
             case "dashboard":
-                return <Dashboard />;
+
+                return (
+                    <Dashboard />
+                );
+
+            // =================================================
+            // DEMO REQUESTS
+            // =================================================
+
+            case "demo-requests":
+
+                return (
+                    <DemoRequests />
+                );
 
             // =================================================
             // CHURCH SERVICES
             // =================================================
 
             case "services":
-                return <ChurchServicesPage />;
+
+                return (
+                    <ChurchServicesPage />
+                );
 
             // =================================================
-            // MEMBER ATTENDANCE REPORT
+            // ATTENDANCE REPORT
             // =================================================
 
             case "member-attendance-report":
-                return <MemberAttendanceReport />;
+
+                return (
+                    <MemberAttendanceReport />
+                );
 
             // =================================================
             // MEMBERS
             // =================================================
 
             case "members":
-                return <Members />;
+
+                return (
+                    <Members />
+                );
 
             // =================================================
             // ATTENDANCE
             // =================================================
 
             case "attendance":
-                return <Attendance />;
+
+                return (
+                    <Attendance />
+                );
 
             // =================================================
             // MINISTRIES
             // =================================================
 
             case "ministries":
-                return <Ministries />;
+
+                return (
+                    <Ministries />
+                );
 
             // =================================================
             // VISITORS
             // =================================================
 
             case "visitors":
-                return <Visitors />;
+
+                return (
+                    <Visitors />
+                );
 
             // =================================================
             // GIVING
             // =================================================
 
             case "giving":
-                return <Giving />;
+
+                return (
+                    <Giving />
+                );
 
             // =================================================
             // INCOME
             // =================================================
 
             case "income":
-                return <Income />;
+
+                return (
+                    <Income />
+                );
 
             // =================================================
             // EXPENSES
             // =================================================
 
             case "expenses":
-                return <Expenses />;
+
+                return (
+                    <Expenses />
+                );
 
             // =================================================
-            // EPIC LEARNING HOME
+            // EPIC LEARNING
             // =================================================
 
             case "learning":
@@ -592,7 +889,6 @@ const App: React.FC = () => {
 
                         </div>
                     );
-
                 }
 
                 return (
@@ -600,20 +896,15 @@ const App: React.FC = () => {
                         courseId={
                             selectedCourseId
                         }
-
                         onBack={
                             handleBackToLearning
                         }
-
                         onLessonSelect={
-                            (lessonId: number) => {
-
+                            (lessonId: number) =>
                                 handleViewLesson(
                                     selectedCourseId,
                                     lessonId
-                                );
-
-                            }
+                                )
                         }
                     />
                 );
@@ -652,7 +943,6 @@ const App: React.FC = () => {
 
                         </div>
                     );
-
                 }
 
                 return (
@@ -674,59 +964,119 @@ const App: React.FC = () => {
             // =================================================
 
             case "settings":
-                return <Settings />;
+
+                return (
+                    <Settings />
+                );
 
             // =================================================
             // FALLBACK
             // =================================================
 
             default:
-                return <Dashboard />;
+
+                return (
+                    <Dashboard />
+                );
 
         }
 
     };
 
     // =====================================================
-    // LOGIN
+    // PUBLIC LANDING PAGE
+    // =====================================================
+    //
+    // IMPORTANT:
+    //
+    // "/" ALWAYS shows the public landing page.
+    //
+    // Even if a JWT exists in localStorage.
+    //
     // =====================================================
 
-    if (!isAuthenticated) {
+    if (isLandingPage) {
+
+        return (
+            <LandingPage
+                onLogin={
+                    handleLandingLogin
+                }
+            />
+        );
+
+    }
+
+    // =====================================================
+    // LOGIN PAGE
+    // =====================================================
+
+    if (isLoginPage) {
+
+        /*
+         * If already authenticated, the useEffect above
+         * will move the browser to /dashboard.
+         *
+         * Return null temporarily while that happens.
+         */
+
+        if (isAuthenticated) {
+
+            return null;
+
+        }
 
         return (
             <div className="epic-login-container">
-                <Login />
+
+                <Login
+                    onLoginSuccess={
+                        handleLoginSuccess
+                    }
+                />
+
             </div>
         );
 
     }
 
     // =====================================================
-    // USER INFORMATION
+    // UNAUTHENTICATED USER
     // =====================================================
 
-    const fullName =
-        localStorage.getItem(
-            "currentFullName"
-        ) ||
-        localStorage.getItem(
-            "currentUser"
-        ) ||
-        "Administrator";
+    if (!isAuthenticated) {
 
-    const role =
-        localStorage.getItem(
-            "currentRole"
-        ) ||
-        "Church Admin";
+        /*
+         * Any protected URL without authentication
+         * goes to the login page.
+         */
 
-    const avatarLetter =
-        fullName
-            .charAt(0)
-            .toUpperCase();
+        if (
+            normalizedPath !== "/"
+        ) {
+
+            return (
+                <Login
+                    onLoginSuccess={
+                        handleLoginSuccess
+                    }
+                />
+            );
+
+        }
+
+        return (
+            <LandingPage
+                onLogin={
+                    handleLandingLogin
+                }
+            />
+        );
+
+    }
 
     // =====================================================
-    // MAIN APPLICATION
+    // AUTHENTICATED CMS
     // =====================================================
 
     return (
@@ -1211,8 +1561,53 @@ const App: React.FC = () => {
                         EPIC LEARNING
                     ================================================= */}
 
+                    {role.toLowerCase() !== "member" && (
+
+                        <>
+
+                            <div className="epic-nav-section epic-nav-section-space">
+                                EPIC LEARNING
+                            </div>
+
+                            <button
+                                type="button"
+                                className={
+                                    `epic-nav-item ${
+                                        activePage ===
+                                            "learning" ||
+                                        activePage ===
+                                            "view-course" ||
+                                        activePage ===
+                                            "lesson"
+                                            ? "active"
+                                            : ""
+                                    }`
+                                }
+                                onClick={
+                                    handleOpenLearning
+                                }
+                            >
+
+                                <span className="epic-nav-icon">
+                                    📚
+                                </span>
+
+                                <span>
+                                    EPIC Learning
+                                </span>
+
+                            </button>
+
+                        </>
+
+                    )}
+
+                    {/* =================================================
+                        BUSINESS / SALES
+                    ================================================= */}
+
                     <div className="epic-nav-section epic-nav-section-space">
-                        EPIC LEARNING
+                        BUSINESS / SALES
                     </div>
 
                     <button
@@ -1220,26 +1615,24 @@ const App: React.FC = () => {
                         className={
                             `epic-nav-item ${
                                 activePage ===
-                                    "learning" ||
-                                activePage ===
-                                    "view-course" ||
-                                activePage ===
-                                    "lesson"
+                                "demo-requests"
                                     ? "active"
                                     : ""
                             }`
                         }
-                        onClick={
-                            handleOpenLearning
+                        onClick={() =>
+                            navigate(
+                                "demo-requests"
+                            )
                         }
                     >
 
                         <span className="epic-nav-icon">
-                            📚
+                            🎯
                         </span>
 
                         <span>
-                            EPIC Learning
+                            Demo Requests
                         </span>
 
                     </button>
@@ -1365,11 +1758,19 @@ const App: React.FC = () => {
                         <div className="epic-topbar-title">
 
                             <strong>
-                                {getPageTitle()}
+                                {
+                                    pageTitles[
+                                        activePage
+                                    ]
+                                }
                             </strong>
 
                             <span>
-                                {getPageSubtitle()}
+                                {
+                                    pageSubtitles[
+                                        activePage
+                                    ]
+                                }
                             </span>
 
                         </div>
@@ -1380,8 +1781,8 @@ const App: React.FC = () => {
 
                         <div className="epic-date">
 
-                            {new Date()
-                                .toLocaleDateString(
+                            {
+                                new Date().toLocaleDateString(
                                     "en-US",
                                     {
                                         weekday:
@@ -1393,7 +1794,8 @@ const App: React.FC = () => {
                                         year:
                                             "numeric"
                                     }
-                                )}
+                                )
+                            }
 
                         </div>
 
@@ -1439,7 +1841,10 @@ const App: React.FC = () => {
 
                     <span>
                         ©{" "}
-                        {new Date().getFullYear()}{" "}
+                        {
+                            new Date()
+                                .getFullYear()
+                        }{" "}
                         EPIC Church Management System
                     </span>
 
@@ -1452,9 +1857,7 @@ const App: React.FC = () => {
             </main>
 
         </div>
-
     );
-
 };
 
 export default App;
