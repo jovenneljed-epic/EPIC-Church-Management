@@ -25,14 +25,22 @@ namespace EPIC.Api.Services
             string action)
         {
             if (user?.Identity?.IsAuthenticated != true)
+            {
                 return false;
+            }
 
             // -----------------------------------------------------
             // ADMIN BYPASS
+            //
+            // ADMIN automatically has full access.
+            // Permissions are still stored for Admin so the
+            // permissions screen can display them.
             // -----------------------------------------------------
 
             if (user.IsInRole("ADMIN"))
+            {
                 return true;
+            }
 
             // -----------------------------------------------------
             // GET USER ID
@@ -42,7 +50,9 @@ namespace EPIC.Api.Services
                 user.FindFirst(ClaimTypes.NameIdentifier);
 
             if (userIdClaim == null)
+            {
                 return false;
+            }
 
             if (!int.TryParse(
                     userIdClaim.Value,
@@ -68,44 +78,84 @@ namespace EPIC.Api.Services
             string action)
         {
             // -----------------------------------------------------
-            // GET USER
+            // VALIDATE INPUT
             // -----------------------------------------------------
 
-            var dbUser = await _context.Users
-                .AsNoTracking()
-                .FirstOrDefaultAsync(
-                    u =>
-                        u.UserId == userId &&
-                        u.IsActive);
+            if (userId <= 0)
+            {
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(module))
+            {
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(action))
+            {
+                return false;
+            }
+
+            module = module.Trim();
+
+            action = action
+                .Trim()
+                .ToLowerInvariant();
+
+
+            // -----------------------------------------------------
+            // GET ACTIVE USER
+            // -----------------------------------------------------
+
+            var dbUser =
+                await _context.Users
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(
+                        u =>
+                            u.UserId == userId &&
+                            u.IsActive);
 
             if (dbUser == null)
+            {
                 return false;
+            }
+
+
+            // -----------------------------------------------------
+            // GET ACTIVE ROLE
+            // -----------------------------------------------------
+
+            var role =
+                await _context.Roles
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(
+                        r =>
+                            r.RoleId == dbUser.RoleId &&
+                            r.IsActive);
+
+            if (role == null)
+            {
+                return false;
+            }
+
 
             // -----------------------------------------------------
             // ADMIN BYPASS
             // -----------------------------------------------------
 
-            var role = await _context.Roles
-                .AsNoTracking()
-                .FirstOrDefaultAsync(
-                    r =>
-                        r.RoleId == dbUser.RoleId &&
-                        r.IsActive);
-
-            if (role == null)
-                return false;
-
-            if (role.RoleName.ToUpper() == "ADMIN")
+            if (
+                role.RoleName
+                    .Trim()
+                    .Equals(
+                        "ADMIN",
+                        StringComparison.OrdinalIgnoreCase))
+            {
                 return true;
+            }
+
 
             // -----------------------------------------------------
-            // NORMALIZE MODULE
-            // -----------------------------------------------------
-
-            module = module.Trim();
-
-            // -----------------------------------------------------
-            // GET PERMISSION
+            // GET ROLE PERMISSION
             // -----------------------------------------------------
 
             var permission =
@@ -116,15 +166,21 @@ namespace EPIC.Api.Services
                             p.RoleId == dbUser.RoleId &&
                             p.Module == module);
 
+            // -----------------------------------------------------
+            // NO PERMISSION = DENIED
+            // -----------------------------------------------------
+
             if (permission == null)
+            {
                 return false;
+            }
+
 
             // -----------------------------------------------------
             // CHECK ACTION
             // -----------------------------------------------------
 
-            return action.Trim().ToLowerInvariant()
-                switch
+            return action switch
             {
                 "view" =>
                     permission.CanView,
@@ -154,9 +210,69 @@ namespace EPIC.Api.Services
             ClaimsPrincipal user)
         {
             if (user?.Identity?.IsAuthenticated != true)
+            {
                 return false;
+            }
 
-            return user.IsInRole("ADMIN");
+            // -----------------------------------------------------
+            // Check JWT role
+            // -----------------------------------------------------
+
+            if (user.IsInRole("ADMIN"))
+            {
+                return true;
+            }
+
+            // -----------------------------------------------------
+            // Also verify against database
+            // -----------------------------------------------------
+
+            var userIdClaim =
+                user.FindFirst(ClaimTypes.NameIdentifier);
+
+            if (userIdClaim == null)
+            {
+                return false;
+            }
+
+            if (!int.TryParse(
+                    userIdClaim.Value,
+                    out int userId))
+            {
+                return false;
+            }
+
+            var dbUser =
+                await _context.Users
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(
+                        u =>
+                            u.UserId == userId &&
+                            u.IsActive);
+
+            if (dbUser == null)
+            {
+                return false;
+            }
+
+            var role =
+                await _context.Roles
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(
+                        r =>
+                            r.RoleId == dbUser.RoleId &&
+                            r.IsActive);
+
+            if (role == null)
+            {
+                return false;
+            }
+
+            return role.RoleName
+                .Trim()
+                .Equals(
+                    "ADMIN",
+                    StringComparison.OrdinalIgnoreCase);
         }
     }
 }

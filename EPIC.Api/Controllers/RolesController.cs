@@ -1,3 +1,4 @@
+```csharp
 using EPIC.Api.Data;
 using EPIC.Api.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -13,7 +14,38 @@ namespace EPIC.Api.Controllers
     {
         private readonly ApplicationDbContext _context;
 
-        public RolesController(ApplicationDbContext context)
+        // =========================================================
+        // ALL EPIC PERMISSION MODULES
+        // =========================================================
+        //
+        // IMPORTANT:
+        // Keep these names exactly the same as the frontend
+        // PermissionService.ts module names.
+        //
+        // =========================================================
+
+        private static readonly string[] PermissionModules =
+        {
+            "Dashboard",
+            "Members",
+            "Attendance",
+            "Visitors",
+            "Church Services",
+            "Giving",
+            "Income",
+            "Expenses",
+            "Ministries",
+            "Events",
+            "Reports",
+            "Settings",
+
+            // New permission-controlled modules
+            "Demo Requests",
+            "EPIC Learning"
+        };
+
+        public RolesController(
+            ApplicationDbContext context)
         {
             _context = context;
         }
@@ -42,7 +74,6 @@ namespace EPIC.Api.Controllers
 
             return Ok(roles);
         }
-
 
         // =========================================================
         // GET ROLE BY ID
@@ -77,7 +108,6 @@ namespace EPIC.Api.Controllers
             return Ok(role);
         }
 
-
         // =========================================================
         // CREATE ROLE
         // POST: api/Roles
@@ -87,7 +117,8 @@ namespace EPIC.Api.Controllers
         public async Task<IActionResult> CreateRole(
             CreateRoleRequest request)
         {
-            if (string.IsNullOrWhiteSpace(request.RoleName))
+            if (request == null ||
+                string.IsNullOrWhiteSpace(request.RoleName))
             {
                 return BadRequest(new
                 {
@@ -96,10 +127,14 @@ namespace EPIC.Api.Controllers
             }
 
             string roleName =
-                request.RoleName.Trim().ToUpper();
+                request.RoleName
+                    .Trim()
+                    .ToUpper();
 
-            bool exists = await _context.Roles
-                .AnyAsync(r => r.RoleName == roleName);
+            bool exists =
+                await _context.Roles
+                    .AnyAsync(r =>
+                        r.RoleName == roleName);
 
             if (exists)
             {
@@ -114,34 +149,78 @@ namespace EPIC.Api.Controllers
                 RoleName = roleName,
 
                 Description =
-                    request.Description?.Trim() ?? "",
+                    request.Description?
+                        .Trim() ?? "",
 
                 IsActive = true,
 
-                CreatedDate = DateTime.Now
+                CreatedDate =
+                    DateTime.Now
             };
 
             _context.Roles.Add(role);
 
             await _context.SaveChangesAsync();
 
+            // -----------------------------------------------------
+            // CREATE DEFAULT PERMISSION RECORDS
+            // -----------------------------------------------------
+            //
+            // Every new role receives all EPIC modules.
+            //
+            // Default:
+            // View   = false
+            // Create = false
+            // Edit   = false
+            // Delete = false
+            // Export = false
+            //
+            // Admin still receives automatic full access through
+            // PermissionService.
+            //
+            // -----------------------------------------------------
+
+            foreach (var module in PermissionModules)
+            {
+                _context.Permissions.Add(
+                    new Permission
+                    {
+                        RoleId = role.RoleId,
+                        Module = module,
+                        CanView = false,
+                        CanCreate = false,
+                        CanEdit = false,
+                        CanDelete = false,
+                        CanExport = false
+                    });
+            }
+
+            await _context.SaveChangesAsync();
+
             return CreatedAtAction(
                 nameof(GetRole),
-                new { id = role.RoleId },
                 new
                 {
-                    message = "Role created successfully.",
+                    id = role.RoleId
+                },
+                new
+                {
+                    message =
+                        "Role created successfully.",
 
-                    roleId = role.RoleId,
+                    roleId =
+                        role.RoleId,
 
-                    roleName = role.RoleName,
+                    roleName =
+                        role.RoleName,
 
-                    description = role.Description,
+                    description =
+                        role.Description,
 
-                    isActive = role.IsActive
+                    isActive =
+                        role.IsActive
                 });
         }
-
 
         // =========================================================
         // UPDATE ROLE
@@ -153,33 +232,41 @@ namespace EPIC.Api.Controllers
             int id,
             UpdateRoleRequest request)
         {
-            var role = await _context.Roles
-                .FirstOrDefaultAsync(r =>
-                    r.RoleId == id);
+            var role =
+                await _context.Roles
+                    .FirstOrDefaultAsync(r =>
+                        r.RoleId == id);
 
             if (role == null)
             {
                 return NotFound(new
                 {
-                    message = "Role not found."
+                    message =
+                        "Role not found."
                 });
             }
 
-            if (string.IsNullOrWhiteSpace(request.RoleName))
+            if (request == null ||
+                string.IsNullOrWhiteSpace(
+                    request.RoleName))
             {
                 return BadRequest(new
                 {
-                    message = "Role name is required."
+                    message =
+                        "Role name is required."
                 });
             }
 
             string roleName =
-                request.RoleName.Trim().ToUpper();
+                request.RoleName
+                    .Trim()
+                    .ToUpper();
 
-            bool duplicate = await _context.Roles
-                .AnyAsync(r =>
-                    r.RoleId != id &&
-                    r.RoleName == roleName);
+            bool duplicate =
+                await _context.Roles
+                    .AnyAsync(r =>
+                        r.RoleId != id &&
+                        r.RoleName == roleName);
 
             if (duplicate)
             {
@@ -190,29 +277,36 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            role.RoleName = roleName;
+            role.RoleName =
+                roleName;
 
             role.Description =
-                request.Description?.Trim() ?? "";
+                request.Description?
+                    .Trim() ?? "";
 
-            role.IsActive = request.IsActive;
+            role.IsActive =
+                request.IsActive;
 
             await _context.SaveChangesAsync();
 
             return Ok(new
             {
-                message = "Role updated successfully.",
+                message =
+                    "Role updated successfully.",
 
-                roleId = role.RoleId,
+                roleId =
+                    role.RoleId,
 
-                roleName = role.RoleName,
+                roleName =
+                    role.RoleName,
 
-                description = role.Description,
+                description =
+                    role.Description,
 
-                isActive = role.IsActive
+                isActive =
+                    role.IsActive
             });
         }
-
 
         // =========================================================
         // DEACTIVATE ROLE
@@ -220,26 +314,30 @@ namespace EPIC.Api.Controllers
         // =========================================================
 
         [HttpDelete("{id:int}")]
-        public async Task<IActionResult> DeleteRole(int id)
+        public async Task<IActionResult> DeleteRole(
+            int id)
         {
-            var role = await _context.Roles
-                .Include(r => r.Users)
-                .FirstOrDefaultAsync(r =>
-                    r.RoleId == id);
+            var role =
+                await _context.Roles
+                    .Include(r => r.Users)
+                    .FirstOrDefaultAsync(r =>
+                        r.RoleId == id);
 
             if (role == null)
             {
                 return NotFound(new
                 {
-                    message = "Role not found."
+                    message =
+                        "Role not found."
                 });
             }
 
             // -----------------------------------------------------
-            // PROTECT ROLE IF USERS ARE STILL ASSIGNED
+            // PROTECT ROLE IF ACTIVE USERS EXIST
             // -----------------------------------------------------
 
-            if (role.Users.Any(u => u.IsActive))
+            if (role.Users.Any(u =>
+                    u.IsActive))
             {
                 return BadRequest(new
                 {
@@ -248,18 +346,20 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            role.IsActive = false;
+            role.IsActive =
+                false;
 
             await _context.SaveChangesAsync();
 
             return Ok(new
             {
-                message = "Role deactivated successfully.",
+                message =
+                    "Role deactivated successfully.",
 
-                roleId = role.RoleId
+                roleId =
+                    role.RoleId
             });
         }
-
 
         // =========================================================
         // GET ROLE PERMISSIONS
@@ -267,55 +367,145 @@ namespace EPIC.Api.Controllers
         // =========================================================
 
         [HttpGet("{id:int}/permissions")]
-        public async Task<IActionResult> GetPermissions(int id)
+        public async Task<IActionResult> GetPermissions(
+            int id)
         {
-            var role = await _context.Roles
-                .AsNoTracking()
-                .FirstOrDefaultAsync(r =>
-                    r.RoleId == id);
+            var role =
+                await _context.Roles
+                    .FirstOrDefaultAsync(r =>
+                        r.RoleId == id);
 
             if (role == null)
             {
                 return NotFound(new
                 {
-                    message = "Role not found."
+                    message =
+                        "Role not found."
                 });
             }
 
-            var permissions = await _context.Permissions
-                .AsNoTracking()
-                .Where(p => p.RoleId == id)
-                .OrderBy(p => p.Module)
-                .Select(p => new
+            // -----------------------------------------------------
+            // ENSURE ALL EPIC MODULES EXIST
+            // -----------------------------------------------------
+            //
+            // This is the important part.
+            //
+            // If Demo Requests or EPIC Learning do not yet exist
+            // in the Permissions table for this role, they are
+            // automatically created.
+            //
+            // Existing permissions are NEVER overwritten.
+            //
+            // -----------------------------------------------------
+
+            var existingModules =
+                await _context.Permissions
+                    .Where(p =>
+                        p.RoleId == id)
+                    .Select(p =>
+                        p.Module)
+                    .ToListAsync();
+
+            var existingNormalized =
+                existingModules
+                    .Select(NormalizeModule)
+                    .ToHashSet();
+
+            bool permissionRecordsAdded =
+                false;
+
+            foreach (var module
+                     in PermissionModules)
+            {
+                if (!existingNormalized
+                    .Contains(
+                        NormalizeModule(module)))
                 {
-                    permissionId = p.PermissionId,
+                    _context.Permissions.Add(
+                        new Permission
+                        {
+                            RoleId =
+                                id,
 
-                    roleId = p.RoleId,
+                            Module =
+                                module,
 
-                    module = p.Module,
+                            CanView =
+                                false,
 
-                    canView = p.CanView,
+                            CanCreate =
+                                false,
 
-                    canCreate = p.CanCreate,
+                            CanEdit =
+                                false,
 
-                    canEdit = p.CanEdit,
+                            CanDelete =
+                                false,
 
-                    canDelete = p.CanDelete,
+                            CanExport =
+                                false
+                        });
 
-                    canExport = p.CanExport
-                })
-                .ToListAsync();
+                    permissionRecordsAdded =
+                        true;
+                }
+            }
+
+            if (permissionRecordsAdded)
+            {
+                await _context.SaveChangesAsync();
+            }
+
+            // -----------------------------------------------------
+            // RETURN COMPLETE PERMISSION LIST
+            // -----------------------------------------------------
+
+            var permissions =
+                await _context.Permissions
+                    .AsNoTracking()
+                    .Where(p =>
+                        p.RoleId == id)
+                    .OrderBy(p =>
+                        p.Module)
+                    .Select(p => new
+                    {
+                        permissionId =
+                            p.PermissionId,
+
+                        roleId =
+                            p.RoleId,
+
+                        module =
+                            p.Module,
+
+                        canView =
+                            p.CanView,
+
+                        canCreate =
+                            p.CanCreate,
+
+                        canEdit =
+                            p.CanEdit,
+
+                        canDelete =
+                            p.CanDelete,
+
+                        canExport =
+                            p.CanExport
+                    })
+                    .ToListAsync();
 
             return Ok(new
             {
-                roleId = role.RoleId,
+                roleId =
+                    role.RoleId,
 
-                roleName = role.RoleName,
+                roleName =
+                    role.RoleName,
 
                 permissions
             });
         }
-
 
         // =========================================================
         // UPDATE ROLE PERMISSIONS
@@ -327,15 +517,17 @@ namespace EPIC.Api.Controllers
             int id,
             List<PermissionUpdateRequest> requests)
         {
-            var role = await _context.Roles
-                .FirstOrDefaultAsync(r =>
-                    r.RoleId == id);
+            var role =
+                await _context.Roles
+                    .FirstOrDefaultAsync(r =>
+                        r.RoleId == id);
 
             if (role == null)
             {
                 return NotFound(new
                 {
-                    message = "Role not found."
+                    message =
+                        "Role not found."
                 });
             }
 
@@ -349,13 +541,41 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            foreach (var request in requests)
+            // -----------------------------------------------------
+            // VALID MODULE SET
+            // -----------------------------------------------------
+
+            var validModules =
+                PermissionModules
+                    .Select(NormalizeModule)
+                    .ToHashSet();
+
+            foreach (var request
+                     in requests)
             {
-                if (string.IsNullOrWhiteSpace(request.Module))
+                if (request == null ||
+                    string.IsNullOrWhiteSpace(
+                        request.Module))
+                {
                     continue;
+                }
 
                 string module =
                     request.Module.Trim();
+
+                // -------------------------------------------------
+                // Only allow known EPIC modules
+                // -------------------------------------------------
+
+                if (!validModules.Contains(
+                        NormalizeModule(module)))
+                {
+                    continue;
+                }
+
+                // -------------------------------------------------
+                // Find existing permission
+                // -------------------------------------------------
 
                 var permission =
                     await _context.Permissions
@@ -363,16 +583,29 @@ namespace EPIC.Api.Controllers
                             p.RoleId == id &&
                             p.Module == module);
 
+                // -------------------------------------------------
+                // Create if missing
+                // -------------------------------------------------
+
                 if (permission == null)
                 {
-                    permission = new Permission
-                    {
-                        RoleId = id,
-                        Module = module
-                    };
+                    permission =
+                        new Permission
+                        {
+                            RoleId =
+                                id,
 
-                    _context.Permissions.Add(permission);
+                            Module =
+                                module
+                        };
+
+                    _context.Permissions.Add(
+                        permission);
                 }
+
+                // -------------------------------------------------
+                // UPDATE CHECKBOX VALUES
+                // -------------------------------------------------
 
                 permission.CanView =
                     request.CanView;
@@ -397,11 +630,26 @@ namespace EPIC.Api.Controllers
                 message =
                     "Role permissions updated successfully.",
 
-                roleId = id
+                roleId =
+                    id
             });
         }
-    }
 
+        // =========================================================
+        // NORMALIZE MODULE
+        // =========================================================
+
+        private static string NormalizeModule(
+            string? module)
+        {
+            return (module ?? "")
+                .Trim()
+                .ToLowerInvariant()
+                .Replace(
+                    "  ",
+                    " ");
+        }
+    }
 
     // =============================================================
     // CREATE ROLE REQUEST
@@ -414,7 +662,6 @@ namespace EPIC.Api.Controllers
 
         public string? Description { get; set; }
     }
-
 
     // =============================================================
     // UPDATE ROLE REQUEST
@@ -429,7 +676,6 @@ namespace EPIC.Api.Controllers
 
         public bool IsActive { get; set; } = true;
     }
-
 
     // =============================================================
     // PERMISSION UPDATE REQUEST
@@ -451,4 +697,4 @@ namespace EPIC.Api.Controllers
         public bool CanExport { get; set; }
     }
 }
-
+```

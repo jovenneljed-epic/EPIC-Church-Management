@@ -1,5 +1,6 @@
 ﻿using EPIC.Api.Data;
 using EPIC.Api.Models;
+using EPIC.Core.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -8,20 +9,28 @@ namespace EPIC.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class DemoRequestsController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IPermissionService _permissionService;
+
+        private const string MODULE = "Demo Requests";
 
         public DemoRequestsController(
-            ApplicationDbContext context)
+            ApplicationDbContext context,
+            IPermissionService permissionService)
         {
             _context = context;
+            _permissionService = permissionService;
         }
 
+
         // =========================================================
-        // PUBLIC - CREATE DEMO REQUEST
-        // =========================================================
-        // POST /api/DemoRequests
+        // PUBLIC - SUBMIT DEMO REQUEST
+        // POST: /api/DemoRequests
+        //
+        // PUBLIC LANDING PAGE
         // =========================================================
 
         [HttpPost]
@@ -35,35 +44,43 @@ namespace EPIC.Api.Controllers
             }
 
             request.FullName =
-                request.FullName?.Trim() ?? "";
+                request.FullName.Trim();
 
             request.ChurchName =
-                request.ChurchName?.Trim() ?? "";
+                request.ChurchName.Trim();
 
             request.Email =
-                request.Email?.Trim().ToLowerInvariant() ?? "";
+                request.Email.Trim().ToLower();
 
-            request.Phone =
-                string.IsNullOrWhiteSpace(request.Phone)
-                    ? null
-                    : request.Phone.Trim();
+            if (!string.IsNullOrWhiteSpace(request.Phone))
+            {
+                request.Phone =
+                    request.Phone.Trim();
+            }
 
-            request.Position =
-                string.IsNullOrWhiteSpace(request.Position)
-                    ? null
-                    : request.Position.Trim();
+            if (!string.IsNullOrWhiteSpace(request.Position))
+            {
+                request.Position =
+                    request.Position.Trim();
+            }
 
-            request.Message =
-                string.IsNullOrWhiteSpace(request.Message)
-                    ? null
-                    : request.Message.Trim();
+            if (!string.IsNullOrWhiteSpace(request.Message))
+            {
+                request.Message =
+                    request.Message.Trim();
+            }
 
-            // Server-controlled fields
             request.DemoRequestId = 0;
+
             request.Status = "Pending";
+
             request.AdminNotes = null;
-            request.CreatedDate = DateTime.UtcNow;
+
+            request.CreatedDate =
+                DateTime.UtcNow;
+
             request.ContactedDate = null;
+
             request.DemoDate = null;
 
             _context.DemoRequests.Add(request);
@@ -73,70 +90,35 @@ namespace EPIC.Api.Controllers
             return Ok(new
             {
                 success = true,
+
                 message =
-                    "Your demo request has been submitted successfully. Our EPIC team will contact you soon. God bless you!",
+                    "Your demo request has been submitted to EPIC Admin successfully. Our EPIC team will contact you soon. God bless you!",
+
                 demoRequestId =
                     request.DemoRequestId
             });
         }
 
+
         // =========================================================
-        // ADMIN - GET SUMMARY
-        // =========================================================
-        // GET /api/DemoRequests/summary
+        // GET ALL DEMO REQUESTS
+        // GET: /api/DemoRequests
         //
-        // IMPORTANT:
-        // This route is declared BEFORE /{id:int}
-        // =========================================================
-
-        [HttpGet("summary")]
-        [Authorize]
-        public async Task<IActionResult> GetSummary()
-        {
-            var total =
-                await _context.DemoRequests.CountAsync();
-
-            var pending =
-                await _context.DemoRequests.CountAsync(
-                    x => x.Status == "Pending");
-
-            var contacted =
-                await _context.DemoRequests.CountAsync(
-                    x => x.Status == "Contacted");
-
-            var scheduled =
-                await _context.DemoRequests.CountAsync(
-                    x => x.Status == "Scheduled");
-
-            var completed =
-                await _context.DemoRequests.CountAsync(
-                    x => x.Status == "Completed");
-
-            var cancelled =
-                await _context.DemoRequests.CountAsync(
-                    x => x.Status == "Cancelled");
-
-            return Ok(new
-            {
-                total,
-                pending,
-                contacted,
-                scheduled,
-                completed,
-                cancelled
-            });
-        }
-
-        // =========================================================
-        // ADMIN - GET ALL DEMO REQUESTS
-        // =========================================================
-        // GET /api/DemoRequests
+        // REQUIRES:
+        // Demo Requests -> View
         // =========================================================
 
         [HttpGet]
-        [Authorize]
         public async Task<IActionResult> GetDemoRequests()
         {
+            if (!await _permissionService.HasPermissionAsync(
+                    User,
+                    MODULE,
+                    "view"))
+            {
+                return Forbid();
+            }
+
             var requests =
                 await _context.DemoRequests
                     .AsNoTracking()
@@ -147,22 +129,33 @@ namespace EPIC.Api.Controllers
             return Ok(requests);
         }
 
+
         // =========================================================
-        // ADMIN - GET SINGLE DEMO REQUEST
-        // =========================================================
-        // GET /api/DemoRequests/{id}
+        // GET SINGLE DEMO REQUEST
+        // GET: /api/DemoRequests/{id}
+        //
+        // REQUIRES:
+        // Demo Requests -> View
         // =========================================================
 
         [HttpGet("{id:int}")]
-        [Authorize]
         public async Task<IActionResult> GetDemoRequest(
             int id)
         {
+            if (!await _permissionService.HasPermissionAsync(
+                    User,
+                    MODULE,
+                    "view"))
+            {
+                return Forbid();
+            }
+
             var request =
                 await _context.DemoRequests
                     .AsNoTracking()
                     .FirstOrDefaultAsync(
-                        x => x.DemoRequestId == id);
+                        x =>
+                            x.DemoRequestId == id);
 
             if (request == null)
             {
@@ -176,18 +169,28 @@ namespace EPIC.Api.Controllers
             return Ok(request);
         }
 
+
         // =========================================================
-        // ADMIN - UPDATE DEMO REQUEST
-        // =========================================================
-        // PUT /api/DemoRequests/{id}
+        // UPDATE DEMO REQUEST
+        // PUT: /api/DemoRequests/{id}
+        //
+        // REQUIRES:
+        // Demo Requests -> Edit
         // =========================================================
 
         [HttpPut("{id:int}")]
-        [Authorize]
         public async Task<IActionResult> UpdateDemoRequest(
             int id,
             [FromBody] DemoRequest updatedRequest)
         {
+            if (!await _permissionService.HasPermissionAsync(
+                    User,
+                    MODULE,
+                    "edit"))
+            {
+                return Forbid();
+            }
+
             if (!ModelState.IsValid)
             {
                 return ValidationProblem(ModelState);
@@ -196,7 +199,8 @@ namespace EPIC.Api.Controllers
             var request =
                 await _context.DemoRequests
                     .FirstOrDefaultAsync(
-                        x => x.DemoRequestId == id);
+                        x =>
+                            x.DemoRequestId == id);
 
             if (request == null)
             {
@@ -206,10 +210,6 @@ namespace EPIC.Api.Controllers
                         "Demo request not found."
                 });
             }
-
-            // =====================================================
-            // VALID STATUSES
-            // =====================================================
 
             var allowedStatuses =
                 new[]
@@ -227,13 +227,9 @@ namespace EPIC.Api.Controllers
                     ? request.Status
                     : updatedRequest.Status.Trim();
 
-            var validStatus =
-                allowedStatuses.Any(
-                    x => x.Equals(
-                        status,
-                        StringComparison.OrdinalIgnoreCase));
-
-            if (!validStatus)
+            if (!allowedStatuses.Contains(
+                    status,
+                    StringComparer.OrdinalIgnoreCase))
             {
                 return BadRequest(new
                 {
@@ -244,22 +240,8 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            // Normalize status
-            status =
-                allowedStatuses.First(
-                    x => x.Equals(
-                        status,
-                        StringComparison.OrdinalIgnoreCase));
-
-            // =====================================================
-            // UPDATE STATUS
-            // =====================================================
-
-            request.Status = status;
-
-            // =====================================================
-            // UPDATE NOTES
-            // =====================================================
+            request.Status =
+                status;
 
             request.AdminNotes =
                 string.IsNullOrWhiteSpace(
@@ -267,23 +249,11 @@ namespace EPIC.Api.Controllers
                     ? null
                     : updatedRequest.AdminNotes.Trim();
 
-            // =====================================================
-            // UPDATE CONTACTED DATE
-            // =====================================================
-
             request.ContactedDate =
                 updatedRequest.ContactedDate;
 
-            // =====================================================
-            // UPDATE DEMO DATE
-            // =====================================================
-
             request.DemoDate =
                 updatedRequest.DemoDate;
-
-            // =====================================================
-            // AUTOMATIC CONTACTED DATE
-            // =====================================================
 
             if (
                 status.Equals(
@@ -295,25 +265,6 @@ namespace EPIC.Api.Controllers
             {
                 request.ContactedDate =
                     DateTime.UtcNow;
-            }
-
-            // =====================================================
-            // AUTOMATIC SCHEDULED DATE
-            // =====================================================
-
-            if (
-                status.Equals(
-                    "Scheduled",
-                    StringComparison.OrdinalIgnoreCase)
-                &&
-                request.DemoDate == null
-            )
-            {
-                return BadRequest(new
-                {
-                    message =
-                        "Please provide a scheduled demo date."
-                });
             }
 
             await _context.SaveChangesAsync();
@@ -329,21 +280,32 @@ namespace EPIC.Api.Controllers
             });
         }
 
+
         // =========================================================
-        // ADMIN - DELETE DEMO REQUEST
-        // =========================================================
-        // DELETE /api/DemoRequests/{id}
+        // DELETE DEMO REQUEST
+        // DELETE: /api/DemoRequests/{id}
+        //
+        // REQUIRES:
+        // Demo Requests -> Delete
         // =========================================================
 
         [HttpDelete("{id:int}")]
-        [Authorize]
         public async Task<IActionResult> DeleteDemoRequest(
             int id)
         {
+            if (!await _permissionService.HasPermissionAsync(
+                    User,
+                    MODULE,
+                    "delete"))
+            {
+                return Forbid();
+            }
+
             var request =
                 await _context.DemoRequests
                     .FirstOrDefaultAsync(
-                        x => x.DemoRequestId == id);
+                        x =>
+                            x.DemoRequestId == id);
 
             if (request == null)
             {
@@ -364,6 +326,71 @@ namespace EPIC.Api.Controllers
 
                 message =
                     "Demo request deleted successfully."
+            });
+        }
+
+
+        // =========================================================
+        // GET SUMMARY
+        // GET: /api/DemoRequests/summary
+        //
+        // REQUIRES:
+        // Demo Requests -> View
+        // =========================================================
+
+        [HttpGet("summary")]
+        public async Task<IActionResult> GetSummary()
+        {
+            if (!await _permissionService.HasPermissionAsync(
+                    User,
+                    MODULE,
+                    "view"))
+            {
+                return Forbid();
+            }
+
+            var total =
+                await _context.DemoRequests
+                    .CountAsync();
+
+            var pending =
+                await _context.DemoRequests
+                    .CountAsync(
+                        x =>
+                            x.Status == "Pending");
+
+            var contacted =
+                await _context.DemoRequests
+                    .CountAsync(
+                        x =>
+                            x.Status == "Contacted");
+
+            var scheduled =
+                await _context.DemoRequests
+                    .CountAsync(
+                        x =>
+                            x.Status == "Scheduled");
+
+            var completed =
+                await _context.DemoRequests
+                    .CountAsync(
+                        x =>
+                            x.Status == "Completed");
+
+            var cancelled =
+                await _context.DemoRequests
+                    .CountAsync(
+                        x =>
+                            x.Status == "Cancelled");
+
+            return Ok(new
+            {
+                total,
+                pending,
+                contacted,
+                scheduled,
+                completed,
+                cancelled
             });
         }
     }
