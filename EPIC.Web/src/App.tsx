@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import "./App.css";
 
@@ -170,8 +171,18 @@ const App: React.FC = () => {
         localStorage.getItem("currentRole") ||
         "Church Admin";
 
+    const normalizedRole =
+        role.trim().toLowerCase();
+
     const avatarLetter =
         fullName.charAt(0).toUpperCase();
+
+    // =====================================================
+    // ROLE HELPERS
+    // =====================================================
+
+    const isMember =
+        normalizedRole === "member";
 
     // =====================================================
     // ROUTE FLAGS
@@ -226,7 +237,6 @@ const App: React.FC = () => {
                     window.location.pathname
                 )
             );
-
         };
 
         window.addEventListener(
@@ -240,7 +250,6 @@ const App: React.FC = () => {
                 "popstate",
                 handlePopState
             );
-
         };
 
     }, []);
@@ -338,11 +347,6 @@ const App: React.FC = () => {
 
     useEffect(() => {
 
-        /*
-         * If the user is not authenticated and tries
-         * to access /dashboard, send them to /login.
-         */
-
         if (
             isDashboardPath &&
             !isAuthenticated
@@ -362,11 +366,6 @@ const App: React.FC = () => {
     // =====================================================
 
     useEffect(() => {
-
-        /*
-         * If an authenticated user manually opens /login,
-         * send them to the dashboard.
-         */
 
         if (
             isLoginPage &&
@@ -506,17 +505,7 @@ const App: React.FC = () => {
 
     const handleOpenLearning = () => {
 
-        const currentRole =
-            (
-                localStorage.getItem(
-                    "currentRole"
-                ) ||
-                "Church Admin"
-            ).toLowerCase();
-
-        if (
-            currentRole === "member"
-        ) {
+        if (isMember) {
 
             return;
 
@@ -734,29 +723,45 @@ const App: React.FC = () => {
 
         switch (activePage) {
 
-            // =================================================
-            // DASHBOARD
-            // =================================================
-
             case "dashboard":
 
                 return (
                     <Dashboard />
                 );
 
-            // =================================================
-            // DEMO REQUESTS
-            // =================================================
-
             case "demo-requests":
+
+                /*
+                 * Extra protection:
+                 *
+                 * A MEMBER should never be able to open
+                 * Demo Requests even if activePage is changed
+                 * accidentally from another component.
+                 */
+
+                if (isMember) {
+
+                    return (
+                        <Dashboard />
+                    );
+
+                }
+
+                if (
+                    !PermissionService.canView(
+                        "Demo Requests"
+                    )
+                ) {
+
+                    return (
+                        <Dashboard />
+                    );
+
+                }
 
                 return (
                     <DemoRequests />
                 );
-
-            // =================================================
-            // CHURCH SERVICES
-            // =================================================
 
             case "services":
 
@@ -764,19 +769,11 @@ const App: React.FC = () => {
                     <ChurchServicesPage />
                 );
 
-            // =================================================
-            // ATTENDANCE REPORT
-            // =================================================
-
             case "member-attendance-report":
 
                 return (
                     <MemberAttendanceReport />
                 );
-
-            // =================================================
-            // MEMBERS
-            // =================================================
 
             case "members":
 
@@ -784,19 +781,11 @@ const App: React.FC = () => {
                     <Members />
                 );
 
-            // =================================================
-            // ATTENDANCE
-            // =================================================
-
             case "attendance":
 
                 return (
                     <Attendance />
                 );
-
-            // =================================================
-            // MINISTRIES
-            // =================================================
 
             case "ministries":
 
@@ -804,19 +793,11 @@ const App: React.FC = () => {
                     <Ministries />
                 );
 
-            // =================================================
-            // VISITORS
-            // =================================================
-
             case "visitors":
 
                 return (
                     <Visitors />
                 );
-
-            // =================================================
-            // GIVING
-            // =================================================
 
             case "giving":
 
@@ -824,19 +805,11 @@ const App: React.FC = () => {
                     <Giving />
                 );
 
-            // =================================================
-            // INCOME
-            // =================================================
-
             case "income":
 
                 return (
                     <Income />
                 );
-
-            // =================================================
-            // EXPENSES
-            // =================================================
 
             case "expenses":
 
@@ -844,11 +817,15 @@ const App: React.FC = () => {
                     <Expenses />
                 );
 
-            // =================================================
-            // EPIC LEARNING
-            // =================================================
-
             case "learning":
+
+                if (isMember) {
+
+                    return (
+                        <Dashboard />
+                    );
+
+                }
 
                 return (
                     <LearningPage
@@ -858,11 +835,15 @@ const App: React.FC = () => {
                     />
                 );
 
-            // =================================================
-            // COURSE DETAILS
-            // =================================================
-
             case "view-course":
+
+                if (isMember) {
+
+                    return (
+                        <Dashboard />
+                    );
+
+                }
 
                 if (!selectedCourseId) {
 
@@ -909,11 +890,15 @@ const App: React.FC = () => {
                     />
                 );
 
-            // =================================================
-            // LESSON
-            // =================================================
-
             case "lesson":
+
+                if (isMember) {
+
+                    return (
+                        <Dashboard />
+                    );
+
+                }
 
                 if (
                     !selectedCourseId ||
@@ -959,19 +944,11 @@ const App: React.FC = () => {
                     />
                 );
 
-            // =================================================
-            // SETTINGS
-            // =================================================
-
             case "settings":
 
                 return (
                     <Settings />
                 );
-
-            // =================================================
-            // FALLBACK
-            // =================================================
 
             default:
 
@@ -985,14 +962,6 @@ const App: React.FC = () => {
 
     // =====================================================
     // PUBLIC LANDING PAGE
-    // =====================================================
-    //
-    // IMPORTANT:
-    //
-    // "/" ALWAYS shows the public landing page.
-    //
-    // Even if a JWT exists in localStorage.
-    //
     // =====================================================
 
     if (isLandingPage) {
@@ -1012,13 +981,6 @@ const App: React.FC = () => {
     // =====================================================
 
     if (isLoginPage) {
-
-        /*
-         * If already authenticated, the useEffect above
-         * will move the browser to /dashboard.
-         *
-         * Return null temporarily while that happens.
-         */
 
         if (isAuthenticated) {
 
@@ -1045,11 +1007,6 @@ const App: React.FC = () => {
     // =====================================================
 
     if (!isAuthenticated) {
-
-        /*
-         * Any protected URL without authentication
-         * goes to the login page.
-         */
 
         if (
             normalizedPath !== "/"
@@ -1212,9 +1169,10 @@ const App: React.FC = () => {
                         CHURCH SERVICES
                     ================================================= */}
 
-                    {PermissionService.canView(
-                        "Church Services"
-                    ) && (
+                    <PermissionFilter
+                        module="Church Services"
+                        action="view"
+                    >
 
                         <button
                             type="button"
@@ -1243,7 +1201,7 @@ const App: React.FC = () => {
 
                         </button>
 
-                    )}
+                    </PermissionFilter>
 
                     {/* =================================================
                         ATTENDANCE REPORT
@@ -1561,7 +1519,7 @@ const App: React.FC = () => {
                         EPIC LEARNING
                     ================================================= */}
 
-                    {role.toLowerCase() !== "member" && (
+                    {!isMember && (
 
                         <>
 
@@ -1569,34 +1527,41 @@ const App: React.FC = () => {
                                 EPIC LEARNING
                             </div>
 
-                            <button
-                                type="button"
-                                className={
-                                    `epic-nav-item ${
-                                        activePage ===
-                                            "learning" ||
-                                        activePage ===
-                                            "view-course" ||
-                                        activePage ===
-                                            "lesson"
-                                            ? "active"
-                                            : ""
-                                    }`
-                                }
-                                onClick={
-                                    handleOpenLearning
-                                }
+                            <PermissionFilter
+                                module="EPIC Learning"
+                                action="view"
                             >
 
-                                <span className="epic-nav-icon">
-                                    📚
-                                </span>
+                                <button
+                                    type="button"
+                                    className={
+                                        `epic-nav-item ${
+                                            activePage ===
+                                                "learning" ||
+                                            activePage ===
+                                                "view-course" ||
+                                            activePage ===
+                                                "lesson"
+                                                ? "active"
+                                                : ""
+                                        }`
+                                    }
+                                    onClick={
+                                        handleOpenLearning
+                                    }
+                                >
 
-                                <span>
-                                    EPIC Learning
-                                </span>
+                                    <span className="epic-nav-icon">
+                                        📚
+                                    </span>
 
-                            </button>
+                                    <span>
+                                        EPIC Learning
+                                    </span>
+
+                                </button>
+
+                            </PermissionFilter>
 
                         </>
 
@@ -1606,36 +1571,47 @@ const App: React.FC = () => {
                         BUSINESS / SALES
                     ================================================= */}
 
-                    <div className="epic-nav-section epic-nav-section-space">
-                        BUSINESS / SALES
-                    </div>
-
-                    <button
-                        type="button"
-                        className={
-                            `epic-nav-item ${
-                                activePage ===
-                                "demo-requests"
-                                    ? "active"
-                                    : ""
-                            }`
-                        }
-                        onClick={() =>
-                            navigate(
-                                "demo-requests"
-                            )
-                        }
+                    <PermissionFilter
+                        module="Demo Requests"
+                        action="view"
                     >
 
-                        <span className="epic-nav-icon">
-                            🎯
-                        </span>
+                        <>
 
-                        <span>
-                            Demo Requests
-                        </span>
+                            <div className="epic-nav-section epic-nav-section-space">
+                                BUSINESS / SALES
+                            </div>
 
-                    </button>
+                            <button
+                                type="button"
+                                className={
+                                    `epic-nav-item ${
+                                        activePage ===
+                                        "demo-requests"
+                                            ? "active"
+                                            : ""
+                                    }`
+                                }
+                                onClick={() =>
+                                    navigate(
+                                        "demo-requests"
+                                    )
+                                }
+                            >
+
+                                <span className="epic-nav-icon">
+                                    🎯
+                                </span>
+
+                                <span>
+                                    Demo Requests
+                                </span>
+
+                            </button>
+
+                        </>
+
+                    </PermissionFilter>
 
                     {/* =================================================
                         SYSTEM
@@ -1861,3 +1837,4 @@ const App: React.FC = () => {
 };
 
 export default App;
+
