@@ -1,5 +1,6 @@
 // ============================================================
-// ADD THIS AT THE VERY TOP OF Visitors.tsx
+// Visitors.tsx
+// EPIC CHURCH MANAGEMENT SYSTEM
 // ============================================================
 
 import React, {
@@ -10,11 +11,6 @@ import React, {
 } from "react";
 
 import "./Visitors.css";
-
-// ============================================================
-// API CONFIGURATION
-// ============================================================
-
 import { API_BASE_URL } from "../config.ts";
 
 // ============================================================
@@ -50,9 +46,8 @@ type DashboardData = {
     totalVisitors: number;
     activeVisitors: number;
     newVisitors: number;
-    contactedVisitors?: number;
-    followUpVisitors?: number;
-    followUps?: number;
+    contactedVisitors: number;
+    followUpVisitors: number;
     connectedVisitors: number;
     convertedMembers: number;
     firstTimeVisitors: number;
@@ -115,6 +110,10 @@ type FollowUpStatus =
     | "CONNECTED"
     | "CONVERTED";
 
+// ============================================================
+// CONSTANTS
+// ============================================================
+
 const ATTENDANCE_STATUSES = [
     "PRESENT",
     "LATE",
@@ -131,8 +130,13 @@ const FOLLOW_UP_STATUSES: FollowUpStatus[] = [
     "CONVERTED",
 ];
 
-const getToday = () =>
-    new Date().toISOString().split("T")[0];
+// ============================================================
+// HELPERS
+// ============================================================
+
+function getToday(): string {
+    return new Date().toISOString().split("T")[0];
+}
 
 const EMPTY_FORM: VisitorForm = {
     firstName: "",
@@ -149,20 +153,24 @@ const EMPTY_FORM: VisitorForm = {
 };
 
 // ============================================================
-// API
+// API HELPER
 // ============================================================
 
 async function apiFetch<T>(
     endpoint: string,
     options: RequestInit = {}
 ): Promise<T> {
-
     const token =
         localStorage.getItem("token") ||
         localStorage.getItem("accessToken") ||
         localStorage.getItem("authToken") ||
         localStorage.getItem("jwt") ||
         "";
+
+    const baseUrl = API_BASE_URL.replace(/\/+$/, "");
+    const cleanEndpoint = endpoint.replace(/^\/+/, "");
+
+    const url = `${baseUrl}/${cleanEndpoint}`;
 
     const headers = new Headers(options.headers);
 
@@ -183,66 +191,69 @@ async function apiFetch<T>(
         );
     }
 
-    const url =
-        `${API_BASE_URL.replace(/\/$/, "")}/${endpoint.replace(/^\//, "")}`;
-
     const response = await fetch(url, {
         ...options,
         headers,
     });
 
-    if (!response.ok) {
+    const responseText = await response.text();
 
+    if (!response.ok) {
         let message =
             `Request failed (${response.status})`;
 
-        try {
-            const text =
-                await response.text();
+        if (responseText.trim()) {
+            try {
+                const data =
+                    JSON.parse(responseText);
 
-            if (text) {
-                try {
-                    const data =
-                        JSON.parse(text);
-
-                    message =
-                        data?.message ||
-                        data?.title ||
-                        data?.error ||
-                        text;
-                } catch {
-                    message = text;
-                }
+                message =
+                    data?.message ||
+                    data?.title ||
+                    data?.error ||
+                    data?.detail ||
+                    message;
+            } catch {
+                message = responseText;
             }
-        } catch {
-            // ignore
+        }
+
+        if (response.status === 401) {
+            message =
+                "Your session has expired. Please log in again.";
+        }
+
+        if (response.status === 403) {
+            message =
+                "You do not have permission to perform this action.";
         }
 
         throw new Error(message);
     }
 
-    if (response.status === 204) {
+    if (
+        response.status === 204 ||
+        !responseText.trim()
+    ) {
         return {} as T;
     }
 
-    const text =
-        await response.text();
-
-    if (!text.trim()) {
-        return {} as T;
+    try {
+        return JSON.parse(responseText) as T;
+    } catch {
+        throw new Error(
+            "The server returned an invalid response."
+        );
     }
-
-    return JSON.parse(text) as T;
 }
 
 // ============================================================
-// HELPERS
+// NAME
 // ============================================================
 
 function getFullName(
     visitor: Visitor
 ): string {
-
     if (visitor.fullName?.trim()) {
         return visitor.fullName.trim();
     }
@@ -253,19 +264,25 @@ function getFullName(
         visitor.lastName,
     ]
         .filter(
-            value => value?.trim()
+            value =>
+                value &&
+                value.trim()
         )
         .join(" ");
 }
 
+// ============================================================
+// DATE
+// ============================================================
+
 function formatDate(
     value?: string | null
 ): string {
+    if (!value) {
+        return "—";
+    }
 
-    if (!value) return "—";
-
-    const date =
-        new Date(value);
+    const date = new Date(value);
 
     if (
         Number.isNaN(
@@ -285,20 +302,21 @@ function formatDate(
     );
 }
 
+// ============================================================
+// TIME
+// ============================================================
+
 function formatTime(
     value?: string | null
 ): string {
+    if (!value) {
+        return "";
+    }
 
-    if (!value) return "";
+    const parts = value.split(":");
 
-    const parts =
-        value.split(":");
-
-    const hour =
-        Number(parts[0]);
-
-    const minute =
-        Number(parts[1] || 0);
+    const hour = Number(parts[0]);
+    const minute = Number(parts[1] || 0);
 
     if (
         Number.isNaN(hour) ||
@@ -307,8 +325,7 @@ function formatTime(
         return value;
     }
 
-    const date =
-        new Date();
+    const date = new Date();
 
     date.setHours(
         hour,
@@ -326,48 +343,62 @@ function formatTime(
     );
 }
 
+// ============================================================
+// ORDINAL
+// ============================================================
+
+function getOrdinalSuffix(
+    value: number
+): string {
+    const mod100 = value % 100;
+
+    if (
+        mod100 >= 11 &&
+        mod100 <= 13
+    ) {
+        return "th";
+    }
+
+    switch (value % 10) {
+        case 1:
+            return "st";
+
+        case 2:
+            return "nd";
+
+        case 3:
+            return "rd";
+
+        default:
+            return "th";
+    }
+}
+
 function getVisitLabel(
     count: number
 ): string {
-
-    if (count <= 0)
+    if (count <= 0) {
         return "No visits";
+    }
 
-    if (count === 1)
-        return "1st Visit";
-
-    if (count === 2)
-        return "2nd Visit";
-
-    if (count === 3)
-        return "3rd Visit";
-
-    return `${count}th Visit`;
+    return `${count}${getOrdinalSuffix(count)} Visit`;
 }
 
 function getNextVisitLabel(
     count: number
 ): string {
+    const next = count + 1;
 
-    const next =
-        count + 1;
-
-    if (next === 1)
-        return "1st Visit";
-
-    if (next === 2)
-        return "2nd Visit";
-
-    if (next === 3)
-        return "3rd Visit";
-
-    return `${next}th Visit`;
+    return `${next}${getOrdinalSuffix(next)} Visit`;
 }
+
+// ============================================================
+// STATUS CLASS
+// ============================================================
 
 function statusClass(
     status?: string | null
 ): string {
-
     return (
         status || "unknown"
     )
@@ -382,7 +413,11 @@ function statusClass(
 // COMPONENT
 // ============================================================
 
-export default function Visitor() {
+export default function Visitors() {
+
+    // ========================================================
+    // STATE
+    // ========================================================
 
     const [visitors, setVisitors] =
         useState<Visitor[]>([]);
@@ -453,7 +488,7 @@ export default function Visitor() {
 
             const data =
                 await apiFetch<Visitor[]>(
-                    "/Visitor"
+                    "/Visitors"
                 );
 
             setVisitors(
@@ -471,17 +506,34 @@ export default function Visitor() {
     const loadDashboard =
         useCallback(async () => {
 
-            const data =
-                await apiFetch<DashboardData>(
-                    "/Visitor/dashboard"
+            try {
+
+                const data =
+                    await apiFetch<DashboardData>(
+                        "/Visitors/dashboard"
+                    );
+
+                setDashboard(data);
+
+            } catch (err) {
+
+                console.warn(
+                    "Visitor dashboard endpoint unavailable.",
+                    err
                 );
 
-            setDashboard(data);
+                /*
+                 * Dashboard is optional because
+                 * statistics can be calculated
+                 * locally from visitor records.
+                 */
+                setDashboard(null);
+            }
 
         }, []);
 
     // ========================================================
-    // LOAD SERVICES
+    // LOAD CHURCH SERVICES
     // ========================================================
 
     const loadServices =
@@ -497,7 +549,7 @@ export default function Visitor() {
                     ? data
                     : [];
 
-            const completed =
+            const completedServices =
                 list
                     .filter(
                         service =>
@@ -515,7 +567,9 @@ export default function Visitor() {
                             ).getTime()
                     );
 
-            setServices(completed);
+            setServices(
+                completedServices
+            );
 
         }, []);
 
@@ -524,49 +578,60 @@ export default function Visitor() {
     // ========================================================
 
     const loadAll =
-        useCallback(async () => {
-
-            try {
+        useCallback(
+            async (): Promise<boolean> => {
 
                 setLoading(true);
                 setError("");
 
-                await Promise.all([
-                    loadVisitors(),
-                    loadDashboard(),
-                    loadServices(),
-                ]);
+                try {
 
-            } catch (err) {
+                    await Promise.all([
+                        loadVisitors(),
+                        loadDashboard(),
+                        loadServices(),
+                    ]);
 
-                console.error(
-                    "Visitor load error:",
-                    err
-                );
+                    return true;
 
-                setError(
-                    err instanceof Error
-                        ? err.message
-                        : "Unable to load visitor data."
-                );
+                } catch (err) {
 
-            } finally {
+                    console.error(
+                        "Visitor load error:",
+                        err
+                    );
 
-                setLoading(false);
-            }
+                    setError(
+                        err instanceof Error
+                            ? err.message
+                            : "Unable to load visitor data."
+                    );
 
-        }, [
-            loadVisitors,
-            loadDashboard,
-            loadServices,
-        ]);
+                    return false;
+
+                } finally {
+
+                    setLoading(false);
+                }
+
+            },
+            [
+                loadVisitors,
+                loadDashboard,
+                loadServices,
+            ]
+        );
+
+    // ========================================================
+    // INITIAL LOAD
+    // ========================================================
 
     useEffect(() => {
         void loadAll();
     }, [loadAll]);
 
     // ========================================================
-    // FILTER
+    // FILTERED VISITORS
     // ========================================================
 
     const filteredVisitors =
@@ -585,18 +650,27 @@ export default function Visitor() {
                             visitor
                         ).toLowerCase();
 
+                    const visitorCode =
+                        visitor.visitorCode
+                            ?.toLowerCase() ||
+                        "";
+
+                    const contact =
+                        visitor.contactNumber
+                            ?.toLowerCase() ||
+                        "";
+
+                    const invitedBy =
+                        visitor.invitedBy
+                            ?.toLowerCase() ||
+                        "";
+
                     const matchesSearch =
                         !query ||
                         name.includes(query) ||
-                        visitor.visitorCode
-                            ?.toLowerCase()
-                            .includes(query) ||
-                        visitor.contactNumber
-                            ?.toLowerCase()
-                            .includes(query) ||
-                        visitor.invitedBy
-                            ?.toLowerCase()
-                            .includes(query);
+                        visitorCode.includes(query) ||
+                        contact.includes(query) ||
+                        invitedBy.includes(query);
 
                     const matchesFollowUp =
                         filter === "ALL" ||
@@ -631,7 +705,7 @@ export default function Visitor() {
         ]);
 
     // ========================================================
-    // FORM
+    // FORM UPDATE
     // ========================================================
 
     const updateForm = (
@@ -675,9 +749,10 @@ export default function Visitor() {
                 setSuccess("");
 
                 await apiFetch(
-                    "/Visitor",
+                    "/Visitors",
                     {
                         method: "POST",
+
                         body: JSON.stringify({
                             firstName:
                                 form.firstName.trim(),
@@ -724,10 +799,6 @@ export default function Visitor() {
                     }
                 );
 
-                setSuccess(
-                    "Visitor successfully registered."
-                );
-
                 setShowAddModal(false);
 
                 setForm({
@@ -735,6 +806,10 @@ export default function Visitor() {
                     firstVisitDate:
                         getToday(),
                 });
+
+                setSuccess(
+                    "Visitor successfully registered."
+                );
 
                 await Promise.all([
                     loadVisitors(),
@@ -761,19 +836,31 @@ export default function Visitor() {
         };
 
     // ========================================================
-    // RECORD VISIT
+    // OPEN RECORD VISIT
     // ========================================================
 
     const openVisitModal =
         (visitor: Visitor) => {
 
-            setSelectedVisitor(visitor);
+            setSelectedVisitor(
+                visitor
+            );
+
             setSelectedServiceId("");
-            setAttendanceStatus("PRESENT");
+
+            setAttendanceStatus(
+                "PRESENT"
+            );
+
             setError("");
             setSuccess("");
+
             setShowVisitModal(true);
         };
+
+    // ========================================================
+    // RECORD VISIT
+    // ========================================================
 
     const recordVisit =
         async (
@@ -783,16 +870,20 @@ export default function Visitor() {
             event.preventDefault();
 
             if (!selectedVisitor) {
+
                 setError(
                     "Please select a visitor."
                 );
+
                 return;
             }
 
             if (!selectedServiceId) {
+
                 setError(
                     "Please select a completed church service."
                 );
+
                 return;
             }
 
@@ -811,21 +902,25 @@ export default function Visitor() {
                         attendanceId: number;
                         status: string;
                     }>(
-                        `/Visitor/${selectedVisitor.visitorId}/attendance`,
+                        `/Visitors/${selectedVisitor.visitorId}/attendance`,
                         {
                             method: "POST",
+
                             body: JSON.stringify({
                                 churchServiceId:
                                     Number(
                                         selectedServiceId
                                     ),
+
                                 status:
                                     attendanceStatus,
                             }),
                         }
                     );
 
-                setShowVisitModal(false);
+                setShowVisitModal(
+                    false
+                );
 
                 setSuccess(
                     `${getFullName(
@@ -860,7 +955,7 @@ export default function Visitor() {
         };
 
     // ========================================================
-    // HISTORY
+    // OPEN HISTORY
     // ========================================================
 
     const openHistory =
@@ -868,22 +963,28 @@ export default function Visitor() {
             visitor: Visitor
         ) => {
 
-            setSelectedVisitor(visitor);
+            setSelectedVisitor(
+                visitor
+            );
+
             setAttendanceHistory([]);
+
             setShowHistoryModal(true);
+
             setHistoryLoading(true);
+
             setError("");
 
             try {
 
                 const data =
                     await apiFetch<VisitorAttendanceResponse>(
-                        `/Visitor/${visitor.visitorId}/attendance`
+                        `/Visitors/${visitor.visitorId}/attendance`
                     );
 
                 setAttendanceHistory(
                     Array.isArray(
-                        data.attendance
+                        data?.attendance
                     )
                         ? data.attendance
                         : []
@@ -904,12 +1005,14 @@ export default function Visitor() {
 
             } finally {
 
-                setHistoryLoading(false);
+                setHistoryLoading(
+                    false
+                );
             }
         };
 
     // ========================================================
-    // FOLLOW UP
+    // UPDATE FOLLOW-UP
     // ========================================================
 
     const updateFollowUp =
@@ -924,9 +1027,10 @@ export default function Visitor() {
                 setSuccess("");
 
                 await apiFetch(
-                    `/Visitor/${visitor.visitorId}/follow-up`,
+                    `/Visitors/${visitor.visitorId}/follow-up`,
                     {
                         method: "PATCH",
+
                         body: JSON.stringify({
                             status,
                         }),
@@ -958,7 +1062,7 @@ export default function Visitor() {
         };
 
     // ========================================================
-    // MODALS
+    // OPEN ADD MODAL
     // ========================================================
 
     const openAddModal = () => {
@@ -971,91 +1075,112 @@ export default function Visitor() {
 
         setError("");
         setSuccess("");
+
         setShowAddModal(true);
     };
 
+    // ========================================================
+    // CLOSE MODALS
+    // ========================================================
+
     const closeModals = () => {
 
-        if (saving) return;
+        if (saving) {
+            return;
+        }
 
         setShowAddModal(false);
         setShowVisitModal(false);
         setShowHistoryModal(false);
     };
 
-    const refreshData = async () => {
-
-        setError("");
-        setSuccess("");
-
-        await loadAll();
-
-        setSuccess(
-            "Visitor data refreshed successfully."
-        );
-    };
-
     // ========================================================
-    // STATS
+    // REFRESH
     // ========================================================
 
-    const stats =
+    const refreshData =
+        async () => {
+
+            setError("");
+            setSuccess("");
+
+            const successful =
+                await loadAll();
+
+            if (successful) {
+
+                setSuccess(
+                    "Visitor data refreshed successfully."
+                );
+            }
+        };
+
+    // ========================================================
+    // LOCAL STATS FALLBACK
+    // ========================================================
+
+    const stats: DashboardData =
         dashboard ?? {
+
             totalVisitors:
                 visitors.length,
 
             activeVisitors:
                 visitors.filter(
-                    x =>
-                        x.status
+                    visitor =>
+                        visitor.status
                             ?.toUpperCase() ===
                         "ACTIVE"
                 ).length,
 
             newVisitors:
                 visitors.filter(
-                    x =>
-                        x.followUpStatus
+                    visitor =>
+                        visitor.followUpStatus
                             ?.toUpperCase() ===
                         "NEW"
                 ).length,
 
-            contactedVisitors: 0,
+            contactedVisitors:
+                visitors.filter(
+                    visitor =>
+                        visitor.followUpStatus
+                            ?.toUpperCase() ===
+                        "CONTACTED"
+                ).length,
 
             followUpVisitors:
                 visitors.filter(
-                    x =>
-                        ["FOLLOW-UP", "CONTACTED"]
-                            .includes(
-                                x.followUpStatus
-                                    ?.toUpperCase()
-                            )
+                    visitor =>
+                        visitor.followUpStatus
+                            ?.toUpperCase() ===
+                        "FOLLOW-UP"
                 ).length,
 
             connectedVisitors:
                 visitors.filter(
-                    x =>
-                        x.followUpStatus
+                    visitor =>
+                        visitor.followUpStatus
                             ?.toUpperCase() ===
                         "CONNECTED"
                 ).length,
 
             convertedMembers:
                 visitors.filter(
-                    x =>
-                        x.isConvertedToMember
+                    visitor =>
+                        visitor.isConvertedToMember
                 ).length,
 
             firstTimeVisitors:
                 visitors.filter(
-                    x =>
-                        x.visitCount <= 1
+                    visitor =>
+                        visitor.visitCount <= 1
                 ).length,
 
             returningVisitors:
                 visitors.filter(
-                    x =>
-                        x.visitCount > 1
+                    visitor =>
+                        visitor.visitCount > 1
                 ).length,
         };
 
@@ -1068,9 +1193,14 @@ export default function Visitor() {
 
             <div className="visitors-shell">
 
+                {/* ==================================================
+                    HEADER
+                ================================================== */}
+
                 <header className="visitors-header">
 
                     <div>
+
                         <div className="eyebrow">
                             EPIC CHURCH MANAGEMENT SYSTEM
                         </div>
@@ -1085,11 +1215,13 @@ export default function Visitor() {
                             follow-ups and
                             connection progress.
                         </p>
+
                     </div>
 
                     <div className="header-actions">
 
                         <button
+                            type="button"
                             className="btn btn-secondary"
                             onClick={() =>
                                 void refreshData()
@@ -1103,8 +1235,11 @@ export default function Visitor() {
                         </button>
 
                         <button
+                            type="button"
                             className="btn btn-primary"
-                            onClick={openAddModal}
+                            onClick={
+                                openAddModal
+                            }
                         >
                             +
                             <span>
@@ -1116,161 +1251,240 @@ export default function Visitor() {
 
                 </header>
 
+                {/* ==================================================
+                    ERROR
+                ================================================== */}
+
                 {error && (
+
                     <div className="alert alert-error">
+
                         <span className="alert-icon">
                             !
                         </span>
 
                         <div>
+
                             <strong>
                                 Unable to complete request
                             </strong>
 
-                            <p>{error}</p>
+                            <p>
+                                {error}
+                            </p>
+
                         </div>
 
                         <button
+                            type="button"
                             onClick={() =>
                                 setError("")
                             }
                         >
                             ×
                         </button>
+
                     </div>
                 )}
 
+                {/* ==================================================
+                    SUCCESS
+                ================================================== */}
+
                 {success && (
+
                     <div className="alert alert-success">
+
                         <span className="alert-icon">
                             ✓
                         </span>
 
                         <div>
+
                             <strong>
                                 Success
                             </strong>
 
-                            <p>{success}</p>
+                            <p>
+                                {success}
+                            </p>
+
                         </div>
 
                         <button
+                            type="button"
                             onClick={() =>
                                 setSuccess("")
                             }
                         >
                             ×
                         </button>
+
                     </div>
                 )}
+
+                {/* ==================================================
+                    STATISTICS
+                ================================================== */}
 
                 <section className="stats-grid">
 
                     <div className="stat-card stat-blue">
+
                         <div className="stat-icon">
                             👥
                         </div>
 
                         <div>
-                            <span>Total Visitors</span>
+
+                            <span>
+                                Total Visitors
+                            </span>
+
                             <strong>
                                 {stats.totalVisitors}
                             </strong>
+
                             <small>
                                 All registered visitors
                             </small>
+
                         </div>
+
                     </div>
 
                     <div className="stat-card stat-green">
+
                         <div className="stat-icon">
                             ✓
                         </div>
 
                         <div>
-                            <span>Active Visitors</span>
+
+                            <span>
+                                Active Visitors
+                            </span>
+
                             <strong>
                                 {stats.activeVisitors}
                             </strong>
+
                             <small>
                                 Currently active
                             </small>
+
                         </div>
+
                     </div>
 
                     <div className="stat-card stat-orange">
+
                         <div className="stat-icon">
                             ✦
                         </div>
 
                         <div>
-                            <span>New Visitors</span>
+
+                            <span>
+                                New Visitors
+                            </span>
+
                             <strong>
                                 {stats.newVisitors}
                             </strong>
+
                             <small>
                                 Need first follow-up
                             </small>
+
                         </div>
+
                     </div>
 
                     <div className="stat-card stat-purple">
+
                         <div className="stat-icon">
                             ↗
                         </div>
 
                         <div>
-                            <span>Follow-Ups</span>
+
+                            <span>
+                                Contacted
+                            </span>
+
                             <strong>
-                                {stats.followUpVisitors ??
-                                    stats.followUps ??
-                                    0}
+                                {stats.contactedVisitors}
                             </strong>
+
                             <small>
-                                Contacted / follow-up
+                                Visitors contacted
                             </small>
+
                         </div>
+
                     </div>
 
                     <div className="stat-card stat-teal">
+
                         <div className="stat-icon">
                             ♥
                         </div>
 
                         <div>
-                            <span>Connected</span>
+
+                            <span>
+                                Connected
+                            </span>
+
                             <strong>
                                 {stats.connectedVisitors}
                             </strong>
+
                             <small>
                                 Connected to church
                             </small>
+
                         </div>
+
                     </div>
 
                     <div className="stat-card stat-gold">
+
                         <div className="stat-icon">
                             ★
                         </div>
 
                         <div>
-                            <span>Converted</span>
+
+                            <span>
+                                Converted
+                            </span>
+
                             <strong>
                                 {stats.convertedMembers}
                             </strong>
+
                             <small>
                                 Became members
                             </small>
+
                         </div>
+
                     </div>
 
                 </section>
+
+                {/* ==================================================
+                    VISITOR JOURNEY
+                ================================================== */}
 
                 <section className="journey-card">
 
                     <div className="journey-header">
 
                         <div>
+
                             <span className="section-kicker">
                                 VISITOR JOURNEY
                             </span>
@@ -1278,6 +1492,7 @@ export default function Visitor() {
                             <h2>
                                 Connection Progress
                             </h2>
+
                         </div>
 
                         <div className="journey-summary">
@@ -1286,7 +1501,9 @@ export default function Visitor() {
                                 First-time:
                                 <strong>
                                     {" "}
-                                    {stats.firstTimeVisitors}
+                                    {
+                                        stats.firstTimeVisitors
+                                    }
                                 </strong>
                             </span>
 
@@ -1294,7 +1511,9 @@ export default function Visitor() {
                                 Returning:
                                 <strong>
                                     {" "}
-                                    {stats.returningVisitors}
+                                    {
+                                        stats.returningVisitors
+                                    }
                                 </strong>
                             </span>
 
@@ -1307,21 +1526,30 @@ export default function Visitor() {
                         {[
                             [
                                 "1",
-                                "First Visit",
-                                stats.firstTimeVisitors,
+                                "New",
+                                stats.newVisitors,
                             ],
+
                             [
                                 "2",
-                                "Returning",
-                                stats.returningVisitors,
+                                "Contacted",
+                                stats.contactedVisitors,
                             ],
+
                             [
                                 "3",
+                                "Follow-Up",
+                                stats.followUpVisitors,
+                            ],
+
+                            [
+                                "4",
                                 "Connected",
                                 stats.connectedVisitors,
                             ],
+
                             [
-                                "4",
+                                "5",
                                 "Member",
                                 stats.convertedMembers,
                             ],
@@ -1330,6 +1558,7 @@ export default function Visitor() {
                                 item,
                                 index
                             ) => (
+
                                 <React.Fragment
                                     key={item[1]}
                                 >
@@ -1350,7 +1579,7 @@ export default function Visitor() {
 
                                     </div>
 
-                                    {index < 3 && (
+                                    {index < 4 && (
                                         <div className="journey-line" />
                                     )}
 
@@ -1362,13 +1591,19 @@ export default function Visitor() {
 
                 </section>
 
+                {/* ==================================================
+                    CONTENT
+                ================================================== */}
+
                 <section className="visitor-content">
 
                     <div className="content-toolbar">
 
                         <div className="search-box">
 
-                            <span>⌕</span>
+                            <span>
+                                ⌕
+                            </span>
 
                             <input
                                 type="text"
@@ -1382,13 +1617,16 @@ export default function Visitor() {
                             />
 
                             {search && (
+
                                 <button
+                                    type="button"
                                     onClick={() =>
                                         setSearch("")
                                     }
                                 >
                                     ×
                                 </button>
+
                             )}
 
                         </div>
@@ -1409,12 +1647,14 @@ export default function Visitor() {
 
                             {FOLLOW_UP_STATUSES.map(
                                 status => (
+
                                     <option
                                         key={status}
                                         value={status}
                                     >
                                         {status}
                                     </option>
+
                                 )
                             )}
 
@@ -1447,26 +1687,32 @@ export default function Visitor() {
                         <div className="view-toggle">
 
                             <button
+                                type="button"
                                 className={
                                     viewMode === "table"
                                         ? "active"
                                         : ""
                                 }
                                 onClick={() =>
-                                    setViewMode("table")
+                                    setViewMode(
+                                        "table"
+                                    )
                                 }
                             >
                                 ☷
                             </button>
 
                             <button
+                                type="button"
                                 className={
                                     viewMode === "cards"
                                         ? "active"
                                         : ""
                                 }
                                 onClick={() =>
-                                    setViewMode("cards")
+                                    setViewMode(
+                                        "cards"
+                                    )
                                 }
                             >
                                 ▦
@@ -1476,22 +1722,32 @@ export default function Visitor() {
 
                     </div>
 
+                    {/* ==================================================
+                        RESULTS HEADER
+                    ================================================== */}
+
                     <div className="results-header">
 
                         <div>
+
                             <strong>
                                 Visitor Records
                             </strong>
 
                             <span>
                                 {" "}
-                                {filteredVisitors.length}{" "}
+                                {
+                                    filteredVisitors.length
+                                }{" "}
                                 record
-                                {filteredVisitors.length !==
+                                {
+                                    filteredVisitors.length !==
                                     1
-                                    ? "s"
-                                    : ""}
+                                        ? "s"
+                                        : ""
+                                }
                             </span>
+
                         </div>
 
                         <span>
@@ -1500,9 +1756,14 @@ export default function Visitor() {
 
                     </div>
 
+                    {/* ==================================================
+                        LOADING
+                    ================================================== */}
+
                     {loading ? (
 
                         <div className="loading-state">
+
                             <div className="spinner" />
 
                             <strong>
@@ -1512,9 +1773,14 @@ export default function Visitor() {
                             <span>
                                 Connecting to EPIC database
                             </span>
+
                         </div>
 
                     ) : filteredVisitors.length === 0 ? (
+
+                        /* ==================================================
+                            EMPTY
+                        ================================================== */
 
                         <div className="empty-state">
 
@@ -1532,6 +1798,7 @@ export default function Visitor() {
                             </p>
 
                             <button
+                                type="button"
                                 className="btn btn-primary"
                                 onClick={
                                     openAddModal
@@ -1544,20 +1811,48 @@ export default function Visitor() {
 
                     ) : viewMode === "table" ? (
 
+                        /* ==================================================
+                            TABLE
+                        ================================================== */
+
                         <div className="table-wrapper">
 
                             <table className="visitors-table">
 
                                 <thead>
+
                                     <tr>
-                                        <th>Visitor</th>
-                                        <th>Visits</th>
-                                        <th>First Visit</th>
-                                        <th>Follow-Up</th>
-                                        <th>Status</th>
-                                        <th>Invited By</th>
-                                        <th>Actions</th>
+
+                                        <th>
+                                            Visitor
+                                        </th>
+
+                                        <th>
+                                            Visits
+                                        </th>
+
+                                        <th>
+                                            First Visit
+                                        </th>
+
+                                        <th>
+                                            Follow-Up
+                                        </th>
+
+                                        <th>
+                                            Status
+                                        </th>
+
+                                        <th>
+                                            Invited By
+                                        </th>
+
+                                        <th>
+                                            Actions
+                                        </th>
+
                                     </tr>
+
                                 </thead>
 
                                 <tbody>
@@ -1572,6 +1867,7 @@ export default function Visitor() {
                                             >
 
                                                 <td>
+
                                                     <div className="visitor-cell">
 
                                                         <div className="avatar">
@@ -1581,10 +1877,13 @@ export default function Visitor() {
                                                         </div>
 
                                                         <div>
+
                                                             <strong>
-                                                                {getFullName(
-                                                                    visitor
-                                                                )}
+                                                                {
+                                                                    getFullName(
+                                                                        visitor
+                                                                    )
+                                                                }
                                                             </strong>
 
                                                             <span>
@@ -1592,13 +1891,17 @@ export default function Visitor() {
                                                                     visitor.visitorCode
                                                                 }
                                                             </span>
+
                                                         </div>
 
                                                     </div>
+
                                                 </td>
 
                                                 <td>
+
                                                     <div className="visit-count-cell">
+
                                                         <strong>
                                                             {
                                                                 visitor.visitCount
@@ -1606,25 +1909,35 @@ export default function Visitor() {
                                                         </strong>
 
                                                         <span>
-                                                            {getVisitLabel(
-                                                                visitor.visitCount
-                                                            )}
+                                                            {
+                                                                getVisitLabel(
+                                                                    visitor.visitCount
+                                                                )
+                                                            }
                                                         </span>
+
                                                     </div>
+
                                                 </td>
 
                                                 <td>
+
                                                     <div className="date-cell">
+
                                                         <strong>
-                                                            {formatDate(
-                                                                visitor.firstVisitDate
-                                                            )}
+                                                            {
+                                                                formatDate(
+                                                                    visitor.firstVisitDate
+                                                                )
+                                                            }
                                                         </strong>
 
                                                         <span>
                                                             First visit
                                                         </span>
+
                                                     </div>
+
                                                 </td>
 
                                                 <td>
@@ -1647,12 +1960,14 @@ export default function Visitor() {
 
                                                         {FOLLOW_UP_STATUSES.map(
                                                             status => (
+
                                                                 <option
                                                                     key={status}
                                                                     value={status}
                                                                 >
                                                                     {status}
                                                                 </option>
+
                                                             )
                                                         )}
 
@@ -1671,11 +1986,12 @@ export default function Visitor() {
                                                     ) : (
 
                                                         <span
-                                                            className={`badge ${visitor.status?.toUpperCase() ===
-                                                                    "ACTIVE"
+                                                            className={`badge ${
+                                                                visitor.status?.toUpperCase() ===
+                                                                "ACTIVE"
                                                                     ? "badge-active"
                                                                     : "badge-inactive"
-                                                                }`}
+                                                            }`}
                                                         >
                                                             {
                                                                 visitor.status ||
@@ -1688,12 +2004,14 @@ export default function Visitor() {
                                                 </td>
 
                                                 <td>
+
                                                     <span className="invited-by">
                                                         {
                                                             visitor.invitedBy ||
                                                             "—"
                                                         }
                                                     </span>
+
                                                 </td>
 
                                                 <td>
@@ -1701,6 +2019,7 @@ export default function Visitor() {
                                                     <div className="action-buttons">
 
                                                         <button
+                                                            type="button"
                                                             className="action-primary"
                                                             onClick={() =>
                                                                 openVisitModal(
@@ -1712,6 +2031,7 @@ export default function Visitor() {
                                                         </button>
 
                                                         <button
+                                                            type="button"
                                                             className="action-secondary"
                                                             onClick={() =>
                                                                 void openHistory(
@@ -1727,6 +2047,7 @@ export default function Visitor() {
                                                 </td>
 
                                             </tr>
+
                                         )
                                     )}
 
@@ -1737,6 +2058,10 @@ export default function Visitor() {
                         </div>
 
                     ) : (
+
+                        /* ==================================================
+                            CARDS
+                        ================================================== */
 
                         <div className="visitor-card-grid">
 
@@ -1753,9 +2078,11 @@ export default function Visitor() {
                                         <div className="visitor-card-top">
 
                                             <div className="avatar avatar-large">
+
                                                 {visitor.firstName
                                                     ?.charAt(0)
                                                     .toUpperCase()}
+
                                             </div>
 
                                             <div>
@@ -1767,9 +2094,11 @@ export default function Visitor() {
                                                 </span>
 
                                                 <h3>
-                                                    {getFullName(
-                                                        visitor
-                                                    )}
+                                                    {
+                                                        getFullName(
+                                                            visitor
+                                                        )
+                                                    }
                                                 </h3>
 
                                                 <span>
@@ -1786,15 +2115,19 @@ export default function Visitor() {
                                         <div className="card-visit-highlight">
 
                                             <div>
+
                                                 <span>
                                                     Current Journey
                                                 </span>
 
                                                 <strong>
-                                                    {getVisitLabel(
-                                                        visitor.visitCount
-                                                    )}
+                                                    {
+                                                        getVisitLabel(
+                                                            visitor.visitCount
+                                                        )
+                                                    }
                                                 </strong>
+
                                             </div>
 
                                             <div className="next-visit">
@@ -1804,9 +2137,11 @@ export default function Visitor() {
                                                 </span>
 
                                                 <strong>
-                                                    {getNextVisitLabel(
-                                                        visitor.visitCount
-                                                    )}
+                                                    {
+                                                        getNextVisitLabel(
+                                                            visitor.visitCount
+                                                        )
+                                                    }
                                                 </strong>
 
                                             </div>
@@ -1816,18 +2151,23 @@ export default function Visitor() {
                                         <div className="card-details">
 
                                             <div>
+
                                                 <span>
                                                     First Visit
                                                 </span>
 
                                                 <strong>
-                                                    {formatDate(
-                                                        visitor.firstVisitDate
-                                                    )}
+                                                    {
+                                                        formatDate(
+                                                            visitor.firstVisitDate
+                                                        )
+                                                    }
                                                 </strong>
+
                                             </div>
 
                                             <div>
+
                                                 <span>
                                                     Invited By
                                                 </span>
@@ -1838,9 +2178,11 @@ export default function Visitor() {
                                                         "—"
                                                     }
                                                 </strong>
+
                                             </div>
 
                                             <div>
+
                                                 <span>
                                                     Ministry
                                                 </span>
@@ -1851,9 +2193,11 @@ export default function Visitor() {
                                                         "—"
                                                     }
                                                 </strong>
+
                                             </div>
 
                                             <div>
+
                                                 <span>
                                                     Follow-Up
                                                 </span>
@@ -1864,6 +2208,7 @@ export default function Visitor() {
                                                         "NEW"
                                                     }
                                                 </strong>
+
                                             </div>
 
                                         </div>
@@ -1871,6 +2216,7 @@ export default function Visitor() {
                                         <div className="card-actions">
 
                                             <button
+                                                type="button"
                                                 className="btn btn-primary"
                                                 onClick={() =>
                                                     openVisitModal(
@@ -1882,6 +2228,7 @@ export default function Visitor() {
                                             </button>
 
                                             <button
+                                                type="button"
                                                 className="btn btn-secondary"
                                                 onClick={() =>
                                                     void openHistory(
@@ -1895,6 +2242,7 @@ export default function Visitor() {
                                         </div>
 
                                     </article>
+
                                 )
                             )}
 
@@ -1905,9 +2253,9 @@ export default function Visitor() {
 
             </div>
 
-            {/* =====================================================
-                ADD VISITOR
-            ===================================================== */}
+            {/* =========================================================
+                ADD VISITOR MODAL
+            ========================================================= */}
 
             {showAddModal && (
 
@@ -1930,6 +2278,7 @@ export default function Visitor() {
                         <div className="modal-header">
 
                             <div>
+
                                 <span className="section-kicker">
                                     NEW RECORD
                                 </span>
@@ -1942,11 +2291,15 @@ export default function Visitor() {
                                     Add a new visitor to
                                     the EPIC database.
                                 </p>
+
                             </div>
 
                             <button
+                                type="button"
                                 className="modal-close"
-                                onClick={closeModals}
+                                onClick={
+                                    closeModals
+                                }
                             >
                                 ×
                             </button>
@@ -1958,6 +2311,8 @@ export default function Visitor() {
                                 handleCreateVisitor
                             }
                         >
+
+                            {/* PERSONAL */}
 
                             <div className="form-section">
 
@@ -2045,6 +2400,7 @@ export default function Visitor() {
                                             </option>
 
                                         </select>
+
                                     </label>
 
                                     <label>
@@ -2099,6 +2455,8 @@ export default function Visitor() {
                                 </div>
 
                             </div>
+
+                            {/* VISIT */}
 
                             <div className="form-section">
 
@@ -2172,6 +2530,7 @@ export default function Visitor() {
                                                 )
                                             }
                                         />
+
                                     </label>
 
                                 </div>
@@ -2183,8 +2542,12 @@ export default function Visitor() {
                                 <button
                                     type="button"
                                     className="btn btn-secondary"
-                                    onClick={closeModals}
-                                    disabled={saving}
+                                    onClick={
+                                        closeModals
+                                    }
+                                    disabled={
+                                        saving
+                                    }
                                 >
                                     Cancel
                                 </button>
@@ -2192,11 +2555,15 @@ export default function Visitor() {
                                 <button
                                     type="submit"
                                     className="btn btn-primary"
-                                    disabled={saving}
+                                    disabled={
+                                        saving
+                                    }
                                 >
-                                    {saving
-                                        ? "Saving..."
-                                        : "Register Visitor"}
+                                    {
+                                        saving
+                                            ? "Saving..."
+                                            : "Register Visitor"
+                                    }
                                 </button>
 
                             </div>
@@ -2208,9 +2575,9 @@ export default function Visitor() {
                 </div>
             )}
 
-            {/* =====================================================
-                RECORD VISIT
-            ===================================================== */}
+            {/* =========================================================
+                RECORD VISIT MODAL
+            ========================================================= */}
 
             {showVisitModal &&
                 selectedVisitor && (
@@ -2241,9 +2608,11 @@ export default function Visitor() {
 
                                     <h2>
                                         Record{" "}
-                                        {getNextVisitLabel(
-                                            selectedVisitor.visitCount
-                                        )}
+                                        {
+                                            getNextVisitLabel(
+                                                selectedVisitor.visitCount
+                                            )
+                                        }
                                     </h2>
 
                                     <p>
@@ -2255,8 +2624,11 @@ export default function Visitor() {
                                 </div>
 
                                 <button
+                                    type="button"
                                     className="modal-close"
-                                    onClick={closeModals}
+                                    onClick={
+                                        closeModals
+                                    }
                                 >
                                     ×
                                 </button>
@@ -2266,9 +2638,11 @@ export default function Visitor() {
                             <div className="visit-profile">
 
                                 <div className="avatar avatar-large">
+
                                     {selectedVisitor.firstName
                                         ?.charAt(0)
                                         .toUpperCase()}
+
                                 </div>
 
                                 <div>
@@ -2280,21 +2654,27 @@ export default function Visitor() {
                                     </span>
 
                                     <h3>
-                                        {getFullName(
-                                            selectedVisitor
-                                        )}
+                                        {
+                                            getFullName(
+                                                selectedVisitor
+                                            )
+                                        }
                                     </h3>
 
                                     <strong>
                                         Current:{" "}
-                                        {getVisitLabel(
-                                            selectedVisitor.visitCount
-                                        )}
+                                        {
+                                            getVisitLabel(
+                                                selectedVisitor.visitCount
+                                            )
+                                        }
                                     </strong>
 
                                 </div>
 
                             </div>
+
+                            {/* PROGRESS */}
 
                             <div className="visit-progress">
 
@@ -2317,7 +2697,7 @@ export default function Visitor() {
                                             <div
                                                 className={
                                                     selectedVisitor.visitCount >=
-                                                        index + 1
+                                                    index + 1
                                                         ? "completed"
                                                         : ""
                                                 }
@@ -2340,6 +2720,7 @@ export default function Visitor() {
                                             )}
 
                                         </React.Fragment>
+
                                     )
                                 )}
 
@@ -2390,9 +2771,11 @@ export default function Visitor() {
 
                                                         {" — "}
 
-                                                        {formatDate(
-                                                            service.serviceDate
-                                                        )}
+                                                        {
+                                                            formatDate(
+                                                                service.serviceDate
+                                                            )
+                                                        }
 
                                                         {service.startTime
                                                             ? ` • ${formatTime(
@@ -2401,17 +2784,21 @@ export default function Visitor() {
                                                             : ""}
 
                                                     </option>
+
                                                 )
                                             )}
 
                                         </select>
+
                                     </label>
 
                                     {services.length === 0 && (
+
                                         <div className="inline-warning">
                                             No completed church
                                             services are available.
                                         </div>
+
                                     )}
 
                                     <label>
@@ -2430,12 +2817,14 @@ export default function Visitor() {
 
                                             {ATTENDANCE_STATUSES.map(
                                                 status => (
+
                                                     <option
                                                         key={status}
                                                         value={status}
                                                     >
                                                         {status}
                                                     </option>
+
                                                 )
                                             )}
 
@@ -2452,17 +2841,21 @@ export default function Visitor() {
                                     </span>
 
                                     <strong>
-                                        {getFullName(
-                                            selectedVisitor
-                                        )}
+                                        {
+                                            getFullName(
+                                                selectedVisitor
+                                            )
+                                        }
                                     </strong>
 
                                     <p>
                                         will be recorded as{" "}
                                         <b>
-                                            {getNextVisitLabel(
-                                                selectedVisitor.visitCount
-                                            )}
+                                            {
+                                                getNextVisitLabel(
+                                                    selectedVisitor.visitCount
+                                                )
+                                            }
                                         </b>
                                         .
                                     </p>
@@ -2474,8 +2867,12 @@ export default function Visitor() {
                                     <button
                                         type="button"
                                         className="btn btn-secondary"
-                                        onClick={closeModals}
-                                        disabled={saving}
+                                        onClick={
+                                            closeModals
+                                        }
+                                        disabled={
+                                            saving
+                                        }
                                     >
                                         Cancel
                                     </button>
@@ -2488,11 +2885,13 @@ export default function Visitor() {
                                             services.length === 0
                                         }
                                     >
-                                        {saving
-                                            ? "Recording..."
-                                            : `Record ${getNextVisitLabel(
-                                                selectedVisitor.visitCount
-                                            )}`}
+                                        {
+                                            saving
+                                                ? "Recording..."
+                                                : `Record ${getNextVisitLabel(
+                                                    selectedVisitor.visitCount
+                                                )}`
+                                        }
                                     </button>
 
                                 </div>
@@ -2504,9 +2903,9 @@ export default function Visitor() {
                     </div>
                 )}
 
-            {/* =====================================================
-                HISTORY
-            ===================================================== */}
+            {/* =========================================================
+                HISTORY MODAL
+            ========================================================= */}
 
             {showHistoryModal &&
                 selectedVisitor && (
@@ -2536,52 +2935,74 @@ export default function Visitor() {
                                     </span>
 
                                     <h2>
-                                        {getFullName(
-                                            selectedVisitor
-                                        )}
+                                        {
+                                            getFullName(
+                                                selectedVisitor
+                                            )
+                                        }
                                     </h2>
 
                                     <p>
+
                                         {
                                             selectedVisitor.visitorCode
-                                        }{" "}
-                                        •{" "}
+                                        }
+
+                                        {" • "}
+
                                         {
                                             selectedVisitor.visitCount
-                                        }{" "}
+                                        }
+
+                                        {" "}
                                         recorded visit
-                                        {selectedVisitor.visitCount !==
+                                        {
+                                            selectedVisitor.visitCount !==
                                             1
-                                            ? "s"
-                                            : ""}
+                                                ? "s"
+                                                : ""
+                                        }
+
                                     </p>
 
                                 </div>
 
                                 <button
+                                    type="button"
                                     className="modal-close"
-                                    onClick={closeModals}
+                                    onClick={
+                                        closeModals
+                                    }
                                 >
                                     ×
                                 </button>
 
                             </div>
 
+                            {/* LOADING */}
+
                             {historyLoading ? (
 
                                 <div className="history-loading">
+
                                     <div className="spinner" />
+
                                     <span>
                                         Loading attendance
                                         history...
                                     </span>
+
                                 </div>
 
                             ) : attendanceHistory.length === 0 ? (
 
+                                /* EMPTY */
+
                                 <div className="empty-history">
 
-                                    <div>—</div>
+                                    <div>
+                                        —
+                                    </div>
 
                                     <h3>
                                         No attendance records
@@ -2596,6 +3017,8 @@ export default function Visitor() {
                                 </div>
 
                             ) : (
+
+                                /* HISTORY */
 
                                 <div className="history-list">
 
@@ -2630,9 +3053,11 @@ export default function Visitor() {
                                                         </strong>
 
                                                         <span>
-                                                            {formatDate(
-                                                                record.attendanceDate
-                                                            )}
+                                                            {
+                                                                formatDate(
+                                                                    record.attendanceDate
+                                                                )
+                                                            }
                                                         </span>
 
                                                     </div>
@@ -2665,22 +3090,29 @@ export default function Visitor() {
                                                 </div>
 
                                             </div>
+
                                         )
                                     )}
 
                                 </div>
                             )}
 
+                            {/* FOOTER */}
+
                             <div className="modal-footer">
 
                                 <button
+                                    type="button"
                                     className="btn btn-secondary"
-                                    onClick={closeModals}
+                                    onClick={
+                                        closeModals
+                                    }
                                 >
                                     Close
                                 </button>
 
                                 <button
+                                    type="button"
                                     className="btn btn-primary"
                                     onClick={() => {
 

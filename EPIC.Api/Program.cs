@@ -1,20 +1,16 @@
+using EPIC.Api.Authorization;
 using EPIC.Api.Data;
 using EPIC.Api.Services;
-using EPIC.Api.Authorization;
 using EPIC.Core.Interfaces;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
+
 using System.Text;
 
-var options = new WebApplicationOptions
-{
-    Args = args
-};
-
-var builder = WebApplication.CreateBuilder(options);
+var builder = WebApplication.CreateBuilder(args);
 
 // ============================================================
 // CONFIGURATION
@@ -34,19 +30,17 @@ builder.Configuration
     .AddJsonFile(
         "appsettings.json",
         optional: false,
-        reloadOnChange: false
-    )
+        reloadOnChange: false)
     .AddJsonFile(
         $"appsettings.{builder.Environment.EnvironmentName}.json",
         optional: true,
-        reloadOnChange: false
-    )
+        reloadOnChange: false)
     .AddEnvironmentVariables();
 
 var configuration = builder.Configuration;
 
 // ============================================================
-// 1. DATABASE
+// DATABASE
 // ============================================================
 
 var connectionString =
@@ -55,8 +49,7 @@ var connectionString =
 if (string.IsNullOrWhiteSpace(connectionString))
 {
     throw new InvalidOperationException(
-        "Database connection string 'EPICChurchDB' is missing."
-    );
+        "Database connection string 'EPICChurchDB' is missing.");
 }
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -65,18 +58,13 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 });
 
 // ============================================================
-// 2. CONTROLLERS
+// CONTROLLERS
 // ============================================================
 
 builder.Services.AddControllers();
 
 // ============================================================
-// 3. CORS
-// ============================================================
-
-
-// ============================================================
-// 3. CORS
+// CORS
 // ============================================================
 
 builder.Services.AddCors(options =>
@@ -86,7 +74,7 @@ builder.Services.AddCors(options =>
         policy
             .SetIsOriginAllowed(origin =>
             {
-                // Localhost development
+                // LOCAL DEVELOPMENT
                 if (origin.StartsWith(
                     "http://localhost:",
                     StringComparison.OrdinalIgnoreCase))
@@ -94,7 +82,7 @@ builder.Services.AddCors(options =>
                     return true;
                 }
 
-                // LAN development
+                // LAN DEVELOPMENT
                 if (origin.StartsWith(
                     "http://192.168.1.10:",
                     StringComparison.OrdinalIgnoreCase))
@@ -102,7 +90,7 @@ builder.Services.AddCors(options =>
                     return true;
                 }
 
-                // Production frontend
+                // PRODUCTION FRONTEND
                 if (origin.Equals(
                     "https://epic-cms.vercel.app",
                     StringComparison.OrdinalIgnoreCase))
@@ -118,18 +106,30 @@ builder.Services.AddCors(options =>
     });
 });
 
-
-
 // ============================================================
-// 4. APPLICATION SERVICES
+// APPLICATION SERVICES
 // ============================================================
+
+// ------------------------------------------------------------
+// PERMISSION SERVICE
+// ------------------------------------------------------------
 
 builder.Services.AddScoped<
     IPermissionService,
     PermissionService>();
 
+// ------------------------------------------------------------
+// SUBSCRIPTION SERVICES
+// ------------------------------------------------------------
+
+builder.Services.AddScoped<
+    SubscriptionLifecycleService>();
+
+builder.Services.AddHostedService<
+    SubscriptionLifecycleWorker>();
+
 // ============================================================
-// 5. JWT CONFIGURATION
+// JWT CONFIGURATION
 // ============================================================
 
 var jwtKey =
@@ -144,26 +144,23 @@ var jwtAudience =
 if (string.IsNullOrWhiteSpace(jwtKey))
 {
     throw new InvalidOperationException(
-        "JWT Key is missing. Check appsettings.json."
-    );
+        "JWT Key is missing. Check appsettings.json.");
 }
 
 if (string.IsNullOrWhiteSpace(jwtIssuer))
 {
     throw new InvalidOperationException(
-        "JWT Issuer is missing. Check appsettings.json."
-    );
+        "JWT Issuer is missing. Check appsettings.json.");
 }
 
 if (string.IsNullOrWhiteSpace(jwtAudience))
 {
     throw new InvalidOperationException(
-        "JWT Audience is missing. Check appsettings.json."
-    );
+        "JWT Audience is missing. Check appsettings.json.");
 }
 
 // ============================================================
-// 6. AUTHENTICATION
+// AUTHENTICATION
 // ============================================================
 
 builder.Services
@@ -190,8 +187,7 @@ builder.Services
 
                 IssuerSigningKey =
                     new SymmetricSecurityKey(
-                        Encoding.UTF8.GetBytes(jwtKey)
-                    ),
+                        Encoding.UTF8.GetBytes(jwtKey)),
 
                 ClockSkew =
                     TimeSpan.Zero
@@ -199,13 +195,13 @@ builder.Services
     });
 
 // ============================================================
-// 7. AUTHORIZATION
+// AUTHORIZATION
 // ============================================================
 
 builder.Services.AddAuthorization();
 
 // ============================================================
-// 8. SWAGGER
+// SWAGGER
 // ============================================================
 
 builder.Services.AddEndpointsApiExplorer();
@@ -224,11 +220,10 @@ builder.Services.AddSwaggerGen(options =>
 
             Description =
                 "EPIC Church Management System API"
-        }
-    );
+        });
 
     // --------------------------------------------------------
-    // JWT AUTHORIZATION
+    // JWT SECURITY DEFINITION
     // --------------------------------------------------------
 
     options.AddSecurityDefinition(
@@ -252,8 +247,11 @@ builder.Services.AddSwaggerGen(options =>
 
             Description =
                 "Enter your JWT token."
-        }
-    );
+        });
+
+    // --------------------------------------------------------
+    // JWT SECURITY REQUIREMENT
+    // --------------------------------------------------------
 
     options.AddSecurityRequirement(
         document =>
@@ -262,37 +260,33 @@ builder.Services.AddSwaggerGen(options =>
                 {
                     new Microsoft.OpenApi.OpenApiSecuritySchemeReference(
                         "Bearer",
-                        document
-                    ),
+                        document),
 
                     new List<string>()
                 }
-            }
-    );
+            });
 });
 
 // ============================================================
-// 9. BUILD APPLICATION
+// BUILD
 // ============================================================
 
 var app = builder.Build();
 
 // ============================================================
-// 10. MEMBER PHOTO STORAGE
+// MEMBER PHOTO STORAGE
 // ============================================================
 
 var memberPhotoFolder =
     Path.Combine(
         app.Environment.ContentRootPath,
-        "root-uploads-members"
-    );
+        "root-uploads-members");
 
 Directory.CreateDirectory(
-    memberPhotoFolder
-);
+    memberPhotoFolder);
 
 // ============================================================
-// 11. SWAGGER
+// SWAGGER
 // ============================================================
 
 app.UseSwagger();
@@ -301,34 +295,24 @@ app.UseSwaggerUI(options =>
 {
     options.SwaggerEndpoint(
         "/swagger/v1/swagger.json",
-        "EPIC Church Management API v1"
-    );
+        "EPIC Church Management API v1");
 
     options.DocumentTitle =
         "EPIC Church Management API";
 });
 
 // ============================================================
-// 12. CORS
+// CORS
 // ============================================================
 //
-// IMPORTANT:
-//
-// CORS MUST RUN BEFORE AUTHENTICATION/AUTHORIZATION.
-//
-// React
-// http://localhost:5173
-//       |
-//       v
-// EPIC API
-// http://localhost:5109
+// MUST RUN BEFORE AUTHENTICATION/AUTHORIZATION
 //
 // ============================================================
 
 app.UseCors("EPICWebPolicy");
 
 // ============================================================
-// 13. STATIC FILES - MEMBER PHOTOS
+// STATIC MEMBER PHOTOS
 // ============================================================
 
 app.UseStaticFiles(
@@ -336,53 +320,48 @@ app.UseStaticFiles(
     {
         FileProvider =
             new PhysicalFileProvider(
-                memberPhotoFolder
-            ),
+                memberPhotoFolder),
 
         RequestPath =
             "/member-photos"
-    }
-);
+    });
 
 // ============================================================
-// 14. HTTPS REDIRECTION
+// HTTPS REDIRECTION
 // ============================================================
 //
-// INTENTIONALLY DISABLED.
+// INTENTIONALLY DISABLED FOR CURRENT LAN DEVELOPMENT.
 //
-// EPIC currently uses:
-//
+// Local:
 // http://localhost:5109
 //
-// and
-//
+// LAN:
 // http://192.168.1.10:5109
-//
-// Do NOT enable UseHttpsRedirection()
-// during LAN HTTP development.
 //
 // ============================================================
 
+// app.UseHttpsRedirection();
+
 // ============================================================
-// 15. AUTHENTICATION
+// AUTHENTICATION
 // ============================================================
 
 app.UseAuthentication();
 
 // ============================================================
-// 16. AUTHORIZATION
+// AUTHORIZATION
 // ============================================================
 
 app.UseAuthorization();
 
 // ============================================================
-// 17. CONTROLLERS
+// CONTROLLERS
 // ============================================================
 
 app.MapControllers();
 
 // ============================================================
-// 18. START APPLICATION
+// RUN
 // ============================================================
 
 app.Run();

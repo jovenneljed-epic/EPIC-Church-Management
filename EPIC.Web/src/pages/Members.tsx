@@ -1,9 +1,10 @@
-import { API_BASE_URL } from "../config";
-import {
+import React, {
     useEffect,
     useMemo,
     useState,
 } from "react";
+
+import { API_BASE_URL } from "../config";
 
 import {
     Search,
@@ -23,9 +24,9 @@ import {
     UserRound,
     ArrowLeft,
     AlertCircle,
+    Camera,
+    Trash2,
 } from "lucide-react";
-
-
 
 // ============================================================
 // TYPES
@@ -170,6 +171,23 @@ function getFullName(member: Member): string {
         .trim();
 }
 
+function getPhotoUrl(photoPath?: string | null): string {
+    if (!photoPath) {
+        return "";
+    }
+
+    if (
+        photoPath.startsWith("http://") ||
+        photoPath.startsWith("https://")
+    ) {
+        return photoPath;
+    }
+
+    const apiRoot = API_BASE_URL.replace(/\/api\/?$/, "");
+
+    return `${apiRoot}${photoPath.startsWith("/") ? "" : "/"}${photoPath}`;
+}
+
 // ============================================================
 // API REQUEST
 // ============================================================
@@ -186,15 +204,14 @@ async function apiRequest(
         );
     }
 
+        options.body instanceof FormData;
+
+    
+
     const response = await fetch(
         `${API_BASE_URL}${endpoint}`,
         {
             ...options,
-            headers: {
-                "Content-Type": "application/json",
-                ...(options.headers || {}),
-                Authorization: `Bearer ${token}`,
-            },
         }
     );
 
@@ -209,7 +226,8 @@ async function apiRequest(
         );
     }
 
-    const text = await response.text();
+    const text =
+        await response.text();
 
     let data: unknown = null;
 
@@ -233,7 +251,9 @@ async function apiRequest(
         ) {
             throw new Error(
                 String(
-                    (data as { message: unknown }).message
+                    (data as {
+                        message: unknown;
+                    }).message
                 )
             );
         }
@@ -279,16 +299,26 @@ export default function Members() {
         useState<number | null>(null);
 
     const [form, setForm] =
-        useState<MemberFormData>(emptyForm);
+        useState<MemberFormData>(
+            emptyForm
+        );
 
     const [selectedMember, setSelectedMember] =
-        useState<CompleteProfile | null>(null);
+        useState<CompleteProfile | null>(
+            null
+        );
 
-    const [, setProfileLoading] =
+    const [profileLoading, setProfileLoading] =
         useState(false);
 
     const [confirmDeactivate, setConfirmDeactivate] =
         useState<Member | null>(null);
+
+    const [selectedPhoto, setSelectedPhoto] =
+        useState<File | null>(null);
+
+    const [photoPreview, setPhotoPreview] =
+        useState("");
 
     // ========================================================
     // LOAD MEMBERS
@@ -328,34 +358,53 @@ export default function Members() {
 
     const filteredMembers = useMemo(() => {
         const keyword =
-            search.trim().toLowerCase();
+            search
+                .trim()
+                .toLowerCase();
 
-        return members.filter((member) => {
-            const fullName =
-                getFullName(member).toLowerCase();
+        return members.filter(
+            (member) => {
+                const fullName =
+                    getFullName(
+                        member
+                    ).toLowerCase();
 
-            const matchesSearch =
-                !keyword ||
-                (member.memberCode || "")
-                    .toLowerCase()
-                    .includes(keyword) ||
-                fullName.includes(keyword) ||
-                (member.contactNumber || "")
-                    .toLowerCase()
-                    .includes(keyword) ||
-                (member.ministry || "")
-                    .toLowerCase()
-                    .includes(keyword);
+                const matchesSearch =
+                    !keyword ||
+                    (
+                        member.memberCode ||
+                        ""
+                    )
+                        .toLowerCase()
+                        .includes(keyword) ||
+                    fullName.includes(
+                        keyword
+                    ) ||
+                    (
+                        member.contactNumber ||
+                        ""
+                    )
+                        .toLowerCase()
+                        .includes(keyword) ||
+                    (
+                        member.ministry ||
+                        ""
+                    )
+                        .toLowerCase()
+                        .includes(keyword);
 
-            const matchesStatus =
-                statusFilter === "ALL" ||
-                member.status === statusFilter;
+                const matchesStatus =
+                    statusFilter ===
+                        "ALL" ||
+                    member.status ===
+                        statusFilter;
 
-            return (
-                matchesSearch &&
-                matchesStatus
-            );
-        });
+                return (
+                    matchesSearch &&
+                    matchesStatus
+                );
+            }
+        );
     }, [
         members,
         search,
@@ -371,18 +420,25 @@ export default function Members() {
 
     const activeMembers =
         members.filter(
-            (m) => m.status === "ACTIVE"
+            (m) =>
+                m.status ===
+                "ACTIVE"
         ).length;
 
     const inactiveMembers =
         members.filter(
-            (m) => m.status === "INACTIVE"
+            (m) =>
+                m.status ===
+                "INACTIVE"
         ).length;
 
     const ministryCount =
         new Set(
             members
-                .map((m) => m.ministry)
+                .map(
+                    (m) =>
+                        m.ministry
+                )
                 .filter(Boolean)
         ).size;
 
@@ -392,9 +448,17 @@ export default function Members() {
 
     const openAddForm = () => {
         setEditingId(null);
-        setForm({ ...emptyForm });
+
+        setForm({
+            ...emptyForm,
+        });
+
+        setSelectedPhoto(null);
+        setPhotoPreview("");
+
         setError("");
         setSuccess("");
+
         setShowForm(true);
     };
 
@@ -405,23 +469,30 @@ export default function Members() {
     const openEditForm = (
         member: Member
     ) => {
-        setEditingId(member.memberId);
+        setEditingId(
+            member.memberId
+        );
 
         setForm({
             memberCode:
-                member.memberCode || "",
+                member.memberCode ||
+                "",
 
             firstName:
-                member.firstName || "",
+                member.firstName ||
+                "",
 
             middleName:
-                member.middleName || "",
+                member.middleName ||
+                "",
 
             lastName:
-                member.lastName || "",
+                member.lastName ||
+                "",
 
             gender:
-                member.gender || "",
+                member.gender ||
+                "",
 
             birthDate:
                 member.birthDate
@@ -432,16 +503,20 @@ export default function Members() {
                     : "",
 
             contactNumber:
-                member.contactNumber || "",
+                member.contactNumber ||
+                "",
 
             address:
-                member.address || "",
+                member.address ||
+                "",
 
             civilStatus:
-                member.civilStatus || "",
+                member.civilStatus ||
+                "",
 
             ministry:
-                member.ministry || "",
+                member.ministry ||
+                "",
 
             dateJoined:
                 member.dateJoined
@@ -452,11 +527,21 @@ export default function Members() {
                     : "",
 
             status:
-                member.status || "ACTIVE",
+                member.status ||
+                "ACTIVE",
 
             photoPath:
-                member.photoPath || "",
+                member.photoPath ||
+                "",
         });
+
+        setSelectedPhoto(null);
+
+        setPhotoPreview(
+            getPhotoUrl(
+                member.photoPath
+            )
+        );
 
         setSelectedMember(null);
         setError("");
@@ -473,7 +558,13 @@ export default function Members() {
 
         setShowForm(false);
         setEditingId(null);
-        setForm({ ...emptyForm });
+
+        setForm({
+            ...emptyForm,
+        });
+
+        setSelectedPhoto(null);
+        setPhotoPreview("");
     };
 
     // ========================================================
@@ -484,10 +575,82 @@ export default function Members() {
         field: keyof MemberFormData,
         value: string
     ) => {
-        setForm((previous) => ({
-            ...previous,
-            [field]: value,
-        }));
+        setForm(
+            (previous) => ({
+                ...previous,
+                [field]: value,
+            })
+        );
+    };
+
+    // ========================================================
+    // PHOTO SELECT
+    // ========================================================
+
+    const handlePhotoChange = (
+        file: File | null
+    ) => {
+        if (!file) {
+            return;
+        }
+
+        const allowedTypes = [
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+        ];
+
+        if (
+            !allowedTypes.includes(
+                file.type
+            )
+        ) {
+            setError(
+                "ONLY JPG, JPEG, PNG, AND WEBP PHOTOS ARE ALLOWED."
+            );
+
+            return;
+        }
+
+        if (
+            file.size >
+            10 * 1024 * 1024
+        ) {
+            setError(
+                "PHOTO SIZE MUST NOT EXCEED 10 MB."
+            );
+
+            return;
+        }
+
+        setError("");
+
+        setSelectedPhoto(file);
+
+        const url =
+            URL.createObjectURL(
+                file
+            );
+
+        setPhotoPreview(url);
+    };
+
+    // ========================================================
+    // REMOVE SELECTED PHOTO
+    // ========================================================
+
+    const removeSelectedPhoto = () => {
+        setSelectedPhoto(null);
+
+        if (editingId !== null) {
+            setPhotoPreview(
+                getPhotoUrl(
+                    form.photoPath
+                )
+            );
+        } else {
+            setPhotoPreview("");
+        }
     };
 
     // ========================================================
@@ -498,72 +661,130 @@ export default function Members() {
         setError("");
         setSuccess("");
 
-        if (!form.firstName.trim()) {
+        if (
+            !form.firstName.trim()
+        ) {
             setError(
                 "FIRST NAME IS REQUIRED."
             );
+
             return;
         }
 
-        if (!form.lastName.trim()) {
+        if (
+            !form.lastName.trim()
+        ) {
             setError(
                 "LAST NAME IS REQUIRED."
             );
+
             return;
         }
 
         try {
             setSaving(true);
 
-            const payload = {
-                memberCode:
-                    form.memberCode.trim(),
+            /*
+             * IMPORTANT:
+             *
+             * The backend UpdateMember endpoint
+             * uses [FromForm].
+             *
+             * Therefore we use FormData for both
+             * create and update.
+             */
 
-                firstName:
-                    form.firstName.trim(),
+            const formData =
+                new FormData();
 
-                middleName:
-                    form.middleName.trim(),
+            if (
+                form.memberCode.trim()
+            ) {
+                formData.append(
+                    "MemberCode",
+                    form.memberCode.trim()
+                );
+            }
 
-                lastName:
-                    form.lastName.trim(),
+            formData.append(
+                "FirstName",
+                form.firstName.trim()
+            );
 
-                gender:
-                    form.gender.trim(),
+            formData.append(
+                "MiddleName",
+                form.middleName.trim()
+            );
 
-                birthDate:
-                    form.birthDate || null,
+            formData.append(
+                "LastName",
+                form.lastName.trim()
+            );
 
-                contactNumber:
-                    form.contactNumber.trim(),
+            formData.append(
+                "Gender",
+                form.gender.trim()
+            );
 
-                address:
-                    form.address.trim(),
+            if (form.birthDate) {
+                formData.append(
+                    "BirthDate",
+                    form.birthDate
+                );
+            }
 
-                civilStatus:
-                    form.civilStatus.trim(),
+            formData.append(
+                "ContactNumber",
+                form.contactNumber.trim()
+            );
 
-                ministry:
-                    form.ministry.trim(),
+            formData.append(
+                "Address",
+                form.address.trim()
+            );
 
-                dateJoined:
-                    form.dateJoined || null,
+            formData.append(
+                "CivilStatus",
+                form.civilStatus.trim()
+            );
 
-                status:
-                    form.status || "ACTIVE",
+            formData.append(
+                "Ministry",
+                form.ministry.trim()
+            );
 
-                photoPath:
-                    form.photoPath.trim(),
-            };
+            if (form.dateJoined) {
+                formData.append(
+                    "DateJoined",
+                    form.dateJoined
+                );
+            }
 
-            if (editingId !== null) {
+            formData.append(
+                "Status",
+                form.status ||
+                "ACTIVE"
+            );
+
+            /*
+             * Only send a photo when a new
+             * file has actually been selected.
+             */
+            if (selectedPhoto) {
+                formData.append(
+                    "photo",
+                    selectedPhoto
+                );
+            }
+
+            if (
+                editingId !== null
+            ) {
                 await apiRequest(
                     `/Members/${editingId}`,
                     {
                         method: "PUT",
-                        body: JSON.stringify(
-                            payload
-                        ),
+                        body: formData,
                     }
                 );
 
@@ -575,9 +796,7 @@ export default function Members() {
                     "/Members",
                     {
                         method: "POST",
-                        body: JSON.stringify(
-                            payload
-                        ),
+                        body: formData,
                     }
                 );
 
@@ -590,7 +809,13 @@ export default function Members() {
 
             setShowForm(false);
             setEditingId(null);
-            setForm({ ...emptyForm });
+
+            setForm({
+                ...emptyForm,
+            });
+
+            setSelectedPhoto(null);
+            setPhotoPreview("");
 
             setTimeout(() => {
                 setSuccess("");
@@ -607,7 +832,7 @@ export default function Members() {
     };
 
     // ========================================================
-    // VIEW PROFILE — FIXED
+    // VIEW PROFILE
     // ========================================================
 
     const viewProfile = async (
@@ -622,9 +847,13 @@ export default function Members() {
                     `/Members/${memberId}/profile`
                 );
 
-            if (!data || typeof data !== "object") {
+            if (
+                !data ||
+                typeof data !==
+                    "object"
+            ) {
                 throw new Error(
-                    "Invalid member profile response from the API."
+                    "INVALID MEMBER PROFILE RESPONSE FROM THE API."
                 );
             }
 
@@ -649,41 +878,50 @@ export default function Members() {
     // DEACTIVATE
     // ========================================================
 
-    const deactivateMember = async () => {
-        if (!confirmDeactivate) return;
+    const deactivateMember =
+        async () => {
+            if (
+                !confirmDeactivate
+            ) {
+                return;
+            }
 
-        try {
-            setLoading(true);
-            setError("");
+            try {
+                setLoading(true);
+                setError("");
 
-            await apiRequest(
-                `/Members/${confirmDeactivate.memberId}`,
-                {
-                    method: "DELETE",
-                }
-            );
+                await apiRequest(
+                    `/Members/${confirmDeactivate.memberId}`,
+                    {
+                        method: "DELETE",
+                    }
+                );
 
-            setConfirmDeactivate(null);
+                setConfirmDeactivate(
+                    null
+                );
 
-            setSuccess(
-                "MEMBER DEACTIVATED SUCCESSFULLY."
-            );
+                setSuccess(
+                    "MEMBER DEACTIVATED SUCCESSFULLY."
+                );
 
-            await loadMembers();
+                await loadMembers();
 
-            setTimeout(() => {
-                setSuccess("");
-            }, 4000);
-        } catch (err) {
-            console.error(err);
+                setTimeout(() => {
+                    setSuccess("");
+                }, 4000);
+            } catch (err) {
+                console.error(err);
 
-            setError(
-                getErrorMessage(err)
-            );
-        } finally {
-            setLoading(false);
-        }
-    };
+                setError(
+                    getErrorMessage(
+                        err
+                    )
+                );
+            } finally {
+                setLoading(false);
+            }
+        };
 
     // ========================================================
     // PROFILE VIEW
@@ -692,9 +930,13 @@ export default function Members() {
     if (selectedMember) {
         return (
             <MemberProfile
-                profile={selectedMember}
+                profile={
+                    selectedMember
+                }
                 onBack={() =>
-                    setSelectedMember(null)
+                    setSelectedMember(
+                        null
+                    )
                 }
                 onEdit={() => {
                     const member =
@@ -707,7 +949,9 @@ export default function Members() {
                         );
 
                     if (member) {
-                        openEditForm(member);
+                        openEditForm(
+                            member
+                        );
                     }
                 }}
             />
@@ -738,9 +982,13 @@ export default function Members() {
                             </h2>
 
                             <p>
-                                Manage church members,
-                                profiles, ministries,
-                                and membership status.
+                                Manage church
+                                members,
+                                profiles,
+                                ministries,
+                                and
+                                membership
+                                status.
                             </p>
 
                         </div>
@@ -753,8 +1001,12 @@ export default function Members() {
 
                     <button
                         className="secondary-button"
-                        onClick={loadMembers}
-                        disabled={loading}
+                        onClick={
+                            loadMembers
+                        }
+                        disabled={
+                            loading
+                        }
                     >
                         <RefreshCw
                             size={17}
@@ -770,7 +1022,9 @@ export default function Members() {
 
                     <button
                         className="primary-button"
-                        onClick={openAddForm}
+                        onClick={
+                            openAddForm
+                        }
                     >
                         <Plus size={18} />
 
@@ -786,7 +1040,9 @@ export default function Members() {
             {error && (
                 <div className="module-alert error">
 
-                    <AlertCircle size={20} />
+                    <AlertCircle
+                        size={20}
+                    />
 
                     <span>
                         {error}
@@ -807,9 +1063,7 @@ export default function Members() {
             {success && (
                 <div className="module-alert success">
 
-                    <span>
-                        ✓
-                    </span>
+                    <span>✓</span>
 
                     <span>
                         {success}
@@ -833,7 +1087,9 @@ export default function Members() {
 
                 <MemberStat
                     title="Total Members"
-                    value={totalMembers}
+                    value={
+                        totalMembers
+                    }
                     subtitle="All registered members"
                     icon={
                         <Users size={22} />
@@ -842,16 +1098,22 @@ export default function Members() {
 
                 <MemberStat
                     title="Active Members"
-                    value={activeMembers}
+                    value={
+                        activeMembers
+                    }
                     subtitle="Currently active"
                     icon={
-                        <UserRound size={22} />
+                        <UserRound
+                            size={22}
+                        />
                     }
                 />
 
                 <MemberStat
                     title="Inactive Members"
-                    value={inactiveMembers}
+                    value={
+                        inactiveMembers
+                    }
                     subtitle="Inactive records"
                     icon={
                         <UserX size={22} />
@@ -860,10 +1122,14 @@ export default function Members() {
 
                 <MemberStat
                     title="Ministries"
-                    value={ministryCount}
+                    value={
+                        ministryCount
+                    }
                     subtitle="Ministries represented"
                     icon={
-                        <Building2 size={22} />
+                        <Building2
+                            size={22}
+                        />
                     }
                 />
 
@@ -878,10 +1144,13 @@ export default function Members() {
                     <Search size={19} />
 
                     <input
-                        value={search}
+                        value={
+                            search
+                        }
                         onChange={(e) =>
                             setSearch(
-                                e.target.value
+                                e.target
+                                    .value
                             )
                         }
                         placeholder="Search member name, code, contact, or ministry..."
@@ -901,10 +1170,13 @@ export default function Members() {
                 </div>
 
                 <select
-                    value={statusFilter}
+                    value={
+                        statusFilter
+                    }
                     onChange={(e) =>
                         setStatusFilter(
-                            e.target.value
+                            e.target
+                                .value
                         )
                     }
                 >
@@ -923,7 +1195,7 @@ export default function Members() {
 
             </div>
 
-            {/* MEMBER TABLE */}
+            {/* TABLE */}
 
             <div className="member-table-card">
 
@@ -941,7 +1213,9 @@ export default function Members() {
                                 filteredMembers.length
                             }{" "}
                             of{" "}
-                            {members.length}{" "}
+                            {
+                                members.length
+                            }{" "}
                             members
                         </p>
 
@@ -950,7 +1224,8 @@ export default function Members() {
                 </div>
 
                 {loading &&
-                    members.length === 0 ? (
+                members.length ===
+                    0 ? (
                     <div className="module-loading">
 
                         <RefreshCw
@@ -963,7 +1238,8 @@ export default function Members() {
                         </span>
 
                     </div>
-                ) : filteredMembers.length === 0 ? (
+                ) : filteredMembers.length ===
+                  0 ? (
                     <div className="empty-state">
 
                         <Users size={40} />
@@ -973,16 +1249,21 @@ export default function Members() {
                         </h3>
 
                         <p>
-                            Try changing your
-                            search or add a new
-                            member.
+                            Try changing
+                            your search
+                            or add a
+                            new member.
                         </p>
 
                         <button
                             className="primary-button"
-                            onClick={openAddForm}
+                            onClick={
+                                openAddForm
+                            }
                         >
-                            <Plus size={17} />
+                            <Plus
+                                size={17}
+                            />
 
                             Add Member
                         </button>
@@ -1028,7 +1309,9 @@ export default function Members() {
                             <tbody>
 
                                 {filteredMembers.map(
-                                    (member) => (
+                                    (
+                                        member
+                                    ) => (
                                         <tr
                                             key={
                                                 member.memberId
@@ -1041,10 +1324,23 @@ export default function Members() {
 
                                                     <div className="member-avatar">
 
-                                                        {member
-                                                            .firstName
-                                                            ?.charAt(0)
-                                                            .toUpperCase()}
+                                                        {member.photoPath ? (
+                                                            <img
+                                                                src={getPhotoUrl(
+                                                                    member.photoPath
+                                                                )}
+                                                                alt={getFullName(
+                                                                    member
+                                                                )}
+                                                            />
+                                                        ) : (
+                                                            member
+                                                                .firstName
+                                                                ?.charAt(
+                                                                    0
+                                                                )
+                                                                .toUpperCase()
+                                                        )}
 
                                                     </div>
 
@@ -1075,7 +1371,9 @@ export default function Members() {
                                                 <div className="table-contact">
 
                                                     <Phone
-                                                        size={14}
+                                                        size={
+                                                            14
+                                                        }
                                                     />
 
                                                     {
@@ -1103,11 +1401,12 @@ export default function Members() {
                                             <td>
 
                                                 <span
-                                                    className={`status-badge ${member.status ===
-                                                            "ACTIVE"
+                                                    className={`status-badge ${
+                                                        member.status ===
+                                                        "ACTIVE"
                                                             ? "active"
                                                             : "inactive"
-                                                        }`}
+                                                    }`}
                                                 >
                                                     {
                                                         member.status
@@ -1131,7 +1430,9 @@ export default function Members() {
                                                         }
                                                     >
                                                         <Eye
-                                                            size={17}
+                                                            size={
+                                                                17
+                                                            }
                                                         />
                                                     </button>
 
@@ -1146,27 +1447,31 @@ export default function Members() {
                                                         }
                                                     >
                                                         <Pencil
-                                                            size={17}
+                                                            size={
+                                                                17
+                                                            }
                                                         />
                                                     </button>
 
                                                     {member.status ===
                                                         "ACTIVE" && (
-                                                            <button
-                                                                type="button"
-                                                                className="icon-action deactivate"
-                                                                title="Deactivate Member"
-                                                                onClick={() =>
-                                                                    setConfirmDeactivate(
-                                                                        member
-                                                                    )
+                                                        <button
+                                                            type="button"
+                                                            className="icon-action deactivate"
+                                                            title="Deactivate Member"
+                                                            onClick={() =>
+                                                                setConfirmDeactivate(
+                                                                    member
+                                                                )
+                                                            }
+                                                        >
+                                                            <UserX
+                                                                size={
+                                                                    17
                                                                 }
-                                                            >
-                                                                <UserX
-                                                                    size={17}
-                                                                />
-                                                            </button>
-                                                        )}
+                                                            />
+                                                        </button>
+                                                    )}
 
                                                 </div>
 
@@ -1185,20 +1490,37 @@ export default function Members() {
 
             </div>
 
-            {/* ADD / EDIT */}
+            {/* FORM */}
 
             {showForm && (
                 <MemberForm
                     form={form}
-                    editingId={editingId}
+                    editingId={
+                        editingId
+                    }
                     saving={saving}
-                    onChange={updateField}
-                    onSave={saveMember}
-                    onClose={closeForm}
+                    photoPreview={
+                        photoPreview
+                    }
+                    onPhotoChange={
+                        handlePhotoChange
+                    }
+                    onRemovePhoto={
+                        removeSelectedPhoto
+                    }
+                    onChange={
+                        updateField
+                    }
+                    onSave={
+                        saveMember
+                    }
+                    onClose={
+                        closeForm
+                    }
                 />
             )}
 
-            {/* DEACTIVATE */}
+            {/* CONFIRM */}
 
             {confirmDeactivate && (
                 <div className="modal-overlay">
@@ -1206,16 +1528,20 @@ export default function Members() {
                     <div className="confirm-modal">
 
                         <div className="confirm-icon">
-                            <UserX size={28} />
+                            <UserX
+                                size={28}
+                            />
                         </div>
 
                         <h3>
-                            Deactivate Member?
+                            Deactivate
+                            Member?
                         </h3>
 
                         <p>
-                            Are you sure you want
-                            to deactivate{" "}
+                            Are you sure
+                            you want to
+                            deactivate{" "}
                             <strong>
                                 {
                                     getFullName(
@@ -1245,12 +1571,34 @@ export default function Members() {
                                     deactivateMember
                                 }
                             >
-                                <UserX size={17} />
+                                <UserX
+                                    size={17}
+                                />
 
                                 Deactivate
                             </button>
 
                         </div>
+
+                    </div>
+
+                </div>
+            )}
+
+            {profileLoading && (
+                <div className="modal-overlay">
+
+                    <div className="profile-loading-modal">
+
+                        <RefreshCw
+                            size={30}
+                            className="spin"
+                        />
+
+                        <span>
+                            Loading member
+                            profile...
+                        </span>
 
                     </div>
 
@@ -1311,6 +1659,9 @@ function MemberForm({
     form,
     editingId,
     saving,
+    photoPreview,
+    onPhotoChange,
+    onRemovePhoto,
     onChange,
     onSave,
     onClose,
@@ -1318,6 +1669,11 @@ function MemberForm({
     form: MemberFormData;
     editingId: number | null;
     saving: boolean;
+    photoPreview: string;
+    onPhotoChange: (
+        file: File | null
+    ) => void;
+    onRemovePhoto: () => void;
     onChange: (
         field: keyof MemberFormData,
         value: string
@@ -1332,7 +1688,7 @@ function MemberForm({
 
                 <div className="modal-header">
 
-                    <div>
+                    <div className="modal-heading-left">
 
                         <div className="modal-title-icon">
                             <Users size={21} />
@@ -1341,13 +1697,15 @@ function MemberForm({
                         <div>
 
                             <h3>
-                                {editingId !== null
+                                {editingId !==
+                                null
                                     ? "Edit Member"
                                     : "Add New Member"}
                             </h3>
 
                             <p>
-                                {editingId !== null
+                                {editingId !==
+                                null
                                     ? "Update member information."
                                     : "Register a new church member."}
                             </p>
@@ -1359,8 +1717,12 @@ function MemberForm({
                     <button
                         type="button"
                         className="modal-close"
-                        onClick={onClose}
-                        disabled={saving}
+                        onClick={
+                            onClose
+                        }
+                        disabled={
+                            saving
+                        }
                     >
                         <X size={21} />
                     </button>
@@ -1369,6 +1731,87 @@ function MemberForm({
 
                 <div className="member-form">
 
+                    {/* PHOTO */}
+
+                    <div className="member-photo-upload">
+
+                        <div className="member-photo-preview">
+
+                            {photoPreview ? (
+                                <img
+                                    src={
+                                        photoPreview
+                                    }
+                                    alt="Member"
+                                />
+                            ) : (
+                                <UserRound
+                                    size={
+                                        42
+                                    }
+                                />
+                            )}
+
+                        </div>
+
+                        <div className="member-photo-actions">
+
+                            <label className="photo-upload-button">
+
+                                <Camera
+                                    size={16}
+                                />
+
+                                Choose Photo
+
+                                <input
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp"
+                                    hidden
+                                    onChange={(
+                                        e
+                                    ) =>
+                                        onPhotoChange(
+                                            e
+                                                .target
+                                                .files?.[0] ||
+                                                null
+                                        )
+                                    }
+                                />
+
+                            </label>
+
+                            {photoPreview && (
+                                <button
+                                    type="button"
+                                    className="photo-remove-button"
+                                    onClick={
+                                        onRemovePhoto
+                                    }
+                                >
+                                    <Trash2
+                                        size={
+                                            15
+                                        }
+                                    />
+
+                                    Remove
+                                </button>
+                            )}
+
+                            <small>
+                                JPG, PNG or
+                                WEBP • Max
+                                10 MB
+                            </small>
+
+                        </div>
+
+                    </div>
+
+                    {/* MEMBER CODE */}
+
                     <div className="form-group">
 
                         <label>
@@ -1376,20 +1819,29 @@ function MemberForm({
                         </label>
 
                         <input
-                            value={form.memberCode}
-                            onChange={(e) =>
+                            value={
+                                form.memberCode
+                            }
+                            onChange={(
+                                e
+                            ) =>
                                 onChange(
                                     "memberCode",
-                                    e.target.value
+                                    e
+                                        .target
+                                        .value
                                 )
                             }
                             placeholder="Auto-generated if blank"
                             disabled={
-                                editingId === null
+                                editingId ===
+                                null
                             }
                         />
 
                     </div>
+
+                    {/* NAME */}
 
                     <div className="form-row">
 
@@ -1403,10 +1855,14 @@ function MemberForm({
                                 value={
                                     form.firstName
                                 }
-                                onChange={(e) =>
+                                onChange={(
+                                    e
+                                ) =>
                                     onChange(
                                         "firstName",
-                                        e.target.value
+                                        e
+                                            .target
+                                            .value
                                     )
                                 }
                                 placeholder="First name"
@@ -1424,10 +1880,14 @@ function MemberForm({
                                 value={
                                     form.middleName
                                 }
-                                onChange={(e) =>
+                                onChange={(
+                                    e
+                                ) =>
                                     onChange(
                                         "middleName",
-                                        e.target.value
+                                        e
+                                            .target
+                                            .value
                                     )
                                 }
                                 placeholder="Middle name"
@@ -1445,10 +1905,14 @@ function MemberForm({
                                 value={
                                     form.lastName
                                 }
-                                onChange={(e) =>
+                                onChange={(
+                                    e
+                                ) =>
                                     onChange(
                                         "lastName",
-                                        e.target.value
+                                        e
+                                            .target
+                                            .value
                                     )
                                 }
                                 placeholder="Last name"
@@ -1457,6 +1921,8 @@ function MemberForm({
                         </div>
 
                     </div>
+
+                    {/* PERSONAL */}
 
                     <div className="form-row">
 
@@ -1467,15 +1933,20 @@ function MemberForm({
                             </label>
 
                             <select
-                                value={form.gender}
-                                onChange={(e) =>
+                                value={
+                                    form.gender
+                                }
+                                onChange={(
+                                    e
+                                ) =>
                                     onChange(
                                         "gender",
-                                        e.target.value
+                                        e
+                                            .target
+                                            .value
                                     )
                                 }
                             >
-
                                 <option value="">
                                     Select gender
                                 </option>
@@ -1487,7 +1958,6 @@ function MemberForm({
                                 <option value="FEMALE">
                                     Female
                                 </option>
-
                             </select>
 
                         </div>
@@ -1503,10 +1973,14 @@ function MemberForm({
                                 value={
                                     form.birthDate
                                 }
-                                onChange={(e) =>
+                                onChange={(
+                                    e
+                                ) =>
                                     onChange(
                                         "birthDate",
-                                        e.target.value
+                                        e
+                                            .target
+                                            .value
                                     )
                                 }
                             />
@@ -1523,14 +1997,17 @@ function MemberForm({
                                 value={
                                     form.civilStatus
                                 }
-                                onChange={(e) =>
+                                onChange={(
+                                    e
+                                ) =>
                                     onChange(
                                         "civilStatus",
-                                        e.target.value
+                                        e
+                                            .target
+                                            .value
                                     )
                                 }
                             >
-
                                 <option value="">
                                     Select status
                                 </option>
@@ -1550,12 +2027,13 @@ function MemberForm({
                                 <option value="SEPARATED">
                                     Separated
                                 </option>
-
                             </select>
 
                         </div>
 
                     </div>
+
+                    {/* CHURCH */}
 
                     <div className="form-row">
 
@@ -1569,10 +2047,14 @@ function MemberForm({
                                 value={
                                     form.contactNumber
                                 }
-                                onChange={(e) =>
+                                onChange={(
+                                    e
+                                ) =>
                                     onChange(
                                         "contactNumber",
-                                        e.target.value
+                                        e
+                                            .target
+                                            .value
                                     )
                                 }
                                 placeholder="09XXXXXXXXX"
@@ -1590,10 +2072,14 @@ function MemberForm({
                                 value={
                                     form.ministry
                                 }
-                                onChange={(e) =>
+                                onChange={(
+                                    e
+                                ) =>
                                     onChange(
                                         "ministry",
-                                        e.target.value
+                                        e
+                                            .target
+                                            .value
                                     )
                                 }
                                 placeholder="e.g. WORSHIP"
@@ -1612,10 +2098,14 @@ function MemberForm({
                                 value={
                                     form.dateJoined
                                 }
-                                onChange={(e) =>
+                                onChange={(
+                                    e
+                                ) =>
                                     onChange(
                                         "dateJoined",
-                                        e.target.value
+                                        e
+                                            .target
+                                            .value
                                     )
                                 }
                             />
@@ -1623,6 +2113,8 @@ function MemberForm({
                         </div>
 
                     </div>
+
+                    {/* STATUS */}
 
                     <div className="form-row">
 
@@ -1633,15 +2125,20 @@ function MemberForm({
                             </label>
 
                             <select
-                                value={form.status}
-                                onChange={(e) =>
+                                value={
+                                    form.status
+                                }
+                                onChange={(
+                                    e
+                                ) =>
                                     onChange(
                                         "status",
-                                        e.target.value
+                                        e
+                                            .target
+                                            .value
                                     )
                                 }
                             >
-
                                 <option value="ACTIVE">
                                     ACTIVE
                                 </option>
@@ -1649,33 +2146,13 @@ function MemberForm({
                                 <option value="INACTIVE">
                                     INACTIVE
                                 </option>
-
                             </select>
 
                         </div>
 
-                        <div className="form-group form-wide">
-
-                            <label>
-                                Photo Path
-                            </label>
-
-                            <input
-                                value={
-                                    form.photoPath
-                                }
-                                onChange={(e) =>
-                                    onChange(
-                                        "photoPath",
-                                        e.target.value
-                                    )
-                                }
-                                placeholder="Optional photo path"
-                            />
-
-                        </div>
-
                     </div>
+
+                    {/* ADDRESS */}
 
                     <div className="form-group">
 
@@ -1684,11 +2161,17 @@ function MemberForm({
                         </label>
 
                         <textarea
-                            value={form.address}
-                            onChange={(e) =>
+                            value={
+                                form.address
+                            }
+                            onChange={(
+                                e
+                            ) =>
                                 onChange(
                                     "address",
-                                    e.target.value
+                                    e
+                                        .target
+                                        .value
                                 )
                             }
                             placeholder="Complete address"
@@ -1703,22 +2186,32 @@ function MemberForm({
 
                     <button
                         className="secondary-button"
-                        onClick={onClose}
-                        disabled={saving}
+                        onClick={
+                            onClose
+                        }
+                        disabled={
+                            saving
+                        }
                     >
                         Cancel
                     </button>
 
                     <button
                         className="primary-button"
-                        onClick={onSave}
-                        disabled={saving}
+                        onClick={
+                            onSave
+                        }
+                        disabled={
+                            saving
+                        }
                     >
 
                         {saving ? (
                             <>
                                 <RefreshCw
-                                    size={17}
+                                    size={
+                                        17
+                                    }
                                     className="spin"
                                 />
 
@@ -1726,9 +2219,14 @@ function MemberForm({
                             </>
                         ) : (
                             <>
-                                <Users size={17} />
+                                <Users
+                                    size={
+                                        17
+                                    }
+                                />
 
-                                {editingId !== null
+                                {editingId !==
+                                null
                                     ? "Update Member"
                                     : "Save Member"}
                             </>
@@ -1767,18 +2265,26 @@ function MemberProfile({
 
                 <button
                     className="secondary-button"
-                    onClick={onBack}
+                    onClick={
+                        onBack
+                    }
                 >
-                    <ArrowLeft size={17} />
+                    <ArrowLeft
+                        size={17}
+                    />
 
                     Back to Members
                 </button>
 
                 <button
                     className="primary-button"
-                    onClick={onEdit}
+                    onClick={
+                        onEdit
+                    }
                 >
-                    <Pencil size={17} />
+                    <Pencil
+                        size={17}
+                    />
 
                     Edit Member
                 </button>
@@ -1789,31 +2295,51 @@ function MemberProfile({
 
                 <div className="large-member-avatar">
 
-                    {member.firstName
-                        ?.charAt(0)
-                        .toUpperCase()}
+                    {member.photoPath ? (
+                        <img
+                            src={getPhotoUrl(
+                                member.photoPath
+                            )}
+                            alt={
+                                member.fullName
+                            }
+                        />
+                    ) : (
+                        member.firstName
+                            ?.charAt(
+                                0
+                            )
+                            .toUpperCase()
+                    )}
 
                 </div>
 
                 <div className="profile-main-info">
 
                     <div className="profile-code">
-                        {member.memberCode}
+                        {
+                            member.memberCode
+                        }
                     </div>
 
                     <h2>
                         {member.fullName ||
-                            getFullName(member)}
+                            getFullName(
+                                member
+                            )}
                     </h2>
 
                     <span
-                        className={`status-badge ${member.status ===
-                                "ACTIVE"
+                        className={`status-badge ${
+                            member.status ===
+                            "ACTIVE"
                                 ? "active"
                                 : "inactive"
-                            }`}
+                        }`}
                     >
-                        {member.status}
+                        {
+                            member.status
+                        }
                     </span>
 
                 </div>
@@ -1828,10 +2354,13 @@ function MemberProfile({
 
                     <div className="profile-panel-heading">
 
-                        <UserRound size={20} />
+                        <UserRound
+                            size={20}
+                        />
 
                         <h3>
-                            Personal Information
+                            Personal
+                            Information
                         </h3>
 
                     </div>
@@ -1863,7 +2392,11 @@ function MemberProfile({
                             member.contactNumber
                         }
                         icon={
-                            <Phone size={15} />
+                            <Phone
+                                size={
+                                    15
+                                }
+                            />
                         }
                     />
 
@@ -1873,7 +2406,11 @@ function MemberProfile({
                             member.address
                         }
                         icon={
-                            <MapPin size={15} />
+                            <MapPin
+                                size={
+                                    15
+                                }
+                            />
                         }
                     />
 
@@ -1883,10 +2420,13 @@ function MemberProfile({
 
                     <div className="profile-panel-heading">
 
-                        <Church size={20} />
+                        <Church
+                            size={20}
+                        />
 
                         <h3>
-                            Church Information
+                            Church
+                            Information
                         </h3>
 
                     </div>
@@ -1905,7 +2445,9 @@ function MemberProfile({
                         )}
                         icon={
                             <CalendarDays
-                                size={15}
+                                size={
+                                    15
+                                }
                             />
                         }
                     />
@@ -1928,7 +2470,7 @@ function MemberProfile({
 
             </div>
 
-            {/* ATTENDANCE SUMMARY */}
+            {/* ATTENDANCE */}
 
             <div className="profile-panel full-width">
 
@@ -1941,7 +2483,8 @@ function MemberProfile({
                     <div>
 
                         <h3>
-                            Attendance Summary
+                            Attendance
+                            Summary
                         </h3>
 
                         <p>
@@ -1960,7 +2503,8 @@ function MemberProfile({
                         value={
                             profile
                                 .attendanceSummary
-                                .totalRecords
+                                ?.totalRecords ??
+                            0
                         }
                     />
 
@@ -1969,7 +2513,8 @@ function MemberProfile({
                         value={
                             profile
                                 .attendanceSummary
-                                .present
+                                ?.present ??
+                            0
                         }
                     />
 
@@ -1978,7 +2523,8 @@ function MemberProfile({
                         value={
                             profile
                                 .attendanceSummary
-                                .late
+                                ?.late ??
+                            0
                         }
                     />
 
@@ -1987,7 +2533,8 @@ function MemberProfile({
                         value={
                             profile
                                 .attendanceSummary
-                                .early
+                                ?.early ??
+                            0
                         }
                     />
 
@@ -1996,7 +2543,8 @@ function MemberProfile({
                         value={
                             profile
                                 .attendanceSummary
-                                .absent
+                                ?.absent ??
+                            0
                         }
                     />
 
@@ -2005,13 +2553,14 @@ function MemberProfile({
                         value={
                             profile
                                 .attendanceSummary
-                                .excused
+                                ?.excused ??
+                            0
                         }
                     />
 
                     <ProfileStat
                         label="Attendance Rate"
-                        value={`${profile.attendanceSummary.attendanceRate}%`}
+                        value={`${profile.attendanceSummary?.attendanceRate ?? 0}%`}
                     />
 
                 </div>
@@ -2024,26 +2573,35 @@ function MemberProfile({
 
                 <div className="profile-panel-heading">
 
-                    <Building2 size={20} />
+                    <Building2
+                        size={20}
+                    />
 
                     <div>
 
                         <h3>
-                            Ministry Assignments
+                            Ministry
+                            Assignments
                         </h3>
 
                         <p>
-                            Current and previous
-                            ministry assignments
+                            Current and
+                            previous
+                            ministry
+                            assignments
                         </p>
 
                     </div>
 
                 </div>
 
-                {profile.ministries.length === 0 ? (
+                {!profile.ministries ||
+                profile.ministries
+                    .length ===
+                    0 ? (
                     <div className="profile-empty">
-                        No ministry assignments
+                        No ministry
+                        assignments
                         recorded.
                     </div>
                 ) : (
@@ -2078,7 +2636,9 @@ function MemberProfile({
                             <tbody>
 
                                 {profile.ministries.map(
-                                    (ministry) => (
+                                    (
+                                        ministry
+                                    ) => (
                                         <tr
                                             key={
                                                 ministry.ministryMemberId
@@ -2101,11 +2661,12 @@ function MemberProfile({
                                             <td>
 
                                                 <span
-                                                    className={`status-badge ${ministry.status ===
-                                                            "ACTIVE"
+                                                    className={`status-badge ${
+                                                        ministry.status ===
+                                                        "ACTIVE"
                                                             ? "active"
                                                             : "inactive"
-                                                        }`}
+                                                    }`}
                                                 >
                                                     {
                                                         ministry.status
@@ -2140,12 +2701,15 @@ function MemberProfile({
 
                     <div className="profile-panel-heading">
 
-                        <Users size={20} />
+                        <Users
+                            size={20}
+                        />
 
                         <div>
 
                             <h3>
-                                Visitor Conversion
+                                Visitor
+                                Conversion
                             </h3>
 
                             <p>
@@ -2222,11 +2786,13 @@ function MemberProfile({
                     <div>
 
                         <h3>
-                            Attendance History
+                            Attendance
+                            History
                         </h3>
 
                         <p>
-                            Detailed attendance
+                            Detailed
+                            attendance
                             records
                         </p>
 
@@ -2234,10 +2800,13 @@ function MemberProfile({
 
                 </div>
 
-                {profile.attendanceHistory.length === 0 ? (
+                {!profile.attendanceHistory ||
+                profile.attendanceHistory
+                    .length ===
+                    0 ? (
                     <div className="profile-empty">
-                        No attendance records
-                        found.
+                        No attendance
+                        records found.
                     </div>
                 ) : (
                     <div className="profile-table-wrapper">
@@ -2271,7 +2840,9 @@ function MemberProfile({
                             <tbody>
 
                                 {profile.attendanceHistory.map(
-                                    (attendance) => (
+                                    (
+                                        attendance
+                                    ) => (
                                         <tr
                                             key={
                                                 attendance.attendanceId

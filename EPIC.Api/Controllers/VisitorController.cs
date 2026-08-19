@@ -1,4 +1,5 @@
-﻿using EPIC.Api.Data;
+﻿using EPIC.Api.Authorization;
+using EPIC.Api.Data;
 using EPIC.Api.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -9,88 +10,77 @@ namespace EPIC.Api.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    public class VisitorController : ControllerBase
+    public class VisitorsController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
 
-        public VisitorController(ApplicationDbContext context)
+        // =========================================================
+        // ALLOWED ATTENDANCE STATUSES
+        // =========================================================
+
+        private static readonly string[] AllowedAttendanceStatuses =
+        {
+            "PRESENT",
+            "LATE",
+            "EARLY",
+            "ABSENT",
+            "EXCUSED"
+        };
+
+        // =========================================================
+        // ALLOWED VISITOR STATUSES
+        // =========================================================
+
+        private static readonly string[] AllowedVisitorStatuses =
+        {
+            "ACTIVE",
+            "INACTIVE"
+        };
+
+        public VisitorsController(
+            ApplicationDbContext context)
         {
             _context = context;
         }
 
         // =========================================================
         // GET ALL VISITORS
-        //
-        // GET /api/Visitor
+        // GET: /api/Visitors
+        // Permission: Visitors / view
         // =========================================================
 
         [HttpGet]
+        [Permission("Visitors", "view")]
         public async Task<IActionResult> GetVisitors()
         {
             var visitors = await _context.Visitors
                 .AsNoTracking()
                 .OrderByDescending(v => v.CreatedDate)
-                .Select(v => new
-                {
-                    visitorId = v.VisitorId,
-                    visitorCode = v.VisitorCode,
-
-                    firstName = v.FirstName,
-                    middleName = v.MiddleName,
-                    lastName = v.LastName,
-
-                    fullName =
-                        v.LastName + ", " +
-                        v.FirstName +
-                        (string.IsNullOrWhiteSpace(v.MiddleName)
-                            ? ""
-                            : " " + v.MiddleName),
-
-                    gender = v.Gender,
-                    birthDate = v.BirthDate,
-
-                    contactNumber = v.ContactNumber,
-                    address = v.Address,
-
-                    invitedBy = v.InvitedBy,
-                    ministry = v.Ministry,
-
-                    firstVisitDate = v.FirstVisitDate,
-                    visitCount = v.VisitCount,
-
-                    followUpStatus = v.FollowUpStatus,
-                    status = v.Status,
-
-                    notes = v.Notes,
-
-                    isConvertedToMember =
-                        v.IsConvertedToMember,
-
-                    convertedMemberId =
-                        v.ConvertedMemberId,
-
-                    conversionDate =
-                        v.ConversionDate,
-
-                    createdDate =
-                        v.CreatedDate,
-
-                    updatedDate =
-                        v.UpdatedDate
-                })
                 .ToListAsync();
 
-            return Ok(visitors);
-        }
+            // -----------------------------------------------------
+            // Automatically synchronize lifecycle statuses
+            // -----------------------------------------------------
 
+            foreach (var visitor in visitors)
+            {
+                visitor.FollowUpStatus =
+                    CalculateFollowUpStatus(visitor);
+            }
+
+            return Ok(
+                visitors.Select(ProjectVisitor)
+            );
+        }
 
         // =========================================================
         // GET VISITOR BY ID
-        //
-        // GET /api/Visitor/{id}
+        // GET: /api/Visitors/{id}
+        // Permission: Visitors / view
         // =========================================================
 
         [HttpGet("{id:int}")]
+        [Permission("Visitors", "view")]
         public async Task<IActionResult> GetVisitor(int id)
         {
             var visitor = await _context.Visitors
@@ -102,21 +92,119 @@ namespace EPIC.Api.Controllers
             {
                 return NotFound(new
                 {
-                    message = "Visitor not found."
+                    message = "VISITOR NOT FOUND."
                 });
             }
 
-            return Ok(visitor);
+            visitor.FollowUpStatus =
+                CalculateFollowUpStatus(visitor);
+
+            return Ok(
+                ProjectVisitor(visitor)
+            );
         }
 
+        // =========================================================
+        // SEARCH VISITORS
+        // GET: /api/Visitors/search?name=Juan
+        // Permission: Visitors / view
+        // =========================================================
+
+        [HttpGet("search")]
+        [Permission("Visitors", "view")]
+        public async Task<IActionResult> SearchVisitors(
+            [FromQuery] string? name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return BadRequest(new
+                {
+                    message =
+                        "PLEASE ENTER A NAME TO SEARCH."
+                });
+            }
+
+            var keyword =
+                name.Trim().ToLower();
+
+            var visitors = await _context.Visitors
+                .AsNoTracking()
+                .Where(v =>
+                    (v.FirstName ?? "")
+                        .ToLower()
+                        .Contains(keyword) ||
+
+                    (v.MiddleName ?? "")
+                        .ToLower()
+                        .Contains(keyword) ||
+
+                    (v.LastName ?? "")
+                        .ToLower()
+                        .Contains(keyword) ||
+
+                    (
+                        (v.FirstName ?? "") + " " +
+                        (v.MiddleName ?? "") + " " +
+                        (v.LastName ?? "")
+                    )
+                    .ToLower()
+                    .Contains(keyword) ||
+
+                    (v.VisitorCode ?? "")
+                        .ToLower()
+                        .Contains(keyword)
+                )
+                .OrderBy(v => v.LastName)
+                .ThenBy(v => v.FirstName)
+                .ToListAsync();
+
+            return Ok(
+                visitors.Select(v => new
+                {
+                    visitorId =
+                        v.VisitorId,
+
+                    visitorCode =
+                        v.VisitorCode,
+
+                    fullName =
+                        BuildFullName(
+                            v.FirstName,
+                            v.MiddleName,
+                            v.LastName),
+
+                    contactNumber =
+                        v.ContactNumber,
+
+                    ministry =
+                        v.Ministry,
+
+                    visitCount =
+                        v.VisitCount,
+
+                    followUpStatus =
+                        CalculateFollowUpStatus(v),
+
+                    status =
+                        v.Status,
+
+                    isConvertedToMember =
+                        v.IsConvertedToMember,
+
+                    convertedMemberId =
+                        v.ConvertedMemberId
+                })
+            );
+        }
 
         // =========================================================
-        // GET VISITOR ATTENDANCE HISTORY
-        //
-        // GET /api/Visitor/{id}/attendance
+        // GET VISITOR ATTENDANCE
+        // GET: /api/Visitors/{id}/attendance
+        // Permission: Visitors / view
         // =========================================================
 
         [HttpGet("{id:int}/attendance")]
+        [Permission("Visitors", "view")]
         public async Task<IActionResult> GetVisitorAttendance(
             int id)
         {
@@ -129,7 +217,8 @@ namespace EPIC.Api.Controllers
             {
                 return NotFound(new
                 {
-                    message = "Visitor not found."
+                    message =
+                        "VISITOR NOT FOUND."
                 });
             }
 
@@ -160,7 +249,8 @@ namespace EPIC.Api.Controllers
                             a.AttendanceDate,
 
                         status =
-                            a.Status,
+                            NormalizeAttendanceStatus(
+                                a.Status),
 
                         recordedBy =
                             a.RecordedBy,
@@ -181,35 +271,36 @@ namespace EPIC.Api.Controllers
                         visitor.VisitorCode,
 
                     fullName =
-                        visitor.LastName + ", " +
-                        visitor.FirstName +
-                        (string.IsNullOrWhiteSpace(
-                            visitor.MiddleName)
-                            ? ""
-                            : " " + visitor.MiddleName),
+                        BuildFullName(
+                            visitor.FirstName,
+                            visitor.MiddleName,
+                            visitor.LastName),
 
                     visitCount =
                         visitor.VisitCount,
 
                     followUpStatus =
-                        visitor.FollowUpStatus,
+                        CalculateFollowUpStatus(visitor),
 
                     isConvertedToMember =
-                        visitor.IsConvertedToMember
+                        visitor.IsConvertedToMember,
+
+                    convertedMemberId =
+                        visitor.ConvertedMemberId
                 },
 
                 attendance
             });
         }
 
-
         // =========================================================
         // CREATE VISITOR
-        //
-        // POST /api/Visitor
+        // POST: /api/Visitors
+        // Permission: Visitors / create
         // =========================================================
 
         [HttpPost]
+        [Permission("Visitors", "create")]
         public async Task<IActionResult> CreateVisitor(
             [FromBody] VisitorRequest request)
         {
@@ -218,98 +309,99 @@ namespace EPIC.Api.Controllers
                 return BadRequest(new
                 {
                     message =
-                        "Visitor information is required."
+                        "VISITOR INFORMATION IS REQUIRED."
                 });
             }
 
-            if (string.IsNullOrWhiteSpace(
-                request.FirstName))
+            var validation =
+                ValidateVisitorRequest(request);
+
+            if (validation != null)
             {
-                return BadRequest(new
+                return validation;
+            }
+
+            var now =
+                DateTime.Now;
+
+            var visitor =
+                new Visitor
                 {
-                    message =
-                        "First name is required."
-                });
-            }
+                    VisitorCode =
+                        await GenerateVisitorCode(),
 
-            if (string.IsNullOrWhiteSpace(
-                request.LastName))
-            {
-                return BadRequest(new
-                {
-                    message =
-                        "Last name is required."
-                });
-            }
+                    FirstName =
+                        request.FirstName.Trim(),
 
-            var visitorCode =
-                await GenerateVisitorCode();
+                    MiddleName =
+                        request.MiddleName?
+                            .Trim() ?? "",
 
-            var now = DateTime.Now;
+                    LastName =
+                        request.LastName.Trim(),
 
-            var visitor = new Visitor
-            {
-                VisitorCode =
-                    visitorCode,
+                    Gender =
+                        request.Gender?
+                            .Trim()
+                            .ToUpper() ?? "",
 
-                FirstName =
-                    request.FirstName.Trim(),
+                    BirthDate =
+                        request.BirthDate,
 
-                MiddleName =
-                    request.MiddleName?.Trim() ?? "",
+                    ContactNumber =
+                        request.ContactNumber?
+                            .Trim() ?? "",
 
-                LastName =
-                    request.LastName.Trim(),
+                    Address =
+                        request.Address?
+                            .Trim() ?? "",
 
-                Gender =
-                    request.Gender?.Trim() ?? "",
+                    InvitedBy =
+                        request.InvitedBy?
+                            .Trim() ?? "",
 
-                BirthDate =
-                    request.BirthDate,
+                    Ministry =
+                        request.Ministry?
+                            .Trim()
+                            .ToUpper() ?? "",
 
-                ContactNumber =
-                    request.ContactNumber?.Trim() ?? "",
+                    FirstVisitDate =
+                        request.FirstVisitDate
+                        ?? DateTime.Today,
 
-                Address =
-                    request.Address?.Trim() ?? "",
+                    VisitCount =
+                        0,
 
-                InvitedBy =
-                    request.InvitedBy?.Trim() ?? "",
+                    // -------------------------------------------------
+                    // AUTOMATIC LIFECYCLE
+                    // New visitor starts as NEW.
+                    // -------------------------------------------------
 
-                Ministry =
-                    request.Ministry?.Trim() ?? "",
+                    FollowUpStatus =
+                        "NEW",
 
-                FirstVisitDate =
-                    request.FirstVisitDate
-                    ?? DateTime.Today,
+                    Status =
+                        "ACTIVE",
 
-                VisitCount =
-                    0,
+                    Notes =
+                        request.Notes?
+                            .Trim() ?? "",
 
-                FollowUpStatus =
-                    "NEW",
+                    IsConvertedToMember =
+                        false,
 
-                Status =
-                    "ACTIVE",
+                    ConvertedMemberId =
+                        null,
 
-                Notes =
-                    request.Notes?.Trim() ?? "",
+                    ConversionDate =
+                        null,
 
-                IsConvertedToMember =
-                    false,
+                    CreatedDate =
+                        now,
 
-                ConvertedMemberId =
-                    null,
-
-                ConversionDate =
-                    null,
-
-                CreatedDate =
-                    now,
-
-                UpdatedDate =
-                    null
-            };
+                    UpdatedDate =
+                        null
+                };
 
             _context.Visitors.Add(visitor);
 
@@ -319,29 +411,33 @@ namespace EPIC.Api.Controllers
                 nameof(GetVisitor),
                 new
                 {
-                    id = visitor.VisitorId
+                    id =
+                        visitor.VisitorId
                 },
                 new
                 {
                     message =
-                        "Visitor created successfully.",
+                        "VISITOR CREATED SUCCESSFULLY.",
 
                     visitorId =
                         visitor.VisitorId,
 
                     visitorCode =
-                        visitor.VisitorCode
+                        visitor.VisitorCode,
+
+                    followUpStatus =
+                        visitor.FollowUpStatus
                 });
         }
 
-
         // =========================================================
         // UPDATE VISITOR
-        //
-        // PUT /api/Visitor/{id}
+        // PUT: /api/Visitors/{id}
+        // Permission: Visitors / edit
         // =========================================================
 
         [HttpPut("{id:int}")]
+        [Permission("Visitors", "edit")]
         public async Task<IActionResult> UpdateVisitor(
             int id,
             [FromBody] VisitorRequest request)
@@ -351,8 +447,16 @@ namespace EPIC.Api.Controllers
                 return BadRequest(new
                 {
                     message =
-                        "Visitor information is required."
+                        "VISITOR INFORMATION IS REQUIRED."
                 });
+            }
+
+            var validation =
+                ValidateVisitorRequest(request);
+
+            if (validation != null)
+            {
+                return validation;
             }
 
             var visitor =
@@ -365,27 +469,16 @@ namespace EPIC.Api.Controllers
                 return NotFound(new
                 {
                     message =
-                        "Visitor not found."
+                        "VISITOR NOT FOUND."
                 });
             }
 
-            if (string.IsNullOrWhiteSpace(
-                request.FirstName))
+            if (visitor.IsConvertedToMember)
             {
                 return BadRequest(new
                 {
                     message =
-                        "First name is required."
-                });
-            }
-
-            if (string.IsNullOrWhiteSpace(
-                request.LastName))
-            {
-                return BadRequest(new
-                {
-                    message =
-                        "Last name is required."
+                        "THIS VISITOR HAS ALREADY BEEN CONVERTED TO A MEMBER."
                 });
             }
 
@@ -399,29 +492,47 @@ namespace EPIC.Api.Controllers
                 request.LastName.Trim();
 
             visitor.Gender =
-                request.Gender?.Trim() ?? "";
+                request.Gender?
+                    .Trim()
+                    .ToUpper() ?? "";
 
             visitor.BirthDate =
                 request.BirthDate;
 
             visitor.ContactNumber =
-                request.ContactNumber?.Trim() ?? "";
+                request.ContactNumber?
+                    .Trim() ?? "";
 
             visitor.Address =
-                request.Address?.Trim() ?? "";
+                request.Address?
+                    .Trim() ?? "";
 
             visitor.InvitedBy =
-                request.InvitedBy?.Trim() ?? "";
+                request.InvitedBy?
+                    .Trim() ?? "";
 
             visitor.Ministry =
-                request.Ministry?.Trim() ?? "";
+                request.Ministry?
+                    .Trim()
+                    .ToUpper() ?? "";
 
-            visitor.FirstVisitDate =
-                request.FirstVisitDate
-                ?? visitor.FirstVisitDate;
+            if (request.FirstVisitDate.HasValue)
+            {
+                visitor.FirstVisitDate =
+                    request.FirstVisitDate.Value;
+            }
 
             visitor.Notes =
-                request.Notes?.Trim() ?? "";
+                request.Notes?
+                    .Trim() ?? "";
+
+            // -----------------------------------------------------
+            // NEVER accept FollowUpStatus from the client.
+            // Always calculate it from the visitor history.
+            // -----------------------------------------------------
+
+            visitor.FollowUpStatus =
+                CalculateFollowUpStatus(visitor);
 
             visitor.UpdatedDate =
                 DateTime.Now;
@@ -431,28 +542,35 @@ namespace EPIC.Api.Controllers
             return Ok(new
             {
                 message =
-                    "Visitor updated successfully."
+                    "VISITOR UPDATED SUCCESSFULLY.",
+
+                visitorId =
+                    visitor.VisitorId,
+
+                followUpStatus =
+                    visitor.FollowUpStatus
             });
         }
 
-
         // =========================================================
-        // UPDATE FOLLOW-UP STATUS
-        //
-        // PATCH /api/Visitor/{id}/follow-up
+        // UPDATE VISITOR ACTIVE/INACTIVE STATUS
+        // PATCH: /api/Visitors/{id}/status
+        // Permission: Visitors / edit
         // =========================================================
 
-        [HttpPatch("{id:int}/follow-up")]
-        public async Task<IActionResult> UpdateFollowUpStatus(
+        [HttpPatch("{id:int}/status")]
+        [Permission("Visitors", "edit")]
+        public async Task<IActionResult> UpdateStatus(
             int id,
-            [FromBody] FollowUpRequest request)
+            [FromBody] StatusRequest request)
         {
-            if (request == null)
+            if (request == null ||
+                string.IsNullOrWhiteSpace(request.Status))
             {
                 return BadRequest(new
                 {
                     message =
-                        "Follow-up information is required."
+                        "STATUS IS REQUIRED."
                 });
             }
 
@@ -466,38 +584,28 @@ namespace EPIC.Api.Controllers
                 return NotFound(new
                 {
                     message =
-                        "Visitor not found."
+                        "VISITOR NOT FOUND."
                 });
             }
 
-            var allowedStatuses =
-                new[]
-                {
-                    "NEW",
-                    "CONTACTED",
-                    "FOLLOW-UP",
-                    "CONNECTED",
-                    "CONVERTED"
-                };
-
             var status =
-                request.Status?
+                request.Status
                     .Trim()
-                    .ToUpper();
+                    .ToUpperInvariant();
 
-            if (string.IsNullOrWhiteSpace(status) ||
-                !allowedStatuses.Contains(status))
+            if (!AllowedVisitorStatuses.Contains(status))
             {
                 return BadRequest(new
                 {
                     message =
-                        "Invalid follow-up status.",
+                        "INVALID VISITOR STATUS.",
 
-                    allowedStatuses
+                    allowedStatuses =
+                        AllowedVisitorStatuses
                 });
             }
 
-            visitor.FollowUpStatus =
+            visitor.Status =
                 status;
 
             visitor.UpdatedDate =
@@ -508,24 +616,26 @@ namespace EPIC.Api.Controllers
             return Ok(new
             {
                 message =
-                    "Follow-up status updated successfully.",
+                    "VISITOR STATUS UPDATED SUCCESSFULLY.",
 
                 visitorId =
                     visitor.VisitorId,
 
-                followUpStatus =
-                    visitor.FollowUpStatus
+                status =
+                    visitor.Status
             });
         }
 
-
         // =========================================================
         // RECORD VISITOR ATTENDANCE
+        // POST: /api/Visitors/{id}/attendance
+        // Permission: Visitors / create
         //
-        // POST /api/Visitor/{id}/attendance
+        // THIS AUTOMATICALLY ADVANCES THE FOLLOW-UP LIFECYCLE.
         // =========================================================
 
         [HttpPost("{id:int}/attendance")]
+        [Permission("Visitors", "create")]
         public async Task<IActionResult> RecordAttendance(
             int id,
             [FromBody] VisitorAttendanceRequest request)
@@ -535,7 +645,7 @@ namespace EPIC.Api.Controllers
                 return BadRequest(new
                 {
                     message =
-                        "Attendance information is required."
+                        "ATTENDANCE INFORMATION IS REQUIRED."
                 });
             }
 
@@ -549,7 +659,32 @@ namespace EPIC.Api.Controllers
                 return NotFound(new
                 {
                     message =
-                        "Visitor not found."
+                        "VISITOR NOT FOUND."
+                });
+            }
+
+            if (!string.Equals(
+                    visitor.Status?.Trim(),
+                    "ACTIVE",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest(new
+                {
+                    message =
+                        "ATTENDANCE CANNOT BE RECORDED FOR AN INACTIVE VISITOR."
+                });
+            }
+
+            // -----------------------------------------------------
+            // Already converted?
+            // -----------------------------------------------------
+
+            if (visitor.IsConvertedToMember)
+            {
+                return BadRequest(new
+                {
+                    message =
+                        "THIS VISITOR HAS ALREADY BEEN CONVERTED TO A MEMBER."
                 });
             }
 
@@ -565,26 +700,26 @@ namespace EPIC.Api.Controllers
                 return NotFound(new
                 {
                     message =
-                        "Church service not found."
+                        "CHURCH SERVICE NOT FOUND."
                 });
             }
 
             var serviceStatus =
-                string.IsNullOrWhiteSpace(
-                    service.Status)
-                    ? "SCHEDULED"
-                    : service.Status
-                        .Trim()
-                        .ToUpper();
+                NormalizeServiceStatus(
+                    service.Status);
 
             if (serviceStatus != "COMPLETED")
             {
                 return BadRequest(new
                 {
                     message =
-                        "Visitor attendance can only be recorded for completed church services."
+                        "VISITOR ATTENDANCE CAN ONLY BE RECORDED FOR COMPLETED CHURCH SERVICES."
                 });
             }
+
+            // -----------------------------------------------------
+            // Prevent duplicate attendance
+            // -----------------------------------------------------
 
             var existing =
                 await _context.VisitorAttendances
@@ -592,26 +727,16 @@ namespace EPIC.Api.Controllers
                         a =>
                             a.VisitorId == id &&
                             a.ChurchServiceId ==
-                                request.ChurchServiceId);
+                            request.ChurchServiceId);
 
             if (existing != null)
             {
                 return Conflict(new
                 {
                     message =
-                        "Attendance has already been recorded for this visitor for this church service."
+                        "ATTENDANCE HAS ALREADY BEEN RECORDED FOR THIS VISITOR FOR THIS CHURCH SERVICE."
                 });
             }
-
-            var allowedStatuses =
-                new[]
-                {
-                    "PRESENT",
-                    "LATE",
-                    "EARLY",
-                    "ABSENT",
-                    "EXCUSED"
-                };
 
             var status =
                 string.IsNullOrWhiteSpace(
@@ -619,14 +744,18 @@ namespace EPIC.Api.Controllers
                     ? "PRESENT"
                     : request.Status
                         .Trim()
-                        .ToUpper();
+                        .ToUpperInvariant();
 
-            if (!allowedStatuses.Contains(status))
+            if (!AllowedAttendanceStatuses
+                .Contains(status))
             {
                 return BadRequest(new
                 {
                     message =
-                        $"Invalid attendance status: {status}"
+                        $"INVALID ATTENDANCE STATUS: {status}",
+
+                    allowedStatuses =
+                        AllowedAttendanceStatuses
                 });
             }
 
@@ -661,10 +790,20 @@ namespace EPIC.Api.Controllers
             _context.VisitorAttendances.Add(
                 attendance);
 
+            await _context.SaveChangesAsync();
+
+            // =====================================================
+            // RECALCULATE VISIT COUNT
+            // =====================================================
+
             visitor.VisitCount =
                 await _context.VisitorAttendances
                     .CountAsync(
-                        a => a.VisitorId == id) + 1;
+                        a => a.VisitorId == id);
+
+            // -----------------------------------------------------
+            // First visit date
+            // -----------------------------------------------------
 
             if (visitor.VisitCount == 1)
             {
@@ -672,21 +811,22 @@ namespace EPIC.Api.Controllers
                     service.ServiceDate;
             }
 
+            // =====================================================
+            // AUTOMATIC FOLLOW-UP LIFECYCLE
+            // =====================================================
+
+            visitor.FollowUpStatus =
+                CalculateFollowUpStatus(visitor);
+
             visitor.UpdatedDate =
                 DateTime.Now;
-
-            if (visitor.FollowUpStatus == "NEW")
-            {
-                visitor.FollowUpStatus =
-                    "CONTACTED";
-            }
 
             await _context.SaveChangesAsync();
 
             return Ok(new
             {
                 message =
-                    "Visitor attendance recorded successfully.",
+                    "VISITOR ATTENDANCE RECORDED SUCCESSFULLY.",
 
                 visitorId =
                     visitor.VisitorId,
@@ -701,20 +841,205 @@ namespace EPIC.Api.Controllers
                     attendance.VisitorAttendanceId,
 
                 status =
-                    attendance.Status
+                    attendance.Status,
+
+                followUpStatus =
+                    visitor.FollowUpStatus
             });
         }
 
+        // =========================================================
+        // CONVERT VISITOR TO MEMBER
+        // POST: /api/Visitors/{id}/convert-to-member
+        // Permission: Visitors / edit
+        //
+        // CONVERSION AUTOMATICALLY SETS FOLLOW-UP STATUS TO
+        // CONVERTED.
+        // =========================================================
+
+        [HttpPost("{id:int}/convert-to-member")]
+        [Permission("Visitors", "edit")]
+        public async Task<IActionResult>
+            ConvertToMember(int id)
+        {
+            await using var transaction =
+                await _context.Database
+                    .BeginTransactionAsync();
+
+            try
+            {
+                var visitor =
+                    await _context.Visitors
+                        .FirstOrDefaultAsync(
+                            v => v.VisitorId == id);
+
+                if (visitor == null)
+                {
+                    return NotFound(new
+                    {
+                        message =
+                            "VISITOR NOT FOUND."
+                    });
+                }
+
+                if (visitor.IsConvertedToMember &&
+                    visitor.ConvertedMemberId.HasValue)
+                {
+                    return Conflict(new
+                    {
+                        message =
+                            "VISITOR HAS ALREADY BEEN CONVERTED TO A MEMBER.",
+
+                        visitorId =
+                            visitor.VisitorId,
+
+                        memberId =
+                            visitor.ConvertedMemberId
+                    });
+                }
+
+                var now =
+                    DateTime.Now;
+
+                var memberCode =
+                    await GenerateMemberCode();
+
+                var member =
+                    new Member
+                    {
+                        MemberCode =
+                            memberCode,
+
+                        FirstName =
+                            visitor.FirstName.Trim(),
+
+                        MiddleName =
+                            visitor.MiddleName?
+                                .Trim() ?? "",
+
+                        LastName =
+                            visitor.LastName.Trim(),
+
+                        Gender =
+                            visitor.Gender?
+                                .Trim()
+                                .ToUpper() ?? "",
+
+                        BirthDate =
+                            visitor.BirthDate,
+
+                        ContactNumber =
+                            visitor.ContactNumber?
+                                .Trim() ?? "",
+
+                        Address =
+                            visitor.Address?
+                                .Trim() ?? "",
+
+                        CivilStatus =
+                            "",
+
+                        Ministry =
+                            visitor.Ministry?
+                                .Trim()
+                                .ToUpper() ?? "",
+
+                        DateJoined =
+                            now,
+
+                        Status =
+                            "ACTIVE",
+
+                        PhotoPath =
+                            "",
+
+                        CreatedDate =
+                            now,
+
+                        UpdatedDate =
+                            null
+                    };
+
+                _context.Members.Add(member);
+
+                await _context.SaveChangesAsync();
+
+                // =================================================
+                // MARK VISITOR AS CONVERTED
+                // =================================================
+
+                visitor.IsConvertedToMember =
+                    true;
+
+                visitor.ConvertedMemberId =
+                    member.MemberId;
+
+                visitor.ConversionDate =
+                    now;
+
+                // -------------------------------------------------
+                // CONVERTED IS THE ONLY MANUAL-LIKE LIFECYCLE
+                // EVENT. IT IS AUTOMATICALLY ASSIGNED HERE.
+                // -------------------------------------------------
+
+                visitor.FollowUpStatus =
+                    "CONVERTED";
+
+                visitor.UpdatedDate =
+                    now;
+
+                await _context.SaveChangesAsync();
+
+                await transaction.CommitAsync();
+
+                return Ok(new
+                {
+                    message =
+                        "VISITOR CONVERTED TO MEMBER SUCCESSFULLY.",
+
+                    visitorId =
+                        visitor.VisitorId,
+
+                    visitorCode =
+                        visitor.VisitorCode,
+
+                    memberId =
+                        member.MemberId,
+
+                    memberCode =
+                        member.MemberCode,
+
+                    conversionDate =
+                        visitor.ConversionDate,
+
+                    followUpStatus =
+                        visitor.FollowUpStatus
+                });
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    new
+                    {
+                        message =
+                            "AN ERROR OCCURRED WHILE CONVERTING THE VISITOR TO A MEMBER."
+                    });
+            }
+        }
 
         // =========================================================
-        // DELETE VISITOR
-        //
-        // DELETE /api/Visitor/{id}
+        // DELETE / DEACTIVATE VISITOR
+        // DELETE: /api/Visitors/{id}
+        // Permission: Visitors / delete
         // =========================================================
 
         [HttpDelete("{id:int}")]
-        public async Task<IActionResult> DeleteVisitor(
-            int id)
+        [Permission("Visitors", "delete")]
+        public async Task<IActionResult>
+            DeleteVisitor(int id)
         {
             var visitor =
                 await _context.Visitors
@@ -726,7 +1051,37 @@ namespace EPIC.Api.Controllers
                 return NotFound(new
                 {
                     message =
-                        "Visitor not found."
+                        "VISITOR NOT FOUND."
+                });
+            }
+
+            // -----------------------------------------------------
+            // Converted visitors are never physically deleted.
+            // -----------------------------------------------------
+
+            if (visitor.IsConvertedToMember)
+            {
+                visitor.Status =
+                    "INACTIVE";
+
+                visitor.UpdatedDate =
+                    DateTime.Now;
+
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    message =
+                        "CONVERTED VISITOR WAS DEACTIVATED INSTEAD OF DELETED.",
+
+                    visitorId =
+                        visitor.VisitorId,
+
+                    status =
+                        visitor.Status,
+
+                    followUpStatus =
+                        visitor.FollowUpStatus
                 });
             }
 
@@ -737,75 +1092,76 @@ namespace EPIC.Api.Controllers
             return Ok(new
             {
                 message =
-                    "Visitor deleted successfully."
+                    "VISITOR DELETED SUCCESSFULLY.",
+
+                visitorId =
+                    id
             });
         }
 
-
         // =========================================================
-        // VISITOR DASHBOARD SUMMARY
-        //
-        // GET /api/Visitor/dashboard
+        // VISITOR DASHBOARD
+        // GET: /api/Visitors/dashboard
+        // Permission: Visitors / view
         // =========================================================
 
         [HttpGet("dashboard")]
+        [Permission("Visitors", "view")]
         public async Task<IActionResult> GetDashboard()
         {
-            var total =
+            var visitors =
                 await _context.Visitors
-                    .CountAsync();
+                    .AsNoTracking()
+                    .ToListAsync();
+
+            // =====================================================
+            // AUTOMATIC LIFECYCLE COUNTS
+            // =====================================================
+
+            var total =
+                visitors.Count;
 
             var active =
-                await _context.Visitors
-                    .CountAsync(
-                        v =>
-                            v.Status == "ACTIVE");
+                visitors.Count(v =>
+                    string.Equals(
+                        v.Status,
+                        "ACTIVE",
+                        StringComparison.OrdinalIgnoreCase));
+
+            var inactive =
+                visitors.Count(v =>
+                    string.Equals(
+                        v.Status,
+                        "INACTIVE",
+                        StringComparison.OrdinalIgnoreCase));
 
             var newVisitors =
-                await _context.Visitors
-                    .CountAsync(
-                        v =>
-                            v.FollowUpStatus ==
-                            "NEW");
+                visitors.Count(v =>
+                    CalculateFollowUpStatus(v) == "NEW");
 
             var contacted =
-                await _context.Visitors
-                    .CountAsync(
-                        v =>
-                            v.FollowUpStatus ==
-                            "CONTACTED");
+                visitors.Count(v =>
+                    CalculateFollowUpStatus(v) == "CONTACTED");
 
             var followUps =
-                await _context.Visitors
-                    .CountAsync(
-                        v =>
-                            v.FollowUpStatus ==
-                            "FOLLOW-UP");
+                visitors.Count(v =>
+                    CalculateFollowUpStatus(v) == "FOLLOW-UP");
 
             var connected =
-                await _context.Visitors
-                    .CountAsync(
-                        v =>
-                            v.FollowUpStatus ==
-                            "CONNECTED");
+                visitors.Count(v =>
+                    CalculateFollowUpStatus(v) == "CONNECTED");
 
             var converted =
-                await _context.Visitors
-                    .CountAsync(
-                        v =>
-                            v.IsConvertedToMember);
+                visitors.Count(v =>
+                    CalculateFollowUpStatus(v) == "CONVERTED");
 
             var firstTimeVisitors =
-                await _context.Visitors
-                    .CountAsync(
-                        v =>
-                            v.VisitCount <= 1);
+                visitors.Count(v =>
+                    v.VisitCount <= 1);
 
             var returningVisitors =
-                await _context.Visitors
-                    .CountAsync(
-                        v =>
-                            v.VisitCount > 1);
+                visitors.Count(v =>
+                    v.VisitCount > 1);
 
             return Ok(new
             {
@@ -814,6 +1170,9 @@ namespace EPIC.Api.Controllers
 
                 activeVisitors =
                     active,
+
+                inactiveVisitors =
+                    inactive,
 
                 newVisitors =
                     newVisitors,
@@ -838,12 +1197,256 @@ namespace EPIC.Api.Controllers
             });
         }
 
+        // =========================================================
+        // AUTOMATIC FOLLOW-UP LIFECYCLE
+        // =========================================================
+        //
+        // NEW
+        //   ↓
+        // First recorded visit
+        //   ↓
+        // CONTACTED
+        //   ↓
+        // Second recorded visit
+        //   ↓
+        // FOLLOW-UP
+        //   ↓
+        // Third or more visits
+        //   ↓
+        // CONNECTED
+        //   ↓
+        // Converted to member
+        //   ↓
+        // CONVERTED
+        //
+        // IMPORTANT:
+        // FollowUpStatus is NEVER determined by user input.
+        // It is calculated from the visitor's actual history.
+        // =========================================================
+
+        private static string CalculateFollowUpStatus(
+            Visitor visitor)
+        {
+            // -----------------------------------------------------
+            // Highest priority: converted member
+            // -----------------------------------------------------
+
+            if (visitor.IsConvertedToMember ||
+                visitor.ConvertedMemberId.HasValue)
+            {
+                return "CONVERTED";
+            }
+
+            // -----------------------------------------------------
+            // No visit yet
+            // -----------------------------------------------------
+
+            if (visitor.VisitCount <= 0)
+            {
+                return "NEW";
+            }
+
+            // -----------------------------------------------------
+            // First visit
+            // -----------------------------------------------------
+
+            if (visitor.VisitCount == 1)
+            {
+                return "CONTACTED";
+            }
+
+            // -----------------------------------------------------
+            // Second visit
+            // -----------------------------------------------------
+
+            if (visitor.VisitCount == 2)
+            {
+                return "FOLLOW-UP";
+            }
+
+            // -----------------------------------------------------
+            // Third visit onward
+            // -----------------------------------------------------
+
+            return "CONNECTED";
+        }
+
+        // =========================================================
+        // VALIDATE VISITOR
+        // =========================================================
+
+        private static IActionResult? ValidateVisitorRequest(
+            VisitorRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(
+                request.FirstName))
+            {
+                return new BadRequestObjectResult(new
+                {
+                    message =
+                        "FIRST NAME IS REQUIRED."
+                });
+            }
+
+            if (string.IsNullOrWhiteSpace(
+                request.LastName))
+            {
+                return new BadRequestObjectResult(new
+                {
+                    message =
+                        "LAST NAME IS REQUIRED."
+                });
+            }
+
+            return null;
+        }
+
+        // =========================================================
+        // NORMALIZE SERVICE STATUS
+        // =========================================================
+
+        private static string NormalizeServiceStatus(
+            string? status)
+        {
+            return string.IsNullOrWhiteSpace(status)
+                ? "SCHEDULED"
+                : status
+                    .Trim()
+                    .ToUpperInvariant();
+        }
+
+        // =========================================================
+        // NORMALIZE ATTENDANCE STATUS
+        // =========================================================
+
+        private static string NormalizeAttendanceStatus(
+            string? status)
+        {
+            var normalized =
+                string.IsNullOrWhiteSpace(status)
+                    ? "PRESENT"
+                    : status
+                        .Trim()
+                        .ToUpperInvariant();
+
+            return AllowedAttendanceStatuses
+                .Contains(normalized)
+                    ? normalized
+                    : "PRESENT";
+        }
+
+        // =========================================================
+        // BUILD FULL NAME
+        // =========================================================
+
+        private static string BuildFullName(
+            string? firstName,
+            string? middleName,
+            string? lastName)
+        {
+            return (
+                (lastName ?? "") + ", " +
+                (firstName ?? "") +
+                (
+                    string.IsNullOrWhiteSpace(middleName)
+                        ? ""
+                        : " " + middleName
+                )
+            ).Trim();
+        }
+
+        // =========================================================
+        // PROJECT VISITOR
+        // =========================================================
+
+        private static object ProjectVisitor(
+            Visitor v)
+        {
+            return new
+            {
+                visitorId =
+                    v.VisitorId,
+
+                visitorCode =
+                    v.VisitorCode,
+
+                firstName =
+                    v.FirstName,
+
+                middleName =
+                    v.MiddleName,
+
+                lastName =
+                    v.LastName,
+
+                fullName =
+                    BuildFullName(
+                        v.FirstName,
+                        v.MiddleName,
+                        v.LastName),
+
+                gender =
+                    v.Gender,
+
+                birthDate =
+                    v.BirthDate,
+
+                contactNumber =
+                    v.ContactNumber,
+
+                address =
+                    v.Address,
+
+                invitedBy =
+                    v.InvitedBy,
+
+                ministry =
+                    v.Ministry,
+
+                firstVisitDate =
+                    v.FirstVisitDate,
+
+                visitCount =
+                    v.VisitCount,
+
+                // -------------------------------------------------
+                // IMPORTANT:
+                // Return calculated status instead of trusting
+                // whatever value happens to be stored in DB.
+                // -------------------------------------------------
+
+                followUpStatus =
+                    CalculateFollowUpStatus(v),
+
+                status =
+                    v.Status,
+
+                notes =
+                    v.Notes,
+
+                isConvertedToMember =
+                    v.IsConvertedToMember,
+
+                convertedMemberId =
+                    v.ConvertedMemberId,
+
+                conversionDate =
+                    v.ConversionDate,
+
+                createdDate =
+                    v.CreatedDate,
+
+                updatedDate =
+                    v.UpdatedDate
+            };
+        }
 
         // =========================================================
         // GENERATE VISITOR CODE
         // =========================================================
 
-        private async Task<string> GenerateVisitorCode()
+        private async Task<string>
+            GenerateVisitorCode()
         {
             var year =
                 DateTime.Now.Year;
@@ -851,76 +1454,101 @@ namespace EPIC.Api.Controllers
             var prefix =
                 $"VIS-{year}-";
 
-            var lastCode =
+            var codes =
                 await _context.Visitors
+                    .AsNoTracking()
                     .Where(v =>
+                        v.VisitorCode != null &&
                         v.VisitorCode.StartsWith(prefix))
-                    .OrderByDescending(
-                        v => v.VisitorId)
-                    .Select(v => v.VisitorCode)
-                    .FirstOrDefaultAsync();
+                    .Select(v =>
+                        v.VisitorCode)
+                    .ToListAsync();
 
-            var nextNumber = 1;
+            var maxNumber =
+                0;
 
-            if (!string.IsNullOrWhiteSpace(lastCode))
+            foreach (var code in codes)
             {
+                if (string.IsNullOrWhiteSpace(code))
+                    continue;
+
                 var numberPart =
-                    lastCode.Replace(prefix, "");
+                    code.Substring(prefix.Length);
 
                 if (int.TryParse(
                     numberPart,
-                    out var lastNumber))
+                    out var number))
                 {
-                    nextNumber =
-                        lastNumber + 1;
+                    if (number > maxNumber)
+                    {
+                        maxNumber =
+                            number;
+                    }
                 }
             }
 
-            return $"{prefix}{nextNumber:D4}";
+            return
+                $"{prefix}{maxNumber + 1:D4}";
         }
-    }
 
+        // =========================================================
+        // GENERATE MEMBER CODE
+        // =========================================================
 
-    // =============================================================
-    // REQUEST MODELS
-    // =============================================================
+        private async Task<string>
+            GenerateMemberCode()
+        {
+            var lastMemberId =
+                await _context.Members
+                    .AsNoTracking()
+                    .Select(m =>
+                        (int?)m.MemberId)
+                    .MaxAsync() ?? 0;
 
-    public class VisitorRequest
-    {
-        public string FirstName { get; set; } = "";
+            return
+                $"MEM-{lastMemberId + 1:0000}";
+        }
 
-        public string MiddleName { get; set; } = "";
+        // =========================================================
+        // REQUEST MODELS
+        // =========================================================
 
-        public string LastName { get; set; } = "";
+        public class VisitorRequest
+        {
+            public string FirstName { get; set; } = "";
 
-        public string Gender { get; set; } = "";
+            public string MiddleName { get; set; } = "";
 
-        public DateTime? BirthDate { get; set; }
+            public string LastName { get; set; } = "";
 
-        public string ContactNumber { get; set; } = "";
+            public string Gender { get; set; } = "";
 
-        public string Address { get; set; } = "";
+            public DateTime? BirthDate { get; set; }
 
-        public string InvitedBy { get; set; } = "";
+            public string ContactNumber { get; set; } = "";
 
-        public string Ministry { get; set; } = "";
+            public string Address { get; set; } = "";
 
-        public DateTime? FirstVisitDate { get; set; }
+            public string InvitedBy { get; set; } = "";
 
-        public string Notes { get; set; } = "";
-    }
+            public string Ministry { get; set; } = "";
 
+            public DateTime? FirstVisitDate { get; set; }
 
-    public class FollowUpRequest
-    {
-        public string Status { get; set; } = "";
-    }
+            public string Notes { get; set; } = "";
+        }
 
+        // =========================================================
+        // VISITOR ATTENDANCE REQUEST
+        //
+        // Follow-up status is intentionally NOT included.
+        // =========================================================
 
-    public class VisitorAttendanceRequest
-    {
-        public int ChurchServiceId { get; set; }
+        public class VisitorAttendanceRequest
+        {
+            public int ChurchServiceId { get; set; }
 
-        public string Status { get; set; } = "PRESENT";
+            public string Status { get; set; } = "PRESENT";
+        }
     }
 }

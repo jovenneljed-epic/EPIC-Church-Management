@@ -1,6 +1,12 @@
-import React from "react";
+import React, {
+    useEffect,
+    useState
+} from "react";
+
 import PermissionService from "./PermissionService";
-import type { PermissionAction } from "./PermissionService";
+import type {
+    PermissionAction
+} from "./PermissionService";
 
 interface PermissionFilterProps {
     module: string;
@@ -9,22 +15,70 @@ interface PermissionFilterProps {
     fallback?: React.ReactNode;
 }
 
-const PermissionFilter: React.FC<PermissionFilterProps> = ({
+const PermissionFilter: React.FC<
+    PermissionFilterProps
+> = ({
     module,
     action,
     children,
-    fallback = null,
+    fallback = null
 }) => {
-    const allowed = PermissionService.hasPermission(
-        module,
-        action
-    );
 
-    if (!allowed) {
-        return <>{fallback}</>;
-    }
+        const [allowed, setAllowed] =
+            useState<boolean>(() =>
+                PermissionService.hasPermission(
+                    module,
+                    action
+                )
+            );
 
-    return <>{children}</>;
-};
+        useEffect(() => {
+
+            const checkPermission = () => {
+
+                setAllowed(
+                    PermissionService.hasPermission(
+                        module,
+                        action
+                    )
+                );
+            };
+
+            // Check immediately
+            checkPermission();
+
+            // Listen for permission changes
+            window.addEventListener(
+                "epic:permissions-changed",
+                checkPermission
+            );
+
+            // Listen for login/logout changes
+            window.addEventListener(
+                "epic:auth-changed",
+                checkPermission
+            );
+
+            return () => {
+
+                window.removeEventListener(
+                    "epic:permissions-changed",
+                    checkPermission
+                );
+
+                window.removeEventListener(
+                    "epic:auth-changed",
+                    checkPermission
+                );
+            };
+
+        }, [module, action]);
+
+        if (!allowed) {
+            return <>{fallback}</>;
+        }
+
+        return <>{children}</>;
+    };
 
 export default PermissionFilter;

@@ -1,5 +1,7 @@
-﻿using EPIC.Api.Models;
+﻿
+using EPIC.Api.Models;
 using Microsoft.EntityFrameworkCore;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace EPIC.Api.Data
 {
@@ -53,11 +55,21 @@ namespace EPIC.Api.Data
 
 
         // =========================================================
-        // DEMO REQUESTS
+        // DEMO / SALES / SUBSCRIPTION
         // =========================================================
 
         public DbSet<DemoRequest> DemoRequests { get; set; }
 
+        public DbSet<SubscriptionPlan> SubscriptionPlans { get; set; }
+
+        public DbSet<Subscription> Subscriptions { get; set; }
+
+        public DbSet<Payment> Payments { get; set; }
+
+
+        // =========================================================
+        // EPIC LEARNING
+        // =========================================================
 
         // =========================================================
         // EPIC LEARNING
@@ -84,6 +96,218 @@ namespace EPIC.Api.Data
             ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+
+            // =========================================================
+            // SUBSCRIPTION PLAN
+            // =========================================================
+
+            modelBuilder.Entity<SubscriptionPlan>(entity =>
+            {
+                entity.HasKey(e => e.SubscriptionPlanId);
+
+                entity.Property(e => e.PlanName)
+                    .HasMaxLength(100)
+                    .IsRequired();
+
+                entity.Property(e => e.Description)
+                    .HasMaxLength(500);
+
+                entity.Property(e => e.MonthlyPrice)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(e => e.AnnualPrice)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(e => e.TrialDays)
+                    .HasDefaultValue(0);
+
+                entity.Property(e => e.MaxUsers)
+                    .HasDefaultValue(5);
+
+                entity.Property(e => e.MaxMembers)
+                    .HasDefaultValue(500);
+
+                entity.Property(e => e.IncludesChurchManagement)
+                    .HasDefaultValue(true);
+
+                entity.Property(e => e.IncludesAttendance)
+                    .HasDefaultValue(true);
+
+                entity.Property(e => e.IncludesGiving)
+                    .HasDefaultValue(true);
+
+                entity.Property(e => e.IncludesFinance)
+                    .HasDefaultValue(true);
+
+                entity.Property(e => e.IncludesMinistries)
+                    .HasDefaultValue(true);
+
+                entity.Property(e => e.IncludesEPICLearning)
+                    .HasDefaultValue(false);
+
+                entity.Property(e => e.IncludesReports)
+                    .HasDefaultValue(true);
+
+                entity.Property(e => e.IsActive)
+                    .HasDefaultValue(true);
+
+                entity.Property(e => e.SortOrder)
+                    .HasDefaultValue(0);
+
+                entity.Property(e => e.CreatedDate)
+                    .IsRequired();
+            });
+
+
+            // =========================================================
+            // SUBSCRIPTION
+            // =========================================================
+
+            modelBuilder.Entity<Subscription>(entity =>
+            {
+                entity.HasKey(e => e.SubscriptionId);
+
+                entity.Property(e => e.ChurchName)
+                    .HasMaxLength(200)
+                    .IsRequired();
+
+                entity.Property(e => e.ContactName)
+                    .HasMaxLength(200);
+
+                entity.Property(e => e.ContactEmail)
+                    .HasMaxLength(200)
+                    .IsRequired();
+
+                entity.Property(e => e.ContactPhone)
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.BillingCycle)
+                    .HasMaxLength(20)
+                    .IsRequired()
+                    .HasDefaultValue("Monthly");
+
+                entity.Property(e => e.Amount)
+                    .HasColumnType("decimal(18,2)");
+
+                entity.Property(e => e.Currency)
+                    .HasMaxLength(10)
+                    .IsRequired()
+                    .HasDefaultValue("PHP");
+
+                entity.Property(e => e.Status)
+                    .HasMaxLength(30)
+                    .IsRequired()
+                    .HasDefaultValue("TRIAL");
+
+                entity.Property(e => e.PaymentCustomerId)
+                    .HasMaxLength(200);
+
+                entity.Property(e => e.PaymentSubscriptionId)
+                    .HasMaxLength(200);
+
+                entity.Property(e => e.Notes)
+                    .HasMaxLength(2000);
+
+                // =====================================================
+                // SUBSCRIPTION → SUBSCRIPTION PLAN
+                // =====================================================
+
+                entity.HasOne<SubscriptionPlan>(e => e.SubscriptionPlan)
+     .WithMany(p => p.Subscriptions)
+     .HasForeignKey(e => e.SubscriptionPlanId)
+     .IsRequired()
+     .OnDelete(DeleteBehavior.Restrict);
+
+                // =====================================================
+                // INDEXES
+                // =====================================================
+
+                entity.HasIndex(e => e.SubscriptionPlanId);
+
+                entity.HasIndex(e => e.Status);
+
+                entity.HasIndex(e => e.ContactEmail);
+
+                entity.HasIndex(e => e.CreatedDate);
+            });
+            // =====================================================
+            // PAYMENT
+            // =====================================================
+
+            modelBuilder.Entity<Payment>(entity =>
+            {
+                entity.HasKey(e => e.PaymentId);
+
+                entity.Property(e => e.Amount)
+                    .HasColumnType("decimal(18,2)")
+                    .IsRequired();
+
+                entity.Property(e => e.Currency)
+                    .HasMaxLength(10)
+                    .IsRequired()
+                    .HasDefaultValue("PHP");
+
+                entity.Property(e => e.PaymentMethod)
+                    .HasMaxLength(50)
+                    .IsRequired()
+                    .HasDefaultValue("Manual");
+
+                entity.Property(e => e.Status)
+                    .HasMaxLength(30)
+                    .IsRequired()
+                    .HasDefaultValue("PENDING");
+
+                entity.Property(e => e.ReferenceNumber)
+                    .HasMaxLength(200);
+
+                entity.Property(e => e.GatewayPaymentId)
+                    .HasMaxLength(200);
+
+                entity.Property(e => e.GatewayCheckoutId)
+                    .HasMaxLength(200);
+
+                entity.Property(e => e.GatewayCustomerId)
+                    .HasMaxLength(200);
+
+                entity.Property(e => e.InvoiceNumber)
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.ReceiptNumber)
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.FailureReason)
+                    .HasMaxLength(1000);
+
+                entity.Property(e => e.Notes)
+                    .HasMaxLength(2000);
+
+                entity.Property(e => e.CreatedDate)
+                    .IsRequired();
+
+
+                // =================================================
+                // PAYMENT → SUBSCRIPTION
+                // =================================================
+
+                entity.HasOne(e => e.Subscription)
+                    .WithMany(s => s.Payments)
+                    .HasForeignKey(e => e.SubscriptionId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+
+                // =================================================
+                // INDEXES
+                // =================================================
+
+                entity.HasIndex(e => e.Status);
+
+                entity.HasIndex(e => e.ReferenceNumber);
+
+                entity.HasIndex(e => e.GatewayPaymentId);
+
+                entity.HasIndex(e => e.CreatedDate);
+            });
 
 
             // =====================================================
@@ -383,20 +607,12 @@ namespace EPIC.Api.Data
             // EPIC LEARNING
             // =====================================================
 
-            // -----------------------------------------------------
-            // COURSE → MODULES
-            // -----------------------------------------------------
-
             modelBuilder.Entity<CourseModule>()
                 .HasOne(m => m.Course)
                 .WithMany(c => c.Modules)
                 .HasForeignKey(m => m.CourseId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-
-            // -----------------------------------------------------
-            // MODULE → LESSONS
-            // -----------------------------------------------------
 
             modelBuilder.Entity<Lesson>()
                 .HasOne(l => l.CourseModule)
@@ -405,20 +621,12 @@ namespace EPIC.Api.Data
                 .OnDelete(DeleteBehavior.Cascade);
 
 
-            // -----------------------------------------------------
-            // COURSE → ENROLLMENTS
-            // -----------------------------------------------------
-
             modelBuilder.Entity<CourseEnrollment>()
                 .HasOne(e => e.Course)
                 .WithMany(c => c.Enrollments)
                 .HasForeignKey(e => e.CourseId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-
-            // -----------------------------------------------------
-            // USER → ENROLLMENTS
-            // -----------------------------------------------------
 
             modelBuilder.Entity<CourseEnrollment>()
                 .HasOne(e => e.User)
@@ -427,20 +635,12 @@ namespace EPIC.Api.Data
                 .OnDelete(DeleteBehavior.Restrict);
 
 
-            // -----------------------------------------------------
-            // ENROLLMENT → LESSON PROGRESS
-            // -----------------------------------------------------
-
             modelBuilder.Entity<LessonProgress>()
                 .HasOne(p => p.CourseEnrollment)
                 .WithMany(e => e.LessonProgresses)
                 .HasForeignKey(p => p.CourseEnrollmentId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-
-            // -----------------------------------------------------
-            // LESSON → PROGRESS
-            // -----------------------------------------------------
 
             modelBuilder.Entity<LessonProgress>()
                 .HasOne(p => p.Lesson)
@@ -449,20 +649,12 @@ namespace EPIC.Api.Data
                 .OnDelete(DeleteBehavior.Restrict);
 
 
-            // -----------------------------------------------------
-            // COURSE → CERTIFICATES
-            // -----------------------------------------------------
-
             modelBuilder.Entity<Certificate>()
                 .HasOne(c => c.Course)
                 .WithMany(c => c.Certificates)
                 .HasForeignKey(c => c.CourseId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-
-            // -----------------------------------------------------
-            // USER → CERTIFICATES
-            // -----------------------------------------------------
 
             modelBuilder.Entity<Certificate>()
                 .HasOne(c => c.User)
@@ -471,9 +663,9 @@ namespace EPIC.Api.Data
                 .OnDelete(DeleteBehavior.Restrict);
 
 
-            // -----------------------------------------------------
+            // =====================================================
             // UNIQUE COURSE ENROLLMENT
-            // -----------------------------------------------------
+            // =====================================================
 
             modelBuilder.Entity<CourseEnrollment>()
                 .HasIndex(e => new
@@ -484,18 +676,18 @@ namespace EPIC.Api.Data
                 .IsUnique();
 
 
-            // -----------------------------------------------------
+            // =====================================================
             // UNIQUE CERTIFICATE NUMBER
-            // -----------------------------------------------------
+            // =====================================================
 
             modelBuilder.Entity<Certificate>()
                 .HasIndex(c => c.CertificateNumber)
                 .IsUnique();
 
 
-            // -----------------------------------------------------
+            // =====================================================
             // UNIQUE LESSON PROGRESS
-            // -----------------------------------------------------
+            // =====================================================
 
             modelBuilder.Entity<LessonProgress>()
                 .HasIndex(p => new
@@ -506,9 +698,9 @@ namespace EPIC.Api.Data
                 .IsUnique();
 
 
-            // -----------------------------------------------------
+            // =====================================================
             // PROGRESS DEFAULT VALUES
-            // -----------------------------------------------------
+            // =====================================================
 
             modelBuilder.Entity<CourseEnrollment>()
                 .Property(e => e.ProgressPercentage)
@@ -523,13 +715,13 @@ namespace EPIC.Api.Data
             // IMPORTANT
             // =====================================================
             //
-            // DO NOT PUT THE OLD EPIC LEARNING HasData() SEED HERE.
+            // DO NOT ADD THE OLD EPIC LEARNING HasData() SEED HERE.
             //
-            // Your learning data is already established by:
+            // Existing learning data is already established by:
             //
             // 20260813094435_SeedFoundationsDiscipleshipLessons
             //
-            // Your CURRENT database contains:
+            // Current learning module IDs:
             //
             // Module 1  = ID 1
             // Module 2  = ID 11
@@ -542,15 +734,10 @@ namespace EPIC.Api.Data
             // Module 9  = ID 18
             // Module 10 = ID 19
             //
-            // Lessons currently use IDs 1, 3-61.
-            //
-            // Reintroducing the old HasData() seed would cause EF Core
-            // to attempt inserting CourseModule IDs 1-10 again.
-            //
-            // Therefore the existing learning seed migration remains
-            // the source of the initial learning data.
+            // Do not reintroduce the old seed.
             //
             // =====================================================
         }
     }
 }
+

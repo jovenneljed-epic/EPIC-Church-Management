@@ -1,0 +1,735 @@
+﻿/* =========================================================
+   EPIC ATTENDANCE REPORT
+   PROFESSIONAL PRINT DOCUMENT
+   ========================================================= */
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    background: #ffffff;
+    font-family:
+        "Segoe UI",
+        Inter,
+        Arial,
+        Helvetica,
+        sans-serif;
+    color: #172033;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+}
+
+/* =========================================================
+   DOCUMENT
+   ========================================================= */
+
+.attendance-print-document {
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 38px 42px;
+    background: #ffffff;
+}
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.attendance-print-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding-bottom: 26px;
+    border-bottom: 3px solid #e9edf5;
+    position: relative;
+}
+
+.attendance-print-header::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -3px;
+    width: 180px;
+    height: 3px;
+    background: linear-gradient(
+        90deg,
+        #4f46e5,
+        #7c3aed,
+        #ec4899
+    );
+}
+
+.attendance-print-brand {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.attendance-print-logo {
+    width: 64px;
+    height: 64px;
+    border-radius: 18px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    color: #ffffff;
+    font-size: 19px;
+    font-weight: 900;
+    letter-spacing: 1px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #4f46e5,
+            #7c3aed 55%,
+            #ec4899
+        );
+
+    box-shadow:
+        0 8px 20px rgba(79, 70, 229, 0.25);
+}
+
+.attendance-print-eyebrow {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    color: #6366f1;
+    margin-bottom: 5px;
+}
+
+.attendance-print-brand h1 {
+    margin: 0;
+    font-size: 27px;
+    line-height: 1.1;
+    font-weight: 800;
+    color: #111827;
+}
+
+.attendance-print-brand p {
+    margin: 6px 0 0;
+    font-size: 12px;
+    color: #6b7280;
+}
+
+.attendance-print-generated {
+    text-align: right;
+    padding-top: 7px;
+}
+
+.attendance-print-generated span {
+    display: block;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    color: #9ca3af;
+    margin-bottom: 5px;
+}
+
+.attendance-print-generated strong {
+    display: block;
+    font-size: 11px;
+    color: #374151;
+    font-weight: 700;
+}
+
+/* =========================================================
+   SERVICE EVENT
+   ========================================================= */
+
+.attendance-print-event {
+    margin-top: 26px;
+    padding: 23px 25px;
+
+    border-radius: 16px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #f5f3ff 0%,
+            #eef2ff 55%,
+            #fdf2f8 100%
+        );
+
+    border: 1px solid #e4e1ff;
+
+    position: relative;
+    overflow: hidden;
+}
+
+.attendance-print-event::after {
+    content: "";
+    position: absolute;
+    width: 170px;
+    height: 170px;
+    right: -80px;
+    top: -90px;
+    border-radius: 50%;
+    background: rgba(124, 58, 237, 0.08);
+}
+
+.attendance-print-event-title {
+    position: relative;
+    z-index: 1;
+}
+
+.attendance-print-event-title span {
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 1.6px;
+    color: #7c3aed;
+}
+
+.attendance-print-event-title h2 {
+    margin: 6px 0 20px;
+    font-size: 22px;
+    color: #111827;
+    font-weight: 800;
+}
+
+.attendance-print-event-grid {
+    display: grid;
+    grid-template-columns:
+        repeat(4, minmax(0, 1fr));
+
+    gap: 18px;
+
+    position: relative;
+    z-index: 1;
+}
+
+.attendance-print-event-grid div {
+    min-width: 0;
+}
+
+.attendance-print-event-grid span {
+    display: block;
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    color: #8b8fa3;
+    margin-bottom: 5px;
+}
+
+.attendance-print-event-grid strong {
+    display: block;
+    font-size: 12px;
+    color: #252b3b;
+    font-weight: 750;
+}
+
+/* =========================================================
+   SUMMARY
+   ========================================================= */
+
+.attendance-print-summary {
+    display: grid;
+    grid-template-columns:
+        repeat(7, minmax(0, 1fr));
+
+    gap: 9px;
+    margin-top: 20px;
+}
+
+.attendance-print-summary > div {
+    min-height: 82px;
+
+    padding: 13px 10px;
+
+    border-radius: 12px;
+
+    background: #ffffff;
+
+    border: 1px solid #e7eaf0;
+
+    text-align: center;
+
+    box-shadow:
+        0 3px 10px rgba(17, 24, 39, 0.04);
+}
+
+.attendance-print-summary span {
+    display: block;
+
+    font-size: 7px;
+    font-weight: 900;
+    letter-spacing: 0.8px;
+
+    color: #8a91a3;
+
+    margin-bottom: 6px;
+}
+
+.attendance-print-summary strong {
+    display: block;
+
+    font-size: 21px;
+    line-height: 1;
+
+    font-weight: 850;
+    color: #1f2937;
+}
+
+/* Individual summary accents */
+
+.attendance-print-summary > div:nth-child(1) {
+    border-top: 4px solid #6366f1;
+}
+
+.attendance-print-summary > div:nth-child(2) {
+    border-top: 4px solid #10b981;
+}
+
+.attendance-print-summary > div:nth-child(3) {
+    border-top: 4px solid #f59e0b;
+}
+
+.attendance-print-summary > div:nth-child(4) {
+    border-top: 4px solid #06b6d4;
+}
+
+.attendance-print-summary > div:nth-child(5) {
+    border-top: 4px solid #ef4444;
+}
+
+.attendance-print-summary > div:nth-child(6) {
+    border-top: 4px solid #8b5cf6;
+}
+
+.attendance-print-summary > div:nth-child(7) {
+    border-top: 4px solid #ec4899;
+}
+
+.attendance-print-summary > div:nth-child(2) strong {
+    color: #059669;
+}
+
+.attendance-print-summary > div:nth-child(3) strong {
+    color: #d97706;
+}
+
+.attendance-print-summary > div:nth-child(4) strong {
+    color: #0891b2;
+}
+
+.attendance-print-summary > div:nth-child(5) strong {
+    color: #dc2626;
+}
+
+.attendance-print-summary > div:nth-child(6) strong {
+    color: #7c3aed;
+}
+
+.attendance-print-summary > div:nth-child(7) strong {
+    color: #db2777;
+}
+
+/* =========================================================
+   TABLE SECTION
+   ========================================================= */
+
+.attendance-print-table-section {
+    margin-top: 28px;
+}
+
+.attendance-print-section-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+
+    margin-bottom: 12px;
+}
+
+.attendance-print-section-heading span {
+    display: block;
+
+    font-size: 8px;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+
+    color: #6366f1;
+
+    margin-bottom: 3px;
+}
+
+.attendance-print-section-heading h3 {
+    margin: 0;
+
+    font-size: 18px;
+    font-weight: 800;
+
+    color: #111827;
+}
+
+.attendance-print-section-heading > strong {
+    font-size: 10px;
+    color: #6b7280;
+    font-weight: 700;
+}
+
+/* =========================================================
+   TABLE
+   ========================================================= */
+
+.attendance-print-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+
+    border: 1px solid #e4e7ec;
+    border-radius: 12px;
+
+    overflow: hidden;
+
+    font-size: 10.5px;
+}
+
+.attendance-print-table thead {
+    background:
+        linear-gradient(
+            90deg,
+            #312e81,
+            #4f46e5
+        );
+}
+
+.attendance-print-table th {
+    padding: 11px 10px;
+
+    color: #ffffff;
+
+    font-size: 8px;
+    font-weight: 850;
+    letter-spacing: 0.8px;
+
+    text-align: left;
+
+    border: none;
+}
+
+.attendance-print-table th:first-child {
+    border-top-left-radius: 11px;
+}
+
+.attendance-print-table th:last-child {
+    border-top-right-radius: 11px;
+}
+
+.attendance-print-table td {
+    padding: 10px;
+
+    border-bottom: 1px solid #edf0f4;
+
+    color: #4b5563;
+
+    vertical-align: middle;
+}
+
+.attendance-print-table tbody tr:nth-child(even) {
+    background: #f8fafc;
+}
+
+.attendance-print-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.attendance-print-table tbody tr {
+    page-break-inside: avoid;
+}
+
+.attendance-print-table td strong {
+    color: #374151;
+    font-weight: 700;
+}
+
+.attendance-print-table .member-name {
+    color: #111827;
+    font-weight: 750;
+}
+
+.col-number {
+    width: 42px;
+    text-align: center !important;
+}
+
+.col-code {
+    width: 120px;
+}
+
+.col-status {
+    width: 105px;
+    text-align: center !important;
+}
+
+.col-date {
+    width: 145px;
+}
+
+.text-center {
+    text-align: center !important;
+}
+
+/* =========================================================
+   STATUS BADGES
+   ========================================================= */
+
+.attendance-print-status {
+    display: inline-flex;
+
+    align-items: center;
+    justify-content: center;
+
+    min-width: 68px;
+
+    padding: 5px 9px;
+
+    border-radius: 999px;
+
+    font-size: 8px;
+    font-weight: 850;
+
+    letter-spacing: 0.2px;
+
+    border: 1px solid transparent;
+}
+
+.status-present {
+    background: #ecfdf5;
+    color: #047857;
+    border-color: #a7f3d0;
+}
+
+.status-late {
+    background: #fffbeb;
+    color: #b45309;
+    border-color: #fde68a;
+}
+
+.status-early {
+    background: #ecfeff;
+    color: #0e7490;
+    border-color: #a5f3fc;
+}
+
+.status-absent {
+    background: #fef2f2;
+    color: #b91c1c;
+    border-color: #fecaca;
+}
+
+.status-excused {
+    background: #f5f3ff;
+    color: #6d28d9;
+    border-color: #ddd6fe;
+}
+
+/* =========================================================
+   SIGNATURE AREA
+   ========================================================= */
+
+.attendance-print-signatures {
+    display: grid;
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr));
+
+    gap: 35px;
+
+    margin-top: 55px;
+
+    page-break-inside: avoid;
+}
+
+.attendance-print-signatures > div {
+    text-align: center;
+}
+
+.signature-line {
+    height: 1px;
+    background: #374151;
+    margin-bottom: 8px;
+}
+
+.attendance-print-signatures strong {
+    display: block;
+
+    font-size: 10px;
+
+    color: #1f2937;
+    font-weight: 750;
+}
+
+.attendance-print-signatures span {
+    display: block;
+
+    margin-top: 3px;
+
+    font-size: 8px;
+
+    color: #9ca3af;
+}
+
+/* =========================================================
+   FOOTER
+   ========================================================= */
+
+.attendance-print-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+
+    margin-top: 35px;
+    padding-top: 15px;
+
+    border-top: 1px solid #e5e7eb;
+
+    page-break-inside: avoid;
+}
+
+.attendance-print-footer div:first-child strong {
+    display: block;
+
+    font-size: 9px;
+
+    color: #374151;
+}
+
+.attendance-print-footer div:first-child span {
+    display: block;
+
+    margin-top: 3px;
+
+    font-size: 8px;
+
+    color: #9ca3af;
+}
+
+.attendance-print-footer div:last-child {
+    text-align: right;
+}
+
+.attendance-print-footer div:last-child span {
+    font-size: 8px;
+    color: #9ca3af;
+    margin-right: 5px;
+}
+
+.attendance-print-footer div:last-child strong {
+    font-size: 8px;
+    color: #6366f1;
+}
+
+/* =========================================================
+   PRINT SETTINGS
+   ========================================================= */
+
+@page {
+    size: A4 portrait;
+    margin: 12mm;
+}
+
+@media print {
+
+    html,
+    body {
+        width: 100%;
+        background: #ffffff !important;
+    }
+
+    .attendance-print-document {
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    .attendance-print-header {
+        page-break-inside: avoid;
+    }
+
+    .attendance-print-event {
+        page-break-inside: avoid;
+    }
+
+    .attendance-print-summary {
+        page-break-inside: avoid;
+    }
+
+    .attendance-print-section-heading {
+        page-break-after: avoid;
+    }
+
+    .attendance-print-table thead {
+        display: table-header-group;
+    }
+
+    .attendance-print-table tr {
+        page-break-inside: avoid;
+    }
+
+    .attendance-print-signatures {
+        page-break-inside: avoid;
+    }
+
+    .attendance-print-footer {
+        page-break-inside: avoid;
+    }
+}
+
+/* =========================================================
+   SCREEN PREVIEW
+   ========================================================= */
+
+@media screen {
+
+    body {
+        background: #eef1f6;
+    }
+
+    .attendance-print-document {
+        margin: 30px auto;
+        border-radius: 14px;
+
+        box-shadow:
+            0 20px 60px rgba(15, 23, 42, 0.12);
+    }
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media screen and (max-width: 800px) {
+
+    .attendance-print-document {
+        padding: 24px;
+    }
+
+    .attendance-print-header {
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .attendance-print-generated {
+        text-align: left;
+    }
+
+    .attendance-print-event-grid {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+
+    .attendance-print-summary {
+        grid-template-columns:
+            repeat(4, minmax(0, 1fr));
+    }
+
+    .attendance-print-signatures {
+        grid-template-columns: 1fr;
+        gap: 30px;
+    }
+}

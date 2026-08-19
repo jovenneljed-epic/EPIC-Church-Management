@@ -56,11 +56,16 @@ interface JwtPayload {
     [key: string]: unknown;
 }
 
+interface MembersResponse {
+    members?: Member[];
+    data?: Member[];
+}
+
 /* =========================================================
    EMPTY FORM
 ========================================================= */
 
-const emptyForm: MemberForm = {
+const createEmptyForm = (): MemberForm => ({
     memberCode: "",
     firstName: "",
     middleName: "",
@@ -77,13 +82,21 @@ const emptyForm: MemberForm = {
     dateJoined: new Date().toISOString().split("T")[0],
     occupation: "",
     notes: ""
-};
+});
+
+/* =========================================================
+   API URL
+========================================================= */
+
+const API_URL =
+    API_BASE_URL.replace(/\/+$/, "");
 
 /* =========================================================
    TOKEN HELPERS
 ========================================================= */
 
 const getToken = (): string | null => {
+
     const keys = [
         "token",
         "accessToken",
@@ -93,9 +106,12 @@ const getToken = (): string | null => {
     ];
 
     for (const key of keys) {
-        const value = localStorage.getItem(key);
+
+        const value =
+            localStorage.getItem(key);
 
         if (value) {
+
             return value
                 .replace(/^Bearer\s+/i, "")
                 .trim();
@@ -110,6 +126,7 @@ const getToken = (): string | null => {
 ========================================================= */
 
 const getJwtPayload = (): JwtPayload | null => {
+
     const token = getToken();
 
     if (!token) {
@@ -117,17 +134,21 @@ const getJwtPayload = (): JwtPayload | null => {
     }
 
     try {
-        const parts = token.split(".");
+
+        const parts =
+            token.split(".");
 
         if (parts.length !== 3) {
             return null;
         }
 
-        const base64Url = parts[1];
+        const base64Url =
+            parts[1];
 
-        const base64 = base64Url
-            .replace(/-/g, "+")
-            .replace(/_/g, "/");
+        const base64 =
+            base64Url
+                .replace(/-/g, "+")
+                .replace(/_/g, "/");
 
         const padded =
             base64 +
@@ -135,11 +156,15 @@ const getJwtPayload = (): JwtPayload | null => {
                 (4 - (base64.length % 4)) % 4
             );
 
-        const decoded = atob(padded);
+        const decoded =
+            atob(padded);
 
-        return JSON.parse(decoded) as JwtPayload;
+        return JSON.parse(
+            decoded
+        ) as JwtPayload;
 
     } catch (error) {
+
         console.error(
             "JWT PAYLOAD ERROR:",
             error
@@ -154,36 +179,32 @@ const getJwtPayload = (): JwtPayload | null => {
 ========================================================= */
 
 const getCurrentUserRoles = (): string[] => {
-    const payload = getJwtPayload();
+
+    const payload =
+        getJwtPayload();
 
     if (!payload) {
         return [];
     }
 
+    const roleClaim =
+        "http://schemas.microsoft.com/ws/2008/06/identity/claims/role";
+
     const possibleRoleValues = [
         payload.role,
         payload.roles,
-        payload[
-            "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
-        ]
+        payload[roleClaim]
     ];
 
-    let roleValue:
-        | string
-        | string[]
-        | undefined;
-
-    for (const value of possibleRoleValues) {
-        if (
-            typeof value === "string" ||
-            Array.isArray(value)
-        ) {
-            roleValue = value;
-            break;
-        }
-    }
+    const roleValue =
+        possibleRoleValues.find(
+            value =>
+                typeof value === "string" ||
+                Array.isArray(value)
+        );
 
     if (Array.isArray(roleValue)) {
+
         return roleValue
             .flatMap(role =>
                 String(role).split(",")
@@ -195,6 +216,7 @@ const getCurrentUserRoles = (): string[] => {
     }
 
     if (typeof roleValue === "string") {
+
         return roleValue
             .split(",")
             .map(role =>
@@ -211,7 +233,9 @@ const getCurrentUserRoles = (): string[] => {
 ========================================================= */
 
 const hasAdminRole = (): boolean => {
-    const roles = getCurrentUserRoles();
+
+    const roles =
+        getCurrentUserRoles();
 
     return roles.some(
         role =>
@@ -221,33 +245,25 @@ const hasAdminRole = (): boolean => {
             role === "SUPERADMIN"
     );
 };
-
-/* =========================================================
-   API FETCH
-========================================================= */
-
-const apiFetch = async (
-    url: string,
+async function apiFetch<T>(
+    endpoint: string,
     options: RequestInit = {}
-): Promise<Response> => {
+): Promise<T> {
+
+    const baseUrl = API_BASE_URL.replace(/\/+$/, "");
+
+    const cleanEndpoint = endpoint.replace(/^\/+/, "");
+
+    const url = `${baseUrl}/${cleanEndpoint}`;
 
     const token = getToken();
 
-    const headers =
-        new Headers(options.headers || {});
+    const headers = new Headers(options.headers);
 
-    headers.set(
-        "Accept",
-        "application/json"
-    );
-
-    /*
-       Only set JSON Content-Type when body
-       is NOT FormData.
-    */
     if (
         options.body &&
-        !(options.body instanceof FormData)
+        !(options.body instanceof FormData) &&
+        !headers.has("Content-Type")
     ) {
         headers.set(
             "Content-Type",
@@ -262,14 +278,231 @@ const apiFetch = async (
         );
     }
 
-    return fetch(
+    console.log(
+        "API REQUEST:",
+        {
+            method: options.method || "GET",
+            url
+        }
+    );
+
+    const response = await fetch(
         url,
         {
             ...options,
             headers
         }
     );
+
+    if (response.status === 401) {
+        throw new Error(
+            "UNAUTHORIZED: Your session has expired. Please login again."
+        );
+    }
+
+    if (response.status === 403) {
+        throw new Error(
+            "FORBIDDEN: You do not have permission to perform this action."
+        );
+    }
+
+    if (response.status === 204) {
+        return {} as T;
+    }
+
+    const text = await response.text();
+
+    if (!response.ok) {
+
+        let message =
+            `Request failed (${response.status})`;
+
+        if (text.trim()) {
+
+            try {
+
+                const data = JSON.parse(text);
+
+                message =
+                    data?.message ||
+                    data?.title ||
+                    data?.error ||
+                    data?.detail ||
+                    message;
+
+            } catch {
+
+                message = text;
+            }
+        }
+
+        throw new Error(message);
+    }
+
+    if (!text.trim()) {
+        return {} as T;
+    }
+
+    try {
+
+        return JSON.parse(text) as T;
+
+    } catch {
+
+        return text as unknown as T;
+    }
+}
+/* =========================================================
+   MEMBER FORM DATA
+========================================================= */
+
+const buildMemberFormData = (
+    form: MemberForm,
+    statusOverride?: string
+): FormData => {
+
+    const formData =
+        new FormData();
+
+    formData.append(
+        "MemberCode",
+        form.memberCode.trim()
+    );
+
+    formData.append(
+        "FirstName",
+        form.firstName.trim()
+    );
+
+    formData.append(
+        "MiddleName",
+        form.middleName.trim()
+    );
+
+    formData.append(
+        "LastName",
+        form.lastName.trim()
+    );
+
+    formData.append(
+        "Suffix",
+        form.suffix.trim()
+    );
+
+    formData.append(
+        "Gender",
+        form.gender || ""
+    );
+
+    formData.append(
+        "BirthDate",
+        form.birthDate || ""
+    );
+
+    formData.append(
+        "CivilStatus",
+        form.civilStatus || ""
+    );
+
+    formData.append(
+        "ContactNumber",
+        form.contactNumber.trim()
+    );
+
+    formData.append(
+        "Email",
+        form.email.trim()
+    );
+
+    formData.append(
+        "Address",
+        form.address.trim()
+    );
+
+    formData.append(
+        "Ministry",
+        form.ministry.trim()
+    );
+
+    formData.append(
+        "Status",
+        statusOverride ||
+        form.status
+    );
+
+    formData.append(
+        "DateJoined",
+        form.dateJoined || ""
+    );
+
+    formData.append(
+        "Occupation",
+        form.occupation.trim()
+    );
+
+    formData.append(
+        "Notes",
+        form.notes.trim()
+    );
+
+    return formData;
 };
+
+/* =========================================================
+   MEMBER JSON PAYLOAD
+========================================================= */
+
+const buildMemberPayload = (
+    form: MemberForm
+) => ({
+    memberCode:
+        form.memberCode.trim(),
+
+    firstName:
+        form.firstName.trim(),
+
+    middleName:
+        form.middleName.trim(),
+
+    lastName:
+        form.lastName.trim(),
+
+    suffix:
+        form.suffix.trim(),
+
+    gender:
+        form.gender || null,
+
+    birthDate:
+        form.birthDate || null,
+
+    civilStatus:
+        form.civilStatus || null,
+
+    contactNumber:
+        form.contactNumber.trim(),
+
+    email:
+        form.email.trim(),
+
+    address:
+        form.address.trim(),
+
+    ministry:
+        form.ministry.trim(),
+
+    status:
+        form.status,
+
+    dateJoined:
+        form.dateJoined || null,
+
+    occupation:
+        form.occupation.trim(),
+
+    notes:
+        form.notes.trim()
+});
 
 /* =========================================================
    COMPONENT
@@ -306,17 +539,15 @@ const Members: React.FC = () => {
         useState<Member | null>(null);
 
     const [form, setForm] =
-        useState<MemberForm>(emptyForm);
+        useState<MemberForm>(
+            createEmptyForm()
+        );
 
     const [message, setMessage] =
         useState<string>("");
 
     const [error, setError] =
         useState<string>("");
-
-    /* =====================================================
-       CURRENT USER
-    ===================================================== */
 
     const [isAdmin, setIsAdmin] =
         useState<boolean>(
@@ -349,13 +580,43 @@ const Members: React.FC = () => {
         );
 
     /* =====================================================
-       REFRESH USER ROLE
+       REFRESH ROLE
     ===================================================== */
 
     useEffect(() => {
-        setIsAdmin(
-            hasAdminRole()
+
+        const refreshRole = () => {
+
+            setIsAdmin(
+                hasAdminRole()
+            );
+        };
+
+        refreshRole();
+
+        window.addEventListener(
+            "epic:permissions-changed",
+            refreshRole
         );
+
+        window.addEventListener(
+            "epic:auth-changed",
+            refreshRole
+        );
+
+        return () => {
+
+            window.removeEventListener(
+                "epic:permissions-changed",
+                refreshRole
+            );
+
+            window.removeEventListener(
+                "epic:auth-changed",
+                refreshRole
+            );
+        };
+
     }, []);
 
     /* =====================================================
@@ -369,45 +630,38 @@ const Members: React.FC = () => {
 
         try {
 
-            const response =
-                await apiFetch(
-                    `${API_BASE_URL}/Members`
-                );
-
-            if (response.status === 401) {
-                throw new Error(
-                    "UNAUTHORIZED: Please login again."
-                );
-            }
-
-            if (response.status === 403) {
-                throw new Error(
-                    "FORBIDDEN: You do not have permission to view members."
-                );
-            }
-
-            if (!response.ok) {
-
-                const text =
-                    await response.text();
-
-                throw new Error(
-                    text ||
-                    `Members API returned ${response.status}.`
-                );
-            }
-
             const data =
-                await response.json();
+                await apiFetch<
+                    Member[] |
+                    MembersResponse
+                >("/Members");
 
-            const list: Member[] =
+            let list: Member[] = [];
+
+            if (
                 Array.isArray(data)
-                    ? data
-                    : Array.isArray(data.members)
-                        ? data.members
-                        : Array.isArray(data.data)
-                            ? data.data
-                            : [];
+            ) {
+
+                list = data;
+
+            } else if (
+                Array.isArray(
+                    data?.members
+                )
+            ) {
+
+                list =
+                    data.members;
+
+            } else if (
+                Array.isArray(
+                    data?.data
+                )
+            ) {
+
+                list =
+                    data.data;
+            }
 
             setMembers(list);
 
@@ -431,7 +685,9 @@ const Members: React.FC = () => {
     };
 
     useEffect(() => {
-        loadMembers();
+
+        void loadMembers();
+
     }, []);
 
     /* =====================================================
@@ -460,14 +716,18 @@ const Members: React.FC = () => {
     const maleMembers =
         members.filter(
             member =>
-                member.gender?.toUpperCase() ===
+                member.gender
+                    ?.trim()
+                    .toUpperCase() ===
                 "MALE"
         ).length;
 
     const femaleMembers =
         members.filter(
             member =>
-                member.gender?.toUpperCase() ===
+                member.gender
+                    ?.trim()
+                    .toUpperCase() ===
                 "FEMALE"
         ).length;
 
@@ -482,7 +742,8 @@ const Members: React.FC = () => {
                 members
                     .map(
                         member =>
-                            member.ministry?.trim()
+                            member.ministry
+                                ?.trim()
                     )
                     .filter(
                         (
@@ -537,23 +798,33 @@ const Members: React.FC = () => {
 
                     const matchesSearch =
                         !keyword ||
-                        fullName.includes(keyword) ||
-                        code.includes(keyword) ||
-                        ministry.includes(keyword) ||
-                        contact.includes(keyword);
+                        fullName.includes(
+                            keyword
+                        ) ||
+                        code.includes(
+                            keyword
+                        ) ||
+                        ministry.includes(
+                            keyword
+                        ) ||
+                        contact.includes(
+                            keyword
+                        );
 
                     const matchesStatus =
                         statusFilter === "ALL" ||
                         normalizeStatus(
                             member.status
-                        ) === statusFilter;
+                        ) ===
+                        statusFilter;
 
                     const matchesMinistry =
                         ministryFilter === "ALL" ||
                         (
                             member.ministry ||
                             ""
-                        ) === ministryFilter;
+                        ) ===
+                        ministryFilter;
 
                     return (
                         matchesSearch &&
@@ -605,7 +876,7 @@ const Members: React.FC = () => {
         setEditingMember(null);
 
         setForm({
-            ...emptyForm,
+            ...createEmptyForm(),
             memberCode:
                 generateMemberCode()
         });
@@ -623,26 +894,35 @@ const Members: React.FC = () => {
         member: Member
     ) => {
 
-        setEditingMember(member);
+        setEditingMember(
+            member
+        );
 
         setForm({
+
             memberCode:
-                member.memberCode || "",
+                member.memberCode ||
+                "",
 
             firstName:
-                member.firstName || "",
+                member.firstName ||
+                "",
 
             middleName:
-                member.middleName || "",
+                member.middleName ||
+                "",
 
             lastName:
-                member.lastName || "",
+                member.lastName ||
+                "",
 
             suffix:
-                member.suffix || "",
+                member.suffix ||
+                "",
 
             gender:
-                member.gender || "",
+                member.gender ||
+                "",
 
             birthDate:
                 formatInputDate(
@@ -650,19 +930,24 @@ const Members: React.FC = () => {
                 ),
 
             civilStatus:
-                member.civilStatus || "",
+                member.civilStatus ||
+                "",
 
             contactNumber:
-                member.contactNumber || "",
+                member.contactNumber ||
+                "",
 
             email:
-                member.email || "",
+                member.email ||
+                "",
 
             address:
-                member.address || "",
+                member.address ||
+                "",
 
             ministry:
-                member.ministry || "",
+                member.ministry ||
+                "",
 
             status:
                 normalizeStatus(
@@ -673,13 +958,16 @@ const Members: React.FC = () => {
                 formatInputDate(
                     member.dateJoined
                 ) ||
-                emptyForm.dateJoined,
+                createEmptyForm()
+                    .dateJoined,
 
             occupation:
-                member.occupation || "",
+                member.occupation ||
+                "",
 
             notes:
-                member.notes || ""
+                member.notes ||
+                ""
         });
 
         setMessage("");
@@ -699,19 +987,18 @@ const Members: React.FC = () => {
 
         setShowModal(false);
         setEditingMember(null);
-        setForm(emptyForm);
+        setForm(
+            createEmptyForm()
+        );
         setError("");
     };
 
     /* =====================================================
        SAVE MEMBER
-       
-       CREATE = JSON POST
-       UPDATE = FormData PUT
     ===================================================== */
 
     const saveMember = async (
-        event: React.FormEvent
+        event: React.FormEvent<HTMLFormElement>
     ) => {
 
         event.preventDefault();
@@ -723,7 +1010,7 @@ const Members: React.FC = () => {
             Boolean(editingMember);
 
         /* ===============================================
-           PERMISSION CHECK
+           PERMISSION
         =============================================== */
 
         if (
@@ -754,13 +1041,19 @@ const Members: React.FC = () => {
            VALIDATION
         =============================================== */
 
-        if (
-            !form.firstName.trim() ||
-            !form.lastName.trim()
-        ) {
+        if (!form.firstName.trim()) {
 
             setError(
-                "First name and last name are required."
+                "First name is required."
+            );
+
+            return;
+        }
+
+        if (!form.lastName.trim()) {
+
+            setError(
+                "Last name is required."
             );
 
             return;
@@ -770,116 +1063,44 @@ const Members: React.FC = () => {
 
         try {
 
-            /* =========================================
-               CREATE MEMBER
-               POST /api/Members
-            ========================================= */
+            /* ===========================================
+               CREATE
+            =========================================== */
 
             if (!isEditing) {
 
-                const payload = {
-
-                    memberCode:
-                        form.memberCode.trim(),
-
-                    firstName:
-                        form.firstName.trim(),
-
-                    middleName:
-                        form.middleName.trim(),
-
-                    lastName:
-                        form.lastName.trim(),
-
-                    suffix:
-                        form.suffix.trim(),
-
-                    gender:
-                        form.gender || null,
-
-                    birthDate:
-                        form.birthDate || null,
-
-                    civilStatus:
-                        form.civilStatus || null,
-
-                    contactNumber:
-                        form.contactNumber.trim(),
-
-                    email:
-                        form.email.trim(),
-
-                    address:
-                        form.address.trim(),
-
-                    ministry:
-                        form.ministry.trim(),
-
-                    status:
-                        form.status,
-
-                    dateJoined:
-                        form.dateJoined || null,
-
-                    occupation:
-                        form.occupation.trim(),
-
-                    notes:
-                        form.notes.trim()
-                };
-
-                const response =
-                    await apiFetch(
-                        `${API_BASE_URL}/Members`,
-                        {
-                            method: "POST",
-                            body:
-                                JSON.stringify(payload)
-                        }
+                const payload =
+                    buildMemberPayload(
+                        form
                     );
 
-                if (
-                    response.status === 401
-                ) {
-                    throw new Error(
-                        "UNAUTHORIZED: Please login again."
-                    );
-                }
+                await apiFetch(
+                    "/Members",
+                    {
+                        method:
+                            "POST",
 
-                if (
-                    response.status === 403
-                ) {
-                    throw new Error(
-                        "FORBIDDEN: You do not have permission to create members."
-                    );
-                }
-
-                if (!response.ok) {
-
-                    const text =
-                        await response.text();
-
-                    throw new Error(
-                        text ||
-                        `Unable to add member. Server returned ${response.status}.`
-                    );
-                }
+                        body:
+                            JSON.stringify(
+                                payload
+                            )
+                    }
+                );
 
                 setMessage(
                     "Member added successfully."
                 );
             }
 
-            /* =========================================
-               UPDATE MEMBER
-               PUT /api/Members/{id}
-               
-               Backend uses [FromForm]
-            ========================================= */
+            /* ===========================================
+               UPDATE
+            =========================================== */
 
             else {
 
-                if (!editingMember?.memberId) {
+                if (
+                    !editingMember?.memberId
+                ) {
 
                     throw new Error(
                         "Unable to update member: Member ID is missing."
@@ -887,87 +1108,12 @@ const Members: React.FC = () => {
                 }
 
                 const formData =
-                    new FormData();
+                    buildMemberFormData(
+                        form
+                    );
 
-                formData.append(
-                    "MemberCode",
-                    form.memberCode.trim()
-                );
-
-                formData.append(
-                    "FirstName",
-                    form.firstName.trim()
-                );
-
-                formData.append(
-                    "MiddleName",
-                    form.middleName.trim()
-                );
-
-                formData.append(
-                    "LastName",
-                    form.lastName.trim()
-                );
-
-                formData.append(
-                    "Suffix",
-                    form.suffix.trim()
-                );
-
-                formData.append(
-                    "Gender",
-                    form.gender || ""
-                );
-
-                formData.append(
-                    "BirthDate",
-                    form.birthDate || ""
-                );
-
-                formData.append(
-                    "CivilStatus",
-                    form.civilStatus || ""
-                );
-
-                formData.append(
-                    "ContactNumber",
-                    form.contactNumber.trim()
-                );
-
-                formData.append(
-                    "Email",
-                    form.email.trim()
-                );
-
-                formData.append(
-                    "Address",
-                    form.address.trim()
-                );
-
-                formData.append(
-                    "Ministry",
-                    form.ministry.trim()
-                );
-
-                formData.append(
-                    "Status",
-                    form.status
-                );
-
-                formData.append(
-                    "DateJoined",
-                    form.dateJoined || ""
-                );
-
-                formData.append(
-                    "Occupation",
-                    form.occupation.trim()
-                );
-
-                formData.append(
-                    "Notes",
-                    form.notes.trim()
-                );
+                const endpoint =
+                    `/Members/${editingMember.memberId}`;
 
                 console.log(
                     "UPDATING MEMBER:",
@@ -976,76 +1122,34 @@ const Members: React.FC = () => {
 
                 console.log(
                     "UPDATE URL:",
-                    `${API_BASE_URL}/Members/${editingMember.memberId}`
+                    `${API_URL}${endpoint}`
                 );
 
-                const response =
-                    await apiFetch(
-                        `${API_BASE_URL}/Members/${editingMember.memberId}`,
-                        {
-                            method: "PUT",
-                            body: formData
-                        }
-                    );
+                await apiFetch(
+                    endpoint,
+                    {
+                        method:
+                            "PUT",
 
-                console.log(
-                    "UPDATE RESPONSE STATUS:",
-                    response.status
+                        body:
+                            formData
+                    }
                 );
-
-                if (
-                    response.status === 401
-                ) {
-
-                    throw new Error(
-                        "UNAUTHORIZED: Please login again."
-                    );
-                }
-
-                if (
-                    response.status === 403
-                ) {
-
-                    throw new Error(
-                        "FORBIDDEN: You do not have permission to edit members."
-                    );
-                }
-
-                if (
-                    response.status === 404
-                ) {
-
-                    const text =
-                        await response.text();
-
-                    throw new Error(
-                        `UPDATE ENDPOINT NOT FOUND (404). URL: ${API_BASE_URL}/Members/${editingMember.memberId}. ${text}`
-                    );
-                }
-
-                if (!response.ok) {
-
-                    const text =
-                        await response.text();
-
-                    throw new Error(
-                        text ||
-                        `Unable to update member. Server returned ${response.status}.`
-                    );
-                }
 
                 setMessage(
                     "Member updated successfully."
                 );
             }
 
-            /* =========================================
+            /* ===========================================
                CLOSE + REFRESH
-            ========================================= */
+            =========================================== */
 
             setShowModal(false);
             setEditingMember(null);
-            setForm(emptyForm);
+            setForm(
+                createEmptyForm()
+            );
 
             await loadMembers();
 
@@ -1099,42 +1203,16 @@ const Members: React.FC = () => {
 
         try {
 
-            const response =
-                await apiFetch(
-                    `${API_BASE_URL}/Members/${member.memberId}`,
-                    {
-                        method: "DELETE"
-                    }
-                );
+            const endpoint =
+                `/Members/${member.memberId}`;
 
-            if (
-                response.status === 401
-            ) {
-
-                throw new Error(
-                    "UNAUTHORIZED: Please login again."
-                );
-            }
-
-            if (
-                response.status === 403
-            ) {
-
-                throw new Error(
-                    "FORBIDDEN: You do not have permission to delete members."
-                );
-            }
-
-            if (!response.ok) {
-
-                const text =
-                    await response.text();
-
-                throw new Error(
-                    text ||
-                    `Unable to delete member. Server returned ${response.status}.`
-                );
-            }
+            await apiFetch(
+                endpoint,
+                {
+                    method:
+                        "DELETE"
+                }
+            );
 
             setMessage(
                 `${getFullName(member)} was deleted successfully.`
@@ -1190,125 +1268,89 @@ const Members: React.FC = () => {
         try {
 
             const formData =
-                new FormData();
-
-            formData.append(
-                "MemberCode",
-                member.memberCode || ""
-            );
-
-            formData.append(
-                "FirstName",
-                member.firstName || ""
-            );
-
-            formData.append(
-                "MiddleName",
-                member.middleName || ""
-            );
-
-            formData.append(
-                "LastName",
-                member.lastName || ""
-            );
-
-            formData.append(
-                "Suffix",
-                member.suffix || ""
-            );
-
-            formData.append(
-                "Gender",
-                member.gender || ""
-            );
-
-            formData.append(
-                "BirthDate",
-                member.birthDate || ""
-            );
-
-            formData.append(
-                "CivilStatus",
-                member.civilStatus || ""
-            );
-
-            formData.append(
-                "ContactNumber",
-                member.contactNumber || ""
-            );
-
-            formData.append(
-                "Email",
-                member.email || ""
-            );
-
-            formData.append(
-                "Address",
-                member.address || ""
-            );
-
-            formData.append(
-                "Ministry",
-                member.ministry || ""
-            );
-
-            formData.append(
-                "Status",
-                newStatus
-            );
-
-            formData.append(
-                "DateJoined",
-                member.dateJoined || ""
-            );
-
-            formData.append(
-                "Occupation",
-                member.occupation || ""
-            );
-
-            formData.append(
-                "Notes",
-                member.notes || ""
-            );
-
-            const response =
-                await apiFetch(
-                    `${API_BASE_URL}/Members/${member.memberId}`,
+                buildMemberFormData(
                     {
-                        method: "PUT",
-                        body: formData
-                    }
+                        memberCode:
+                            member.memberCode ||
+                            "",
+
+                        firstName:
+                            member.firstName ||
+                            "",
+
+                        middleName:
+                            member.middleName ||
+                            "",
+
+                        lastName:
+                            member.lastName ||
+                            "",
+
+                        suffix:
+                            member.suffix ||
+                            "",
+
+                        gender:
+                            member.gender ||
+                            "",
+
+                        birthDate:
+                            formatInputDate(
+                                member.birthDate
+                            ),
+
+                        civilStatus:
+                            member.civilStatus ||
+                            "",
+
+                        contactNumber:
+                            member.contactNumber ||
+                            "",
+
+                        email:
+                            member.email ||
+                            "",
+
+                        address:
+                            member.address ||
+                            "",
+
+                        ministry:
+                            member.ministry ||
+                            "",
+
+                        status:
+                            currentStatus,
+
+                        dateJoined:
+                            formatInputDate(
+                                member.dateJoined
+                            ),
+
+                        occupation:
+                            member.occupation ||
+                            "",
+
+                        notes:
+                            member.notes ||
+                            ""
+                    },
+                    newStatus
                 );
 
-            if (
-                response.status === 401
-            ) {
+            const endpoint =
+                `/Members/${member.memberId}`;
 
-                throw new Error(
-                    "UNAUTHORIZED: Please login again."
-                );
-            }
+            await apiFetch(
+                endpoint,
+                {
+                    method:
+                        "PUT",
 
-            if (
-                response.status === 403
-            ) {
-
-                throw new Error(
-                    "FORBIDDEN: You do not have permission to change member status."
-                );
-            }
-
-            if (!response.ok) {
-
-                const text =
-                    await response.text();
-
-                throw new Error(
-                    text ||
-                    "Unable to update member status."
-                );
-            }
+                    body:
+                        formData
+                }
+            );
 
             setMessage(
                 `${getFullName(member)} is now ${newStatus.toLowerCase()}.`
@@ -1348,11 +1390,19 @@ const Members: React.FC = () => {
     };
 
     /* =====================================================
+       FORM DISABLED
+    ===================================================== */
+
+    const formDisabled =
+        editingMember
+            ? !canEditMembers
+            : !canCreateMembers;
+
+    /* =====================================================
        RENDER
     ===================================================== */
 
     return (
-
         <div className="members-page">
 
             {/* =================================================
@@ -1428,9 +1478,14 @@ const Members: React.FC = () => {
 
             <div
                 style={{
-                    marginBottom: "18px",
-                    padding: "10px 14px",
-                    borderRadius: "8px",
+                    marginBottom:
+                        "18px",
+
+                    padding:
+                        "10px 14px",
+
+                    borderRadius:
+                        "8px",
 
                     background:
                         isAdmin
@@ -1447,12 +1502,12 @@ const Members: React.FC = () => {
                             ? "#065f46"
                             : "#4b5563",
 
-                    fontSize: "13px"
+                    fontSize:
+                        "13px"
                 }}
             >
 
                 {isAdmin ? (
-
                     <>
                         <strong>
                             ADMIN ACCESS:
@@ -1461,9 +1516,7 @@ const Members: React.FC = () => {
                         update status,
                         and delete members.
                     </>
-
                 ) : (
-
                     <>
                         <strong>
                             VIEW-ONLY ACCESS:
@@ -1473,7 +1526,6 @@ const Members: React.FC = () => {
                         create, edit, delete,
                         or change member status.
                     </>
-
                 )}
 
             </div>
@@ -1762,14 +1814,19 @@ const Members: React.FC = () => {
                 <div className="members-result-count">
 
                     <strong>
-                        {filteredMembers.length}
+                        {
+                            filteredMembers.length
+                        }
                     </strong>
 
                     <span>
                         member
-                        {filteredMembers.length !== 1
-                            ? "s"
-                            : ""}
+                        {
+                            filteredMembers.length !==
+                                1
+                                ? "s"
+                                : ""
+                        }
                     </span>
 
                 </div>
@@ -1802,13 +1859,17 @@ const Members: React.FC = () => {
                         Showing{" "}
 
                         <strong>
-                            {filteredMembers.length}
+                            {
+                                filteredMembers.length
+                            }
                         </strong>
 
                         {" "}of{" "}
 
                         <strong>
-                            {members.length}
+                            {
+                                members.length
+                            }
                         </strong>
 
                     </div>
@@ -1845,9 +1906,11 @@ const Members: React.FC = () => {
                         </h3>
 
                         <p>
-                            {members.length === 0
-                                ? "There are currently no members registered in the system."
-                                : "Try changing your search or filter settings."}
+                            {
+                                members.length === 0
+                                    ? "There are currently no members registered in the system."
+                                    : "Try changing your search or filter settings."
+                            }
                         </p>
 
                         {members.length === 0 &&
@@ -1929,7 +1992,8 @@ const Members: React.FC = () => {
 
                                             <td className="row-number">
                                                 {
-                                                    index + 1
+                                                    index +
+                                                    1
                                                 }
                                             </td>
 
@@ -1938,9 +2002,7 @@ const Members: React.FC = () => {
                                                 <div className="member-person">
 
                                                     <div
-                                                        className={`member-avatar ${getAvatarClass(
-                                                            member
-                                                        )}`}
+                                                        className={`member-avatar ${getAvatarClass(member)}`}
                                                     >
                                                         {
                                                             getInitials(
@@ -2024,9 +2086,7 @@ const Members: React.FC = () => {
 
                                                     <button
                                                         type="button"
-                                                        className={`member-status-badge status-${normalizeStatus(
-                                                            member.status
-                                                        ).toLowerCase()}`}
+                                                        className={`member-status-badge status-${normalizeStatus(member.status).toLowerCase()}`}
                                                         onClick={() =>
                                                             toggleStatus(
                                                                 member
@@ -2050,9 +2110,7 @@ const Members: React.FC = () => {
                                                 ) : (
 
                                                     <span
-                                                        className={`member-status-badge status-${normalizeStatus(
-                                                            member.status
-                                                        ).toLowerCase()}`}
+                                                        className={`member-status-badge status-${normalizeStatus(member.status).toLowerCase()}`}
                                                         title="View only"
                                                     >
 
@@ -2189,21 +2247,25 @@ const Members: React.FC = () => {
 
                                 <h2>
 
-                                    {editingMember
-                                        ? canEditMembers
-                                            ? "Edit Member"
-                                            : "View Member"
-                                        : "Add New Member"}
+                                    {
+                                        editingMember
+                                            ? canEditMembers
+                                                ? "Edit Member"
+                                                : "View Member"
+                                            : "Add New Member"
+                                    }
 
                                 </h2>
 
                                 <p>
 
-                                    {editingMember
-                                        ? canEditMembers
-                                            ? "Update the member's information below."
-                                            : "Member information is displayed in read-only mode."
-                                        : "Register a new member in the church database."}
+                                    {
+                                        editingMember
+                                            ? canEditMembers
+                                                ? "Update the member's information below."
+                                                : "Member information is displayed in read-only mode."
+                                            : "Register a new member in the church database."
+                                    }
 
                                 </p>
 
@@ -2273,8 +2335,7 @@ const Members: React.FC = () => {
                                                     form.memberCode
                                                 }
                                                 disabled={
-                                                    !canEditMembers &&
-                                                    !canCreateMembers
+                                                    formDisabled
                                                 }
                                                 onChange={
                                                     event =>
@@ -2298,8 +2359,7 @@ const Members: React.FC = () => {
                                                 type="text"
                                                 required
                                                 disabled={
-                                                    !canEditMembers &&
-                                                    !canCreateMembers
+                                                    formDisabled
                                                 }
                                                 value={
                                                     form.firstName
@@ -2325,8 +2385,7 @@ const Members: React.FC = () => {
                                             <input
                                                 type="text"
                                                 disabled={
-                                                    !canEditMembers &&
-                                                    !canCreateMembers
+                                                    formDisabled
                                                 }
                                                 value={
                                                     form.middleName
@@ -2353,8 +2412,7 @@ const Members: React.FC = () => {
                                                 type="text"
                                                 required
                                                 disabled={
-                                                    !canEditMembers &&
-                                                    !canCreateMembers
+                                                    formDisabled
                                                 }
                                                 value={
                                                     form.lastName
@@ -2380,8 +2438,7 @@ const Members: React.FC = () => {
                                             <input
                                                 type="text"
                                                 disabled={
-                                                    !canEditMembers &&
-                                                    !canCreateMembers
+                                                    formDisabled
                                                 }
                                                 value={
                                                     form.suffix
@@ -2406,8 +2463,7 @@ const Members: React.FC = () => {
 
                                             <select
                                                 disabled={
-                                                    !canEditMembers &&
-                                                    !canCreateMembers
+                                                    formDisabled
                                                 }
                                                 value={
                                                     form.gender
@@ -2446,8 +2502,7 @@ const Members: React.FC = () => {
                                             <input
                                                 type="date"
                                                 disabled={
-                                                    !canEditMembers &&
-                                                    !canCreateMembers
+                                                    formDisabled
                                                 }
                                                 value={
                                                     form.birthDate
@@ -2471,8 +2526,7 @@ const Members: React.FC = () => {
 
                                             <select
                                                 disabled={
-                                                    !canEditMembers &&
-                                                    !canCreateMembers
+                                                    formDisabled
                                                 }
                                                 value={
                                                     form.civilStatus
@@ -2552,8 +2606,7 @@ const Members: React.FC = () => {
                                             <input
                                                 type="tel"
                                                 disabled={
-                                                    !canEditMembers &&
-                                                    !canCreateMembers
+                                                    formDisabled
                                                 }
                                                 value={
                                                     form.contactNumber
@@ -2579,8 +2632,7 @@ const Members: React.FC = () => {
                                             <input
                                                 type="email"
                                                 disabled={
-                                                    !canEditMembers &&
-                                                    !canCreateMembers
+                                                    formDisabled
                                                 }
                                                 value={
                                                     form.email
@@ -2605,8 +2657,7 @@ const Members: React.FC = () => {
 
                                             <textarea
                                                 disabled={
-                                                    !canEditMembers &&
-                                                    !canCreateMembers
+                                                    formDisabled
                                                 }
                                                 value={
                                                     form.address
@@ -2666,8 +2717,7 @@ const Members: React.FC = () => {
                                             <input
                                                 type="text"
                                                 disabled={
-                                                    !canEditMembers &&
-                                                    !canCreateMembers
+                                                    formDisabled
                                                 }
                                                 value={
                                                     form.ministry
@@ -2693,8 +2743,7 @@ const Members: React.FC = () => {
                                             <input
                                                 type="text"
                                                 disabled={
-                                                    !canEditMembers &&
-                                                    !canCreateMembers
+                                                    formDisabled
                                                 }
                                                 value={
                                                     form.occupation
@@ -2720,8 +2769,7 @@ const Members: React.FC = () => {
                                             <input
                                                 type="date"
                                                 disabled={
-                                                    !canEditMembers &&
-                                                    !canCreateMembers
+                                                    formDisabled
                                                 }
                                                 value={
                                                     form.dateJoined
@@ -2745,8 +2793,7 @@ const Members: React.FC = () => {
 
                                             <select
                                                 disabled={
-                                                    !canEditMembers &&
-                                                    !canCreateMembers
+                                                    formDisabled
                                                 }
                                                 value={
                                                     form.status
@@ -2780,8 +2827,7 @@ const Members: React.FC = () => {
 
                                             <textarea
                                                 disabled={
-                                                    !canEditMembers &&
-                                                    !canCreateMembers
+                                                    formDisabled
                                                 }
                                                 value={
                                                     form.notes
@@ -2821,47 +2867,52 @@ const Members: React.FC = () => {
                                         saving
                                     }
                                 >
-                                    {canEditMembers ||
-                                        canCreateMembers
-                                        ? "Cancel"
-                                        : "Close"}
+                                    {
+                                        canEditMembers ||
+                                            canCreateMembers
+                                            ? "Cancel"
+                                            : "Close"
+                                    }
                                 </button>
 
-                                {(
-                                    editingMember
-                                        ? canEditMembers
-                                        : canCreateMembers
-                                ) && (
+                                {
+                                    (
+                                        editingMember
+                                            ? canEditMembers
+                                            : canCreateMembers
+                                    ) && (
 
-                                    <button
-                                        type="submit"
-                                        className="modal-save-btn"
-                                        disabled={
-                                            saving
-                                        }
-                                    >
+                                        <button
+                                            type="submit"
+                                            className="modal-save-btn"
+                                            disabled={
+                                                saving
+                                            }
+                                        >
 
-                                        {saving ? (
+                                            {saving ? (
 
-                                            <>
-                                                <span className="button-spinner" />
-                                                Saving...
-                                            </>
+                                                <>
+                                                    <span className="button-spinner" />
+                                                    Saving...
+                                                </>
 
-                                        ) : (
+                                            ) : (
 
-                                            <>
-                                                ✓{" "}
-                                                {editingMember
-                                                    ? "Update Member"
-                                                    : "Save Member"}
-                                            </>
+                                                <>
+                                                    ✓{" "}
+                                                    {
+                                                        editingMember
+                                                            ? "Update Member"
+                                                            : "Save Member"
+                                                    }
+                                                </>
 
-                                        )}
+                                            )}
 
-                                    </button>
-
-                                )}
+                                        </button>
+                                    )
+                                }
 
                             </div>
 

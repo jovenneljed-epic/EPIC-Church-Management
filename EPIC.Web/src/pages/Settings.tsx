@@ -1,5 +1,6 @@
 import { API_BASE_URL } from "../config";
 import React, { useEffect, useMemo, useState } from "react";
+import { EPIC_PERMISSION_MODULES } from "../PermissionService";
 
 /*
 ============================================================
@@ -92,22 +93,6 @@ type SettingsTab =
 // ============================================================
 // MODULES
 // ============================================================
-
-const DEFAULT_MODULES = [
-    "Dashboard",
-    "Members",
-    "Attendance",
-    "Visitors",
-    "Church Services",
-    "Giving",
-    "Income",
-    "Expenses",
-    "Ministries",
-    "Events",
-    "Reports",
-    "Settings",
-];
-
 
 // ============================================================
 // TOKEN
@@ -961,46 +946,42 @@ const Settings: React.FC = () => {
     // LOAD PERMISSIONS
     // ========================================================
 
-    const loadPermissions = async (
-        role: Role
-    ) => {
-
+    const loadPermissions = async (role: Role) => {
         try {
-
             setLoadingPermissions(true);
             clearNotifications();
-
             setSelectedRole(role);
 
-            const result =
-                await apiRequest<{
-                    roleId: number;
-                    roleName: string;
-                    permissions: Permission[];
-                }>(
-                    `/Roles/${role.roleId}/permissions`
-                );
+            const result = await apiRequest<{
+                roleId: number;
+                roleName: string;
+                permissions: Permission[];
+            }>(
+                `/Roles/${role.roleId}/permissions`
+            );
 
-            const existing =
-                result.permissions || [];
+            const existing = result.permissions || [];
 
-            const normalized =
-                DEFAULT_MODULES.map(module => {
+            const normalized: Permission[] =
+                EPIC_PERMISSION_MODULES.map((module) => {
 
-                    const found =
-                        existing.find(
-                            p =>
-                                p.module.toLowerCase() ===
-                                module.toLowerCase()
-                        );
+                    const found = existing.find(
+                        (p) =>
+                            p.module?.trim().toLowerCase() ===
+                            module.trim().toLowerCase()
+                    );
 
                     if (found) {
-
                         return {
                             ...found,
+                            roleId: role.roleId,
                             module,
+                            canView: Boolean(found.canView),
+                            canCreate: Boolean(found.canCreate),
+                            canEdit: Boolean(found.canEdit),
+                            canDelete: Boolean(found.canDelete),
+                            canExport: Boolean(found.canExport)
                         };
-
                     }
 
                     return {
@@ -1011,43 +992,30 @@ const Settings: React.FC = () => {
                         canCreate: false,
                         canEdit: false,
                         canDelete: false,
-                        canExport: false,
+                        canExport: false
                     };
-
                 });
-
-            // Include any additional modules
-            // already stored in database.
-            existing.forEach(permission => {
-
-                const exists =
-                    normalized.some(
-                        p =>
-                            p.module.toLowerCase() ===
-                            permission.module.toLowerCase()
-                    );
-
-                if (!exists) {
-                    normalized.push(permission);
-                }
-
-            });
 
             setPermissions(normalized);
 
-            setActiveTab("permissions");
+        } catch (error) {
 
-        } catch (err: any) {
+            console.error(
+                "Failed to load permissions:",
+                error
+            );
+
+            setPermissions([]);
 
             setError(
-                err.message ||
-                "Unable to load permissions."
+                error instanceof Error
+                    ? error.message
+                    : "Unable to load permissions."
             );
 
         } finally {
 
             setLoadingPermissions(false);
-
         }
     };
 
@@ -1109,18 +1077,26 @@ const Settings: React.FC = () => {
 
     // ========================================================
     // SAVE PERMISSIONS
-    // ========================================================
+// ========================================================
 
     const savePermissions = async () => {
 
+        console.log("=================================");
+        console.log("SAVE PERMISSIONS CLICKED");
+        console.log("Selected Role:", selectedRole);
+        console.log("Permission Count:", permissions.length);
+
         if (!selectedRole) {
+
+            console.error(
+                "SAVE STOPPED: No role selected."
+            );
 
             setError(
                 "Please select a role."
             );
 
             return;
-
         }
 
         clearNotifications();
@@ -1129,59 +1105,115 @@ const Settings: React.FC = () => {
 
             setSavingPermissions(true);
 
-            const payload =
-                permissions.map(permission => ({
-                    module:
-                        permission.module,
+            const payload = permissions.map(permission => ({
+                module: permission.module,
+                canView: Boolean(permission.canView),
+                canCreate: Boolean(permission.canCreate),
+                canEdit: Boolean(permission.canEdit),
+                canDelete: Boolean(permission.canDelete),
+                canExport: Boolean(permission.canExport)
+            }));
 
-                    canView:
-                        permission.canView,
+            console.log(
+                "================================="
+            );
 
-                    canCreate:
-                        permission.canCreate,
+            console.log(
+                "SAVING ROLE PERMISSIONS:",
+                selectedRole.roleName
+            );
 
-                    canEdit:
-                        permission.canEdit,
+            console.log(
+                "ROLE ID:",
+                selectedRole.roleId
+            );
 
-                    canDelete:
-                        permission.canDelete,
+            console.table(payload);
 
-                    canExport:
-                        permission.canExport,
-                }));
+            const url =
+                `/Roles/${selectedRole.roleId}/permissions`;
 
-            await apiRequest(
-                `/Roles/${selectedRole.roleId}/permissions`,
+            console.log(
+                "PUT URL:",
+                url
+            );
+
+            console.log(
+                "ABOUT TO CALL API..."
+            );
+
+            const response = await apiRequest(
+                url,
                 {
                     method: "PUT",
-                    body: JSON.stringify(payload),
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+                    body:
+                        JSON.stringify(payload)
                 }
+            );
+
+            console.log(
+                "API CALL COMPLETED!"
+            );
+
+            console.log(
+                "API RESPONSE:",
+                response
             );
 
             setMessage(
                 `PERMISSIONS SAVED FOR ${selectedRole.roleName}.`
             );
 
+            console.log(
+                "RELOADING PERMISSIONS..."
+            );
+
             await loadPermissions(
                 selectedRole
             );
 
-        } catch (err: any) {
+            console.log(
+                "PERMISSIONS RELOADED!"
+            );
+
+        }
+        catch (err: any) {
+
+            console.error(
+                "================================="
+            );
+
+            console.error(
+                "PERMISSION SAVE ERROR:"
+            );
+
+            console.error(
+                err
+            );
+
+            console.error(
+                "================================="
+            );
 
             setError(
-                err.message ||
+                err?.message ||
                 "Unable to save permissions."
             );
 
-        } finally {
+        }
+        finally {
 
             setSavingPermissions(false);
 
+            console.log(
+                "SAVE PERMISSIONS FINISHED"
+            );
         }
-    };
-
-
-    // ========================================================
+    };    // ========================================================
     // FILTER USERS
     // ========================================================
 

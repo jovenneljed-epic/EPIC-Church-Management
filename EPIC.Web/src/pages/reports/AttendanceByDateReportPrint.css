@@ -1,0 +1,1077 @@
+﻿/* ============================================================
+   EPIC ATTENDANCE BY DATE
+   FUTURISTIC PRINT DOCUMENT
+   ============================================================ */
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    background: #ffffff;
+    font-family:
+        Inter,
+        "Segoe UI",
+        Arial,
+        sans-serif;
+    color: #172033;
+}
+
+body {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+}
+
+/* ============================================================
+   DOCUMENT
+   ============================================================ */
+
+.attendance-print-document {
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto;
+    background: #ffffff;
+    overflow: hidden;
+}
+
+/* ============================================================
+   TOP ACCENT
+   ============================================================ */
+
+.print-top-accent {
+    height: 7px;
+    display: flex;
+    width: 100%;
+}
+
+.print-top-accent span:nth-child(1) {
+    flex: 1;
+    background: #5b4bff;
+}
+
+.print-top-accent span:nth-child(2) {
+    flex: 1;
+    background: #00b8d9;
+}
+
+.print-top-accent span:nth-child(3) {
+    flex: 1;
+    background: #8b5cf6;
+}
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+
+.print-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 26px 34px;
+    border-bottom: 1px solid #e7eaf2;
+}
+
+.print-brand {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.print-logo {
+    width: 54px;
+    height: 54px;
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background:
+        linear-gradient(
+            135deg,
+            #5b4bff,
+            #00b8d9
+        );
+    color: white;
+    font-size: 28px;
+    font-weight: 900;
+    box-shadow:
+        0 8px 20px rgba(91, 75, 255, .20);
+}
+
+.print-brand-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.print-eyebrow {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    color: #697386;
+}
+
+.print-brand-name {
+    margin-top: 2px;
+    font-size: 27px;
+    line-height: 1;
+    font-weight: 950;
+    letter-spacing: -1px;
+    color: #20243a;
+}
+
+.print-tagline {
+    margin-top: 4px;
+    font-size: 10px;
+    color: #7b8496;
+}
+
+.print-document-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    text-align: right;
+}
+
+.print-document-meta .meta-label {
+    font-size: 8px;
+    letter-spacing: 1.7px;
+    color: #8a93a6;
+    font-weight: 800;
+}
+
+.print-document-meta strong {
+    margin: 3px 0;
+    font-size: 16px;
+    letter-spacing: 1px;
+    color: #30364d;
+}
+
+.print-document-meta span:last-child {
+    font-size: 9px;
+    color: #8a93a6;
+}
+
+/* ============================================================
+   HERO
+   ============================================================ */
+
+.print-hero {
+    min-height: 190px;
+    margin: 24px 34px;
+    border-radius: 24px;
+    position: relative;
+    overflow: hidden;
+    background:
+        linear-gradient(
+            120deg,
+            #202552 0%,
+            #343b87 45%,
+            #286d91 100%
+        );
+    color: white;
+}
+
+.hero-grid-pattern {
+    position: absolute;
+    inset: 0;
+    opacity: .12;
+    background-image:
+        linear-gradient(
+            rgba(255,255,255,.5) 1px,
+            transparent 1px
+        ),
+        linear-gradient(
+            90deg,
+            rgba(255,255,255,.5) 1px,
+            transparent 1px
+        );
+    background-size: 24px 24px;
+}
+
+.hero-grid-pattern::after {
+    content: "";
+    position: absolute;
+    width: 360px;
+    height: 360px;
+    right: -90px;
+    top: -110px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,.15);
+    box-shadow:
+        0 0 0 30px rgba(255,255,255,.035),
+        0 0 0 60px rgba(255,255,255,.025),
+        0 0 0 90px rgba(255,255,255,.018);
+}
+
+.hero-content {
+    position: relative;
+    z-index: 2;
+    padding: 28px 32px;
+}
+
+.hero-kicker {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    color: #8eeaff;
+}
+
+.hero-content h1 {
+    margin: 7px 0 4px;
+    font-size: 31px;
+    line-height: 1.05;
+    letter-spacing: -1.3px;
+    font-weight: 900;
+}
+
+.hero-content h1 span {
+    color: #78e8ff;
+}
+
+.hero-content p {
+    margin: 0;
+    font-size: 11px;
+    color: rgba(255,255,255,.72);
+}
+
+.hero-period {
+    margin-top: 18px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 13px;
+    border: 1px solid rgba(255,255,255,.16);
+    background: rgba(255,255,255,.08);
+    border-radius: 12px;
+}
+
+.period-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,.12);
+    font-size: 14px;
+}
+
+.hero-period small {
+    display: block;
+    font-size: 7px;
+    letter-spacing: 1.5px;
+    color: rgba(255,255,255,.58);
+    font-weight: 800;
+}
+
+.hero-period strong {
+    display: block;
+    margin-top: 2px;
+    font-size: 11px;
+    color: white;
+}
+
+.hero-orbit {
+    position: absolute;
+    right: 58px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 130px;
+    height: 130px;
+}
+
+.orbit-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,.17);
+}
+
+.ring-two {
+    inset: 15px;
+    border-color: rgba(120,232,255,.25);
+}
+
+.orbit-core {
+    position: absolute;
+    inset: 30px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background:
+        linear-gradient(
+            145deg,
+            rgba(255,255,255,.17),
+            rgba(255,255,255,.05)
+        );
+    border: 1px solid rgba(255,255,255,.2);
+}
+
+.orbit-core span {
+    font-size: 22px;
+    font-weight: 900;
+}
+
+.orbit-core small {
+    margin-top: 1px;
+    font-size: 7px;
+    letter-spacing: 1.5px;
+    color: rgba(255,255,255,.6);
+}
+
+/* ============================================================
+   SECTION HEADING
+   ============================================================ */
+
+.print-kpi-section {
+    padding: 0 34px;
+}
+
+.section-heading,
+.records-heading {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-bottom: 14px;
+}
+
+.section-heading span,
+.records-heading span {
+    font-size: 8px;
+    font-weight: 900;
+    letter-spacing: 1.8px;
+    color: #68738a;
+}
+
+.section-heading h2,
+.records-heading h2 {
+    margin: 3px 0 0;
+    font-size: 18px;
+    color: #252b40;
+}
+
+.section-line {
+    height: 1px;
+    flex: 1;
+    background:
+        linear-gradient(
+            90deg,
+            #dce1eb,
+            transparent
+        );
+}
+
+/* ============================================================
+   KPI GRID
+   ============================================================ */
+
+.print-kpi-grid {
+    display: grid;
+    grid-template-columns:
+        repeat(6, 1fr);
+    gap: 9px;
+}
+
+.print-kpi {
+    min-height: 78px;
+    padding: 11px;
+    border-radius: 13px;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid #e8ebf2;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+.print-kpi::after {
+    content: "";
+    position: absolute;
+    width: 48px;
+    height: 48px;
+    right: -18px;
+    bottom: -18px;
+    border-radius: 50%;
+    opacity: .09;
+    background: currentColor;
+}
+
+.kpi-icon {
+    width: 31px;
+    height: 31px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 900;
+    flex-shrink: 0;
+}
+
+.kpi-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.kpi-info span {
+    font-size: 7px;
+    letter-spacing: .7px;
+    font-weight: 900;
+    color: #7a8395;
+}
+
+.kpi-info strong {
+    margin-top: 2px;
+    font-size: 21px;
+    line-height: 1;
+    color: #242a40;
+}
+
+.print-kpi.total {
+    color: #5965f2;
+}
+
+.print-kpi.total .kpi-icon {
+    background: #eef0ff;
+    color: #5965f2;
+}
+
+.print-kpi.present {
+    color: #0b9b74;
+}
+
+.print-kpi.present .kpi-icon {
+    background: #e6f8f2;
+    color: #0b9b74;
+}
+
+.print-kpi.late {
+    color: #d98b16;
+}
+
+.print-kpi.late .kpi-icon {
+    background: #fff4df;
+    color: #d98b16;
+}
+
+.print-kpi.early {
+    color: #1682c4;
+}
+
+.print-kpi.early .kpi-icon {
+    background: #e7f5ff;
+    color: #1682c4;
+}
+
+.print-kpi.absent {
+    color: #db4f68;
+}
+
+.print-kpi.absent .kpi-icon {
+    background: #ffebef;
+    color: #db4f68;
+}
+
+.print-kpi.excused {
+    color: #805ac7;
+}
+
+.print-kpi.excused .kpi-icon {
+    background: #f1eaff;
+    color: #805ac7;
+}
+
+/* ============================================================
+   RATE
+   ============================================================ */
+
+.print-rate-card {
+    margin-top: 10px;
+    padding: 13px 16px;
+    border-radius: 13px;
+    background:
+        linear-gradient(
+            100deg,
+            #f5f6ff,
+            #f4fbff
+        );
+    border: 1px solid #e2e6f4;
+}
+
+.rate-card-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+
+.rate-card-heading > div:first-child {
+    display: flex;
+    align-items: baseline;
+    gap: 9px;
+}
+
+.rate-card-heading span {
+    font-size: 8px;
+    letter-spacing: 1.1px;
+    font-weight: 900;
+    color: #68738a;
+}
+
+.rate-card-heading strong {
+    font-size: 22px;
+    color: #3f4fc6;
+}
+
+.rate-description {
+    font-size: 8px;
+    color: #7e8798;
+}
+
+.rate-progress {
+    height: 7px;
+    margin-top: 8px;
+    overflow: hidden;
+    border-radius: 99px;
+    background: #e1e5f0;
+}
+
+.rate-progress-fill {
+    height: 100%;
+    border-radius: inherit;
+    background:
+        linear-gradient(
+            90deg,
+            #5b4bff,
+            #00b8d9
+        );
+}
+
+/* ============================================================
+   RECORDS
+   ============================================================ */
+
+.records-section {
+    margin: 26px 34px 0;
+}
+
+.records-heading {
+    margin-bottom: 10px;
+}
+
+.records-count {
+    margin-left: auto;
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+    padding: 7px 11px;
+    border-radius: 9px;
+    background: #f5f6fa;
+}
+
+.records-count strong {
+    font-size: 15px;
+    color: #30364c;
+}
+
+.records-count span {
+    font-size: 7px;
+    letter-spacing: 1px;
+}
+
+/* ============================================================
+   TABLE
+   ============================================================ */
+
+.print-table-container {
+    border: 1px solid #e0e4ec;
+    border-radius: 13px;
+    overflow: hidden;
+}
+
+.print-attendance-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.print-attendance-table thead {
+    display: table-header-group;
+}
+
+.print-attendance-table th {
+    padding: 10px 8px;
+    text-align: left;
+    background:
+        linear-gradient(
+            100deg,
+            #242b50,
+            #303a72
+        );
+    color: rgba(255,255,255,.86);
+    font-size: 7px;
+    letter-spacing: 1px;
+    font-weight: 900;
+}
+
+.print-attendance-table th:first-child {
+    border-radius: 10px 0 0 0;
+}
+
+.print-attendance-table th:last-child {
+    border-radius: 0 10px 0 0;
+}
+
+.print-attendance-table td {
+    padding: 9px 8px;
+    border-bottom: 1px solid #edf0f5;
+    font-size: 8px;
+    color: #424a5e;
+    vertical-align: middle;
+    word-break: break-word;
+}
+
+.print-attendance-table tbody tr:nth-child(even) {
+    background: #fafbfe;
+}
+
+.print-attendance-table tbody tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+}
+
+.number-column {
+    width: 36px;
+    text-align: center !important;
+}
+
+.print-attendance-table th:nth-child(2) {
+    width: 22%;
+}
+
+.print-attendance-table th:nth-child(3) {
+    width: 10%;
+}
+
+.print-attendance-table th:nth-child(4) {
+    width: 18%;
+}
+
+.print-attendance-table th:nth-child(5) {
+    width: 12%;
+}
+
+.print-attendance-table th:nth-child(6) {
+    width: 12%;
+}
+
+.print-attendance-table th:nth-child(7) {
+    width: 16%;
+}
+
+.row-number {
+    font-size: 8px;
+    font-weight: 900;
+    color: #9299aa;
+}
+
+/* ============================================================
+   MEMBER
+   ============================================================ */
+
+.print-member {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.member-avatar {
+    width: 27px;
+    height: 27px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    color: white;
+    font-size: 8px;
+    font-weight: 900;
+    background:
+        linear-gradient(
+            135deg,
+            #5965f2,
+            #00a9ca
+        );
+}
+
+.print-member > div:last-child {
+    min-width: 0;
+}
+
+.print-member strong {
+    display: block;
+    font-size: 8px;
+    color: #283047;
+}
+
+.print-member span {
+    display: block;
+    margin-top: 1px;
+    font-size: 6.5px;
+    color: #969dad;
+}
+
+/* ============================================================
+   CODE
+   ============================================================ */
+
+.print-code {
+    display: inline-block;
+    padding: 4px 6px;
+    border-radius: 5px;
+    background: #f0f2f8;
+    color: #5d667a;
+    font-size: 7px;
+    font-weight: 800;
+}
+
+/* ============================================================
+   SERVICE
+   ============================================================ */
+
+.print-service {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-weight: 700;
+    color: #3c455a;
+}
+
+.service-indicator {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background:
+        linear-gradient(
+            135deg,
+            #5b4bff,
+            #00b8d9
+        );
+    box-shadow:
+        0 0 0 3px #eef0ff;
+}
+
+.print-date {
+    font-size: 7.5px;
+    color: #606a7d;
+}
+
+/* ============================================================
+   STATUS
+   ============================================================ */
+
+.print-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 7px;
+    border-radius: 99px;
+    font-size: 7px;
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+.print-status b {
+    font-size: 8px;
+}
+
+.status-present {
+    color: #087d5e;
+    background: #e6f8f2;
+}
+
+.status-late {
+    color: #a86b0b;
+    background: #fff3dc;
+}
+
+.status-early {
+    color: #126d9f;
+    background: #e5f5ff;
+}
+
+.status-absent {
+    color: #b63750;
+    background: #ffebef;
+}
+
+.status-excused {
+    color: #6845a8;
+    background: #f0eaff;
+}
+
+.print-remarks {
+    color: #7b8393;
+    font-size: 7.5px;
+}
+
+/* ============================================================
+   EMPTY
+   ============================================================ */
+
+.print-empty {
+    padding: 35px;
+    text-align: center;
+    color: #7c8495;
+    font-size: 10px;
+}
+
+/* ============================================================
+   VERIFICATION
+   ============================================================ */
+
+.verification-section {
+    margin: 22px 34px 0;
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap: 24px;
+    align-items: end;
+}
+
+.verification-card {
+    display: flex;
+    gap: 11px;
+    padding: 13px;
+    border: 1px solid #e2e6ee;
+    border-radius: 12px;
+    background: #fafbfe;
+}
+
+.verification-icon {
+    width: 29px;
+    height: 29px;
+    flex-shrink: 0;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #e7f8f2;
+    color: #0b9b74;
+    font-weight: 900;
+}
+
+.verification-card span {
+    display: block;
+    font-size: 7px;
+    letter-spacing: 1px;
+    color: #818a9b;
+    font-weight: 900;
+}
+
+.verification-card strong {
+    display: block;
+    margin-top: 2px;
+    font-size: 8px;
+    color: #394157;
+}
+
+.verification-card p {
+    margin: 3px 0 0;
+    font-size: 7px;
+    line-height: 1.45;
+    color: #858d9d;
+}
+
+.signature-area {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.signature-line span {
+    display: block;
+    height: 25px;
+    border-bottom: 1px solid #8d95a4;
+}
+
+.signature-line strong {
+    display: block;
+    margin-top: 5px;
+    text-align: center;
+    font-size: 7px;
+    color: #6d7586;
+}
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+
+.print-footer {
+    margin-top: 28px;
+    padding: 14px 34px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    align-items: center;
+    border-top: 1px solid #e2e6ee;
+    background: #f8f9fc;
+}
+
+.footer-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.footer-logo {
+    width: 27px;
+    height: 27px;
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background:
+        linear-gradient(
+            135deg,
+            #5b4bff,
+            #00b8d9
+        );
+    color: white;
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.footer-brand strong {
+    display: block;
+    font-size: 10px;
+    color: #343b51;
+}
+
+.footer-brand span {
+    display: block;
+    font-size: 6px;
+    color: #8991a0;
+}
+
+.footer-center {
+    text-align: center;
+    font-size: 7px;
+    letter-spacing: 1.2px;
+    color: #8991a0;
+    font-weight: 900;
+}
+
+.footer-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.footer-right strong {
+    font-size: 7px;
+    letter-spacing: .8px;
+    color: #626b7e;
+}
+
+.footer-right span {
+    margin-top: 2px;
+    font-size: 6px;
+    color: #9aa1af;
+}
+
+/* ============================================================
+   PRINT
+   ============================================================ */
+
+@page {
+    size: A4 portrait;
+    margin: 10mm;
+}
+
+@media print {
+
+    html,
+    body {
+        width: 100%;
+        background: white !important;
+    }
+
+    .attendance-print-document {
+        width: 100%;
+        max-width: none;
+        margin: 0;
+    }
+
+    .print-header {
+        padding-top: 4px;
+    }
+
+    .print-hero {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    .print-kpi-section {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    .print-kpi-grid {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    .print-rate-card {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    .records-section {
+        break-before: auto;
+    }
+
+    .print-table-container {
+        overflow: visible;
+    }
+
+    .print-attendance-table {
+        page-break-inside: auto;
+    }
+
+    .print-attendance-table tr {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+
+    .verification-section {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    .print-footer {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+}
+
+/* ============================================================
+   SCREEN PREVIEW
+   ============================================================ */
+
+@media screen {
+
+    body {
+        background: #eef1f7;
+        padding: 20px;
+    }
+
+    .attendance-print-document {
+        box-shadow:
+            0 20px 60px rgba(27,35,65,.12);
+    }
+}

@@ -25,24 +25,25 @@ namespace EPIC.Api.Controllers
         // =========================================================
 
         private static readonly string[] PermissionModules =
-        {
-            "Dashboard",
-            "Members",
-            "Attendance",
-            "Visitors",
-            "Church Services",
-            "Giving",
-            "Income",
-            "Expenses",
-            "Ministries",
-            "Events",
-            "Reports",
-            "Settings",
+ {
+    "Dashboard",
+    "Members",
+    "Attendance",
+    "Visitors",
+    "Church Services",
+    "Giving",
+    "Income",
+    "Expenses",
+    "Ministries",
+    "Events",
+    "Reports",
+    "Settings",
 
-            // New permission-controlled modules
-            "Demo Requests",
-            "EPIC Learning"
-        };
+    // New permission-controlled modules
+    "Demo Requests",
+    "Subscriptions",
+    "EPIC Learning"
+};
 
         public RolesController(
             ApplicationDbContext context)
