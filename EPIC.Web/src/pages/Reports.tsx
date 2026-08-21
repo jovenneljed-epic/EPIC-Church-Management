@@ -1,8 +1,10 @@
 import React, { useMemo, useState } from "react";
 
 import "./Reports.css";
-import MembershipDirectoryReport from "./reports/MembershipDirectoryReport";
 
+import MembershipDirectoryReport from "./reports/MembershipDirectoryReport";
+import VisitorReportBuilder from "./reports/VisitorReportBuilder";
+import FinancialReportBuilder from "./reports/FinancialReportBuilder";
 
 // =========================================================
 // TYPES
@@ -220,52 +222,51 @@ const CATEGORIES: Array<{
     name: ReportCategory | "All";
     icon: string;
 }> = [
+        {
+            name: "All",
+            icon: "▦"
+        },
 
-    {
-        name: "All",
-        icon: "▦"
-    },
+        {
+            name: "Membership",
+            icon: "👥"
+        },
 
-    {
-        name: "Membership",
-        icon: "👥"
-    },
+        {
+            name: "Attendance",
+            icon: "✓"
+        },
 
-    {
-        name: "Attendance",
-        icon: "✓"
-    },
+        {
+            name: "Visitors",
+            icon: "🚪"
+        },
 
-    {
-        name: "Visitors",
-        icon: "🚪"
-    },
+        {
+            name: "Giving",
+            icon: "₱"
+        },
 
-    {
-        name: "Giving",
-        icon: "₱"
-    },
+        {
+            name: "Finance",
+            icon: "💰"
+        },
 
-    {
-        name: "Finance",
-        icon: "💰"
-    },
+        {
+            name: "Ministries",
+            icon: "♫"
+        },
 
-    {
-        name: "Ministries",
-        icon: "♫"
-    },
+        {
+            name: "Church Services",
+            icon: "⛪"
+        },
 
-    {
-        name: "Church Services",
-        icon: "⛪"
-    },
-
-    {
-        name: "EPIC Learning",
-        icon: "📚"
-    }
-];
+        {
+            name: "EPIC Learning",
+            icon: "📚"
+        }
+    ];
 
 // =========================================================
 // FORMS
@@ -356,12 +357,22 @@ const Reports: React.FC<ReportsProps> = ({
 }) => {
 
     // =====================================================
-    // STATE
+    // VIEW STATE
     // =====================================================
+
     const [
         showMembershipDirectory,
         setShowMembershipDirectory
     ] = useState(false);
+
+    const [
+        showVisitorReport,
+        setShowVisitorReport
+    ] = useState(false);
+const [
+    showFinancialReport,
+    setShowFinancialReport
+] = useState(false);
 
     const [
         activeCategory,
@@ -417,12 +428,6 @@ const Reports: React.FC<ReportsProps> = ({
     ]);
 
     // =====================================================
-    // PRINT
-    // =====================================================
-
-  
-
-    // =====================================================
     // OPEN REPORT
     // =====================================================
 
@@ -431,9 +436,24 @@ const Reports: React.FC<ReportsProps> = ({
     ): void => {
 
         switch (report.id) {
+
+            // =================================================
+            // MEMBERSHIP DIRECTORY
+            // =================================================
+
             case "membership-directory":
 
                 setShowMembershipDirectory(true);
+
+                return;
+
+            // =================================================
+            // VISITOR REPORT
+            // =================================================
+
+            case "visitor-report":
+
+                setShowVisitorReport(true);
 
                 return;
 
@@ -446,6 +466,12 @@ const Reports: React.FC<ReportsProps> = ({
                 if (onOpenAttendanceReport) {
 
                     onOpenAttendanceReport();
+
+                } else {
+
+                    console.warn(
+                        "Reports: onOpenAttendanceReport callback is not connected."
+                    );
 
                 }
 
@@ -485,9 +511,19 @@ const Reports: React.FC<ReportsProps> = ({
                 return;
 
             // =================================================
-            // OTHER REPORTS
+            // FUTURE REPORTS
+            // =================================================
+            // =================================================
+            // FINANCIAL REPORT
             // =================================================
 
+case "income-report":
+case "expense-report":
+case "financial-summary":
+
+    setShowFinancialReport(true);
+
+    return;
             default:
 
                 alert(
@@ -511,12 +547,12 @@ const Reports: React.FC<ReportsProps> = ({
             `${form.title}\n\n` +
             "The printable form template will be added in the Forms & Documents phase."
         );
-
     };
 
     // =====================================================
-    // RENDER
+    // MEMBERSHIP DIRECTORY VIEW
     // =====================================================
+
     if (showMembershipDirectory) {
 
         return (
@@ -527,6 +563,31 @@ const Reports: React.FC<ReportsProps> = ({
             />
         );
     }
+
+    // =====================================================
+    // VISITOR REPORT VIEW
+    // =====================================================
+
+    if (showVisitorReport) {
+
+        return (
+            <VisitorReportBuilder />
+        );
+    }
+// =====================================================
+// FINANCIAL REPORT VIEW
+// =====================================================
+
+if (showFinancialReport) {
+
+    return (
+        <FinancialReportBuilder />
+    );
+}
+    // =====================================================
+    // MAIN REPORTS PAGE
+    // =====================================================
+
     return (
 
         <div className="epic-reports">
@@ -558,8 +619,6 @@ const Reports: React.FC<ReportsProps> = ({
                     </div>
 
                 </div>
-
-                
 
             </div>
 
@@ -600,16 +659,16 @@ const Reports: React.FC<ReportsProps> = ({
             </div>
 
             {/* =================================================
-                REPORTS
+                REPORTS TAB
             ================================================= */}
 
             {activeTab === "reports" && (
 
                 <>
 
-                    {/* =========================================
+                    {/* =================================================
                         SEARCH
-                    ========================================= */}
+                    ================================================= */}
 
                     <div className="reports-toolbar">
 
@@ -634,9 +693,9 @@ const Reports: React.FC<ReportsProps> = ({
 
                     </div>
 
-                    {/* =========================================
+                    {/* =================================================
                         CATEGORIES
-                    ========================================= */}
+                    ================================================= */}
 
                     <div className="reports-category-bar">
 
@@ -647,7 +706,7 @@ const Reports: React.FC<ReportsProps> = ({
                                 type="button"
                                 className={
                                     activeCategory ===
-                                    category.name
+                                        category.name
                                         ? "active"
                                         : ""
                                 }
@@ -670,9 +729,9 @@ const Reports: React.FC<ReportsProps> = ({
 
                     </div>
 
-                    {/* =========================================
+                    {/* =================================================
                         SECTION HEADING
-                    ========================================= */}
+                    ================================================= */}
 
                     <div className="reports-section-heading">
 
@@ -696,9 +755,9 @@ const Reports: React.FC<ReportsProps> = ({
 
                     </div>
 
-                    {/* =========================================
+                    {/* =================================================
                         REPORT GRID
-                    ========================================= */}
+                    ================================================= */}
 
                     {filteredReports.length > 0 ? (
 
@@ -711,9 +770,7 @@ const Reports: React.FC<ReportsProps> = ({
                                     type="button"
                                     className="report-card"
                                     onClick={() =>
-                                        handleOpenReport(
-                                            report
-                                        )
+                                        handleOpenReport(report)
                                     }
                                     aria-label={`Open ${report.title}`}
                                 >
@@ -774,7 +831,7 @@ const Reports: React.FC<ReportsProps> = ({
             )}
 
             {/* =================================================
-                FORMS
+                FORMS & DOCUMENTS TAB
             ================================================= */}
 
             {activeTab === "forms" && (
@@ -810,6 +867,7 @@ const Reports: React.FC<ReportsProps> = ({
                                 onClick={() =>
                                     handleOpenForm(form)
                                 }
+                                aria-label={`Open ${form.title}`}
                             >
 
                                 <div className="report-card-icon">

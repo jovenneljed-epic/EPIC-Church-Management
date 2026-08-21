@@ -22,704 +22,76 @@ interface Member {
     status?: string;
     dateJoined?: string;
     occupation?: string;
+    notes?: string;
 }
 
 interface MembershipDirectoryPrintProps {
     members: Member[];
-    generatedAt?: string;
+    generatedAt: string;
 }
-
-/* =========================================================
-   COMPONENT
-========================================================= */
-
-const MembershipDirectoryPrint: React.FC<
-    MembershipDirectoryPrintProps
-> = ({
-    members,
-    generatedAt
-}) => {
-
-    /* =====================================================
-       STATISTICS
-    ===================================================== */
-
-    const totalMembers = members.length;
-
-    const activeMembers =
-        members.filter(
-            member =>
-                normalizeStatus(member.status) === "ACTIVE"
-        ).length;
-
-    const inactiveMembers =
-        members.filter(
-            member =>
-                normalizeStatus(member.status) === "INACTIVE"
-        ).length;
-
-    const maleMembers =
-        members.filter(
-            member =>
-                member.gender
-                    ?.trim()
-                    .toUpperCase() === "MALE"
-        ).length;
-
-    const femaleMembers =
-        members.filter(
-            member =>
-                member.gender
-                    ?.trim()
-                    .toUpperCase() === "FEMALE"
-        ).length;
-
-    const ministries =
-        new Set(
-            members
-                .map(
-                    member =>
-                        member.ministry?.trim()
-                )
-                .filter(Boolean)
-        ).size;
-
-    /* =====================================================
-       RENDER
-    ===================================================== */
-
-    return (
-        <div className="membership-print-document">
-
-            {/* =================================================
-                DOCUMENT HEADER
-            ================================================= */}
-
-            <header className="membership-print-header">
-
-                <div className="membership-print-brand">
-
-                    <div className="membership-print-logo">
-                        EPIC
-                    </div>
-
-                    <div className="membership-print-brand-text">
-
-                        <span className="membership-print-eyebrow">
-                            EPIC CHURCH MANAGEMENT SYSTEM
-                        </span>
-
-                        <h1>
-                            MEMBERSHIP DIRECTORY
-                        </h1>
-
-                        <p>
-                            Official Church Member Listing
-                        </p>
-
-                    </div>
-
-                </div>
-
-                <div className="membership-print-meta">
-
-                    <span>
-                        REPORT GENERATED
-                    </span>
-
-                    <strong>
-                        {generatedAt ||
-                            formatGeneratedDate()}
-                    </strong>
-
-                </div>
-
-            </header>
-
-
-            {/* =================================================
-                HEADER ACCENT
-            ================================================= */}
-
-            <div className="membership-print-accent-line" />
-
-
-            {/* =================================================
-                REPORT TITLE
-            ================================================= */}
-
-            <section className="membership-print-title">
-
-                <div>
-
-                    <span>
-                        OFFICIAL MEMBERSHIP REPORT
-                    </span>
-
-                    <h2>
-                        Church Member Directory
-                    </h2>
-
-                    <p>
-                        Complete listing of registered church
-                        members maintained through the EPIC
-                        Church Management System.
-                    </p>
-
-                </div>
-
-                <div className="membership-print-report-badge">
-
-                    <span>
-                        REPORT TYPE
-                    </span>
-
-                    <strong>
-                        MEMBERSHIP
-                    </strong>
-
-                </div>
-
-            </section>
-
-
-            {/* =================================================
-                SUMMARY
-            ================================================= */}
-
-            <section className="membership-print-summary">
-
-                <div className="print-stat total">
-
-                    <span>
-                        TOTAL MEMBERS
-                    </span>
-
-                    <strong>
-                        {totalMembers}
-                    </strong>
-
-                </div>
-
-                <div className="print-stat active">
-
-                    <span>
-                        ACTIVE
-                    </span>
-
-                    <strong>
-                        {activeMembers}
-                    </strong>
-
-                </div>
-
-                <div className="print-stat inactive">
-
-                    <span>
-                        INACTIVE
-                    </span>
-
-                    <strong>
-                        {inactiveMembers}
-                    </strong>
-
-                </div>
-
-                <div className="print-stat female">
-
-                    <span>
-                        FEMALE
-                    </span>
-
-                    <strong>
-                        {femaleMembers}
-                    </strong>
-
-                </div>
-
-                <div className="print-stat male">
-
-                    <span>
-                        MALE
-                    </span>
-
-                    <strong>
-                        {maleMembers}
-                    </strong>
-
-                </div>
-
-                <div className="print-stat ministry">
-
-                    <span>
-                        MINISTRIES
-                    </span>
-
-                    <strong>
-                        {ministries}
-                    </strong>
-
-                </div>
-
-            </section>
-
-
-            {/* =================================================
-                TABLE SECTION
-            ================================================= */}
-
-            <section className="membership-print-table-section">
-
-                <div className="membership-print-section-header">
-
-                    <div>
-
-                        <span>
-                            MEMBER RECORDS
-                        </span>
-
-                        <h3>
-                            Complete Membership Directory
-                        </h3>
-
-                    </div>
-
-                    <div className="membership-print-record-count">
-
-                        {totalMembers}{" "}
-                        {totalMembers === 1
-                            ? "REGISTERED MEMBER"
-                            : "REGISTERED MEMBERS"}
-
-                    </div>
-
-                </div>
-
-
-                {/* =================================================
-                    TABLE
-                ================================================= */}
-
-                <table className="membership-print-table">
-
-                    <thead>
-
-                        <tr>
-
-                            <th className="col-number">
-                                #
-                            </th>
-
-                            <th className="col-member">
-                                MEMBER
-                            </th>
-
-                            <th className="col-code">
-                                CODE
-                            </th>
-
-                            <th className="col-gender">
-                                GENDER
-                            </th>
-
-                            <th className="col-contact">
-                                CONTACT
-                            </th>
-
-                            <th className="col-ministry">
-                                MINISTRY
-                            </th>
-
-                            <th className="col-status">
-                                STATUS
-                            </th>
-
-                            <th className="col-date">
-                                DATE JOINED
-                            </th>
-
-                        </tr>
-
-                    </thead>
-
-                    <tbody>
-
-                        {members.map(
-                            (
-                                member,
-                                index
-                            ) => {
-
-                                const status =
-                                    normalizeStatus(
-                                        member.status
-                                    );
-
-                                const memberName =
-                                    getFullName(
-                                        member
-                                    );
-
-                                return (
-
-                                    <tr
-                                        key={
-                                            member.memberId
-                                        }
-                                    >
-
-                                        {/* NUMBER */}
-
-                                        <td className="member-number">
-
-                                            {String(
-                                                index + 1
-                                            ).padStart(
-                                                2,
-                                                "0"
-                                            )}
-
-                                        </td>
-
-
-                                        {/* MEMBER */}
-
-                                        <td>
-
-                                            <div className="print-member">
-
-                                                <div className="print-member-avatar">
-
-                                                    {getInitials(
-                                                        memberName
-                                                    )}
-
-                                                </div>
-
-                                                <div className="print-member-info">
-
-                                                    <strong>
-                                                        {memberName}
-                                                    </strong>
-
-                                                    <span>
-                                                        {
-                                                            member.email ||
-                                                            "No email registered"
-                                                        }
-                                                    </span>
-
-                                                </div>
-
-                                            </div>
-
-                                        </td>
-
-
-                                        {/* CODE */}
-
-                                        <td>
-
-                                            <span className="print-code">
-
-                                                {
-                                                    member.memberCode ||
-                                                    `MEM-${String(
-                                                        member.memberId
-                                                    ).padStart(
-                                                        4,
-                                                        "0"
-                                                    )}`
-                                                }
-
-                                            </span>
-
-                                        </td>
-
-
-                                        {/* GENDER */}
-
-                                        <td>
-
-                                            <span className="print-gender">
-
-                                                {
-                                                    member.gender ||
-                                                    "—"
-                                                }
-
-                                            </span>
-
-                                        </td>
-
-
-                                        {/* CONTACT */}
-
-                                        <td className="print-contact">
-
-                                            {
-                                                member.contactNumber ||
-                                                "—"
-                                            }
-
-                                        </td>
-
-
-                                        {/* MINISTRY */}
-
-                                        <td>
-
-                                            <span className="print-ministry">
-
-                                                {
-                                                    member.ministry ||
-                                                    "General"
-                                                }
-
-                                            </span>
-
-                                        </td>
-
-
-                                        {/* STATUS */}
-
-                                        <td>
-
-                                            <span
-                                                className={
-                                                    `print-status ${status.toLowerCase()}`
-                                                }
-                                            >
-
-                                                <i>
-                                                    ●
-                                                </i>
-
-                                                {status}
-
-                                            </span>
-
-                                        </td>
-
-
-                                        {/* DATE */}
-
-                                        <td className="print-date">
-
-                                            {
-                                                formatDate(
-                                                    member.dateJoined
-                                                )
-                                            }
-
-                                        </td>
-
-                                    </tr>
-
-                                );
-
-                            }
-                        )}
-
-                    </tbody>
-
-                </table>
-
-            </section>
-
-
-            {/* =================================================
-                VERIFICATION
-            ================================================= */}
-
-            <section className="membership-print-verification">
-
-                <div>
-
-                    <span>
-                        RECORD STATUS
-                    </span>
-
-                    <strong>
-                        OFFICIAL
-                    </strong>
-
-                </div>
-
-                <div>
-
-                    <span>
-                        TOTAL RECORDS
-                    </span>
-
-                    <strong>
-                        {totalMembers}
-                    </strong>
-
-                </div>
-
-                <div>
-
-                    <span>
-                        ACTIVE RECORDS
-                    </span>
-
-                    <strong>
-                        {activeMembers}
-                    </strong>
-
-                </div>
-
-                <div>
-
-                    <span>
-                        REPORT DATE
-                    </span>
-
-                    <strong>
-                        {formatShortDate()}
-                    </strong>
-
-                </div>
-
-            </section>
-
-
-            {/* =================================================
-                SIGNATURES
-            ================================================= */}
-
-            <section className="membership-print-signatures">
-
-                <div className="signature-block">
-
-                    <div className="signature-line" />
-
-                    <strong>
-                        CHURCH ADMINISTRATOR
-                    </strong>
-
-                    <span>
-                        Authorized Representative
-                    </span>
-
-                </div>
-
-                <div className="signature-block">
-
-                    <div className="signature-line" />
-
-                    <strong>
-                        SENIOR PASTOR
-                    </strong>
-
-                    <span>
-                        Church Leadership
-                    </span>
-
-                </div>
-
-                <div className="signature-block">
-
-                    <div className="signature-line" />
-
-                    <strong>
-                        DATE VERIFIED
-                    </strong>
-
-                    <span>
-                        Official Record Verification
-                    </span>
-
-                </div>
-
-            </section>
-
-
-            {/* =================================================
-                FOOTER
-            ================================================= */}
-
-            <footer className="membership-print-footer">
-
-                <div>
-
-                    <strong>
-                        EPIC
-                    </strong>
-
-                    <span>
-                        Engaging People Into Christ
-                    </span>
-
-                </div>
-
-                <div>
-
-                    <span>
-                        Confidential Church Record
-                    </span>
-
-                    <strong>
-                        MEMBERSHIP DIRECTORY
-                    </strong>
-
-                </div>
-
-            </footer>
-
-        </div>
-    );
-};
-
 
 /* =========================================================
    HELPERS
 ========================================================= */
 
+const normalizeStatus = (
+    status?: string
+): string => {
+
+    return status?.trim().toUpperCase() === "INACTIVE"
+        ? "INACTIVE"
+        : "ACTIVE";
+};
+
 const getFullName = (
     member: Member
 ): string => {
 
-    const parts = [
+    return [
         member.firstName,
         member.middleName,
         member.lastName,
         member.suffix
     ]
-        .filter(
-            value =>
-                Boolean(
-                    value &&
-                    value.trim()
-                )
-        )
-        .map(
-            value =>
-                value!.trim()
-        );
-
-    return (
-        parts.join(" ") ||
-        member.memberCode ||
-        "Unnamed Member"
-    );
+        .filter(Boolean)
+        .join(" ")
+        .trim()
+        || member.memberCode
+        || "Unnamed Member";
 };
 
+const formatDate = (
+    value?: string
+): string => {
 
-/* =========================================================
-   INITIALS
-========================================================= */
+    if (!value) {
+        return "—";
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return value;
+    }
+
+    return date.toLocaleDateString(
+        "en-US",
+        {
+            month: "short",
+            day: "numeric",
+            year: "numeric"
+        }
+    );
+};
 
 const getInitials = (
     name: string
 ): string => {
 
-    const parts =
-        name
-            .trim()
-            .split(/\s+/)
-            .filter(Boolean);
+    const parts = name
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
 
     if (!parts.length) {
         return "?";
@@ -737,93 +109,571 @@ const getInitials = (
     ).toUpperCase();
 };
 
-
 /* =========================================================
-   STATUS
+   COMPONENT
 ========================================================= */
 
-const normalizeStatus = (
-    status?: string
-): string => {
+const MembershipDirectoryPrint:
+    React.FC<MembershipDirectoryPrintProps> = ({
+        members,
+        generatedAt
+    }) => {
 
-    return (
-        status
-            ?.trim()
-            .toUpperCase() === "INACTIVE"
-    )
-        ? "INACTIVE"
-        : "ACTIVE";
-};
+        const total = members.length;
 
+        const active = members.filter(
+            member =>
+                normalizeStatus(member.status) === "ACTIVE"
+        ).length;
 
-/* =========================================================
-   DATE
-========================================================= */
+        const inactive = members.filter(
+            member =>
+                normalizeStatus(member.status) === "INACTIVE"
+        ).length;
 
-const formatDate = (
-    value?: string
-): string => {
+        const male = members.filter(
+            member =>
+                member.gender
+                    ?.trim()
+                    .toUpperCase() === "MALE"
+        ).length;
 
-    if (!value) {
-        return "—";
-    }
+        const female = members.filter(
+            member =>
+                member.gender
+                    ?.trim()
+                    .toUpperCase() === "FEMALE"
+        ).length;
 
-    const date =
-        new Date(value);
+        const ministries = new Set(
+            members
+                .map(member =>
+                    member.ministry?.trim()
+                )
+                .filter(Boolean)
+        ).size;
 
-    if (
-        Number.isNaN(
-            date.getTime()
-        )
-    ) {
-        return value;
-    }
+        const today = new Date().toLocaleDateString(
+            "en-US",
+            {
+                month: "long",
+                day: "numeric",
+                year: "numeric"
+            }
+        );
 
-    return date.toLocaleDateString(
-        "en-US",
-        {
-            month: "short",
-            day: "numeric",
-            year: "numeric"
-        }
-    );
-};
+        return (
 
+            <div className="membership-print-document">
 
-/* =========================================================
-   GENERATED DATE
-========================================================= */
+                {/* =================================================
+                    TOP ACCENT
+                ================================================= */}
 
-const formatGeneratedDate = (): string => {
+                <div className="print-top-accent" />
 
-    return new Date().toLocaleString(
-        "en-US",
-        {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-            hour: "numeric",
-            minute: "2-digit"
-        }
-    );
-};
+                {/* =================================================
+                    BRAND HEADER
+                ================================================= */}
 
+                <header className="print-header">
 
-/* =========================================================
-   SHORT DATE
-========================================================= */
+                    <div className="print-brand">
 
-const formatShortDate = (): string => {
+                        <div className="print-brand-mark">
+                            EPIC
+                        </div>
 
-    return new Date().toLocaleDateString(
-        "en-US",
-        {
-            month: "short",
-            day: "numeric",
-            year: "numeric"
-        }
-    );
-};
+                        <div>
 
+                            <div className="print-brand-name">
+                                EPIC CHURCH
+                            </div>
+
+                            <div className="print-brand-system">
+                                CHURCH MANAGEMENT SYSTEM
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div className="print-header-right">
+
+                        <div className="print-document-type">
+                            OFFICIAL REPORT
+                        </div>
+
+                        <div className="print-document-code">
+                            CMS / MEMBERS / 001
+                        </div>
+
+                    </div>
+
+                </header>
+
+                {/* =================================================
+                    REPORT TITLE
+                ================================================= */}
+
+                <section className="print-title-section">
+
+                    <div className="print-title-overline">
+                        MEMBERSHIP & COMMUNITY RECORDS
+                    </div>
+
+                    <h1>
+                        Membership Directory
+                    </h1>
+
+                    <p>
+                        Official listing of registered church members
+                        maintained through the EPIC Church Management System.
+                    </p>
+
+                    <div className="print-title-meta">
+
+                        <div>
+                            <span>REPORT PERIOD</span>
+                            <strong>Current Membership</strong>
+                        </div>
+
+                        <div>
+                            <span>GENERATED</span>
+                            <strong>{generatedAt}</strong>
+                        </div>
+
+                        <div>
+                            <span>RECORDS</span>
+                            <strong>{total}</strong>
+                        </div>
+
+                    </div>
+
+                </section>
+
+                {/* =================================================
+                    SUMMARY
+                ================================================= */}
+
+                <section className="print-summary">
+
+                    <div className="print-summary-card primary">
+
+                        <span className="summary-label">
+                            TOTAL MEMBERS
+                        </span>
+
+                        <strong>
+                            {total}
+                        </strong>
+
+                        <small>
+                            Registered records
+                        </small>
+
+                    </div>
+
+                    <div className="print-summary-card">
+
+                        <span className="summary-label">
+                            ACTIVE
+                        </span>
+
+                        <strong>
+                            {active}
+                        </strong>
+
+                        <small>
+                            Active membership
+                        </small>
+
+                    </div>
+
+                    <div className="print-summary-card">
+
+                        <span className="summary-label">
+                            INACTIVE
+                        </span>
+
+                        <strong>
+                            {inactive}
+                        </strong>
+
+                        <small>
+                            Inactive membership
+                        </small>
+
+                    </div>
+
+                    <div className="print-summary-card">
+
+                        <span className="summary-label">
+                            FEMALE
+                        </span>
+
+                        <strong>
+                            {female}
+                        </strong>
+
+                        <small>
+                            Female members
+                        </small>
+
+                    </div>
+
+                    <div className="print-summary-card">
+
+                        <span className="summary-label">
+                            MALE
+                        </span>
+
+                        <strong>
+                            {male}
+                        </strong>
+
+                        <small>
+                            Male members
+                        </small>
+
+                    </div>
+
+                    <div className="print-summary-card">
+
+                        <span className="summary-label">
+                            MINISTRIES
+                        </span>
+
+                        <strong>
+                            {ministries}
+                        </strong>
+
+                        <small>
+                            Represented groups
+                        </small>
+
+                    </div>
+
+                </section>
+
+                {/* =================================================
+                    DIRECTORY SECTION
+                ================================================= */}
+
+                <section className="print-directory-section">
+
+                    <div className="print-section-heading">
+
+                        <div>
+
+                            <span>
+                                MEMBER RECORDS
+                            </span>
+
+                            <h2>
+                                Church Membership Listing
+                            </h2>
+
+                        </div>
+
+                        <div className="print-section-count">
+                            {total} RECORDS
+                        </div>
+
+                    </div>
+
+                    <div className="print-section-line" />
+
+                    {/* =================================================
+                        TABLE
+                    ================================================= */}
+
+                    <table className="print-members-table">
+
+                        <thead>
+
+                            <tr>
+
+                                <th className="col-no">
+                                    #
+                                </th>
+
+                                <th className="col-member">
+                                    MEMBER
+                                </th>
+
+                                <th className="col-code">
+                                    MEMBER CODE
+                                </th>
+
+                                <th className="col-gender">
+                                    GENDER
+                                </th>
+
+                                <th className="col-contact">
+                                    CONTACT
+                                </th>
+
+                                <th className="col-ministry">
+                                    MINISTRY
+                                </th>
+
+                                <th className="col-status">
+                                    STATUS
+                                </th>
+
+                                <th className="col-date">
+                                    DATE JOINED
+                                </th>
+
+                            </tr>
+
+                        </thead>
+
+                        <tbody>
+
+                            {members.map(
+                                (member, index) => {
+
+                                    const name =
+                                        getFullName(member);
+
+                                    const status =
+                                        normalizeStatus(
+                                            member.status
+                                        );
+
+                                    return (
+
+                                        <tr
+                                            key={
+                                                member.memberId
+                                            }
+                                        >
+
+                                            <td className="member-number">
+                                                {String(
+                                                    index + 1
+                                                ).padStart(
+                                                    2,
+                                                    "0"
+                                                )}
+                                            </td>
+
+                                            <td>
+
+                                                <div className="print-member">
+
+                                                    <div className="print-avatar">
+                                                        {getInitials(name)}
+                                                    </div>
+
+                                                    <div className="print-member-info">
+
+                                                        <strong>
+                                                            {name}
+                                                        </strong>
+
+                                                        <span>
+                                                            {member.email ||
+                                                                "No email registered"}
+                                                        </span>
+
+                                                    </div>
+
+                                                </div>
+
+                                            </td>
+
+                                            <td>
+
+                                                <span className="print-member-code">
+
+                                                    {member.memberCode ||
+                                                        `MEM-${String(
+                                                            member.memberId
+                                                        ).padStart(
+                                                            4,
+                                                            "0"
+                                                        )}`}
+
+                                                </span>
+
+                                            </td>
+
+                                            <td>
+                                                {member.gender || "—"}
+                                            </td>
+
+                                            <td>
+                                                {member.contactNumber || "—"}
+                                            </td>
+
+                                            <td>
+
+                                                <span className="print-ministry">
+
+                                                    {member.ministry ||
+                                                        "General"}
+
+                                                </span>
+
+                                            </td>
+
+                                            <td>
+
+                                                <span
+                                                    className={
+                                                        status === "ACTIVE"
+                                                            ? "print-status active"
+                                                            : "print-status inactive"
+                                                    }
+                                                >
+
+                                                    <i />
+
+                                                    {status}
+
+                                                </span>
+
+                                            </td>
+
+                                            <td>
+                                                {formatDate(
+                                                    member.dateJoined
+                                                )}
+                                            </td>
+
+                                        </tr>
+
+                                    );
+                                }
+                            )}
+
+                        </tbody>
+
+                    </table>
+
+                </section>
+
+                {/* =================================================
+                    CERTIFICATION
+                ================================================= */}
+
+                <section className="print-certification">
+
+                    <div className="certification-icon">
+                        ✓
+                    </div>
+
+                    <div>
+
+                        <span>
+                            REPORT CERTIFICATION
+                        </span>
+
+                        <p>
+                            This report contains membership information
+                            generated from the EPIC Church Management System.
+                            The information presented is based on the member
+                            records available at the time this report was
+                            generated.
+                        </p>
+
+                    </div>
+
+                </section>
+
+                {/* =================================================
+                    SIGNATURE AREA
+                ================================================= */}
+
+                <section className="print-signatures">
+
+                    <div className="signature-block">
+
+                        <div className="signature-line" />
+
+                        <strong>
+                            Prepared By
+                        </strong>
+
+                        <span>
+                            EPIC Church Management System
+                        </span>
+
+                    </div>
+
+                    <div className="signature-block">
+
+                        <div className="signature-line" />
+
+                        <strong>
+                            Verified By
+                        </strong>
+
+                        <span>
+                            Church Administrator
+                        </span>
+
+                    </div>
+
+                    <div className="signature-block">
+
+                        <div className="signature-line" />
+
+                        <strong>
+                            Approved By
+                        </strong>
+
+                        <span>
+                            Senior Pastor / Authorized Officer
+                        </span>
+
+                    </div>
+
+                </section>
+
+                {/* =================================================
+                    FOOTER
+                ================================================= */}
+
+                <footer className="print-footer">
+
+                    <div>
+
+                        <strong>
+                            EPIC CHURCH
+                        </strong>
+
+                        <span>
+                            Engaging People Into Christ
+                        </span>
+
+                    </div>
+
+                    <div className="print-footer-center">
+                        CONFIDENTIAL • CHURCH ADMINISTRATION
+                    </div>
+
+                    <div className="print-footer-right">
+
+                        <span>
+                            Generated
+                        </span>
+
+                        <strong>
+                            {today}
+                        </strong>
+
+                    </div>
+
+                </footer>
+
+                <div className="print-footer-bar" />
+
+            </div>
+        );
+    };
 
 export default MembershipDirectoryPrint;

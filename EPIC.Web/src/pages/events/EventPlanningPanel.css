@@ -1,0 +1,1445 @@
+﻿/* =========================================================
+   EPIC EVENT MANAGEMENT
+   EVENT PLANNING PANEL
+   FINAL REFACTORED VERSION
+   FIXED:
+   - Tasks Complete visibility
+   - Preparation alignment
+   - Equal statistic card heights
+   - Responsive behavior
+   ========================================================= */
+
+
+/* =========================================================
+   BASE
+   ========================================================= */
+
+.event-planning-panel,
+.event-planning-panel * {
+    box-sizing: border-box;
+}
+
+.event-planning-panel {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+
+    color: #172033;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.planning-header {
+    width: 100%;
+
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+
+    gap: 20px;
+    margin-bottom: 18px;
+}
+
+.planning-header > div:first-child {
+    min-width: 0;
+}
+
+.planning-eyebrow {
+    margin-bottom: 4px;
+
+    color: #7a8493;
+
+    font-size: 10px;
+    font-weight: 700;
+
+    letter-spacing: 0.08em;
+    line-height: 1.2;
+
+    text-transform: uppercase;
+}
+
+.planning-header h2 {
+    margin: 0;
+
+    color: #1f2937;
+
+    font-size: 22px;
+    font-weight: 700;
+
+    line-height: 1.25;
+    letter-spacing: -0.25px;
+}
+
+.planning-header p {
+    max-width: 650px;
+
+    margin: 5px 0 0;
+
+    color: #7a8493;
+
+    font-size: 13px;
+    font-weight: 400;
+
+    line-height: 1.5;
+}
+
+.planning-header-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+
+    gap: 8px;
+
+    flex-shrink: 0;
+}
+
+
+/* =========================================================
+   BUTTONS
+   ========================================================= */
+
+.planning-primary-btn,
+.planning-refresh-btn,
+.secondary-btn,
+.icon-action {
+    border: 0;
+
+    font-family: inherit;
+
+    cursor: pointer;
+
+    transition:
+        transform 0.18s ease,
+        background 0.18s ease,
+        border-color 0.18s ease,
+        box-shadow 0.18s ease,
+        color 0.18s ease;
+}
+
+
+/* =========================================================
+   PRIMARY BUTTON
+   ========================================================= */
+
+.planning-primary-btn {
+    min-height: 38px;
+
+    padding: 0 15px;
+
+    border-radius: 9px;
+
+    background: linear-gradient(
+        135deg,
+        #2563eb,
+        #4f46e5
+    );
+
+    color: #ffffff;
+
+    font-size: 12px;
+    font-weight: 600;
+
+    box-shadow:
+        0 5px 14px rgba(37, 99, 235, 0.16);
+}
+
+.planning-primary-btn:hover {
+    transform: translateY(-1px);
+
+    box-shadow:
+        0 8px 18px rgba(37, 99, 235, 0.20);
+}
+
+.planning-primary-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+
+/* =========================================================
+   REFRESH BUTTON
+   ========================================================= */
+
+.planning-refresh-btn {
+    min-height: 38px;
+
+    padding: 0 13px;
+
+    border: 1px solid #e1e6ec;
+    border-radius: 9px;
+
+    background: #ffffff;
+
+    color: #475569;
+
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.planning-refresh-btn:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+}
+
+
+/* =========================================================
+   ERROR
+   ========================================================= */
+
+.planning-error {
+    width: 100%;
+
+    margin-bottom: 14px;
+    padding: 10px 13px;
+
+    border: 1px solid #fecdd3;
+    border-radius: 9px;
+
+    background: #fff1f2;
+
+    color: #be123c;
+
+    font-size: 12px;
+    font-weight: 600;
+}
+
+
+/* =========================================================
+   STATISTICS GRID
+   ========================================================= */
+
+.planning-stat-grid {
+    width: 100%;
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(4, minmax(0, 1fr));
+
+    gap: 14px;
+
+    margin: 18px 0;
+
+    align-items: stretch;
+}
+
+
+/* =========================================================
+   STAT CARD
+   EXACT SAME HEIGHT
+   ========================================================= */
+
+.planning-stat-card {
+    width: 100%;
+    min-width: 0;
+
+    height: 76px;
+    min-height: 76px;
+
+    display: flex;
+    align-items: center;
+
+    padding: 12px 15px;
+
+    border: 1px solid #e8ebf0;
+    border-radius: 12px;
+
+    background: #ffffff;
+
+    box-shadow:
+        0 2px 8px rgba(15, 23, 42, 0.04);
+
+    overflow: hidden;
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.planning-stat-card:hover {
+    transform: translateY(-1px);
+
+    box-shadow:
+        0 5px 14px rgba(15, 23, 42, 0.07);
+}
+
+
+/* =========================================================
+   NORMAL STAT CARD
+   ========================================================= */
+
+.planning-stat-card:not(.progress-card) {
+    gap: 11px;
+}
+
+
+/* =========================================================
+   NORMAL STAT ICON
+   ========================================================= */
+
+.planning-stat-card:not(.progress-card) .stat-icon {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+
+    flex: 0 0 34px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 9px;
+
+    background: #f5f7fa;
+
+    font-size: 15px;
+    line-height: 1;
+}
+
+
+/* =========================================================
+   NORMAL STAT CONTENT
+   ========================================================= */
+
+.planning-stat-card:not(.progress-card) > div:last-child {
+    min-width: 0;
+
+    display: flex;
+    flex-direction: column;
+
+    justify-content: center;
+
+    gap: 2px;
+}
+
+
+/* =========================================================
+   STAT LABEL
+   ========================================================= */
+
+.planning-stat-card .stat-label {
+    display: block;
+
+    margin: 0;
+
+    color: #7a8493;
+
+    font-size: 10px;
+    font-weight: 600;
+
+    line-height: 1.2;
+
+    white-space: nowrap;
+}
+
+
+/* =========================================================
+   STAT VALUE
+   ========================================================= */
+
+.planning-stat-card:not(.progress-card) strong {
+    display: block;
+
+    margin: 0;
+
+    color: #1f2937;
+
+    font-size: 19px;
+    font-weight: 700;
+
+    line-height: 1.1;
+
+    white-space: nowrap;
+}
+
+
+/* =========================================================
+   PROGRESS / PREPARATION CARD
+   ========================================================= */
+
+.planning-stat-card.progress-card {
+    height: 76px;
+    min-height: 76px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 12px 15px;
+
+    overflow: hidden;
+}
+
+
+/* =========================================================
+   PROGRESS CARD CONTENT
+   IMPORTANT:
+   This wrapper must NOT inherit stat-card rules.
+   ========================================================= */
+
+.planning-stat-card.progress-card .progress-card-content {
+    width: 100%;
+    min-width: 0;
+
+    height: auto;
+
+    display: flex;
+    flex-direction: column;
+
+    justify-content: center;
+
+    gap: 0;
+
+    overflow: visible;
+}
+
+
+/* =========================================================
+   TASKS COMPLETE / PREPARATION HEADER
+   ========================================================= */
+
+.planning-stat-card.progress-card .progress-stat-header {
+    width: 100%;
+    min-width: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 10px;
+
+    margin: 0 0 7px;
+
+    overflow: visible;
+}
+
+
+/* =========================================================
+   TASKS COMPLETE LABEL
+   ========================================================= */
+
+.planning-stat-card.progress-card .progress-stat-header span {
+    display: block;
+
+    flex: 1 1 auto;
+
+    min-width: 0;
+
+    margin: 0;
+
+    color: #7a8493;
+
+    font-size: 10px;
+    font-weight: 600;
+
+    line-height: 1.2;
+
+    white-space: nowrap;
+}
+
+
+/* =========================================================
+   TASKS COMPLETE VALUE
+   ========================================================= */
+
+.planning-stat-card.progress-card .progress-stat-header strong {
+    display: block;
+
+    flex: 0 0 auto;
+
+    min-width: max-content;
+
+    margin: 0;
+
+    padding: 0;
+
+    color: #1f2937;
+
+    font-size: 17px;
+    font-weight: 700;
+
+    line-height: 1;
+
+    white-space: nowrap;
+
+    visibility: visible;
+    opacity: 1;
+}
+
+
+/* =========================================================
+   PROGRESS BAR
+   ========================================================= */
+
+.planning-stat-card.progress-card .planning-progress {
+    width: 100%;
+    height: 5px;
+
+    flex-shrink: 0;
+
+    overflow: hidden;
+
+    border-radius: 999px;
+
+    background: #edf0f4;
+}
+
+
+/* =========================================================
+   PROGRESS FILL
+   ========================================================= */
+
+.planning-stat-card.progress-card .planning-progress-fill {
+    width: 0;
+    height: 100%;
+
+    border-radius: inherit;
+
+    background: #2563eb;
+
+    transition:
+        width 0.3s ease;
+}
+
+
+/* =========================================================
+   TABS
+   ========================================================= */
+
+.planning-tabs {
+    width: 100%;
+
+    min-height: 48px;
+
+    display: flex;
+    align-items: stretch;
+
+    gap: 4px;
+
+    padding: 4px;
+    margin: 0 0 14px;
+
+    border: 1px solid #e2e8f0;
+    border-radius: 11px;
+
+    background: #f8fafc;
+}
+
+.planning-tab {
+    flex: 1;
+
+    min-width: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: 6px;
+
+    padding: 0 12px;
+
+    border: 0;
+    border-radius: 8px;
+
+    background: transparent;
+
+    color: #64748b;
+
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition:
+        background 0.18s ease,
+        color 0.18s ease,
+        box-shadow 0.18s ease;
+}
+
+.planning-tab span {
+    font-size: 14px;
+}
+
+.planning-tab b {
+    min-width: 21px;
+    height: 19px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 0 6px;
+
+    border-radius: 999px;
+
+    background: #e2e8f0;
+
+    color: #475569;
+
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.planning-tab:hover {
+    color: #2563eb;
+}
+
+.planning-tab.active {
+    background: #ffffff;
+
+    color: #1d4ed8;
+
+    box-shadow:
+        0 2px 6px rgba(15, 23, 42, 0.06);
+}
+
+.planning-tab.active b {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+
+/* =========================================================
+   CONTENT
+   ========================================================= */
+
+.planning-content {
+    width: 100%;
+    min-width: 0;
+
+    border: 1px solid #e5eaf0;
+    border-radius: 12px;
+
+    background: #ffffff;
+
+    overflow: hidden;
+}
+
+.planning-loading {
+    min-height: 170px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    color: #7a8493;
+
+    font-size: 12px;
+}
+
+
+/* =========================================================
+   EMPTY STATE
+   ========================================================= */
+
+.planning-empty {
+    min-height: 270px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    flex-direction: column;
+
+    padding: 35px 20px;
+
+    text-align: center;
+}
+
+.empty-icon {
+    width: 52px;
+    height: 52px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    margin-bottom: 12px;
+
+    border-radius: 14px;
+
+    background: #f5f7fa;
+
+    font-size: 23px;
+}
+
+.planning-empty h3 {
+    margin: 5px 0;
+
+    color: #1f2937;
+
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.planning-empty p {
+    max-width: 480px;
+
+    margin: 0 auto 16px;
+
+    color: #7a8493;
+
+    font-size: 12px;
+
+    line-height: 1.55;
+}
+
+
+/* =========================================================
+   LIST
+   ========================================================= */
+
+.planning-list,
+.planning-checklist {
+    width: 100%;
+}
+
+.planning-item,
+.checklist-item {
+    width: 100%;
+    min-width: 0;
+
+    display: flex;
+    align-items: center;
+
+    gap: 14px;
+
+    padding: 15px 17px;
+
+    border-bottom: 1px solid #edf1f5;
+}
+
+.planning-item:last-child,
+.checklist-item:last-child {
+    border-bottom: 0;
+}
+
+
+/* =========================================================
+   MAIN CONTENT
+   ========================================================= */
+
+.item-main,
+.checklist-main {
+    flex: 1;
+
+    min-width: 0;
+}
+
+.item-title-row {
+    min-width: 0;
+
+    display: flex;
+    align-items: center;
+
+    flex-wrap: wrap;
+
+    gap: 6px;
+}
+
+.item-title-row h3,
+.checklist-main h3 {
+    min-width: 0;
+
+    margin: 0;
+
+    color: #1f2937;
+
+    font-size: 14px;
+    font-weight: 650;
+
+    line-height: 1.35;
+}
+
+.item-main p,
+.checklist-main p {
+    margin: 5px 0 0;
+
+    color: #7a8493;
+
+    font-size: 12px;
+
+    line-height: 1.5;
+}
+
+
+/* =========================================================
+   META
+   ========================================================= */
+
+.item-meta {
+    display: flex;
+    align-items: center;
+
+    flex-wrap: wrap;
+
+    gap: 6px 13px;
+
+    margin-top: 8px;
+}
+
+.item-meta span {
+    display: inline-flex;
+    align-items: center;
+
+    gap: 3px;
+
+    color: #7a8493;
+
+    font-size: 10px;
+    font-weight: 500;
+}
+
+
+/* =========================================================
+   PRIORITY
+   ========================================================= */
+
+.priority-badge {
+    min-height: 19px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 0 7px;
+
+    border-radius: 999px;
+
+    font-size: 8px;
+    font-weight: 800;
+
+    letter-spacing: 0.04em;
+
+    text-transform: uppercase;
+}
+
+.priority-badge.low {
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+.priority-badge.normal {
+    background: #eff6ff;
+    color: #2563eb;
+}
+
+.priority-badge.high {
+    background: #fff7ed;
+    color: #c2410c;
+}
+
+.priority-badge.urgent {
+    background: #fff1f2;
+    color: #be123c;
+}
+
+
+/* =========================================================
+   ACTIONS
+   ========================================================= */
+
+.item-actions {
+    flex-shrink: 0;
+
+    display: flex;
+    align-items: center;
+
+    gap: 5px;
+}
+
+
+/* =========================================================
+   STATUS SELECT
+   ========================================================= */
+
+.status-select {
+    min-width: 116px;
+    height: 33px;
+
+    padding: 0 26px 0 9px;
+
+    border: 1px solid #dbe2ea;
+    border-radius: 8px;
+
+    outline: none;
+
+    background: #ffffff;
+
+    color: #334155;
+
+    font-family: inherit;
+
+    font-size: 10px;
+    font-weight: 600;
+
+    cursor: pointer;
+}
+
+.status-select:focus {
+    border-color: #93c5fd;
+
+    box-shadow:
+        0 0 0 3px rgba(59, 130, 246, 0.08);
+}
+
+.status-select.pending {
+    color: #92400e;
+}
+
+.status-select.in_progress {
+    color: #1d4ed8;
+}
+
+.status-select.ready,
+.status-select.completed {
+    color: #15803d;
+}
+
+.status-select.cancelled,
+.status-select.skipped {
+    color: #be123c;
+}
+
+
+/* =========================================================
+   ICON ACTIONS
+   ========================================================= */
+
+.icon-action {
+    width: 33px;
+    height: 33px;
+    min-width: 33px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+
+    background: #f8fafc;
+
+    color: #475569;
+
+    font-size: 13px;
+}
+
+.icon-action:hover {
+    background: #eff6ff;
+
+    border-color: #bfdbfe;
+
+    color: #2563eb;
+}
+
+.icon-action.danger:hover {
+    background: #fff1f2;
+
+    border-color: #fecdd3;
+
+    color: #e11d48;
+}
+
+
+/* =========================================================
+   CHECKLIST
+   ========================================================= */
+
+.checklist-item.completed {
+    background: #f8fafc;
+}
+
+.checklist-item.completed .checklist-main h3 {
+    color: #64748b;
+
+    text-decoration: line-through;
+}
+
+
+/* =========================================================
+   CHECK BUTTON
+   ========================================================= */
+
+.check-button {
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: 2px solid #cbd5e1;
+    border-radius: 7px;
+
+    background: #ffffff;
+
+    color: #ffffff;
+
+    font-size: 12px;
+    font-weight: 900;
+
+    cursor: pointer;
+
+    transition:
+        background 0.18s ease,
+        border-color 0.18s ease;
+}
+
+.check-button:hover {
+    border-color: #2563eb;
+}
+
+.checklist-item.completed .check-button {
+    border-color: #22c55e;
+
+    background: #22c55e;
+}
+
+
+/* =========================================================
+   MODAL OVERLAY
+   ========================================================= */
+
+.planning-modal-overlay {
+    position: fixed;
+
+    inset: 0;
+
+    z-index: 9999;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 20px;
+
+    background: rgba(15, 23, 42, 0.55);
+
+    backdrop-filter: blur(6px);
+
+    overflow-y: auto;
+}
+
+
+/* =========================================================
+   MODAL
+   ========================================================= */
+
+.planning-modal {
+    width: min(700px, 100%);
+
+    max-height: calc(100vh - 40px);
+
+    display: flex;
+    flex-direction: column;
+
+    overflow: hidden;
+
+    border-radius: 15px;
+
+    background: #ffffff;
+
+    box-shadow:
+        0 25px 70px rgba(15, 23, 42, 0.22);
+}
+
+
+/* =========================================================
+   MODAL HEADER
+   ========================================================= */
+
+.modal-header {
+    min-height: 68px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 15px;
+
+    padding: 15px 19px;
+
+    border-bottom: 1px solid #edf1f5;
+}
+
+.modal-header span {
+    display: block;
+
+    margin-bottom: 3px;
+
+    color: #7a8493;
+
+    font-size: 9px;
+    font-weight: 700;
+
+    letter-spacing: 0.1em;
+}
+
+.modal-header h2 {
+    margin: 0;
+
+    color: #1f2937;
+
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.modal-header > button {
+    width: 32px;
+    height: 32px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    flex-shrink: 0;
+
+    border: 0;
+    border-radius: 8px;
+
+    background: #f1f5f9;
+
+    color: #475569;
+
+    font-size: 21px;
+
+    cursor: pointer;
+}
+
+.modal-header > button:hover {
+    background: #e2e8f0;
+}
+
+
+/* =========================================================
+   MODAL BODY
+   ========================================================= */
+
+.modal-body {
+    padding: 19px;
+
+    overflow-y: auto;
+}
+
+.form-group {
+    min-width: 0;
+}
+
+.form-group.full {
+    width: 100%;
+
+    margin-bottom: 14px;
+}
+
+.form-row {
+    width: 100%;
+
+    display: grid;
+
+    grid-template-columns:
+        minmax(0, 1fr)
+        minmax(0, 1fr);
+
+    gap: 13px;
+
+    margin-bottom: 14px;
+}
+
+.form-group label {
+    display: block;
+
+    margin-bottom: 5px;
+
+    color: #334155;
+
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    min-width: 0;
+
+    border: 1px solid #dbe2ea;
+    border-radius: 8px;
+
+    outline: none;
+
+    background: #ffffff;
+
+    color: #172033;
+
+    font-family: inherit;
+
+    font-size: 12px;
+
+    transition:
+        border-color 0.18s ease,
+        box-shadow 0.18s ease;
+}
+
+.form-group input,
+.form-group select {
+    height: 39px;
+
+    padding: 0 10px;
+}
+
+.form-group textarea {
+    min-height: 78px;
+
+    padding: 9px 10px;
+
+    resize: vertical;
+
+    line-height: 1.5;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    border-color: #93c5fd;
+
+    box-shadow:
+        0 0 0 3px rgba(59, 130, 246, 0.08);
+}
+
+
+/* =========================================================
+   MODAL FOOTER
+   ========================================================= */
+
+.modal-footer {
+    min-height: 62px;
+
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+
+    gap: 8px;
+
+    padding: 12px 19px;
+
+    border-top: 1px solid #edf1f5;
+
+    background: #fafbfc;
+}
+
+
+/* =========================================================
+   SECONDARY BUTTON
+   ========================================================= */
+
+.secondary-btn {
+    min-height: 37px;
+
+    padding: 0 15px;
+
+    border: 1px solid #dbe2ea;
+    border-radius: 8px;
+
+    background: #ffffff;
+
+    color: #475569;
+
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.secondary-btn:hover {
+    background: #f8fafc;
+}
+
+
+/* =========================================================
+   LARGE TABLET
+   ========================================================= */
+
+@media (max-width: 1100px) {
+
+    .planning-stat-grid {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+
+}
+
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (max-width: 900px) {
+
+    .planning-header {
+        align-items: flex-start;
+
+        flex-direction: column;
+    }
+
+    .planning-header-actions {
+        width: 100%;
+
+        justify-content: flex-start;
+    }
+
+    .planning-item,
+    .checklist-item {
+        align-items: flex-start;
+
+        flex-wrap: wrap;
+    }
+
+    .item-actions {
+        width: 100%;
+
+        justify-content: flex-end;
+    }
+
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+    .planning-stat-grid {
+        grid-template-columns: 1fr;
+
+        gap: 9px;
+    }
+
+    .planning-tabs {
+        min-height: auto;
+
+        flex-direction: column;
+    }
+
+    .planning-tab {
+        min-height: 42px;
+
+        flex: none;
+    }
+
+    .planning-item,
+    .checklist-item {
+        padding: 13px;
+    }
+
+    .item-actions {
+        justify-content: flex-start;
+
+        flex-wrap: wrap;
+    }
+
+    .status-select {
+        flex: 1;
+
+        min-width: 130px;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+
+        gap: 0;
+    }
+
+    .planning-modal-overlay {
+        padding: 10px;
+    }
+
+    .planning-modal {
+        max-height: calc(100vh - 20px);
+
+        border-radius: 13px;
+    }
+
+    .modal-header,
+    .modal-body,
+    .modal-footer {
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+
+}
+
+
+/* =========================================================
+   SMALL MOBILE
+   ========================================================= */
+
+@media (max-width: 480px) {
+
+    .planning-header h2 {
+        font-size: 20px;
+    }
+
+    .planning-header-actions {
+        width: 100%;
+
+        flex-direction: column;
+
+        align-items: stretch;
+    }
+
+    .planning-header-actions button {
+        width: 100%;
+    }
+
+    .planning-stat-card,
+    .planning-stat-card.progress-card {
+        height: 68px;
+        min-height: 68px;
+
+        padding: 10px 12px;
+    }
+
+    .planning-stat-card:not(.progress-card) .stat-icon {
+        width: 30px;
+        height: 30px;
+
+        min-width: 30px;
+
+        flex-basis: 30px;
+
+        font-size: 14px;
+    }
+
+    .planning-stat-card:not(.progress-card) strong {
+        font-size: 17px;
+    }
+
+    .progress-stat-header strong {
+        font-size: 16px;
+    }
+
+    .planning-empty {
+        padding: 30px 16px;
+    }
+
+    .modal-footer {
+        flex-direction: column-reverse;
+
+        align-items: stretch;
+    }
+
+    .modal-footer button {
+        width: 100%;
+    }
+
+}

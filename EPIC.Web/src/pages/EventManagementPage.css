@@ -1,0 +1,2054 @@
+﻿/* =========================================================
+   EPIC EVENT MANAGEMENT
+   MODERN PROFESSIONAL UI
+   EVENT MANAGEMENT + ASSIGNMENT SYSTEM
+========================================================= */
+
+.event-management {
+    width: 100%;
+    min-height: 100%;
+    padding: 28px;
+    box-sizing: border-box;
+
+    background:
+        linear-gradient(
+            180deg,
+            #f8faff 0%,
+            #f5f7fb 100%
+        );
+
+    color: #172033;
+
+    font-family:
+        Inter,
+        "Segoe UI",
+        Roboto,
+        Arial,
+        sans-serif;
+}
+
+
+/* =========================================================
+   PAGE HEADER
+========================================================= */
+
+.event-page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+.event-page-heading {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.event-page-icon {
+    width: 54px;
+    height: 54px;
+
+    flex-shrink: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 14px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #eef4ff,
+            #e4edff
+        );
+
+    border: 1px solid #d8e4ff;
+
+    font-size: 25px;
+
+    box-shadow:
+        0 4px 12px rgba(37, 99, 235, 0.08);
+}
+
+.event-eyebrow {
+    display: block;
+
+    margin-bottom: 5px;
+
+    color: #667085;
+
+    font-size: 10px;
+    font-weight: 800;
+
+    letter-spacing: 1.3px;
+}
+
+.event-page-heading h1 {
+    margin: 0;
+
+    color: #172033;
+
+    font-size: 26px;
+    font-weight: 750;
+
+    line-height: 1.2;
+}
+
+.event-page-heading p {
+    margin: 7px 0 0;
+
+    color: #667085;
+
+    font-size: 13px;
+
+    line-height: 1.5;
+}
+
+
+/* =========================================================
+   BUTTON BASE
+========================================================= */
+
+.event-primary-button,
+.event-secondary-button,
+.event-cancel-button {
+    min-height: 40px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: 7px;
+
+    padding: 0 16px;
+
+    border-radius: 9px;
+
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 700;
+
+    cursor: pointer;
+
+    white-space: nowrap;
+
+    transition:
+        all 0.18s ease;
+}
+
+
+/* =========================================================
+   PRIMARY BUTTON
+========================================================= */
+
+.event-primary-button {
+    border: 1px solid #2563eb;
+
+    background:
+        linear-gradient(
+            135deg,
+            #2563eb,
+            #1d4ed8
+        );
+
+    color: #ffffff;
+
+    box-shadow:
+        0 4px 10px rgba(37, 99, 235, 0.18);
+}
+
+.event-primary-button:hover {
+    background:
+        linear-gradient(
+            135deg,
+            #1d4ed8,
+            #1e40af
+        );
+
+    transform: translateY(-1px);
+
+    box-shadow:
+        0 7px 16px rgba(37, 99, 235, 0.24);
+}
+
+.event-primary-button:active {
+    transform: translateY(0);
+}
+
+.event-primary-button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+
+/* =========================================================
+   SECONDARY BUTTON
+========================================================= */
+
+.event-secondary-button {
+    background: #ffffff;
+
+    border: 1px solid #d5dce8;
+
+    color: #344054;
+
+    box-shadow:
+        0 1px 2px rgba(16, 24, 40, 0.04);
+}
+
+.event-secondary-button:hover {
+    background: #f8fafc;
+
+    border-color: #aeb9ca;
+
+    color: #1d4ed8;
+
+    transform: translateY(-1px);
+
+    box-shadow:
+        0 4px 10px rgba(16, 24, 40, 0.07);
+}
+
+
+/* =========================================================
+   CANCEL BUTTON
+========================================================= */
+
+.event-cancel-button {
+    background: #ffffff;
+
+    border: 1px solid #d9dee8;
+
+    color: #475467;
+}
+
+.event-cancel-button:hover {
+    background: #f8fafc;
+
+    border-color: #b9c2d0;
+
+    color: #344054;
+}
+
+.event-cancel-button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+
+/* =========================================================
+   STATISTICS
+========================================================= */
+
+.event-stat-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(4, minmax(0, 1fr));
+
+    gap: 14px;
+
+    margin-bottom: 20px;
+}
+
+.event-stat-card {
+    position: relative;
+
+    padding: 18px 20px;
+
+    background: #ffffff;
+
+    border: 1px solid #e4e8ef;
+
+    border-radius: 12px;
+
+    overflow: hidden;
+
+    box-shadow:
+        0 2px 6px rgba(16, 24, 40, 0.035);
+
+    transition:
+        transform 0.18s ease,
+        box-shadow 0.18s ease;
+}
+
+.event-stat-card:hover {
+    transform: translateY(-2px);
+
+    box-shadow:
+        0 7px 18px rgba(16, 24, 40, 0.07);
+}
+
+.event-stat-card::before {
+    content: "";
+
+    position: absolute;
+
+    left: 0;
+    top: 14px;
+    bottom: 14px;
+
+    width: 3px;
+
+    background: #2563eb;
+
+    border-radius: 0 4px 4px 0;
+}
+
+.event-stat-card.upcoming::before {
+    background: #2563eb;
+}
+
+.event-stat-card.ongoing::before {
+    background: #f59e0b;
+}
+
+.event-stat-card.completed::before {
+    background: #16a34a;
+}
+
+.event-stat-card span {
+    display: block;
+
+    margin-bottom: 8px;
+
+    color: #667085;
+
+    font-size: 10px;
+    font-weight: 800;
+
+    letter-spacing: 0.8px;
+}
+
+.event-stat-card strong {
+    display: block;
+
+    color: #101828;
+
+    font-size: 28px;
+    font-weight: 750;
+
+    line-height: 1;
+}
+
+.event-stat-card small {
+    display: block;
+
+    margin-top: 8px;
+
+    color: #98a2b3;
+
+    font-size: 11px;
+}
+
+
+/* =========================================================
+   ERROR
+========================================================= */
+
+.event-error {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 15px;
+
+    margin-bottom: 18px;
+
+    padding: 12px 15px;
+
+    background: #fff5f5;
+
+    border: 1px solid #fecdca;
+
+    border-radius: 9px;
+
+    color: #b42318;
+
+    font-size: 13px;
+}
+
+.event-error button {
+    min-height: 30px;
+
+    padding: 0 12px;
+
+    background: #ffffff;
+
+    border: 1px solid #fecdca;
+
+    border-radius: 7px;
+
+    color: #b42318;
+
+    font-size: 11px;
+    font-weight: 700;
+
+    cursor: pointer;
+}
+
+.event-error button:hover {
+    background: #fef3f2;
+}
+
+
+/* =========================================================
+   WORKSPACE
+========================================================= */
+
+.event-workspace {
+    display: grid;
+
+    grid-template-columns:
+        minmax(330px, 390px)
+        minmax(0, 1fr);
+
+    min-height: 620px;
+
+    background: #ffffff;
+
+    border: 1px solid #e1e6ee;
+
+    border-radius: 14px;
+
+    overflow: hidden;
+
+    box-shadow:
+        0 3px 10px rgba(16, 24, 40, 0.045);
+}
+
+
+/* =========================================================
+   EVENT LIST PANEL
+========================================================= */
+
+.event-list-panel {
+    min-width: 0;
+
+    background: #fbfcfe;
+
+    border-right: 1px solid #e4e8ef;
+}
+
+.event-list-header {
+    padding: 18px 20px 14px;
+
+    background: #ffffff;
+
+    border-bottom: 1px solid #e7ebf1;
+}
+
+.event-list-header span {
+    display: block;
+
+    margin-bottom: 4px;
+
+    color: #667085;
+
+    font-size: 10px;
+    font-weight: 800;
+
+    letter-spacing: 0.8px;
+}
+
+.event-list-header h2 {
+    margin: 0;
+
+    color: #172033;
+
+    font-size: 17px;
+    font-weight: 750;
+}
+
+
+/* =========================================================
+   FILTERS
+========================================================= */
+
+.event-filters {
+    display: grid;
+
+    grid-template-columns:
+        minmax(0, 1fr)
+        120px;
+
+    gap: 8px;
+
+    padding: 12px;
+
+    background: #ffffff;
+
+    border-bottom: 1px solid #e7ebf1;
+}
+
+.event-filters input,
+.event-filters select {
+    width: 100%;
+    height: 36px;
+
+    box-sizing: border-box;
+
+    padding: 0 10px;
+
+    background: #ffffff;
+
+    border: 1px solid #d9dee8;
+
+    border-radius: 7px;
+
+    color: #344054;
+
+    font-family: inherit;
+    font-size: 12px;
+
+    outline: none;
+
+    transition:
+        border-color 0.18s ease,
+        box-shadow 0.18s ease;
+}
+
+.event-filters input::placeholder {
+    color: #98a2b3;
+}
+
+.event-filters input:focus,
+.event-filters select:focus {
+    border-color: #84a9f8;
+
+    box-shadow:
+        0 0 0 3px rgba(37, 99, 235, 0.08);
+}
+
+
+/* =========================================================
+   EVENT LIST
+========================================================= */
+
+.event-list {
+    max-height: 540px;
+
+    overflow-y: auto;
+}
+
+.event-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.event-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.event-list::-webkit-scrollbar-thumb {
+    background: #d0d5dd;
+
+    border-radius: 10px;
+}
+
+.event-list-item {
+    width: 100%;
+
+    display: grid;
+
+    grid-template-columns:
+        48px
+        minmax(0, 1fr)
+        auto;
+
+    align-items: center;
+
+    gap: 12px;
+
+    padding: 13px 14px;
+
+    background: transparent;
+
+    border: 0;
+
+    border-bottom: 1px solid #edf0f4;
+
+    text-align: left;
+
+    cursor: pointer;
+
+    font-family: inherit;
+
+    transition:
+        background 0.15s ease,
+        box-shadow 0.15s ease;
+}
+
+.event-list-item:hover {
+    background: #f5f8fc;
+}
+
+.event-list-item.selected {
+    background: #eef4ff;
+
+    box-shadow:
+        inset 3px 0 0 #2563eb;
+}
+
+
+/* =========================================================
+   EVENT DATE
+========================================================= */
+
+.event-list-date {
+    width: 44px;
+    height: 46px;
+
+    display: flex;
+    flex-direction: column;
+
+    align-items: center;
+    justify-content: center;
+
+    background: #ffffff;
+
+    border: 1px solid #dfe5ee;
+
+    border-radius: 8px;
+
+    box-shadow:
+        0 1px 2px rgba(16, 24, 40, 0.03);
+}
+
+.event-list-date strong {
+    color: #172033;
+
+    font-size: 17px;
+    font-weight: 750;
+
+    line-height: 1;
+}
+
+.event-list-date span {
+    margin-top: 3px;
+
+    color: #667085;
+
+    font-size: 9px;
+    font-weight: 800;
+
+    text-transform: uppercase;
+}
+
+
+/* =========================================================
+   EVENT LIST CONTENT
+========================================================= */
+
+.event-list-content {
+    min-width: 0;
+
+    display: flex;
+    flex-direction: column;
+
+    gap: 3px;
+}
+
+.event-list-content strong {
+    overflow: hidden;
+
+    color: #172033;
+
+    font-size: 13px;
+    font-weight: 650;
+
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.event-list-content span {
+    color: #667085;
+
+    font-size: 11px;
+}
+
+.event-list-content small {
+    overflow: hidden;
+
+    color: #98a2b3;
+
+    font-size: 10px;
+
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+
+/* =========================================================
+   STATUS BADGES
+========================================================= */
+
+.event-status {
+    display: inline-flex;
+
+    align-items: center;
+    justify-content: center;
+
+    padding: 4px 8px;
+
+    border-radius: 20px;
+
+    font-size: 9px;
+    font-weight: 800;
+
+    white-space: nowrap;
+}
+
+.event-status.upcoming {
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.event-status.ongoing {
+    background: #fffaeb;
+    color: #b54708;
+}
+
+.event-status.completed {
+    background: #ecfdf3;
+    color: #027a48;
+}
+
+.event-status.cancelled {
+    background: #fef3f2;
+    color: #b42318;
+}
+
+.event-status.large {
+    align-self: flex-start;
+
+    padding: 6px 10px;
+
+    font-size: 10px;
+}
+
+
+/* =========================================================
+   LOADING / EMPTY
+========================================================= */
+
+.event-loading,
+.event-empty-list {
+    padding: 35px 20px;
+
+    text-align: center;
+
+    color: #667085;
+
+    font-size: 13px;
+}
+
+.event-empty-details {
+    height: 100%;
+    min-height: 500px;
+
+    display: flex;
+    flex-direction: column;
+
+    align-items: center;
+    justify-content: center;
+
+    padding: 40px;
+
+    text-align: center;
+}
+
+.event-empty-details > div {
+    width: 54px;
+    height: 54px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    margin-bottom: 14px;
+
+    background: #f2f4f7;
+
+    border-radius: 12px;
+
+    font-size: 23px;
+}
+
+.event-empty-details h2 {
+    margin: 0;
+
+    color: #344054;
+
+    font-size: 17px;
+}
+
+.event-empty-details p {
+    max-width: 400px;
+
+    margin: 7px 0 0;
+
+    color: #98a2b3;
+
+    font-size: 12px;
+
+    line-height: 1.6;
+}
+
+
+/* =========================================================
+   EVENT DETAILS
+========================================================= */
+
+.event-details-panel {
+    min-width: 0;
+
+    background: #ffffff;
+
+    padding: 24px;
+
+    overflow: hidden;
+}
+
+.event-details-header {
+    display: flex;
+
+    align-items: flex-start;
+    justify-content: space-between;
+
+    gap: 20px;
+
+    padding-bottom: 20px;
+
+    border-bottom: 1px solid #e7ebf1;
+}
+
+.event-detail-type {
+    display: inline-block;
+
+    margin-bottom: 7px;
+
+    color: #2563eb;
+
+    font-size: 10px;
+    font-weight: 800;
+
+    letter-spacing: 0.7px;
+
+    text-transform: uppercase;
+}
+
+.event-details-header h2 {
+    margin: 0;
+
+    color: #172033;
+
+    font-size: 24px;
+    font-weight: 750;
+
+    line-height: 1.25;
+}
+
+.event-details-header p {
+    max-width: 700px;
+
+    margin: 8px 0 0;
+
+    color: #667085;
+
+    font-size: 12px;
+
+    line-height: 1.6;
+}
+
+
+/* =========================================================
+   EVENT INFORMATION
+========================================================= */
+
+.event-information-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(4, minmax(0, 1fr));
+
+    gap: 12px;
+
+    margin: 20px 0;
+}
+
+.event-information-grid > div {
+    padding: 14px;
+
+    background:
+        linear-gradient(
+            180deg,
+            #fafbfc,
+            #f8fafc
+        );
+
+    border: 1px solid #e6eaf0;
+
+    border-radius: 9px;
+}
+
+.event-information-grid span {
+    display: block;
+
+    margin-bottom: 6px;
+
+    color: #98a2b3;
+
+    font-size: 9px;
+    font-weight: 800;
+
+    letter-spacing: 0.7px;
+}
+
+.event-information-grid strong {
+    display: block;
+
+    color: #344054;
+
+    font-size: 12px;
+    font-weight: 650;
+
+    line-height: 1.4;
+}
+
+
+/* =========================================================
+   EVENT SECTION
+========================================================= */
+
+.event-section {
+    margin-top: 22px;
+}
+
+.event-section-header {
+    display: flex;
+
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 15px;
+
+    margin-bottom: 12px;
+}
+
+.event-section-header span {
+    display: block;
+
+    margin-bottom: 3px;
+
+    color: #98a2b3;
+
+    font-size: 9px;
+    font-weight: 800;
+
+    letter-spacing: 0.7px;
+}
+
+.event-section-header h3 {
+    margin: 0;
+
+    color: #344054;
+
+    font-size: 15px;
+    font-weight: 750;
+}
+
+
+/* =========================================================
+   EVENT NOTES
+========================================================= */
+
+.event-notes {
+    padding: 15px 16px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #f8fafc,
+            #f5f7fb
+        );
+
+    border: 1px solid #e4e8ef;
+
+    border-left: 3px solid #2563eb;
+
+    border-radius: 9px;
+
+    color: #475467;
+
+    font-size: 12px;
+
+    line-height: 1.7;
+
+    white-space: pre-wrap;
+}
+
+
+/* =========================================================
+   ASSIGNMENT TABLE
+========================================================= */
+
+.event-assignment-table {
+    width: 100%;
+
+    overflow-x: auto;
+    overflow-y: hidden;
+
+    background: #ffffff;
+
+    border: 1px solid #e4e8ef;
+
+    border-radius: 10px;
+}
+
+
+/* =========================================================
+   ASSIGNMENT ROW
+========================================================= */
+
+.event-assignment-row {
+    display: grid;
+
+    /*
+       EXACT SAME COLUMNS FOR HEADER + EVERY ROW
+
+       1. ROLE
+       2. ASSIGNED PERSON / TEAM
+       3. DEPARTMENT
+       4. STATUS
+       5. ACTION
+    */
+
+    grid-template-columns:
+        minmax(180px, 1.35fr)
+        minmax(180px, 1.35fr)
+        minmax(150px, 1fr)
+        105px
+        210px;
+
+    align-items: center;
+
+    column-gap: 12px;
+
+    min-height: 54px;
+
+    padding: 0 14px;
+
+    box-sizing: border-box;
+
+    border-bottom: 1px solid #edf0f4;
+}
+
+.event-assignment-row:last-child {
+    border-bottom: none;
+}
+
+
+/* =========================================================
+   ASSIGNMENT HEADER
+========================================================= */
+
+.event-assignment-row.header {
+    min-height: 42px;
+
+    background: #f8fafc;
+
+    color: #667085;
+
+    font-size: 9px;
+
+    font-weight: 800;
+
+    letter-spacing: 0.6px;
+
+    text-transform: uppercase;
+}
+
+
+/* =========================================================
+   NORMAL CELLS
+========================================================= */
+
+.event-assignment-row > strong,
+.event-assignment-row > span {
+    min-width: 0;
+
+    overflow: hidden;
+
+    white-space: nowrap;
+
+    text-overflow: ellipsis;
+}
+
+
+/* =========================================================
+   ROLE
+========================================================= */
+
+.event-assignment-row > strong {
+    color: #344054;
+
+    font-size: 11px;
+
+    font-weight: 700;
+}
+
+
+/* =========================================================
+   ASSIGNED PERSON / TEAM
+========================================================= */
+
+.event-assignment-row > span:nth-child(2) {
+    color: #344054;
+
+    font-size: 11px;
+
+    font-weight: 650;
+}
+
+
+/* =========================================================
+   DEPARTMENT
+========================================================= */
+
+.event-assignment-row > span:nth-child(3) {
+    color: #667085;
+
+    font-size: 11px;
+
+    font-weight: 500;
+}
+
+
+/* =========================================================
+   STATUS
+========================================================= */
+
+.event-assignment-row > span:nth-child(4) {
+    display: flex;
+
+    align-items: center;
+
+    min-width: 0;
+
+    white-space: nowrap;
+}
+
+.assignment-assigned {
+    color: #027a48 !important;
+
+    font-weight: 700 !important;
+}
+
+.assignment-pending {
+    color: #b54708 !important;
+
+    font-weight: 700 !important;
+}
+
+
+/* =========================================================
+   ACTION COLUMN
+   IMPORTANT:
+   This has a FIXED width matching the grid column.
+========================================================= */
+
+.event-assignment-actions {
+    width: 210px;
+
+    min-width: 210px;
+
+    height: 100%;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: flex-start;
+
+    gap: 6px;
+
+    box-sizing: border-box;
+
+    white-space: nowrap;
+}
+
+
+/* =========================================================
+   ALL ASSIGNMENT ACTION BUTTONS
+========================================================= */
+
+.event-assignment-actions button {
+    height: 30px;
+
+    flex: 0 0 auto;
+
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    gap: 4px;
+
+    box-sizing: border-box;
+
+    padding: 0 9px;
+
+    border-radius: 6px;
+
+    font-family: inherit;
+
+    font-size: 10px;
+
+    font-weight: 700;
+
+    line-height: 1;
+
+    white-space: nowrap;
+
+    cursor: pointer;
+
+    transition:
+        background 0.18s ease,
+        border-color 0.18s ease,
+        color 0.18s ease,
+        transform 0.18s ease,
+        box-shadow 0.18s ease;
+}
+
+
+/* =========================================================
+   VIEW BUTTON
+========================================================= */
+
+.event-assignment-view {
+    width: 60px;
+
+    min-width: 60px;
+
+    background: #eff6ff;
+
+    border: 1px solid #bfdbfe;
+
+    color: #2563eb;
+}
+
+.event-assignment-view:hover {
+    background: #dbeafe;
+
+    border-color: #93c5fd;
+
+    color: #1d4ed8;
+
+    transform: translateY(-1px);
+
+    box-shadow:
+        0 3px 8px rgba(37, 99, 235, 0.12);
+}
+
+
+/* =========================================================
+   EDIT BUTTON
+========================================================= */
+
+.event-assignment-edit {
+    width: 60px;
+
+    min-width: 60px;
+
+    background: #f5f3ff;
+
+    border: 1px solid #ddd6fe;
+
+    color: #7c3aed;
+}
+
+.event-assignment-edit:hover {
+    background: #ede9fe;
+
+    border-color: #c4b5fd;
+
+    color: #6d28d9;
+
+    transform: translateY(-1px);
+
+    box-shadow:
+        0 3px 8px rgba(124, 58, 237, 0.12);
+}
+
+
+/* =========================================================
+   DELETE BUTTON
+========================================================= */
+
+.event-assignment-delete {
+    width: 66px;
+
+    min-width: 66px;
+
+    background: #fff5f5;
+
+    border: 1px solid #fecaca;
+
+    color: #dc2626;
+}
+
+.event-assignment-delete:hover {
+    background: #fee2e2;
+
+    border-color: #fca5a5;
+
+    color: #b91c1c;
+
+    transform: translateY(-1px);
+
+    box-shadow:
+        0 3px 8px rgba(220, 38, 38, 0.12);
+}
+
+
+/* =========================================================
+   BUTTON ICONS / TEXT
+========================================================= */
+
+.event-assignment-actions button span {
+    display: inline-block;
+
+    white-space: nowrap;
+
+    line-height: 1;
+}
+
+
+/* =========================================================
+   ACTION HEADER
+========================================================= */
+
+.event-assignment-row.header > span:last-child {
+    text-align: left;
+}
+
+
+/* =========================================================
+   NO ASSIGNMENTS
+========================================================= */
+
+.event-no-assignments {
+    grid-column: 1 / -1;
+
+    padding: 38px 20px;
+
+    text-align: center;
+
+    color: #98a2b3;
+}
+
+
+/* =========================================================
+   FORM
+========================================================= */
+
+.event-modal form {
+    padding: 20px 22px;
+}
+
+.event-form-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+
+    gap: 16px;
+}
+
+.event-form-field {
+    min-width: 0;
+}
+
+.event-form-field.full {
+    grid-column: 1 / -1;
+}
+
+.event-form-field label {
+    display: block;
+
+    margin-bottom: 6px;
+
+    color: #475467;
+
+    font-size: 10px;
+
+    font-weight: 800;
+
+    letter-spacing: 0.4px;
+}
+
+.event-form-field input,
+.event-form-field select,
+.event-form-field textarea {
+    width: 100%;
+
+    box-sizing: border-box;
+
+    background: #ffffff;
+
+    border: 1px solid #d9dee8;
+
+    border-radius: 8px;
+
+    color: #344054;
+
+    font-family: inherit;
+
+    font-size: 12px;
+
+    outline: none;
+
+    transition:
+        border-color 0.18s ease,
+        box-shadow 0.18s ease,
+        background 0.18s ease;
+}
+
+.event-form-field input,
+.event-form-field select {
+    height: 40px;
+
+    padding: 0 11px;
+}
+
+.event-form-field textarea {
+    min-height: 90px;
+
+    padding: 10px 11px;
+
+    resize: vertical;
+}
+
+.event-form-field input::placeholder,
+.event-form-field textarea::placeholder {
+    color: #98a2b3;
+}
+
+.event-form-field input:hover,
+.event-form-field select:hover,
+.event-form-field textarea:hover {
+    border-color: #c4cad5;
+}
+
+.event-form-field input:focus,
+.event-form-field select:focus,
+.event-form-field textarea:focus {
+    border-color: #84a9f8;
+
+    background: #ffffff;
+
+    box-shadow:
+        0 0 0 3px rgba(37, 99, 235, 0.08);
+}
+
+
+/* =========================================================
+   MODAL ACTIONS
+========================================================= */
+
+.event-modal-actions {
+    display: flex;
+
+    align-items: center;
+
+    justify-content: flex-end;
+
+    gap: 8px;
+
+    margin-top: 22px;
+
+    padding-top: 18px;
+
+    border-top: 1px solid #e7ebf1;
+}
+
+
+/* =========================================================
+   ASSIGNMENT VIEW MODAL
+========================================================= */
+
+.event-assignment-view-modal {
+    width: min(650px, 100%);
+
+    max-height: 90vh;
+
+    overflow: hidden;
+
+    display: flex;
+
+    flex-direction: column;
+
+    background: #ffffff;
+
+    border: 1px solid #e4e7ec;
+
+    border-radius: 14px;
+
+    box-shadow:
+        0 24px 60px rgba(16, 24, 40, 0.20);
+}
+
+
+/* =========================================================
+   VIEW CONTENT
+========================================================= */
+
+.event-assignment-view-content {
+    padding: 24px;
+
+    overflow-y: auto;
+}
+
+
+/* =========================================================
+   VIEW HERO
+========================================================= */
+
+.assignment-view-hero {
+    display: flex;
+
+    align-items: center;
+
+    gap: 15px;
+
+    margin-bottom: 22px;
+
+    padding: 18px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #f8fbff,
+            #eef4ff
+        );
+
+    border: 1px solid #dbe7ff;
+
+    border-radius: 12px;
+}
+
+.assignment-view-icon {
+    width: 48px;
+    height: 48px;
+
+    flex-shrink: 0;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    background: #ffffff;
+
+    border: 1px solid #dbe7ff;
+
+    border-radius: 10px;
+
+    font-size: 21px;
+}
+
+.assignment-view-hero span {
+    display: block;
+
+    margin-bottom: 4px;
+
+    color: #667085;
+
+    font-size: 9px;
+
+    font-weight: 700;
+
+    letter-spacing: 0.8px;
+}
+
+.assignment-view-hero h3 {
+    margin: 0;
+
+    color: #172033;
+
+    font-size: 18px;
+
+    font-weight: 700;
+}
+
+.assignment-view-hero p {
+    margin: 4px 0 0;
+
+    color: #667085;
+
+    font-size: 12px;
+}
+
+
+/* =========================================================
+   VIEW INFORMATION GRID
+========================================================= */
+
+.assignment-view-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+
+    gap: 10px;
+
+    margin-bottom: 18px;
+}
+
+.assignment-view-card {
+    min-width: 0;
+
+    padding: 14px;
+
+    background: #f8fafc;
+
+    border: 1px solid #e6eaf0;
+
+    border-radius: 9px;
+}
+
+.assignment-view-card span {
+    display: block;
+
+    margin-bottom: 7px;
+
+    color: #98a2b3;
+
+    font-size: 9px;
+
+    font-weight: 700;
+
+    letter-spacing: 0.7px;
+}
+
+.assignment-view-card strong {
+    display: block;
+
+    overflow-wrap: anywhere;
+
+    color: #344054;
+
+    font-size: 12px;
+
+    font-weight: 650;
+
+    line-height: 1.45;
+}
+
+
+/* =========================================================
+   ASSIGNMENT STATUS
+========================================================= */
+
+.assignment-view-status {
+    color: #027a48 !important;
+}
+
+.assignment-view-status.pending {
+    color: #b54708 !important;
+}
+
+.assignment-view-status.in-progress {
+    color: #2563eb !important;
+}
+
+.assignment-view-status.completed {
+    color: #027a48 !important;
+}
+
+.assignment-view-status.cancelled {
+    color: #b42318 !important;
+}
+
+
+/* =========================================================
+   PRIORITY
+========================================================= */
+
+.assignment-view-priority {
+    display: inline-block !important;
+
+    padding: 4px 8px;
+
+    background: #f2f4f7;
+
+    border-radius: 20px;
+
+    font-size: 10px !important;
+
+    text-transform: uppercase;
+}
+
+.assignment-view-priority.high {
+    background: #fff7ed;
+
+    color: #c2410c !important;
+}
+
+.assignment-view-priority.critical {
+    background: #fef2f2;
+
+    color: #b91c1c !important;
+}
+
+.assignment-view-priority.low {
+    background: #f0fdf4;
+
+    color: #15803d !important;
+}
+
+
+/* =========================================================
+   NOTES
+========================================================= */
+
+.assignment-view-notes {
+    padding: 16px;
+
+    background: #ffffff;
+
+    border: 1px solid #e4e8ef;
+
+    border-radius: 9px;
+}
+
+.assignment-view-notes > span {
+    display: block;
+
+    margin-bottom: 8px;
+
+    color: #98a2b3;
+
+    font-size: 9px;
+
+    font-weight: 700;
+
+    letter-spacing: 0.7px;
+}
+
+.assignment-view-notes p {
+    margin: 0;
+
+    color: #475467;
+
+    font-size: 12px;
+
+    line-height: 1.65;
+
+    white-space: pre-wrap;
+}
+
+.assignment-view-notes p.empty {
+    color: #98a2b3;
+
+    font-style: italic;
+}
+
+
+/* =========================================================
+   AUDIT INFORMATION
+========================================================= */
+
+.assignment-view-audit {
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+
+    gap: 10px;
+
+    margin-top: 10px;
+}
+
+.assignment-view-audit > div {
+    padding: 12px 14px;
+
+    background: #f8fafc;
+
+    border-radius: 8px;
+}
+
+.assignment-view-audit span {
+    display: block;
+
+    margin-bottom: 5px;
+
+    color: #98a2b3;
+
+    font-size: 8px;
+
+    font-weight: 700;
+
+    letter-spacing: 0.7px;
+}
+
+.assignment-view-audit strong {
+    display: block;
+
+    color: #667085;
+
+    font-size: 10px;
+
+    font-weight: 600;
+
+    line-height: 1.4;
+}
+
+
+/* =========================================================
+   VIEW MODAL FOOTER
+========================================================= */
+
+.event-assignment-view-footer {
+    display: flex;
+
+    justify-content: flex-end;
+
+    padding: 16px 22px;
+
+    border-top: 1px solid #e7ebf1;
+
+    background: #ffffff;
+}
+
+
+/* =========================================================
+   RESPONSIVE - 1100px
+========================================================= */
+
+@media (max-width: 1100px) {
+
+    .event-stat-grid {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+
+    .event-workspace {
+        grid-template-columns:
+            330px
+            minmax(0, 1fr);
+    }
+
+    .event-information-grid {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+
+    /*
+       Assignment table becomes horizontally scrollable
+       instead of squeezing the columns.
+    */
+
+    .event-assignment-table {
+        overflow-x: auto;
+    }
+
+    .event-assignment-row {
+        min-width: 950px;
+    }
+}
+
+
+/* =========================================================
+   RESPONSIVE - 850px
+========================================================= */
+
+@media (max-width: 850px) {
+
+    .event-management {
+        padding: 18px;
+    }
+
+    .event-page-header {
+        align-items: flex-start;
+
+        flex-direction: column;
+    }
+
+    .event-workspace {
+        grid-template-columns: 1fr;
+    }
+
+    .event-list-panel {
+        border-right: 0;
+
+        border-bottom: 1px solid #e4e8ef;
+    }
+
+    .event-list {
+        max-height: 420px;
+    }
+
+    .event-details-panel {
+        padding: 20px;
+    }
+}
+
+
+/* =========================================================
+   RESPONSIVE - 650px
+========================================================= */
+
+@media (max-width: 650px) {
+
+    .event-stat-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .event-filters {
+        grid-template-columns: 1fr;
+    }
+
+    .event-details-panel {
+        padding: 18px;
+    }
+
+    .event-details-header {
+        flex-direction: column;
+    }
+
+    .event-information-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .event-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .event-form-field.full {
+        grid-column: auto;
+    }
+
+    /*
+       Keep assignment table wide enough
+       for all columns.
+    */
+
+    .event-assignment-table {
+        overflow-x: auto;
+
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .event-assignment-row {
+        min-width: 950px;
+    }
+
+    .event-assignment-actions {
+        justify-content: flex-start;
+    }
+
+    .event-assignment-view-modal {
+        max-height: 95vh;
+
+        border-radius: 12px;
+    }
+
+    .event-assignment-view-content {
+        padding: 18px;
+    }
+
+    .assignment-view-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .assignment-view-audit {
+        grid-template-columns: 1fr;
+    }
+
+    /*
+       On very small screens show icons only.
+    */
+
+    .event-assignment-actions button {
+        width: 32px;
+
+        min-width: 32px;
+
+        padding: 0;
+    }
+
+    .event-assignment-actions button span {
+        display: none;
+    }
+}
+
+
+/* =========================================================
+   RESPONSIVE - 480px
+========================================================= */
+
+@media (max-width: 480px) {
+
+    .event-management {
+        padding: 12px;
+    }
+
+    .event-page-heading {
+        align-items: flex-start;
+    }
+
+    .event-page-icon {
+        width: 44px;
+        height: 44px;
+    }
+
+    .event-page-heading h1 {
+        font-size: 20px;
+    }
+
+    .event-page-heading p {
+        font-size: 11px;
+    }
+
+    .event-primary-button {
+        width: 100%;
+    }
+
+    .event-section-header {
+        align-items: flex-start;
+
+        flex-direction: column;
+    }
+
+    .event-secondary-button {
+        width: 100%;
+    }
+
+    .event-modal {
+        width: 100%;
+    }
+
+    .event-modal-header,
+    .event-modal form {
+        padding-left: 16px;
+
+        padding-right: 16px;
+    }
+
+    .event-modal-actions {
+        flex-direction: column-reverse;
+    }
+
+    .event-modal-actions button {
+        width: 100%;
+    }
+}

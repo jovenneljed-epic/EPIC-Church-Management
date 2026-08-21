@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import "./Income.css";
 
+import { apiClient } from "../api/apiClient";
 import { API_BASE_URL } from "../config";
-
 /* =========================================================
    CONSTANTS
 ========================================================= */
@@ -143,20 +143,6 @@ function createEmptyForm(): FormData {
     };
 }
 
-/* =========================================================
-   TOKEN
-========================================================= */
-
-function getToken(): string {
-    return (
-        localStorage.getItem("token") ||
-        localStorage.getItem("accessToken") ||
-        localStorage.getItem("jwt") ||
-        localStorage.getItem("authToken") ||
-        localStorage.getItem("epicToken") ||
-        ""
-    );
-}
 
 /* =========================================================
    API
@@ -166,7 +152,10 @@ async function apiFetch(
     endpoint: string,
     options: RequestInit = {}
 ): Promise<Response> {
-    const token = getToken();
+    console.log("EPIC INCOME API:", endpoint);
+
+    return apiClient(endpoint, options);
+
 
     const headers = new Headers(options.headers);
 
@@ -175,7 +164,17 @@ async function apiFetch(
     }
 
     headers.set("Accept", "application/json");
+    const token =
+        localStorage.getItem("token") ||
+        localStorage.getItem("accessToken") ||
+        localStorage.getItem("jwt");
 
+    if (token) {
+        headers.set(
+            "Authorization",
+            `Bearer ${token}`
+        );
+    }
     if (token) {
         headers.set("Authorization", `Bearer ${token}`);
     }

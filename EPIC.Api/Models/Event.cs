@@ -42,5 +42,29 @@ namespace EPIC.Api.Models
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
         public DateTime? UpdatedAt { get; set; }
+
+
+        // =========================================================
+        // EVENT ASSIGNMENTS
+        // =========================================================
+
+        public ICollection<EventAssignment> EventAssignments { get; set; }
+            = new List<EventAssignment>();
+
+
+        // =========================================================
+        // EVENT NEEDS
+        // =========================================================
+
+        public ICollection<EventNeed> EventNeeds { get; set; }
+            = new List<EventNeed>();
+
+
+        // =========================================================
+        // EVENT CHECKLISTS
+        // =========================================================
+
+        public ICollection<EventChecklist> EventChecklists { get; set; }
+            = new List<EventChecklist>();
     }
 }

@@ -4,6 +4,7 @@ using EPIC.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EPIC.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260820190109_SyncEventAssignments")]
+    partial class SyncEventAssignments
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -512,10 +515,8 @@ namespace EPIC.Api.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .ValueGeneratedOnAdd()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasDefaultValue("SCHEDULED");
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -530,12 +531,6 @@ namespace EPIC.Api.Migrations
                         .HasColumnType("nvarchar(200)");
 
                     b.HasKey("EventId");
-
-                    b.HasIndex("EventDate");
-
-                    b.HasIndex("EventType");
-
-                    b.HasIndex("Status");
 
                     b.ToTable("Events");
                 });
@@ -589,6 +584,7 @@ namespace EPIC.Api.Migrations
                         .HasDefaultValue("NORMAL");
 
                     b.Property<string>("RoleName")
+                        .IsRequired()
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
 
@@ -610,93 +606,6 @@ namespace EPIC.Api.Migrations
                     b.HasIndex("Priority");
 
                     b.ToTable("EventAssignments");
-                });
-
-            modelBuilder.Entity("EPIC.Api.Models.EventChecklist", b =>
-                {
-                    b.Property<int>("EventChecklistId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("EventChecklistId"));
-
-                    b.Property<int?>("AssignedMemberId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("AssignedPerson")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("Category")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<DateTime?>("CompletedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int?>("CompletedByMemberId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<DateTime?>("DueDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("EventId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Notes")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Priority")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
-                        .HasDefaultValue("NORMAL");
-
-                    b.Property<int>("SortOrder")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasDefaultValue(0);
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)")
-                        .HasDefaultValue("PENDING");
-
-                    b.Property<string>("TaskName")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("EventChecklistId");
-
-                    b.HasIndex("AssignedMemberId");
-
-                    b.HasIndex("Category");
-
-                    b.HasIndex("CompletedByMemberId");
-
-                    b.HasIndex("EventId");
-
-                    b.HasIndex("Priority");
-
-                    b.HasIndex("SortOrder");
-
-                    b.HasIndex("Status");
-
-                    b.ToTable("EventChecklists");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.EventDepartment", b =>
@@ -755,87 +664,6 @@ namespace EPIC.Api.Migrations
                     b.ToTable("EventDepartments");
                 });
 
-            modelBuilder.Entity("EPIC.Api.Models.EventNeed", b =>
-                {
-                    b.Property<int>("EventNeedId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("EventNeedId"));
-
-                    b.Property<string>("Category")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<int>("EventId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("NeedName")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<DateTime?>("NeededBy")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Notes")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Priority")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
-                        .HasDefaultValue("NORMAL");
-
-                    b.Property<decimal>("Quantity")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("decimal(18,2)")
-                        .HasDefaultValue(1m);
-
-                    b.Property<int?>("ResponsibleMemberId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ResponsiblePerson")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)")
-                        .HasDefaultValue("PENDING");
-
-                    b.Property<string>("Unit")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("EventNeedId");
-
-                    b.HasIndex("Category");
-
-                    b.HasIndex("EventId");
-
-                    b.HasIndex("Priority");
-
-                    b.HasIndex("ResponsibleMemberId");
-
-                    b.HasIndex("Status");
-
-                    b.ToTable("EventNeeds");
-                });
-
             modelBuilder.Entity("EPIC.Api.Models.EventRole", b =>
                 {
                     b.Property<int>("EventRoleId")
@@ -852,10 +680,8 @@ namespace EPIC.Api.Migrations
 
                     b.Property<string>("Priority")
                         .IsRequired()
-                        .ValueGeneratedOnAdd()
                         .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)")
-                        .HasDefaultValue("NORMAL");
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("RoleDescription")
                         .HasMaxLength(500)
@@ -868,10 +694,8 @@ namespace EPIC.Api.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .ValueGeneratedOnAdd()
                         .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)")
-                        .HasDefaultValue("ACTIVE");
+                        .HasColumnType("nvarchar(30)");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -879,12 +703,6 @@ namespace EPIC.Api.Migrations
                     b.HasKey("EventRoleId");
 
                     b.HasIndex("EventDepartmentId");
-
-                    b.HasIndex("Priority");
-
-                    b.HasIndex("RoleName");
-
-                    b.HasIndex("Status");
 
                     b.ToTable("EventRoles");
                 });
@@ -2038,8 +1856,7 @@ namespace EPIC.Api.Migrations
                 {
                     b.HasOne("EPIC.Api.Models.EventDepartment", "EventDepartment")
                         .WithMany()
-                        .HasForeignKey("EventDepartmentId")
-                        .OnDelete(DeleteBehavior.NoAction);
+                        .HasForeignKey("EventDepartmentId");
 
                     b.HasOne("EPIC.Api.Models.Event", "Event")
                         .WithMany("EventAssignments")
@@ -2049,13 +1866,11 @@ namespace EPIC.Api.Migrations
 
                     b.HasOne("EPIC.Api.Models.EventRole", "EventRole")
                         .WithMany("EventAssignments")
-                        .HasForeignKey("EventRoleId")
-                        .OnDelete(DeleteBehavior.NoAction);
+                        .HasForeignKey("EventRoleId");
 
                     b.HasOne("EPIC.Api.Models.Member", "Member")
                         .WithMany()
-                        .HasForeignKey("MemberId")
-                        .OnDelete(DeleteBehavior.NoAction);
+                        .HasForeignKey("MemberId");
 
                     b.Navigation("Event");
 
@@ -2064,31 +1879,6 @@ namespace EPIC.Api.Migrations
                     b.Navigation("EventRole");
 
                     b.Navigation("Member");
-                });
-
-            modelBuilder.Entity("EPIC.Api.Models.EventChecklist", b =>
-                {
-                    b.HasOne("EPIC.Api.Models.Member", "AssignedMember")
-                        .WithMany()
-                        .HasForeignKey("AssignedMemberId")
-                        .OnDelete(DeleteBehavior.NoAction);
-
-                    b.HasOne("EPIC.Api.Models.Member", "CompletedByMember")
-                        .WithMany()
-                        .HasForeignKey("CompletedByMemberId")
-                        .OnDelete(DeleteBehavior.NoAction);
-
-                    b.HasOne("EPIC.Api.Models.Event", "Event")
-                        .WithMany("EventChecklists")
-                        .HasForeignKey("EventId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("AssignedMember");
-
-                    b.Navigation("CompletedByMember");
-
-                    b.Navigation("Event");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.EventDepartment", b =>
@@ -2109,30 +1899,12 @@ namespace EPIC.Api.Migrations
                     b.Navigation("Event");
                 });
 
-            modelBuilder.Entity("EPIC.Api.Models.EventNeed", b =>
-                {
-                    b.HasOne("EPIC.Api.Models.Event", "Event")
-                        .WithMany("EventNeeds")
-                        .HasForeignKey("EventId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("EPIC.Api.Models.Member", "ResponsibleMember")
-                        .WithMany()
-                        .HasForeignKey("ResponsibleMemberId")
-                        .OnDelete(DeleteBehavior.NoAction);
-
-                    b.Navigation("Event");
-
-                    b.Navigation("ResponsibleMember");
-                });
-
             modelBuilder.Entity("EPIC.Api.Models.EventRole", b =>
                 {
                     b.HasOne("EPIC.Api.Models.EventDepartment", "EventDepartment")
                         .WithMany()
                         .HasForeignKey("EventDepartmentId")
-                        .OnDelete(DeleteBehavior.NoAction)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("EventDepartment");
@@ -2306,10 +2078,6 @@ namespace EPIC.Api.Migrations
             modelBuilder.Entity("EPIC.Api.Models.Event", b =>
                 {
                     b.Navigation("EventAssignments");
-
-                    b.Navigation("EventChecklists");
-
-                    b.Navigation("EventNeeds");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.EventRole", b =>

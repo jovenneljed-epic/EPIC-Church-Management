@@ -1487,3 +1487,45 @@
         animation: none;
     }
 }
+/* =========================================================
+   MEMBERSHIP DIRECTORY PRINT DOCUMENT
+   ========================================================= */
+
+.membership-directory-print {
+    display: none;
+}
+
+/* =========================================================
+   PRINT MODE
+   ========================================================= */
+
+@media print {
+
+    .membership-directory-screen {
+        display: none !important;
+    }
+
+    .membership-directory-print {
+        display: block !important;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+    }
+
+    @page {
+        size: A4 portrait;
+        margin: 10mm;
+    }
+
+    html,
+    body {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: white !important;
+    }
+
+    body {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+}

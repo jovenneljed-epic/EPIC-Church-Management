@@ -17,6 +17,8 @@ import Members from "./Members";
 import Attendance from "./Attendance";
 
 import ChurchServicesPage from "./pages/ChurchServicesPage";
+import EventManagementPage
+    from "./pages/EventManagementPage";
 import MemberAttendanceReport from "./pages/MemberAttendanceReport";
 import Visitors from "./pages/Visitors";
 import Giving from "./pages/Giving";
@@ -77,6 +79,7 @@ type Page =
     | "attendance"
     | "member-attendance-report"
     | "services"
+    | "events"
     | "ministries"
     | "visitors"
     | "giving"
@@ -132,6 +135,8 @@ const PAGE_ROUTES: Record<Page, string> = {
 
     services:
         "/services",
+    events:
+        "/events",
 
     ministries:
         "/ministries",
@@ -179,8 +184,11 @@ const PAGE_TITLES: Record<Page, string> = {
     subscriptions:
         "Subscription Management",
 
-    services:
-        "Church Services",
+   services:
+    "Church Services",
+
+events:
+    "Event Management",
 
     "member-attendance-report":
         "Member Attendance Report",
@@ -246,8 +254,11 @@ const PAGE_SUBTITLES: Record<Page, string> = {
     subscriptions:
         "Manage EPIC plans, subscriptions and billing",
 
-    services:
-        "Schedule and manage church services and events",
+services:
+    "Schedule and manage church services and events",
+
+events:
+    "Plan programs, teams, assignments and activities for every event",
 
     "member-attendance-report":
         "Attendance performance, member history and pastoral follow-up",
@@ -422,6 +433,8 @@ case "/demo-requests":
 
         case "/services":
             return "services";
+case "/events":
+    return "events";
 
         case "/ministries":
             return "ministries";
@@ -1377,6 +1390,27 @@ case "attendance-by-date-report":
                         return (
                             <ChurchServicesPage />
                         );
+// =========================================
+// EVENT MANAGEMENT
+// =========================================
+
+case "events":
+
+    if (
+        !canView(
+            "Event Management"
+        )
+    ) {
+
+        return (
+            <Dashboard />
+        );
+
+    }
+
+    return (
+        <EventManagementPage />
+    );
 
                     // =========================================
                     // MEMBER ATTENDANCE REPORT
@@ -1978,6 +2012,41 @@ case "attendance-by-date-report":
                         </button>
 
                     </PermissionFilter>
+{/* =================================================
+    EVENT MANAGEMENT
+================================================= */}
+
+<PermissionFilter
+    module="Event Management"
+    action="view"
+>
+
+    <button
+        type="button"
+        className={`epic-nav-item ${
+            activePage ===
+            "events"
+                ? "active"
+                : ""
+        }`}
+        onClick={() =>
+            navigate(
+                "events"
+            )
+        }
+    >
+
+        <span className="epic-nav-icon">
+            🎯
+        </span>
+
+        <span>
+            Event Management
+        </span>
+
+    </button>
+
+</PermissionFilter>
 
                     {/* =================================================
                         REPORTS

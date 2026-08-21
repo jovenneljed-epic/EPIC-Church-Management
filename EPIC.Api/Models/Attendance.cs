@@ -15,8 +15,9 @@ namespace EPIC.Api.Models
         [Required]
         public int MemberId { get; set; }
 
-        [ForeignKey("MemberId")]
+        [ForeignKey(nameof(MemberId))]
         public Member? Member { get; set; }
+
 
         // =====================================================
         // CHURCH SERVICE
@@ -24,8 +25,19 @@ namespace EPIC.Api.Models
 
         public int? ChurchServiceId { get; set; }
 
-        [ForeignKey("ChurchServiceId")]
+        [ForeignKey(nameof(ChurchServiceId))]
         public ChurchService? ChurchService { get; set; }
+
+
+        // =====================================================
+        // EVENT
+        // =====================================================
+
+        public int? EventId { get; set; }
+
+        [ForeignKey(nameof(EventId))]
+        public Event? Event { get; set; }
+
 
         // =====================================================
         // ATTENDANCE INFORMATION
@@ -34,10 +46,12 @@ namespace EPIC.Api.Models
         [Required]
         public DateTime AttendanceDate { get; set; }
 
-        // Keep existing field for compatibility
+        // Legacy compatibility field
         public string Service { get; set; } = "";
+
         [Required]
         public string Status { get; set; } = "PRESENT";
+
 
         // =====================================================
         // RECORD INFORMATION

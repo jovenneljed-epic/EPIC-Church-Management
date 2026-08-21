@@ -302,7 +302,7 @@ const MembershipDirectoryReport:
         ===================================================== */
 
         const loadMembers =
-            async () => {
+            async (): Promise<void> => {
 
                 setLoading(true);
                 setError("");
@@ -381,8 +381,7 @@ const MembershipDirectoryReport:
                         members
                             .map(
                                 member =>
-                                    member.ministry
-                                        ?.trim()
+                                    member.ministry?.trim()
                             )
                             .filter(
                                 (
@@ -469,7 +468,8 @@ const MembershipDirectoryReport:
                                 (
                                     member.ministry ||
                                     ""
-                                ) === ministryFilter;
+                                ).trim() ===
+                                ministryFilter;
 
                             return (
                                 matchesSearch &&
@@ -483,7 +483,9 @@ const MembershipDirectoryReport:
                 return result.sort(
                     (a, b) => {
 
-                        if (sortBy === "code") {
+                        if (
+                            sortBy === "code"
+                        ) {
 
                             return (
                                 a.memberCode || ""
@@ -492,18 +494,20 @@ const MembershipDirectoryReport:
                             );
                         }
 
-                        if (sortBy === "joined") {
+                        if (
+                            sortBy === "joined"
+                        ) {
 
                             return (
                                 new Date(
                                     a.dateJoined || 0
                                 ).getTime()
                             ) -
-                                (
-                                    new Date(
-                                        b.dateJoined || 0
-                                    ).getTime()
-                                );
+                            (
+                                new Date(
+                                    b.dateJoined || 0
+                                ).getTime()
+                            );
                         }
 
                         return getFullName(a)
@@ -553,7 +557,8 @@ const MembershipDirectoryReport:
                         ""
                     )
                         .trim()
-                        .toUpperCase() === "MALE"
+                        .toUpperCase() ===
+                    "MALE"
             ).length;
 
         const female =
@@ -564,14 +569,15 @@ const MembershipDirectoryReport:
                         ""
                     )
                         .trim()
-                        .toUpperCase() === "FEMALE"
+                        .toUpperCase() ===
+                    "FEMALE"
             ).length;
 
         /* =====================================================
            RESET FILTERS
         ===================================================== */
 
-        const resetFilters = () => {
+        const resetFilters = (): void => {
 
             setSearch("");
             setStatusFilter("ALL");
@@ -580,137 +586,6 @@ const MembershipDirectoryReport:
             setSortBy("name");
         };
 
-        /* =====================================================
-           DEDICATED PRINT
-        ===================================================== */
-const handlePrint = () => {
-    const printContent = document.querySelector(
-        ".membership-directory-print"
-    ) as HTMLElement | null;
-
-    if (!printContent) {
-        setError(
-            "Membership directory print document could not be found."
-        );
-        return;
-    }
-
-    const printWindow = window.open(
-        "",
-        "_blank",
-        "width=1100,height=900"
-    );
-
-    if (!printWindow) {
-        setError(
-            "Unable to open print window. Please allow pop-ups for this site."
-        );
-        return;
-    }
-
-    const printStyles = Array.from(
-        document.querySelectorAll("link[rel='stylesheet']")
-    )
-        .map(
-            link =>
-                `<link rel="stylesheet" href="${(
-                    link as HTMLLinkElement
-                ).href}">`
-        )
-        .join("");
-
-    printWindow.document.open();
-
-    printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8" />
-            <title>EPIC Membership Directory</title>
-
-            ${printStyles}
-
-            <style>
-                html,
-                body {
-                    margin: 0;
-                    padding: 0;
-                    background: #ffffff;
-                    width: 100%;
-                }
-
-                body {
-                    font-family:
-                        "Segoe UI",
-                        Inter,
-                        Arial,
-                        sans-serif;
-                }
-
-                /*
-                 * ONLY THE DEDICATED PRINT DOCUMENT
-                 * IS ALLOWED TO EXIST.
-                 */
-
-                .membership-directory-print {
-                    display: block !important;
-                    visibility: visible !important;
-                    width: 100% !important;
-                    max-width: none !important;
-                }
-
-                @media print {
-
-                    html,
-                    body {
-                        margin: 0 !important;
-                        padding: 0 !important;
-                        background: #ffffff !important;
-                    }
-
-                    .membership-directory-print {
-                        display: block !important;
-                        visibility: visible !important;
-                    }
-
-                    @page {
-                        size: A4 portrait;
-                        margin: 12mm;
-                    }
-                }
-            </style>
-        </head>
-
-        <body>
-
-            ${printContent.outerHTML}
-
-            <script>
-                window.onload = function () {
-
-                    setTimeout(function () {
-
-                        window.focus();
-
-                        window.print();
-
-                    }, 500);
-
-                };
-
-                window.onafterprint = function () {
-                    setTimeout(function () {
-                        window.close();
-                    }, 200);
-                };
-            </script>
-
-        </body>
-        </html>
-    `);
-
-    printWindow.document.close();
-};
         /* =====================================================
            GENERATED DATE
         ===================================================== */
@@ -728,16 +603,350 @@ const handlePrint = () => {
             );
 
         /* =====================================================
+           DEDICATED PRINT
+           
+           IMPORTANT:
+           This prints ONLY MembershipDirectoryPrint.
+           
+           The dashboard is never printed.
+        ===================================================== */
+const handlePrint = (): void => {
+
+    if (loading) {
+        return;
+    }
+
+    if (filteredMembers.length === 0) {
+
+        setError(
+            "There are no member records available to print."
+        );
+
+        return;
+    }
+
+    /*
+     * Find the actual MembershipDirectoryPrint document.
+     */
+    const printSource =
+        document.querySelector(
+            ".membership-print-document"
+        ) as HTMLElement | null;
+
+    if (!printSource) {
+
+        setError(
+            "MembershipDirectoryPrint could not be found."
+        );
+
+        console.error(
+            "MembershipDirectoryPrint not found."
+        );
+
+        return;
+    }
+
+    /*
+     * Find MembershipDirectoryPrint.css
+     * from the currently loaded stylesheets.
+     */
+    let printCss = "";
+
+    try {
+
+        const stylesheets =
+            Array.from(
+                document.styleSheets
+            );
+
+        for (const stylesheet of stylesheets) {
+
+            try {
+
+                const rules =
+                    Array.from(
+                        stylesheet.cssRules
+                    );
+
+                const cssText =
+                    rules
+                        .map(
+                            rule =>
+                                rule.cssText
+                        )
+                        .join("\n");
+
+                /*
+                 * Only take the CSS belonging to
+                 * MembershipDirectoryPrint.
+                 */
+                if (
+                    cssText.includes(
+                        ".membership-print-document"
+                    ) ||
+                    cssText.includes(
+                        ".print-header"
+                    ) ||
+                    cssText.includes(
+                        ".print-summary-card"
+                    )
+                ) {
+
+                    printCss +=
+                        cssText + "\n";
+
+                }
+
+            } catch {
+
+                /*
+                 * Ignore stylesheets that the browser
+                 * does not allow us to read.
+                 */
+            }
+        }
+
+    } catch (error) {
+
+        console.error(
+            "Unable to read print stylesheet:",
+            error
+        );
+
+    }
+
+    /*
+     * If CSS could not be extracted,
+     * fall back to the loaded stylesheet links.
+     */
+    if (!printCss.trim()) {
+
+        printCss = `
+            @import url("/src/pages/reports/MembershipDirectoryPrint.css");
+        `;
+
+    }
+
+    /*
+     * Open a separate print window.
+     */
+    const printWindow =
+        window.open(
+            "",
+            "_blank",
+            "width=1200,height=900,scrollbars=yes,resizable=yes"
+        );
+
+    if (!printWindow) {
+
+        setError(
+            "Unable to open print window. Please allow pop-ups for EPIC CMS."
+        );
+
+        return;
+    }
+
+    /*
+     * Copy ONLY the MembershipDirectoryPrint HTML.
+     */
+    const html =
+        printSource.outerHTML;
+
+    /*
+     * Create the print document.
+     */
+    printWindow.document.open();
+
+    printWindow.document.write(`
+        <!DOCTYPE html>
+
+        <html lang="en">
+
+        <head>
+
+            <meta charset="UTF-8" />
+
+            <meta
+                name="viewport"
+                content="width=device-width, initial-scale=1.0"
+            />
+
+            <title>
+                EPIC CMS - Membership Directory
+            </title>
+
+            <style>
+
+                ${printCss}
+
+            </style>
+
+            <style>
+
+                /*
+                 * PRINT WINDOW RESET
+                 */
+
+                html,
+                body {
+
+                    margin: 0 !important;
+
+                    padding: 0 !important;
+
+                    width: 100% !important;
+
+                    background: #ffffff !important;
+
+                }
+
+                body {
+
+                    -webkit-print-color-adjust:
+                        exact !important;
+
+                    print-color-adjust:
+                        exact !important;
+
+                }
+
+                *,
+                *::before,
+                *::after {
+
+                    box-sizing: border-box;
+
+                }
+
+                /*
+                 * ACTUAL PRINT DOCUMENT
+                 */
+
+                .membership-print-document {
+
+                    display: block !important;
+
+                    visibility: visible !important;
+
+                    position: relative !important;
+
+                    left: auto !important;
+
+                    top: auto !important;
+
+                    width: 100% !important;
+
+                    max-width: none !important;
+
+                    margin: 0 !important;
+
+                    padding: 0 !important;
+
+                    background: #ffffff !important;
+
+                }
+
+                /*
+                 * A4
+                 */
+
+                @page {
+
+                    size: A4 portrait;
+
+                    margin: 10mm;
+
+                }
+
+                @media print {
+
+                    html,
+                    body {
+
+                        margin: 0 !important;
+
+                        padding: 0 !important;
+
+                        background: #ffffff !important;
+
+                    }
+
+                    .membership-print-document {
+
+                        display: block !important;
+
+                        visibility: visible !important;
+
+                    }
+
+                }
+
+            </style>
+
+        </head>
+
+        <body>
+
+            ${html}
+
+            <script>
+
+                window.addEventListener(
+                    "load",
+                    function () {
+
+                        setTimeout(
+                            function () {
+
+                                window.focus();
+
+                                window.print();
+
+                            },
+                            800
+                        );
+
+                    }
+                );
+
+                window.addEventListener(
+                    "afterprint",
+                    function () {
+
+                        setTimeout(
+                            function () {
+
+                                window.close();
+
+                            },
+                            300
+                        );
+
+                    }
+                );
+
+            </script>
+
+        </body>
+
+        </html>
+    `);
+
+    printWindow.document.close();
+};
+        /* =====================================================
            RENDER
         ===================================================== */
 
         return (
-
             <>
 
                 {/* =================================================
-               NORMAL SCREEN REPORT
-            ================================================= */}
+                   NORMAL SCREEN DASHBOARD
+                   
+                   KEEP THIS EXACTLY AS YOUR DASHBOARD.
+                   IT IS NEVER USED FOR PRINTING.
+                ================================================= */}
 
                 <div className="membership-directory-screen">
 
@@ -788,11 +997,11 @@ const handlePrint = () => {
                             <button
                                 type="button"
                                 className="directory-print-btn"
-                                onClick={handlePrint}
                                 disabled={
                                     loading ||
                                     filteredMembers.length === 0
                                 }
+                                onClick={handlePrint}
                             >
                                 🖨 Generate / Print
                             </button>
@@ -1333,8 +1542,7 @@ const handlePrint = () => {
                                                                 className={
                                                                     `directory-status ${normalizeStatus(
                                                                         member.status
-                                                                    ).toLowerCase()
-                                                                    }`
+                                                                    ).toLowerCase()}`
                                                                 }
                                                             >
 
@@ -1403,19 +1611,20 @@ const handlePrint = () => {
 
                 </div>
 
-
                 {/* =================================================
-               DEDICATED PRINT COMPONENT
-               
-               IMPORTANT:
-               This is NOT part of the normal screen UI.
-               It exists only so handlePrint() can extract
-               MembershipDirectoryPrint.
-            ================================================= */}
+                   HIDDEN PRINT SOURCE
+
+                   THIS NEVER APPEARS ON THE DASHBOARD.
+
+                   handlePrint() copies ONLY this component.
+                ================================================= */}
 
                 <div
                     className="membership-directory-print"
                     aria-hidden="true"
+                    style={{
+                        display: "none"
+                    }}
                 >
 
                     <MembershipDirectoryPrint
