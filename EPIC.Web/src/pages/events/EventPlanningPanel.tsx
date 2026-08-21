@@ -1,22 +1,13 @@
-
 import React, {
     useCallback,
     useEffect,
     useMemo,
     useState,
 } from "react";
-
 import axios from "axios";
 
+import { API_BASE_URL } from "../../config";
 import "./EventPlanningPanel.css";
-
-/* =========================================================
-   API CONFIGURATION
-   ========================================================= */
-
-const API_BASE_URL =
-    import.meta.env.VITE_API_BASE_URL ||
-    "http://localhost:5109/api";
 
 /* =========================================================
    TYPES
@@ -29,15 +20,15 @@ interface EventNeed {
     needName: string;
     description?: string | null;
     category?: string | null;
-    quantity?: number;
+    quantity?: number | null;
     unit?: string | null;
     responsiblePerson?: string | null;
     responsibleMemberId?: number | null;
-    status?: string;
-    priority?: string;
+    status?: string | null;
+    priority?: string | null;
     notes?: string | null;
     neededBy?: string | null;
-    createdAt?: string;
+    createdAt?: string | null;
     updatedAt?: string | null;
 }
 
@@ -72,6 +63,8 @@ interface EventNeedForm {
     notes: string;
 }
 
+type PlanningTab = "needs" | "checklist";
+
 /* =========================================================
    DEFAULT FORM
    ========================================================= */
@@ -93,7 +86,9 @@ const DEFAULT_FORM: EventNeedForm = {
    STATUS HELPERS
    ========================================================= */
 
-const normalizeStatus = (value?: string): string => {
+const normalizeStatus = (
+    value?: string | null
+): string => {
     if (!value) {
         return "pending";
     }
@@ -102,42 +97,39 @@ const normalizeStatus = (value?: string): string => {
         .toLowerCase()
         .trim()
         .replace(/-/g, "_")
-        .replace(/ /g, "_");
+        .replace(/\s+/g, "_");
 
-    if (
-        status === "complete" ||
-        status === "completed" ||
-        status === "done"
-    ) {
-        return "completed";
+    switch (status) {
+        case "complete":
+        case "completed":
+        case "done":
+            return "completed";
+
+        case "in_progress":
+        case "progress":
+            return "in_progress";
+
+        case "ready":
+            return "ready";
+
+        case "cancelled":
+        case "canceled":
+            return "cancelled";
+
+        case "skipped":
+            return "skipped";
+
+        default:
+            return "pending";
     }
-
-    if (status === "in_progress") {
-        return "in_progress";
-    }
-
-    if (status === "ready") {
-        return "ready";
-    }
-
-    if (
-        status === "cancelled" ||
-        status === "canceled"
-    ) {
-        return "cancelled";
-    }
-
-    if (status === "skipped") {
-        return "skipped";
-    }
-
-    return "pending";
 };
 
-const toBackendStatus = (value: string): string => {
-    const normalized = normalizeStatus(value);
+const toBackendStatus = (
+    value?: string | null
+): string => {
+    const status = normalizeStatus(value);
 
-    switch (normalized) {
+    switch (status) {
         case "in_progress":
             return "IN_PROGRESS";
 
@@ -155,10 +147,12 @@ const toBackendStatus = (value: string): string => {
 };
 
 /* =========================================================
-   PRIORITY HELPER
+   PRIORITY
    ========================================================= */
 
-const toBackendPriority = (value?: string): string => {
+const toBackendPriority = (
+    value?: string | null
+): string => {
     const priority =
         value?.trim().toUpperCase() || "NORMAL";
 
@@ -169,15 +163,13 @@ const toBackendPriority = (value?: string): string => {
         "URGENT",
     ];
 
-    if (validPriorities.includes(priority)) {
-        return priority;
-    }
-
-    return "NORMAL";
+    return validPriorities.includes(priority)
+        ? priority
+        : "NORMAL";
 };
 
 /* =========================================================
-   NORMALIZE EVENT NEED
+   NORMALIZE NEED
    ========================================================= */
 
 const normalizeNeed = (
@@ -194,27 +186,25 @@ const normalizeNeed = (
 
     return {
         id,
-
         title:
-            need.needName ||
+            need.needName?.trim() ||
             "Untitled Event Need",
 
         description:
-            need.description ||
+            need.description?.trim() ||
             "No description provided.",
 
         priority:
-            need.priority?.toLowerCase() ||
+            need.priority?.trim().toLowerCase() ||
             "normal",
 
         status,
 
         dueDate:
-            need.neededBy ||
-            null,
+            need.neededBy || null,
 
         assignedTo:
-            need.responsiblePerson ||
+            need.responsiblePerson?.trim() ||
             "Unassigned",
 
         completed:
@@ -226,30 +216,51 @@ const normalizeNeed = (
 };
 
 /* =========================================================
-   EXTRACT API DATA
+   EXTRACT API RESPONSE
    ========================================================= */
 
 const extractNeeds = (
-    data: any
+    data: unknown
 ): EventNeed[] => {
     if (Array.isArray(data)) {
-        return data;
+        return data as EventNeed[];
     }
 
-    if (Array.isArray(data?.items)) {
-        return data.items;
+    if (
+        typeof data !== "object" ||
+        data === null
+    ) {
+        return [];
     }
 
-    if (Array.isArray(data?.data)) {
-        return data.data;
+    const response =
+        data as Record<string, unknown>;
+
+    if (Array.isArray(response.items)) {
+        return response.items as EventNeed[];
     }
 
-    if (Array.isArray(data?.eventNeeds)) {
-        return data.eventNeeds;
+    if (Array.isArray(response.data)) {
+        return response.data as EventNeed[];
     }
 
-    if (Array.isArray(data?.needs)) {
-        return data.needs;
+    if (
+        Array.isArray(response.eventNeeds)
+    ) {
+        return response.eventNeeds as EventNeed[];
+    }
+
+    if (Array.isArray(response.needs)) {
+        return response.needs as EventNeed[];
+    }
+
+    if (
+        response.eventNeed &&
+        typeof response.eventNeed === "object"
+    ) {
+        return [
+            response.eventNeed as EventNeed,
+        ];
     }
 
     return [];
@@ -264,12 +275,20 @@ const EventPlanningPanel: React.FC<
 > = ({
     eventId,
     eventName,
+    onClose,
 }) => {
+    /* =====================================================
+       STATE
+       ===================================================== */
+
     const [needs, setNeeds] =
         useState<PlanningTask[]>([]);
 
     const [loading, setLoading] =
         useState<boolean>(true);
+
+    const [saving, setSaving] =
+        useState<boolean>(false);
 
     const [error, setError] =
         useState<string>("");
@@ -278,14 +297,9 @@ const EventPlanningPanel: React.FC<
         useState<string>("");
 
     const [activeTab, setActiveTab] =
-        useState<
-            "needs" | "checklist"
-        >("needs");
+        useState<PlanningTab>("needs");
 
     const [showModal, setShowModal] =
-        useState<boolean>(false);
-
-    const [saving, setSaving] =
         useState<boolean>(false);
 
     const [form, setForm] =
@@ -293,9 +307,9 @@ const EventPlanningPanel: React.FC<
             DEFAULT_FORM
         );
 
-    /* =========================================================
-       AUTH CONFIG
-       ========================================================= */
+    /* =====================================================
+       AUTH
+       ===================================================== */
 
     const getAuthConfig =
         useCallback(() => {
@@ -305,28 +319,80 @@ const EventPlanningPanel: React.FC<
                     "accessToken"
                 );
 
-            if (!token) {
-                return {
-                    headers: {
-                        "Content-Type":
-                            "application/json",
-                    },
-                };
-            }
-
             return {
                 headers: {
-                    Authorization:
-                        "Bearer " + token,
                     "Content-Type":
                         "application/json",
+
+                    ...(token
+                        ? {
+                              Authorization:
+                                  `Bearer ${token}`,
+                          }
+                        : {}),
                 },
             };
         }, []);
 
-    /* =========================================================
-       LOAD PLANNING DATA
-       ========================================================= */
+    /* =====================================================
+       ERROR HANDLER
+       ===================================================== */
+
+    const getErrorMessage = (
+        err: unknown,
+        fallback: string
+    ): string => {
+        if (!axios.isAxiosError(err)) {
+            return fallback;
+        }
+
+        if (err.message === "Network Error") {
+            return (
+                "Unable to connect to the server. " +
+                "Please check the API connection."
+            );
+        }
+
+        const data = err.response?.data;
+
+        if (
+            typeof data === "object" &&
+            data !== null
+        ) {
+            const response =
+                data as Record<
+                    string,
+                    unknown
+                >;
+
+            if (
+                typeof response.message ===
+                "string"
+            ) {
+                return response.message;
+            }
+
+            if (
+                typeof response.error ===
+                "string"
+            ) {
+                return response.error;
+            }
+
+            if (
+                typeof response.title ===
+                "string"
+            ) {
+                return response.title;
+            }
+        }
+
+        return fallback;
+    };
+
+    /* =====================================================
+       LOAD EVENT NEEDS
+       ===================================================== */
 
     const loadPlanningData =
         useCallback(async () => {
@@ -340,9 +406,17 @@ const EventPlanningPanel: React.FC<
                 setLoading(true);
                 setError("");
 
+                const url =
+                    `${API_BASE_URL}/EventNeeds/event/${eventId}`;
+
+                console.log(
+                    "Loading Event Needs:",
+                    url
+                );
+
                 const response =
                     await axios.get(
-                        `${API_BASE_URL}/EventNeeds/event/${eventId}`,
+                        url,
                         getAuthConfig()
                     );
 
@@ -351,29 +425,45 @@ const EventPlanningPanel: React.FC<
                         response.data
                     );
 
-                setNeeds(
-                    rawNeeds.map(
-                        normalizeNeed
-                    )
-                );
-            } catch (err: any) {
+                const normalized =
+                    rawNeeds
+                        .map(normalizeNeed)
+                        .filter(
+                            (
+                                task: PlanningTask
+                            ) =>
+                                task.id > 0
+                        );
+
+                setNeeds(normalized);
+            } catch (err: unknown) {
                 console.error(
                     "Unable to load event planning data:",
                     err
                 );
 
-                console.error(
-                    "Server response:",
-                    err?.response?.data
-                );
+                if (
+                    axios.isAxiosError(err)
+                ) {
+                    console.error(
+                        "HTTP Status:",
+                        err.response?.status
+                    );
 
-                setError(
-                    err?.response?.data?.message ||
-                    err?.response?.data?.error ||
-                    "Unable to load event planning data."
-                );
+                    console.error(
+                        "Server Response:",
+                        err.response?.data
+                    );
+                }
 
                 setNeeds([]);
+
+                setError(
+                    getErrorMessage(
+                        err,
+                        "Unable to load event planning data."
+                    )
+                );
             } finally {
                 setLoading(false);
             }
@@ -382,17 +472,17 @@ const EventPlanningPanel: React.FC<
             getAuthConfig,
         ]);
 
-    /* =========================================================
+    /* =====================================================
        INITIAL LOAD
-       ========================================================= */
+       ===================================================== */
 
     useEffect(() => {
-        loadPlanningData();
+        void loadPlanningData();
     }, [loadPlanningData]);
 
-    /* =========================================================
-       AUTO HIDE SUCCESS
-       ========================================================= */
+    /* =====================================================
+       SUCCESS AUTO HIDE
+       ===================================================== */
 
     useEffect(() => {
         if (!success) {
@@ -409,30 +499,38 @@ const EventPlanningPanel: React.FC<
         };
     }, [success]);
 
-    /* =========================================================
+    /* =====================================================
        STATISTICS
-       ========================================================= */
+       ===================================================== */
 
-    const totalNeeds = needs.length;
+    const totalNeeds =
+        needs.length;
 
     const completedNeeds =
-        useMemo(() => {
-            return needs.filter(
-                (need) =>
-                    need.completed
-            ).length;
-        }, [needs]);
+        useMemo(
+            () =>
+                needs.filter(
+                    (
+                        task: PlanningTask
+                    ) => task.completed
+                ).length,
+            [needs]
+        );
 
     const readyNeeds =
-        useMemo(() => {
-            return needs.filter(
-                (need) =>
-                    need.status ===
-                        "ready" ||
-                    need.status ===
-                        "completed"
-            ).length;
-        }, [needs]);
+        useMemo(
+            () =>
+                needs.filter(
+                    (
+                        task: PlanningTask
+                    ) =>
+                        task.status ===
+                            "ready" ||
+                        task.status ===
+                            "completed"
+                ).length,
+            [needs]
+        );
 
     const preparationPercentage =
         totalNeeds === 0
@@ -443,9 +541,9 @@ const EventPlanningPanel: React.FC<
                       100
               );
 
-    /* =========================================================
+    /* =====================================================
        FORM
-       ========================================================= */
+       ===================================================== */
 
     const resetForm =
         useCallback(() => {
@@ -454,7 +552,30 @@ const EventPlanningPanel: React.FC<
             });
         }, []);
 
-    const closeModal = () => {
+    const updateFormField = <
+        K extends keyof EventNeedForm
+    >(
+        field: K,
+        value: EventNeedForm[K]
+    ): void => {
+        setForm(
+            (
+                current: EventNeedForm
+            ) => ({
+                ...current,
+                [field]: value,
+            })
+        );
+    };
+
+    const openAddModal = (): void => {
+        setError("");
+        setSuccess("");
+        resetForm();
+        setShowModal(true);
+    };
+
+    const closeModal = (): void => {
         if (saving) {
             return;
         }
@@ -463,178 +584,175 @@ const EventPlanningPanel: React.FC<
         setShowModal(false);
     };
 
-    const openAddModal = () => {
-        setError("");
-        setSuccess("");
-        resetForm();
-        setShowModal(true);
-    };
-
-    /* =========================================================
+    /* =====================================================
        CREATE EVENT NEED
-       ========================================================= */
+       ===================================================== */
 
-    const handleAddNeed =
-        async (
-            e: React.FormEvent<HTMLFormElement>
-        ) => {
-            e.preventDefault();
+    const handleAddNeed = async (
+        e: React.FormEvent<HTMLFormElement>
+    ): Promise<void> => {
+        e.preventDefault();
 
-            if (!form.needName.trim()) {
-                setError(
-                    "Please enter an event need."
+        const needName =
+            form.needName.trim();
+
+        if (!needName) {
+            setError(
+                "Please enter an event need."
+            );
+            return;
+        }
+
+        if (!eventId) {
+            setError(
+                "Invalid event ID."
+            );
+            return;
+        }
+
+        try {
+            setSaving(true);
+            setError("");
+            setSuccess("");
+
+            const quantity =
+                Number(form.quantity);
+
+            const payload = {
+                eventId: Number(eventId),
+
+                needName,
+
+                description:
+                    form.description.trim() ||
+                    null,
+
+                category:
+                    form.category.trim() ||
+                    null,
+
+                quantity:
+                    Number.isFinite(quantity) &&
+                    quantity > 0
+                        ? quantity
+                        : 1,
+
+                unit:
+                    form.unit.trim() ||
+                    null,
+
+                responsiblePerson:
+                    form.responsiblePerson.trim() ||
+                    null,
+
+                responsibleMemberId:
+                    null,
+
+                status:
+                    toBackendStatus(
+                        form.status
+                    ),
+
+                priority:
+                    toBackendPriority(
+                        form.priority
+                    ),
+
+                notes:
+                    form.notes.trim() ||
+                    null,
+
+                neededBy:
+                    form.neededBy
+                        ? `${form.neededBy}T00:00:00`
+                        : null,
+            };
+
+            console.log(
+                "Creating Event Need:",
+                payload
+            );
+
+            const response =
+                await axios.post(
+                    `${API_BASE_URL}/EventNeeds`,
+                    payload,
+                    getAuthConfig()
                 );
-                return;
-            }
 
-            if (!eventId) {
-                setError(
-                    "Invalid event ID."
-                );
-                return;
-            }
+            console.log(
+                "Event Need created:",
+                response.data
+            );
 
-            try {
-                setSaving(true);
-                setError("");
-                setSuccess("");
-
-                const quantity =
-                    Number(
-                        form.quantity
-                    );
-
-                const payload = {
-                    eventId:
-                        Number(eventId),
-
-                    needName:
-                        form.needName.trim(),
-
-                    description:
-                        form.description.trim() ||
-                        null,
-
-                    category:
-                        form.category.trim() ||
-                        null,
-
-                    quantity:
-                        quantity > 0
-                            ? quantity
-                            : 1,
-
-                    unit:
-                        form.unit.trim() ||
-                        null,
-
-                    responsiblePerson:
-                        form.responsiblePerson.trim() ||
-                        null,
-
-                    responsibleMemberId:
-                        null,
-
-                    status:
-                        toBackendStatus(
-                            form.status
-                        ),
-
-                    priority:
-                        toBackendPriority(
-                            form.priority
-                        ),
-
-                    notes:
-                        form.notes.trim() ||
-                        null,
-
-                    neededBy:
-                        form.neededBy
-                            ? `${form.neededBy}T00:00:00`
-                            : null,
-                };
-
-                console.log(
-                    "Creating Event Need:",
-                    payload
-                );
-
-                const response =
-                    await axios.post(
-                        `${API_BASE_URL}/EventNeeds`,
-                        payload,
-                        getAuthConfig()
-                    );
-
-                console.log(
-                    "Event Need created successfully:",
+            const responseNeeds =
+                extractNeeds(
                     response.data
                 );
 
-                const createdName =
-                    form.needName.trim();
+            if (
+                responseNeeds.length > 0
+            ) {
+                const created =
+                    normalizeNeed(
+                        responseNeeds[0]
+                    );
 
-                const createdNeed =
-                    response.data?.eventNeed;
-
-                if (createdNeed) {
-                    const normalized =
-                        normalizeNeed(
-                            createdNeed
-                        );
-
+                if (created.id > 0) {
                     setNeeds(
-                        (current) => [
-                            normalized,
+                        (
+                            current: PlanningTask[]
+                        ) => [
+                            created,
                             ...current,
                         ]
                     );
                 } else {
                     await loadPlanningData();
                 }
-
-                resetForm();
-                setShowModal(false);
-
-                setSuccess(
-                    `"${createdName}" was successfully added to the event planning list.`
-                );
-            } catch (err: any) {
-                console.error(
-                    "Unable to create event need:",
-                    err
-                );
-
-                console.error(
-                    "HTTP status:",
-                    err?.response?.status
-                );
-
-                console.error(
-                    "Server response:",
-                    err?.response?.data
-                );
-
-                setError(
-                    err?.response?.data?.message ||
-                    err?.response?.data?.error ||
-                    "Unable to create event need."
-                );
-            } finally {
-                setSaving(false);
+            } else {
+                await loadPlanningData();
             }
-        };
 
-    /* =========================================================
+            resetForm();
+            setShowModal(false);
+
+            setSuccess(
+                `"${needName}" was successfully added to the event planning list.`
+            );
+        } catch (err: unknown) {
+            console.error(
+                "Unable to create event need:",
+                err
+            );
+
+            setError(
+                getErrorMessage(
+                    err,
+                    "Unable to create event need."
+                )
+            );
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    /* =====================================================
        UPDATE STATUS
-       ========================================================= */
+       ===================================================== */
 
     const updateTaskStatus =
         async (
             task: PlanningTask,
             newStatus: string
-        ) => {
+        ): Promise<void> => {
+            if (!task.id) {
+                setError(
+                    "Invalid event need ID."
+                );
+                return;
+            }
+
             try {
                 setError("");
                 setSuccess("");
@@ -663,6 +781,9 @@ const EventPlanningPanel: React.FC<
                         null,
 
                     quantity:
+                        Number.isFinite(
+                            quantity
+                        ) &&
                         quantity > 0
                             ? quantity
                             : 1,
@@ -678,7 +799,7 @@ const EventPlanningPanel: React.FC<
                             : task.assignedTo,
 
                     responsibleMemberId:
-                        original.responsibleMemberId ||
+                        original.responsibleMemberId ??
                         null,
 
                     status:
@@ -716,9 +837,13 @@ const EventPlanningPanel: React.FC<
                     );
 
                 setNeeds(
-                    (current) =>
+                    (
+                        current: PlanningTask[]
+                    ) =>
                         current.map(
-                            (item) => {
+                            (
+                                item: PlanningTask
+                            ) => {
                                 if (
                                     item.id !==
                                     task.id
@@ -754,28 +879,29 @@ const EventPlanningPanel: React.FC<
                 setSuccess(
                     `"${task.title}" was successfully updated.`
                 );
-            } catch (err: any) {
+            } catch (err: unknown) {
                 console.error(
                     "Unable to update event need:",
                     err
                 );
 
                 setError(
-                    err?.response?.data?.message ||
-                    err?.response?.data?.error ||
-                    "Unable to update event need."
+                    getErrorMessage(
+                        err,
+                        "Unable to update event need."
+                    )
                 );
             }
         };
 
-    /* =========================================================
-       TOGGLE CHECKLIST
-       ========================================================= */
+    /* =====================================================
+       CHECKLIST
+       ===================================================== */
 
     const toggleComplete =
         async (
             task: PlanningTask
-        ) => {
+        ): Promise<void> => {
             const newStatus =
                 task.completed
                     ? "PENDING"
@@ -787,14 +913,14 @@ const EventPlanningPanel: React.FC<
             );
         };
 
-    /* =========================================================
+    /* =====================================================
        DELETE
-       ========================================================= */
+       ===================================================== */
 
     const deleteNeed =
         async (
             task: PlanningTask
-        ) => {
+        ): Promise<void> => {
             const confirmed =
                 window.confirm(
                     `Delete "${task.title}"?`
@@ -814,9 +940,13 @@ const EventPlanningPanel: React.FC<
                 );
 
                 setNeeds(
-                    (current) =>
+                    (
+                        current: PlanningTask[]
+                    ) =>
                         current.filter(
-                            (item) =>
+                            (
+                                item: PlanningTask
+                            ) =>
                                 item.id !==
                                 task.id
                         )
@@ -825,27 +955,28 @@ const EventPlanningPanel: React.FC<
                 setSuccess(
                     `"${task.title}" was successfully deleted.`
                 );
-            } catch (err: any) {
+            } catch (err: unknown) {
                 console.error(
                     "Unable to delete event need:",
                     err
                 );
 
                 setError(
-                    err?.response?.data?.message ||
-                    err?.response?.data?.error ||
-                    "Unable to delete event need."
+                    getErrorMessage(
+                        err,
+                        "Unable to delete event need."
+                    )
                 );
             }
         };
 
-    /* =========================================================
-       DATE FORMAT
-       ========================================================= */
+    /* =====================================================
+       DATE
+       ===================================================== */
 
     const formatDate = (
         value: string | null
-    ) => {
+    ): string => {
         if (!value) {
             return "No due date";
         }
@@ -871,16 +1002,12 @@ const EventPlanningPanel: React.FC<
         );
     };
 
-    /* =========================================================
+    /* =====================================================
        RENDER
-       ========================================================= */
+       ===================================================== */
 
     return (
         <section className="event-planning-panel">
-
-            {/* =================================================
-                SUCCESS MESSAGE
-            ================================================= */}
 
             {success && (
                 <div className="planning-success">
@@ -908,12 +1035,7 @@ const EventPlanningPanel: React.FC<
                 </div>
             )}
 
-            {/* =================================================
-                HEADER
-            ================================================= */}
-
             <div className="planning-header">
-
                 <div>
                     <div className="planning-eyebrow">
                         EVENT MANAGEMENT
@@ -932,11 +1054,21 @@ const EventPlanningPanel: React.FC<
 
                 <div className="planning-header-actions">
 
+                    {onClose && (
+                        <button
+                            type="button"
+                            className="planning-refresh-btn"
+                            onClick={onClose}
+                        >
+                            ← Close
+                        </button>
+                    )}
+
                     <button
                         type="button"
                         className="planning-refresh-btn"
-                        onClick={
-                            loadPlanningData
+                        onClick={() =>
+                            void loadPlanningData()
                         }
                         disabled={loading}
                     >
@@ -946,35 +1078,37 @@ const EventPlanningPanel: React.FC<
                     <button
                         type="button"
                         className="planning-primary-btn"
-                        onClick={
-                            openAddModal
-                        }
+                        onClick={openAddModal}
                     >
                         + Add Event Need
                     </button>
 
                 </div>
-
             </div>
-
-            {/* =================================================
-                ERROR
-            ================================================= */}
 
             {error && (
                 <div className="planning-error">
-                    {error}
+                    <span>⚠</span>
+
+                    <span>
+                        {error}
+                    </span>
+
+                    <button
+                        type="button"
+                        onClick={() =>
+                            setError("")
+                        }
+                        title="Close"
+                    >
+                        ×
+                    </button>
                 </div>
             )}
-
-            {/* =================================================
-                STATISTICS
-            ================================================= */}
 
             <div className="planning-stat-grid">
 
                 <div className="planning-stat-card">
-
                     <div className="stat-icon">
                         📦
                     </div>
@@ -988,11 +1122,9 @@ const EventPlanningPanel: React.FC<
                             {totalNeeds}
                         </strong>
                     </div>
-
                 </div>
 
                 <div className="planning-stat-card">
-
                     <div className="stat-icon">
                         ✓
                     </div>
@@ -1006,11 +1138,9 @@ const EventPlanningPanel: React.FC<
                             {readyNeeds}
                         </strong>
                     </div>
-
                 </div>
 
                 <div className="planning-stat-card">
-
                     <div className="stat-icon">
                         ☑
                     </div>
@@ -1025,11 +1155,9 @@ const EventPlanningPanel: React.FC<
                             {totalNeeds}
                         </strong>
                     </div>
-
                 </div>
 
                 <div className="planning-stat-card progress-card">
-
                     <div className="progress-card-content">
 
                         <div className="progress-stat-header">
@@ -1043,7 +1171,6 @@ const EventPlanningPanel: React.FC<
                         </div>
 
                         <div className="planning-progress">
-
                             <div
                                 className="planning-progress-fill"
                                 style={{
@@ -1051,38 +1178,27 @@ const EventPlanningPanel: React.FC<
                                         `${preparationPercentage}%`,
                                 }}
                             />
-
                         </div>
 
                     </div>
-
                 </div>
 
             </div>
-
-            {/* =================================================
-                TABS
-            ================================================= */}
 
             <div className="planning-tabs">
 
                 <button
                     type="button"
                     className={`planning-tab ${
-                        activeTab ===
-                        "needs"
+                        activeTab === "needs"
                             ? "active"
                             : ""
                     }`}
                     onClick={() =>
-                        setActiveTab(
-                            "needs"
-                        )
+                        setActiveTab("needs")
                     }
                 >
-                    <span>
-                        📦
-                    </span>
+                    <span>📦</span>
 
                     Event Needs
 
@@ -1105,9 +1221,7 @@ const EventPlanningPanel: React.FC<
                         )
                     }
                 >
-                    <span>
-                        ☑
-                    </span>
+                    <span>☑</span>
 
                     Checklist
 
@@ -1119,24 +1233,14 @@ const EventPlanningPanel: React.FC<
 
             </div>
 
-            {/* =================================================
-                CONTENT
-            ================================================= */}
-
             <div className="planning-content">
 
                 {loading ? (
-
                     <div className="planning-loading">
                         Loading event planning...
                     </div>
-
-                ) : activeTab ===
-                  "needs" ? (
-
-                    needs.length ===
-                    0 ? (
-
+                ) : activeTab === "needs" ? (
+                    needs.length === 0 ? (
                         <div className="planning-empty">
 
                             <div className="empty-icon">
@@ -1167,14 +1271,13 @@ const EventPlanningPanel: React.FC<
                             </button>
 
                         </div>
-
                     ) : (
-
                         <div className="planning-list">
 
                             {needs.map(
-                                (task) => (
-
+                                (
+                                    task: PlanningTask
+                                ) => (
                                     <div
                                         className="planning-item"
                                         key={
@@ -1241,15 +1344,14 @@ const EventPlanningPanel: React.FC<
                                                         : task.status
                                                 }
                                                 onChange={(
-                                                    e
+                                                    e: React.ChangeEvent<HTMLSelectElement>
                                                 ) =>
-                                                    updateTaskStatus(
+                                                    void updateTaskStatus(
                                                         task,
                                                         e.target.value
                                                     )
                                                 }
                                             >
-
                                                 <option value="pending">
                                                     Pending
                                                 </option>
@@ -1265,7 +1367,6 @@ const EventPlanningPanel: React.FC<
                                                 <option value="cancelled">
                                                     Cancelled
                                                 </option>
-
                                             </select>
 
                                             <button
@@ -1273,7 +1374,7 @@ const EventPlanningPanel: React.FC<
                                                 className="icon-action danger"
                                                 title="Delete"
                                                 onClick={() =>
-                                                    deleteNeed(
+                                                    void deleteNeed(
                                                         task
                                                     )
                                                 }
@@ -1284,137 +1385,120 @@ const EventPlanningPanel: React.FC<
                                         </div>
 
                                     </div>
-
                                 )
                             )}
 
                         </div>
-
                     )
+                ) : needs.length === 0 ? (
+                    <div className="planning-empty">
 
-                ) : (
-
-                    needs.length ===
-                    0 ? (
-
-                        <div className="planning-empty">
-
-                            <div className="empty-icon">
-                                ☑
-                            </div>
-
-                            <h3>
-                                No Checklist Tasks
-                            </h3>
-
-                            <p>
-                                Add event needs to
-                                create your event
-                                preparation checklist.
-                            </p>
-
-                            <button
-                                type="button"
-                                className="planning-primary-btn"
-                                onClick={
-                                    openAddModal
-                                }
-                            >
-                                + Add Event Need
-                            </button>
-
+                        <div className="empty-icon">
+                            ☑
                         </div>
 
-                    ) : (
+                        <h3>
+                            No Checklist Tasks
+                        </h3>
 
-                        <div className="planning-checklist">
+                        <p>
+                            Add event needs to
+                            create your event
+                            preparation checklist.
+                        </p>
 
-                            {needs.map(
-                                (task) => (
+                        <button
+                            type="button"
+                            className="planning-primary-btn"
+                            onClick={
+                                openAddModal
+                            }
+                        >
+                            + Add Event Need
+                        </button>
 
-                                    <div
-                                        key={
-                                            task.id
+                    </div>
+                ) : (
+                    <div className="planning-checklist">
+
+                        {needs.map(
+                            (
+                                task: PlanningTask
+                            ) => (
+                                <div
+                                    key={task.id}
+                                    className={`checklist-item ${
+                                        task.completed
+                                            ? "completed"
+                                            : ""
+                                    }`}
+                                >
+
+                                    <button
+                                        type="button"
+                                        className="check-button"
+                                        onClick={() =>
+                                            void toggleComplete(
+                                                task
+                                            )
                                         }
-                                        className={`checklist-item ${
+                                        title={
                                             task.completed
-                                                ? "completed"
-                                                : ""
-                                        }`}
+                                                ? "Mark as pending"
+                                                : "Mark as complete"
+                                        }
                                     >
+                                        {task.completed
+                                            ? "✓"
+                                            : ""}
+                                    </button>
 
-                                        <button
-                                            type="button"
-                                            className="check-button"
-                                            onClick={() =>
-                                                toggleComplete(
-                                                    task
+                                    <div className="checklist-main">
+
+                                        <h3>
+                                            {
+                                                task.title
+                                            }
+                                        </h3>
+
+                                        <p>
+                                            {
+                                                task.description
+                                            }
+
+                                            {" • "}
+
+                                            {
+                                                formatDate(
+                                                    task.dueDate
                                                 )
                                             }
-                                            title={
-                                                task.completed
-                                                    ? "Mark as pending"
-                                                    : "Mark as complete"
-                                            }
-                                        >
-                                            {task.completed
-                                                ? "✓"
-                                                : ""}
-                                        </button>
-
-                                        <div className="checklist-main">
-
-                                            <h3>
-                                                {
-                                                    task.title
-                                                }
-                                            </h3>
-
-                                            <p>
-                                                {
-                                                    task.description
-                                                }
-
-                                                {" • "}
-
-                                                {formatDate(
-                                                    task.dueDate
-                                                )}
-                                            </p>
-
-                                        </div>
-
-                                        <span
-                                            className={`priority-badge ${task.priority}`}
-                                        >
-                                            {
-                                                task.priority
-                                            }
-                                        </span>
+                                        </p>
 
                                     </div>
 
-                                )
-                            )}
+                                    <span
+                                        className={`priority-badge ${task.priority}`}
+                                    >
+                                        {
+                                            task.priority
+                                        }
+                                    </span>
 
-                        </div>
+                                </div>
+                            )
+                        )}
 
-                    )
-
+                    </div>
                 )}
 
             </div>
 
-            {/* =================================================
-                MODAL
-            ================================================= */}
-
             {showModal && (
-
                 <div
                     className="planning-modal-overlay"
                     onMouseDown={(
-                        e
+                        e: React.MouseEvent<HTMLDivElement>
                     ) => {
                         if (
                             e.target ===
@@ -1431,7 +1515,6 @@ const EventPlanningPanel: React.FC<
                         <div className="modal-header">
 
                             <div>
-
                                 <span>
                                     EVENT MANAGEMENT
                                 </span>
@@ -1439,17 +1522,13 @@ const EventPlanningPanel: React.FC<
                                 <h2>
                                     Add Event Need
                                 </h2>
-
                             </div>
 
                             <button
                                 type="button"
-                                onClick={
-                                    closeModal
-                                }
-                                disabled={
-                                    saving
-                                }
+                                onClick={closeModal}
+                                disabled={saving}
+                                title="Close"
                             >
                                 ×
                             </button>
@@ -1466,26 +1545,22 @@ const EventPlanningPanel: React.FC<
 
                                 <div className="form-group full">
 
-                                    <label>
+                                    <label htmlFor="needName">
                                         Event Need
                                     </label>
 
                                     <input
+                                        id="needName"
                                         type="text"
                                         value={
                                             form.needName
                                         }
                                         onChange={(
-                                            e
+                                            e: React.ChangeEvent<HTMLInputElement>
                                         ) =>
-                                            setForm(
-                                                (
-                                                    current
-                                                ) => ({
-                                                    ...current,
-                                                    needName:
-                                                        e.target.value,
-                                                })
+                                            updateFormField(
+                                                "needName",
+                                                e.target.value
                                             )
                                         }
                                         placeholder="e.g. Sound System"
@@ -1496,25 +1571,21 @@ const EventPlanningPanel: React.FC<
 
                                 <div className="form-group full">
 
-                                    <label>
+                                    <label htmlFor="description">
                                         Description
                                     </label>
 
                                     <textarea
+                                        id="description"
                                         value={
                                             form.description
                                         }
                                         onChange={(
-                                            e
+                                            e: React.ChangeEvent<HTMLTextAreaElement>
                                         ) =>
-                                            setForm(
-                                                (
-                                                    current
-                                                ) => ({
-                                                    ...current,
-                                                    description:
-                                                        e.target.value,
-                                                })
+                                            updateFormField(
+                                                "description",
+                                                e.target.value
                                             )
                                         }
                                         placeholder="Describe what needs to be prepared..."
@@ -1524,25 +1595,21 @@ const EventPlanningPanel: React.FC<
 
                                 <div className="form-group full">
 
-                                    <label>
+                                    <label htmlFor="category">
                                         Category
                                     </label>
 
                                     <select
+                                        id="category"
                                         value={
                                             form.category
                                         }
                                         onChange={(
-                                            e
+                                            e: React.ChangeEvent<HTMLSelectElement>
                                         ) =>
-                                            setForm(
-                                                (
-                                                    current
-                                                ) => ({
-                                                    ...current,
-                                                    category:
-                                                        e.target.value,
-                                                })
+                                            updateFormField(
+                                                "category",
+                                                e.target.value
                                             )
                                         }
                                     >
@@ -1591,11 +1658,12 @@ const EventPlanningPanel: React.FC<
 
                                     <div className="form-group">
 
-                                        <label>
+                                        <label htmlFor="quantity">
                                             Quantity
                                         </label>
 
                                         <input
+                                            id="quantity"
                                             type="number"
                                             min="0.01"
                                             step="0.01"
@@ -1603,16 +1671,11 @@ const EventPlanningPanel: React.FC<
                                                 form.quantity
                                             }
                                             onChange={(
-                                                e
+                                                e: React.ChangeEvent<HTMLInputElement>
                                             ) =>
-                                                setForm(
-                                                    (
-                                                        current
-                                                    ) => ({
-                                                        ...current,
-                                                        quantity:
-                                                            e.target.value,
-                                                    })
+                                                updateFormField(
+                                                    "quantity",
+                                                    e.target.value
                                                 )
                                             }
                                         />
@@ -1621,26 +1684,22 @@ const EventPlanningPanel: React.FC<
 
                                     <div className="form-group">
 
-                                        <label>
+                                        <label htmlFor="unit">
                                             Unit
                                         </label>
 
                                         <input
+                                            id="unit"
                                             type="text"
                                             value={
                                                 form.unit
                                             }
                                             onChange={(
-                                                e
+                                                e: React.ChangeEvent<HTMLInputElement>
                                             ) =>
-                                                setForm(
-                                                    (
-                                                        current
-                                                    ) => ({
-                                                        ...current,
-                                                        unit:
-                                                            e.target.value,
-                                                    })
+                                                updateFormField(
+                                                    "unit",
+                                                    e.target.value
                                                 )
                                             }
                                             placeholder="pcs, sets, boxes..."
@@ -1654,25 +1713,21 @@ const EventPlanningPanel: React.FC<
 
                                     <div className="form-group">
 
-                                        <label>
+                                        <label htmlFor="priority">
                                             Priority
                                         </label>
 
                                         <select
+                                            id="priority"
                                             value={
                                                 form.priority
                                             }
                                             onChange={(
-                                                e
+                                                e: React.ChangeEvent<HTMLSelectElement>
                                             ) =>
-                                                setForm(
-                                                    (
-                                                        current
-                                                    ) => ({
-                                                        ...current,
-                                                        priority:
-                                                            e.target.value,
-                                                    })
+                                                updateFormField(
+                                                    "priority",
+                                                    e.target.value
                                                 )
                                             }
                                         >
@@ -1699,25 +1754,21 @@ const EventPlanningPanel: React.FC<
 
                                     <div className="form-group">
 
-                                        <label>
+                                        <label htmlFor="status">
                                             Status
                                         </label>
 
                                         <select
+                                            id="status"
                                             value={
                                                 form.status
                                             }
                                             onChange={(
-                                                e
+                                                e: React.ChangeEvent<HTMLSelectElement>
                                             ) =>
-                                                setForm(
-                                                    (
-                                                        current
-                                                    ) => ({
-                                                        ...current,
-                                                        status:
-                                                            e.target.value,
-                                                    })
+                                                updateFormField(
+                                                    "status",
+                                                    e.target.value
                                                 )
                                             }
                                         >
@@ -1748,26 +1799,22 @@ const EventPlanningPanel: React.FC<
 
                                     <div className="form-group">
 
-                                        <label>
+                                        <label htmlFor="responsiblePerson">
                                             Responsible Person
                                         </label>
 
                                         <input
+                                            id="responsiblePerson"
                                             type="text"
                                             value={
                                                 form.responsiblePerson
                                             }
                                             onChange={(
-                                                e
+                                                e: React.ChangeEvent<HTMLInputElement>
                                             ) =>
-                                                setForm(
-                                                    (
-                                                        current
-                                                    ) => ({
-                                                        ...current,
-                                                        responsiblePerson:
-                                                            e.target.value,
-                                                    })
+                                                updateFormField(
+                                                    "responsiblePerson",
+                                                    e.target.value
                                                 )
                                             }
                                             placeholder="Person or team"
@@ -1777,26 +1824,22 @@ const EventPlanningPanel: React.FC<
 
                                     <div className="form-group">
 
-                                        <label>
+                                        <label htmlFor="neededBy">
                                             Needed By
                                         </label>
 
                                         <input
+                                            id="neededBy"
                                             type="date"
                                             value={
                                                 form.neededBy
                                             }
                                             onChange={(
-                                                e
+                                                e: React.ChangeEvent<HTMLInputElement>
                                             ) =>
-                                                setForm(
-                                                    (
-                                                        current
-                                                    ) => ({
-                                                        ...current,
-                                                        neededBy:
-                                                            e.target.value,
-                                                    })
+                                                updateFormField(
+                                                    "neededBy",
+                                                    e.target.value
                                                 )
                                             }
                                         />
@@ -1807,25 +1850,21 @@ const EventPlanningPanel: React.FC<
 
                                 <div className="form-group full">
 
-                                    <label>
+                                    <label htmlFor="notes">
                                         Notes
                                     </label>
 
                                     <textarea
+                                        id="notes"
                                         value={
                                             form.notes
                                         }
                                         onChange={(
-                                            e
+                                            e: React.ChangeEvent<HTMLTextAreaElement>
                                         ) =>
-                                            setForm(
-                                                (
-                                                    current
-                                                ) => ({
-                                                    ...current,
-                                                    notes:
-                                                        e.target.value,
-                                                })
+                                            updateFormField(
+                                                "notes",
+                                                e.target.value
                                             )
                                         }
                                         placeholder="Additional notes..."
@@ -1840,12 +1879,8 @@ const EventPlanningPanel: React.FC<
                                 <button
                                     type="button"
                                     className="secondary-btn"
-                                    onClick={
-                                        closeModal
-                                    }
-                                    disabled={
-                                        saving
-                                    }
+                                    onClick={closeModal}
+                                    disabled={saving}
                                 >
                                     Cancel
                                 </button>
@@ -1853,9 +1888,7 @@ const EventPlanningPanel: React.FC<
                                 <button
                                     type="submit"
                                     className="planning-primary-btn"
-                                    disabled={
-                                        saving
-                                    }
+                                    disabled={saving}
                                 >
                                     {saving
                                         ? "Saving..."
@@ -1869,7 +1902,6 @@ const EventPlanningPanel: React.FC<
                     </div>
 
                 </div>
-
             )}
 
         </section>
