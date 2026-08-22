@@ -22,6 +22,7 @@ namespace EPIC.Api.Data
         public DbSet<Expense> Expenses { get; set; }
         public DbSet<Visitor> Visitors { get; set; }
         public DbSet<VisitorAttendance> VisitorAttendances { get; set; }
+        public DbSet<WebsiteVisit> WebsiteVisits { get; set; }
         public DbSet<Ministry> Ministries { get; set; }
         public DbSet<MinistryMember> MinistryMembers { get; set; }
 
@@ -84,6 +85,111 @@ namespace EPIC.Api.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            // =====================================================
+            // WEBSITE ANALYTICS
+            // =====================================================
+
+            modelBuilder.Entity<WebsiteVisit>(entity =>
+            {
+                entity.HasKey(e => e.WebsiteVisitId);
+
+                entity.Property(e => e.VisitorId)
+                    .HasMaxLength(100)
+                    .IsRequired();
+
+                entity.Property(e => e.SessionId)
+                    .HasMaxLength(100)
+                    .IsRequired();
+
+                entity.Property(e => e.PageUrl)
+                    .HasMaxLength(500)
+                    .IsRequired();
+
+                entity.Property(e => e.PagePath)
+                    .HasMaxLength(500);
+
+                entity.Property(e => e.PageTitle)
+                    .HasMaxLength(200);
+
+                entity.Property(e => e.Referrer)
+                    .HasMaxLength(1000);
+
+                entity.Property(e => e.TrafficSource)
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.TrafficMedium)
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.TrafficCampaign)
+                    .HasMaxLength(200);
+
+                entity.Property(e => e.UtmSource)
+                    .HasMaxLength(200);
+
+                entity.Property(e => e.UtmMedium)
+                    .HasMaxLength(200);
+
+                entity.Property(e => e.UtmCampaign)
+                    .HasMaxLength(200);
+
+                entity.Property(e => e.UtmTerm)
+                    .HasMaxLength(200);
+
+                entity.Property(e => e.UtmContent)
+                    .HasMaxLength(200);
+
+                entity.Property(e => e.DeviceType)
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.Browser)
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.OperatingSystem)
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.ScreenResolution)
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.Country)
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.Region)
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.City)
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.UserAgent)
+                    .HasMaxLength(1000);
+
+                entity.Property(e => e.Language)
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.TimeZone)
+                    .HasMaxLength(50);
+
+                // =====================================================
+                // INDEXES
+                // =====================================================
+
+                entity.HasIndex(e => e.VisitorId);
+
+                entity.HasIndex(e => e.SessionId);
+
+                entity.HasIndex(e => e.VisitedAt);
+
+                entity.HasIndex(e => e.PagePath);
+
+                entity.HasIndex(e => e.TrafficSource);
+
+                entity.HasIndex(e => e.TrafficMedium);
+
+                entity.HasIndex(e => e.UtmCampaign);
+
+                entity.HasIndex(e => e.DeviceType);
+
+                entity.HasIndex(e => e.Country);
+            });
 
             // =====================================================
             // EVENT

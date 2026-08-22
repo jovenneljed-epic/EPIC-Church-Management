@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import "./LandingPage.css";
 import { API_BASE_URL } from "../config";
+import { initializeWebsiteAnalytics } from "../analytics/websiteAnalytics";
 
 interface LandingPageProps {
     onLogin: () => void;
@@ -23,7 +24,11 @@ interface DemoResponse {
 
 const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
 
+
     const [menuOpen, setMenuOpen] = useState(false);
+useEffect(() => {
+    initializeWebsiteAnalytics();
+}, []);
 
     // =========================================================
     // DEMO FORM

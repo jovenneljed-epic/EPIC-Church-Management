@@ -17,17 +17,23 @@ interface EventNeed {
     eventNeedId?: number;
     id?: number;
     eventId: number;
+
     needName: string;
     description?: string | null;
     category?: string | null;
+
     quantity?: number | null;
     unit?: string | null;
+
     responsiblePerson?: string | null;
     responsibleMemberId?: number | null;
+
     status?: string | null;
     priority?: string | null;
+
     notes?: string | null;
     neededBy?: string | null;
+
     createdAt?: string | null;
     updatedAt?: string | null;
 }
@@ -36,11 +42,15 @@ interface PlanningTask {
     id: number;
     title: string;
     description: string;
+    category: string;
+    quantity: number;
+    unit: string;
     priority: string;
-    status: string;
+    status: StatusValue;
     dueDate: string | null;
     assignedTo: string;
     completed: boolean;
+    notes: string;
     original: EventNeed;
 }
 
@@ -65,6 +75,12 @@ interface EventNeedForm {
 
 type PlanningTab = "needs" | "checklist";
 
+type StatusValue =
+    | "pending"
+    | "in_progress"
+    | "ready"
+    | "cancelled";
+
 /* =========================================================
    DEFAULT FORM
    ========================================================= */
@@ -88,7 +104,7 @@ const DEFAULT_FORM: EventNeedForm = {
 
 const normalizeStatus = (
     value?: string | null
-): string => {
+): StatusValue => {
     if (!value) {
         return "pending";
     }
@@ -103,21 +119,17 @@ const normalizeStatus = (
         case "complete":
         case "completed":
         case "done":
-            return "completed";
+        case "ready":
+            return "ready";
 
         case "in_progress":
         case "progress":
+        case "ongoing":
             return "in_progress";
-
-        case "ready":
-            return "ready";
 
         case "cancelled":
         case "canceled":
             return "cancelled";
-
-        case "skipped":
-            return "skipped";
 
         default:
             return "pending";
@@ -127,18 +139,14 @@ const normalizeStatus = (
 const toBackendStatus = (
     value?: string | null
 ): string => {
-    const status = normalizeStatus(value);
-
-    switch (status) {
+    switch (normalizeStatus(value)) {
         case "in_progress":
             return "IN_PROGRESS";
 
         case "ready":
-        case "completed":
             return "READY";
 
         case "cancelled":
-        case "skipped":
             return "CANCELLED";
 
         default:
@@ -147,8 +155,26 @@ const toBackendStatus = (
 };
 
 /* =========================================================
-   PRIORITY
+   PRIORITY HELPERS
    ========================================================= */
+
+const normalizePriority = (
+    value?: string | null
+): string => {
+    const priority =
+        value?.trim().toUpperCase() || "NORMAL";
+
+    const validPriorities = [
+        "LOW",
+        "NORMAL",
+        "HIGH",
+        "URGENT",
+    ];
+
+    return validPriorities.includes(priority)
+        ? priority.toLowerCase()
+        : "normal";
+};
 
 const toBackendPriority = (
     value?: string | null
@@ -180,12 +206,15 @@ const normalizeNeed = (
         Number(need.id) ||
         0;
 
-    const status = normalizeStatus(
-        need.status
-    );
+    const status =
+        normalizeStatus(need.status);
+
+    const quantity =
+        Number(need.quantity);
 
     return {
         id,
+
         title:
             need.needName?.trim() ||
             "Untitled Event Need",
@@ -194,9 +223,23 @@ const normalizeNeed = (
             need.description?.trim() ||
             "No description provided.",
 
+        category:
+            need.category?.trim() ||
+            "Other",
+
+        quantity:
+            Number.isFinite(quantity) &&
+            quantity > 0
+                ? quantity
+                : 1,
+
+        unit:
+            need.unit?.trim() || "",
+
         priority:
-            need.priority?.trim().toLowerCase() ||
-            "normal",
+            normalizePriority(
+                need.priority
+            ),
 
         status,
 
@@ -208,15 +251,17 @@ const normalizeNeed = (
             "Unassigned",
 
         completed:
-            status === "ready" ||
-            status === "completed",
+            status === "ready",
+
+        notes:
+            need.notes?.trim() || "",
 
         original: need,
     };
 };
 
 /* =========================================================
-   EXTRACT API RESPONSE
+   API RESPONSE
    ========================================================= */
 
 const extractNeeds = (
@@ -236,22 +281,17 @@ const extractNeeds = (
     const response =
         data as Record<string, unknown>;
 
-    if (Array.isArray(response.items)) {
-        return response.items as EventNeed[];
-    }
+    const possibleArrays = [
+        response.items,
+        response.data,
+        response.eventNeeds,
+        response.needs,
+    ];
 
-    if (Array.isArray(response.data)) {
-        return response.data as EventNeed[];
-    }
-
-    if (
-        Array.isArray(response.eventNeeds)
-    ) {
-        return response.eventNeeds as EventNeed[];
-    }
-
-    if (Array.isArray(response.needs)) {
-        return response.needs as EventNeed[];
+    for (const value of possibleArrays) {
+        if (Array.isArray(value)) {
+            return value as EventNeed[];
+        }
     }
 
     if (
@@ -285,22 +325,25 @@ const EventPlanningPanel: React.FC<
         useState<PlanningTask[]>([]);
 
     const [loading, setLoading] =
-        useState<boolean>(true);
+        useState(true);
 
     const [saving, setSaving] =
-        useState<boolean>(false);
+        useState(false);
 
     const [error, setError] =
-        useState<string>("");
+        useState("");
 
     const [success, setSuccess] =
-        useState<string>("");
+        useState("");
 
     const [activeTab, setActiveTab] =
         useState<PlanningTab>("needs");
 
     const [showModal, setShowModal] =
-        useState<boolean>(false);
+        useState(false);
+
+    const [editingTask, setEditingTask] =
+        useState<PlanningTask | null>(null);
 
     const [form, setForm] =
         useState<EventNeedForm>(
@@ -308,7 +351,7 @@ const EventPlanningPanel: React.FC<
         );
 
     /* =====================================================
-       AUTH
+       AUTH CONFIG
        ===================================================== */
 
     const getAuthConfig =
@@ -346,14 +389,34 @@ const EventPlanningPanel: React.FC<
             return fallback;
         }
 
-        if (err.message === "Network Error") {
+        if (
+            err.code === "ERR_NETWORK"
+        ) {
             return (
                 "Unable to connect to the server. " +
-                "Please check the API connection."
+                "Please check that the EPIC API is running."
             );
         }
 
-        const data = err.response?.data;
+        if (
+            err.response?.status === 401
+        ) {
+            return (
+                "Your session has expired. " +
+                "Please log in again."
+            );
+        }
+
+        if (
+            err.response?.status === 403
+        ) {
+            return (
+                "You do not have permission to perform this action."
+            );
+        }
+
+        const data =
+            err.response?.data;
 
         if (
             typeof data === "object" &&
@@ -406,17 +469,9 @@ const EventPlanningPanel: React.FC<
                 setLoading(true);
                 setError("");
 
-                const url =
-                    `${API_BASE_URL}/EventNeeds/event/${eventId}`;
-
-                console.log(
-                    "Loading Event Needs:",
-                    url
-                );
-
                 const response =
                     await axios.get(
-                        url,
+                        `${API_BASE_URL}/EventNeeds/event/${eventId}`,
                         getAuthConfig()
                     );
 
@@ -429,32 +484,16 @@ const EventPlanningPanel: React.FC<
                     rawNeeds
                         .map(normalizeNeed)
                         .filter(
-                            (
-                                task: PlanningTask
-                            ) =>
+                            task =>
                                 task.id > 0
                         );
 
                 setNeeds(normalized);
             } catch (err: unknown) {
                 console.error(
-                    "Unable to load event planning data:",
+                    "Unable to load event needs:",
                     err
                 );
-
-                if (
-                    axios.isAxiosError(err)
-                ) {
-                    console.error(
-                        "HTTP Status:",
-                        err.response?.status
-                    );
-
-                    console.error(
-                        "Server Response:",
-                        err.response?.data
-                    );
-                }
 
                 setNeeds([]);
 
@@ -472,16 +511,12 @@ const EventPlanningPanel: React.FC<
             getAuthConfig,
         ]);
 
-    /* =====================================================
-       INITIAL LOAD
-       ===================================================== */
-
     useEffect(() => {
         void loadPlanningData();
     }, [loadPlanningData]);
 
     /* =====================================================
-       SUCCESS AUTO HIDE
+       SUCCESS MESSAGE AUTO CLEAR
        ===================================================== */
 
     useEffect(() => {
@@ -494,9 +529,8 @@ const EventPlanningPanel: React.FC<
                 setSuccess("");
             }, 4000);
 
-        return () => {
+        return () =>
             window.clearTimeout(timer);
-        };
     }, [success]);
 
     /* =====================================================
@@ -510,24 +544,33 @@ const EventPlanningPanel: React.FC<
         useMemo(
             () =>
                 needs.filter(
-                    (
-                        task: PlanningTask
-                    ) => task.completed
+                    task =>
+                        task.completed
                 ).length,
             [needs]
         );
 
     const readyNeeds =
+        completedNeeds;
+
+    const pendingNeeds =
         useMemo(
             () =>
                 needs.filter(
-                    (
-                        task: PlanningTask
-                    ) =>
+                    task =>
                         task.status ===
-                            "ready" ||
+                        "pending"
+                ).length,
+            [needs]
+        );
+
+    const inProgressNeeds =
+        useMemo(
+            () =>
+                needs.filter(
+                    task =>
                         task.status ===
-                            "completed"
+                        "in_progress"
                 ).length,
             [needs]
         );
@@ -550,6 +593,8 @@ const EventPlanningPanel: React.FC<
             setForm({
                 ...DEFAULT_FORM,
             });
+
+            setEditingTask(null);
         }, []);
 
     const updateFormField = <
@@ -558,15 +603,15 @@ const EventPlanningPanel: React.FC<
         field: K,
         value: EventNeedForm[K]
     ): void => {
-        setForm(
-            (
-                current: EventNeedForm
-            ) => ({
-                ...current,
-                [field]: value,
-            })
-        );
+        setForm(current => ({
+            ...current,
+            [field]: value,
+        }));
     };
+
+    /* =====================================================
+       ADD MODAL
+       ===================================================== */
 
     const openAddModal = (): void => {
         setError("");
@@ -574,6 +619,73 @@ const EventPlanningPanel: React.FC<
         resetForm();
         setShowModal(true);
     };
+
+    /* =====================================================
+       EDIT MODAL
+       ===================================================== */
+
+    const openEditModal = (
+        task: PlanningTask
+    ): void => {
+        setError("");
+        setSuccess("");
+
+        setEditingTask(task);
+
+        setForm({
+            needName:
+                task.title,
+
+            description:
+                task.original.description ||
+                "",
+
+            category:
+                task.original.category ||
+                "",
+
+            quantity:
+                String(
+                    task.quantity || 1
+                ),
+
+            unit:
+                task.unit || "",
+
+            priority:
+                toBackendPriority(
+                    task.priority
+                ),
+
+            status:
+                toBackendStatus(
+                    task.status
+                ),
+
+            responsiblePerson:
+                task.assignedTo ===
+                "Unassigned"
+                    ? ""
+                    : task.assignedTo,
+
+            neededBy:
+                task.dueDate
+                    ? task.dueDate.substring(
+                          0,
+                          10
+                      )
+                    : "",
+
+            notes:
+                task.notes || "",
+        });
+
+        setShowModal(true);
+    };
+
+    /* =====================================================
+       CLOSE MODAL
+       ===================================================== */
 
     const closeModal = (): void => {
         if (saving) {
@@ -585,10 +697,74 @@ const EventPlanningPanel: React.FC<
     };
 
     /* =====================================================
-       CREATE EVENT NEED
+       BUILD PAYLOAD
        ===================================================== */
 
-    const handleAddNeed = async (
+    const buildPayload = (): EventNeed => {
+        const quantity =
+            Number(form.quantity);
+
+        return {
+            eventId:
+                Number(eventId),
+
+            needName:
+                form.needName.trim(),
+
+            description:
+                form.description.trim() ||
+                null,
+
+            category:
+                form.category.trim() ||
+                null,
+
+            quantity:
+                Number.isFinite(quantity) &&
+                quantity > 0
+                    ? quantity
+                    : 1,
+
+            unit:
+                form.unit.trim() ||
+                null,
+
+            responsiblePerson:
+                form.responsiblePerson.trim() ||
+                null,
+
+            responsibleMemberId:
+                editingTask
+                    ?.original
+                    .responsibleMemberId ??
+                null,
+
+            status:
+                toBackendStatus(
+                    form.status
+                ),
+
+            priority:
+                toBackendPriority(
+                    form.priority
+                ),
+
+            notes:
+                form.notes.trim() ||
+                null,
+
+            neededBy:
+                form.neededBy
+                    ? `${form.neededBy}T00:00:00`
+                    : null,
+        };
+    };
+
+    /* =====================================================
+       SAVE EVENT NEED
+       ===================================================== */
+
+    const handleSaveNeed = async (
         e: React.FormEvent<HTMLFormElement>
     ): Promise<void> => {
         e.preventDefault();
@@ -615,121 +791,47 @@ const EventPlanningPanel: React.FC<
             setError("");
             setSuccess("");
 
-            const quantity =
-                Number(form.quantity);
+            const payload =
+                buildPayload();
 
-            const payload = {
-                eventId: Number(eventId),
+            if (editingTask) {
+                await axios.put(
+                    `${API_BASE_URL}/EventNeeds/${editingTask.id}`,
+                    payload,
+                    getAuthConfig()
+                );
 
-                needName,
-
-                description:
-                    form.description.trim() ||
-                    null,
-
-                category:
-                    form.category.trim() ||
-                    null,
-
-                quantity:
-                    Number.isFinite(quantity) &&
-                    quantity > 0
-                        ? quantity
-                        : 1,
-
-                unit:
-                    form.unit.trim() ||
-                    null,
-
-                responsiblePerson:
-                    form.responsiblePerson.trim() ||
-                    null,
-
-                responsibleMemberId:
-                    null,
-
-                status:
-                    toBackendStatus(
-                        form.status
-                    ),
-
-                priority:
-                    toBackendPriority(
-                        form.priority
-                    ),
-
-                notes:
-                    form.notes.trim() ||
-                    null,
-
-                neededBy:
-                    form.neededBy
-                        ? `${form.neededBy}T00:00:00`
-                        : null,
-            };
-
-            console.log(
-                "Creating Event Need:",
-                payload
-            );
-
-            const response =
+                setSuccess(
+                    `"${needName}" was successfully updated.`
+                );
+            } else {
                 await axios.post(
                     `${API_BASE_URL}/EventNeeds`,
                     payload,
                     getAuthConfig()
                 );
 
-            console.log(
-                "Event Need created:",
-                response.data
-            );
-
-            const responseNeeds =
-                extractNeeds(
-                    response.data
+                setSuccess(
+                    `"${needName}" was successfully added.`
                 );
-
-            if (
-                responseNeeds.length > 0
-            ) {
-                const created =
-                    normalizeNeed(
-                        responseNeeds[0]
-                    );
-
-                if (created.id > 0) {
-                    setNeeds(
-                        (
-                            current: PlanningTask[]
-                        ) => [
-                            created,
-                            ...current,
-                        ]
-                    );
-                } else {
-                    await loadPlanningData();
-                }
-            } else {
-                await loadPlanningData();
             }
+
+            await loadPlanningData();
 
             resetForm();
             setShowModal(false);
-
-            setSuccess(
-                `"${needName}" was successfully added to the event planning list.`
-            );
         } catch (err: unknown) {
             console.error(
-                "Unable to create event need:",
+                "Unable to save event need:",
                 err
             );
 
             setError(
                 getErrorMessage(
                     err,
-                    "Unable to create event need."
+                    editingTask
+                        ? "Unable to update event need."
+                        : "Unable to create event need."
                 )
             );
         } finally {
@@ -760,70 +862,72 @@ const EventPlanningPanel: React.FC<
                 const original =
                     task.original;
 
-                const quantity =
-                    Number(
-                        original.quantity
+                const normalizedStatus =
+                    normalizeStatus(
+                        newStatus
                     );
 
-                const payload = {
-                    eventId:
-                        Number(eventId),
+                const payload: EventNeed =
+                    {
+                        eventId:
+                            Number(eventId),
 
-                    needName:
-                        task.title,
+                        needName:
+                            task.title,
 
-                    description:
-                        original.description ||
-                        null,
+                        description:
+                            original.description ||
+                            null,
 
-                    category:
-                        original.category ||
-                        null,
+                        category:
+                            original.category ||
+                            null,
 
-                    quantity:
-                        Number.isFinite(
-                            quantity
-                        ) &&
-                        quantity > 0
-                            ? quantity
-                            : 1,
+                        quantity:
+                            Number(
+                                original.quantity
+                            ) > 0
+                                ? Number(
+                                      original.quantity
+                                  )
+                                : 1,
 
-                    unit:
-                        original.unit ||
-                        null,
+                        unit:
+                            original.unit ||
+                            null,
 
-                    responsiblePerson:
-                        task.assignedTo ===
-                        "Unassigned"
-                            ? null
-                            : task.assignedTo,
+                        responsiblePerson:
+                            task.assignedTo ===
+                            "Unassigned"
+                                ? null
+                                : task.assignedTo,
 
-                    responsibleMemberId:
-                        original.responsibleMemberId ??
-                        null,
+                        responsibleMemberId:
+                            original.responsibleMemberId ??
+                            null,
 
-                    status:
-                        toBackendStatus(
-                            newStatus
-                        ),
+                        status:
+                            toBackendStatus(
+                                normalizedStatus
+                            ),
 
-                    priority:
-                        toBackendPriority(
-                            task.priority
-                        ),
+                        priority:
+                            toBackendPriority(
+                                task.priority
+                            ),
 
-                    notes:
-                        original.notes ||
-                        null,
+                        notes:
+                            original.notes ||
+                            null,
 
-                    neededBy:
-                        task.dueDate
-                            ? `${task.dueDate.substring(
-                                  0,
-                                  10
-                              )}T00:00:00`
-                            : null,
-                };
+                        neededBy:
+                            task.dueDate
+                                ? `${task.dueDate.substring(
+                                      0,
+                                      10
+                                  )}T00:00:00`
+                                : null,
+                    };
 
                 await axios.put(
                     `${API_BASE_URL}/EventNeeds/${task.id}`,
@@ -831,71 +935,57 @@ const EventPlanningPanel: React.FC<
                     getAuthConfig()
                 );
 
-                const normalizedStatus =
-                    normalizeStatus(
-                        newStatus
-                    );
+                setNeeds(current =>
+                    current.map(item => {
+                        if (
+                            item.id !==
+                            task.id
+                        ) {
+                            return item;
+                        }
 
-                setNeeds(
-                    (
-                        current: PlanningTask[]
-                    ) =>
-                        current.map(
-                            (
-                                item: PlanningTask
-                            ) => {
-                                if (
-                                    item.id !==
-                                    task.id
-                                ) {
-                                    return item;
-                                }
+                        return {
+                            ...item,
 
-                                return {
-                                    ...item,
+                            status:
+                                normalizedStatus,
 
-                                    status:
-                                        normalizedStatus,
+                            completed:
+                                normalizedStatus ===
+                                "ready",
 
-                                    completed:
-                                        normalizedStatus ===
-                                            "ready" ||
-                                        normalizedStatus ===
-                                            "completed",
+                            original: {
+                                ...item.original,
 
-                                    original: {
-                                        ...item.original,
-
-                                        status:
-                                            toBackendStatus(
-                                                newStatus
-                                            ),
-                                    },
-                                };
-                            }
-                        )
+                                status:
+                                    toBackendStatus(
+                                        normalizedStatus
+                                    ),
+                            },
+                        };
+                    })
                 );
 
                 setSuccess(
-                    `"${task.title}" was successfully updated.`
+                    `"${task.title}" status updated.`
                 );
             } catch (err: unknown) {
                 console.error(
-                    "Unable to update event need:",
+                    "Unable to update status:",
                     err
                 );
 
                 setError(
                     getErrorMessage(
                         err,
-                        "Unable to update event need."
+                        "Unable to update event need status."
                     )
                 );
             }
         };
 
     /* =====================================================
-       CHECKLIST
+       TOGGLE COMPLETE
        ===================================================== */
 
     const toggleComplete =
@@ -939,17 +1029,12 @@ const EventPlanningPanel: React.FC<
                     getAuthConfig()
                 );
 
-                setNeeds(
-                    (
-                        current: PlanningTask[]
-                    ) =>
-                        current.filter(
-                            (
-                                item: PlanningTask
-                            ) =>
-                                item.id !==
-                                task.id
-                        )
+                setNeeds(current =>
+                    current.filter(
+                        item =>
+                            item.id !==
+                            task.id
+                    )
                 );
 
                 setSuccess(
@@ -971,7 +1056,7 @@ const EventPlanningPanel: React.FC<
         };
 
     /* =====================================================
-       DATE
+       DATE FORMAT
        ===================================================== */
 
     const formatDate = (
@@ -1003,19 +1088,48 @@ const EventPlanningPanel: React.FC<
     };
 
     /* =====================================================
+       STATUS LABEL
+       ===================================================== */
+
+    const getStatusLabel = (
+        status: StatusValue
+    ): string => {
+        switch (status) {
+            case "in_progress":
+                return "In Progress";
+
+            case "ready":
+                return "Ready";
+
+            case "cancelled":
+                return "Cancelled";
+
+            default:
+                return "Pending";
+        }
+    };
+
+    /* =====================================================
        RENDER
        ===================================================== */
 
     return (
         <section className="event-planning-panel">
 
+            {/* =================================================
+                SUCCESS MESSAGE
+            ================================================= */}
+
             {success && (
                 <div className="planning-success">
-                    <span>✓</span>
+
+                    <div className="planning-message-icon">
+                        ✓
+                    </div>
 
                     <div>
                         <strong>
-                            Success!
+                            Success
                         </strong>
 
                         <p>
@@ -1028,15 +1142,21 @@ const EventPlanningPanel: React.FC<
                         onClick={() =>
                             setSuccess("")
                         }
-                        title="Close"
                     >
                         ×
                     </button>
+
                 </div>
             )}
 
+            {/* =================================================
+                HEADER
+            ================================================= */}
+
             <div className="planning-header">
-                <div>
+
+                <div className="planning-header-info">
+
                     <div className="planning-eyebrow">
                         EVENT MANAGEMENT
                     </div>
@@ -1050,6 +1170,7 @@ const EventPlanningPanel: React.FC<
                             ? `Organize ${eventName}, monitor preparation, and complete planning tasks.`
                             : "Organize event needs, monitor preparation, and complete planning tasks."}
                     </p>
+
                 </div>
 
                 <div className="planning-header-actions">
@@ -1057,7 +1178,7 @@ const EventPlanningPanel: React.FC<
                     {onClose && (
                         <button
                             type="button"
-                            className="planning-refresh-btn"
+                            className="planning-secondary-btn"
                             onClick={onClose}
                         >
                             ← Close
@@ -1066,29 +1187,52 @@ const EventPlanningPanel: React.FC<
 
                     <button
                         type="button"
-                        className="planning-refresh-btn"
+                        className={`planning-refresh-btn ${
+                            loading
+                                ? "is-refreshing"
+                                : ""
+                        }`}
                         onClick={() =>
                             void loadPlanningData()
                         }
                         disabled={loading}
+                        title="Refresh event planning data"
                     >
-                        ↻ Refresh
+                        <span className="refresh-icon">
+                            ↻
+                        </span>
+
+                        <span className="refresh-text">
+                            {loading
+                                ? "Refreshing..."
+                                : "Refresh"}
+                        </span>
                     </button>
 
                     <button
                         type="button"
                         className="planning-primary-btn"
-                        onClick={openAddModal}
+                        onClick={
+                            openAddModal
+                        }
                     >
                         + Add Event Need
                     </button>
 
                 </div>
+
             </div>
+
+            {/* =================================================
+                ERROR
+            ================================================= */}
 
             {error && (
                 <div className="planning-error">
-                    <span>⚠</span>
+
+                    <span className="error-icon">
+                        ⚠
+                    </span>
 
                     <span>
                         {error}
@@ -1099,21 +1243,27 @@ const EventPlanningPanel: React.FC<
                         onClick={() =>
                             setError("")
                         }
-                        title="Close"
                     >
                         ×
                     </button>
+
                 </div>
             )}
+
+            {/* =================================================
+                STATISTICS
+            ================================================= */}
 
             <div className="planning-stat-grid">
 
                 <div className="planning-stat-card">
+
                     <div className="stat-icon">
                         📦
                     </div>
 
-                    <div>
+                    <div className="stat-content">
+
                         <span className="stat-label">
                             Event Needs
                         </span>
@@ -1121,15 +1271,19 @@ const EventPlanningPanel: React.FC<
                         <strong>
                             {totalNeeds}
                         </strong>
+
                     </div>
+
                 </div>
 
                 <div className="planning-stat-card">
+
                     <div className="stat-icon">
                         ✓
                     </div>
 
-                    <div>
+                    <div className="stat-content">
+
                         <span className="stat-label">
                             Ready
                         </span>
@@ -1137,15 +1291,39 @@ const EventPlanningPanel: React.FC<
                         <strong>
                             {readyNeeds}
                         </strong>
+
                     </div>
+
                 </div>
 
                 <div className="planning-stat-card">
+
+                    <div className="stat-icon">
+                        ◷
+                    </div>
+
+                    <div className="stat-content">
+
+                        <span className="stat-label">
+                            In Progress
+                        </span>
+
+                        <strong>
+                            {inProgressNeeds}
+                        </strong>
+
+                    </div>
+
+                </div>
+
+                <div className="planning-stat-card">
+
                     <div className="stat-icon">
                         ☑
                     </div>
 
-                    <div>
+                    <div className="stat-content">
+
                         <span className="stat-label">
                             Tasks Complete
                         </span>
@@ -1154,23 +1332,32 @@ const EventPlanningPanel: React.FC<
                             {completedNeeds}/
                             {totalNeeds}
                         </strong>
+
                     </div>
+
                 </div>
 
                 <div className="planning-stat-card progress-card">
+
                     <div className="progress-card-content">
 
                         <div className="progress-stat-header">
+
                             <span>
                                 Preparation
                             </span>
 
                             <strong>
-                                {preparationPercentage}%
+                                {
+                                    preparationPercentage
+                                }
+                                %
                             </strong>
+
                         </div>
 
                         <div className="planning-progress">
+
                             <div
                                 className="planning-progress-fill"
                                 style={{
@@ -1178,12 +1365,77 @@ const EventPlanningPanel: React.FC<
                                         `${preparationPercentage}%`,
                                 }}
                             />
+
                         </div>
 
                     </div>
+
                 </div>
 
             </div>
+
+            {/* =================================================
+                PREPARATION
+            ================================================= */}
+
+            <div className="planning-preparation-card">
+
+                <div className="preparation-top">
+
+                    <div>
+
+                        <span>
+                            EVENT PREPARATION
+                        </span>
+
+                        <h3>
+                            {preparationPercentage ===
+                            100
+                                ? "Event is fully prepared"
+                                : "Preparation progress"}
+                        </h3>
+
+                    </div>
+
+                    <strong>
+                        {
+                            preparationPercentage
+                        }%
+                    </strong>
+
+                </div>
+
+                <div className="planning-progress">
+
+                    <div
+                        className="planning-progress-fill"
+                        style={{
+                            width:
+                                `${preparationPercentage}%`,
+                        }}
+                    />
+
+                </div>
+
+                <div className="preparation-footer">
+
+                    <span>
+                        {completedNeeds} of{" "}
+                        {totalNeeds} tasks
+                        completed
+                    </span>
+
+                    <span>
+                        {pendingNeeds} pending
+                    </span>
+
+                </div>
+
+            </div>
+
+            {/* =================================================
+                TABS
+            ================================================= */}
 
             <div className="planning-tabs">
 
@@ -1195,12 +1447,18 @@ const EventPlanningPanel: React.FC<
                             : ""
                     }`}
                     onClick={() =>
-                        setActiveTab("needs")
+                        setActiveTab(
+                            "needs"
+                        )
                     }
                 >
-                    <span>📦</span>
+                    <span>
+                        📦
+                    </span>
 
-                    Event Needs
+                    <span>
+                        Event Needs
+                    </span>
 
                     <b>
                         {totalNeeds}
@@ -1221,9 +1479,13 @@ const EventPlanningPanel: React.FC<
                         )
                     }
                 >
-                    <span>☑</span>
+                    <span>
+                        ☑
+                    </span>
 
-                    Checklist
+                    <span>
+                        Checklist
+                    </span>
 
                     <b>
                         {completedNeeds}/
@@ -1233,14 +1495,36 @@ const EventPlanningPanel: React.FC<
 
             </div>
 
+            {/* =================================================
+                CONTENT
+            ================================================= */}
+
             <div className="planning-content">
+
+                {/* =================================================
+                    LOADING
+                ================================================= */}
 
                 {loading ? (
                     <div className="planning-loading">
-                        Loading event planning...
+
+                        <div className="planning-spinner" />
+
+                        <span>
+                            Loading event
+                            planning...
+                        </span>
+
                     </div>
+
                 ) : activeTab === "needs" ? (
+
+                    /* =================================================
+                       EVENT NEEDS TAB
+                    ================================================= */
+
                     needs.length === 0 ? (
+
                         <div className="planning-empty">
 
                             <div className="empty-icon">
@@ -1271,172 +1555,265 @@ const EventPlanningPanel: React.FC<
                             </button>
 
                         </div>
+
                     ) : (
+
                         <div className="planning-list">
 
-                            {needs.map(
-                                (
-                                    task: PlanningTask
-                                ) => (
-                                    <div
-                                        className="planning-item"
-                                        key={
-                                            task.id
-                                        }
-                                    >
+                            {needs.map(task => (
 
-                                        <div className="item-main">
+                                <article
+                                    className={`planning-item ${
+                                        task.completed
+                                            ? "is-complete"
+                                            : ""
+                                    }`}
+                                    key={task.id}
+                                >
 
-                                            <div className="item-title-row">
+                                    {/* STATUS INDICATOR */}
 
-                                                <h3>
-                                                    {
-                                                        task.title
-                                                    }
-                                                </h3>
+                                    <div className="item-status-indicator" />
 
-                                                <span
-                                                    className={`priority-badge ${task.priority}`}
-                                                >
-                                                    {
-                                                        task.priority
-                                                    }
-                                                </span>
+                                    {/* =================================================
+                                        MAIN CONTENT
+                                    ================================================= */}
 
-                                            </div>
+                                    <div className="item-main">
 
-                                            <p>
+                                        <div className="item-title-row">
+
+                                            <h3>
                                                 {
-                                                    task.description
+                                                    task.title
                                                 }
-                                            </p>
+                                            </h3>
 
-                                            <div className="item-meta">
+                                            <span
+                                                className={`priority-badge ${task.priority}`}
+                                            >
+                                                {
+                                                    task.priority
+                                                }
+                                            </span>
 
-                                                <span>
-                                                    👤{" "}
+                                        </div>
+
+                                        <p className="item-description">
+                                            {
+                                                task.description
+                                            }
+                                        </p>
+
+                                        <div className="item-details">
+
+                                            <span>
+                                                <b>
+                                                    Category
+                                                </b>
+
+                                                <strong>
+                                                    {
+                                                        task.category
+                                                    }
+                                                </strong>
+                                            </span>
+
+                                            <span>
+                                                <b>
+                                                    Quantity
+                                                </b>
+
+                                                <strong>
+                                                    {
+                                                        task.quantity
+                                                    }{" "}
+                                                    {
+                                                        task.unit
+                                                    }
+                                                </strong>
+                                            </span>
+
+                                            <span>
+                                                <b>
+                                                    Responsible
+                                                </b>
+
+                                                <strong>
                                                     {
                                                         task.assignedTo
                                                     }
+                                                </strong>
+                                            </span>
+
+                                            <span>
+                                                <b>
+                                                    Needed By
+                                                </b>
+
+                                                <strong>
+                                                    {formatDate(
+                                                        task.dueDate
+                                                    )}
+                                                </strong>
+                                            </span>
+
+                                        </div>
+
+                                        {task.notes && (
+                                            <div className="item-notes">
+
+                                                <span>
+                                                    NOTE
                                                 </span>
 
                                                 <span>
-                                                    📅{" "}
                                                     {
-                                                        formatDate(
-                                                            task.dueDate
-                                                        )
+                                                        task.notes
                                                     }
                                                 </span>
 
                                             </div>
-
-                                        </div>
-
-                                        <div className="item-actions">
-
-                                            <select
-                                                className={`status-select ${task.status}`}
-                                                value={
-                                                    task.status ===
-                                                    "completed"
-                                                        ? "ready"
-                                                        : task.status
-                                                }
-                                                onChange={(
-                                                    e: React.ChangeEvent<HTMLSelectElement>
-                                                ) =>
-                                                    void updateTaskStatus(
-                                                        task,
-                                                        e.target.value
-                                                    )
-                                                }
-                                            >
-                                                <option value="pending">
-                                                    Pending
-                                                </option>
-
-                                                <option value="in_progress">
-                                                    In Progress
-                                                </option>
-
-                                                <option value="ready">
-                                                    Ready
-                                                </option>
-
-                                                <option value="cancelled">
-                                                    Cancelled
-                                                </option>
-                                            </select>
-
-                                            <button
-                                                type="button"
-                                                className="icon-action danger"
-                                                title="Delete"
-                                                onClick={() =>
-                                                    void deleteNeed(
-                                                        task
-                                                    )
-                                                }
-                                            >
-                                                🗑
-                                            </button>
-
-                                        </div>
+                                        )}
 
                                     </div>
-                                )
-                            )}
+
+                                    {/* =================================================
+                                        ACTIONS
+                                    ================================================= */}
+
+                                    <div className="item-actions">
+
+                                        <select
+                                            className={`status-select ${task.status}`}
+                                            value={
+                                                task.status
+                                            }
+                                            onChange={e =>
+                                                void updateTaskStatus(
+                                                    task,
+                                                    e.target
+                                                        .value
+                                                )
+                                            }
+                                            title={`Current status: ${getStatusLabel(
+                                                task.status
+                                            )}`}
+                                        >
+                                            <option value="pending">
+                                                Pending
+                                            </option>
+
+                                            <option value="in_progress">
+                                                In Progress
+                                            </option>
+
+                                            <option value="ready">
+                                                Ready
+                                            </option>
+
+                                            <option value="cancelled">
+                                                Cancelled
+                                            </option>
+                                        </select>
+
+                                        <button
+                                            type="button"
+                                            className="icon-action edit"
+                                            title="Edit event need"
+                                            onClick={() =>
+                                                openEditModal(
+                                                    task
+                                                )
+                                            }
+                                        >
+                                            ✎
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            className="icon-action danger"
+                                            title="Delete event need"
+                                            onClick={() =>
+                                                void deleteNeed(
+                                                    task
+                                                )
+                                            }
+                                        >
+                                            🗑
+                                        </button>
+
+                                    </div>
+
+                                </article>
+
+                            ))}
 
                         </div>
+
                     )
-                ) : needs.length === 0 ? (
-                    <div className="planning-empty">
 
-                        <div className="empty-icon">
-                            ☑
-                        </div>
-
-                        <h3>
-                            No Checklist Tasks
-                        </h3>
-
-                        <p>
-                            Add event needs to
-                            create your event
-                            preparation checklist.
-                        </p>
-
-                        <button
-                            type="button"
-                            className="planning-primary-btn"
-                            onClick={
-                                openAddModal
-                            }
-                        >
-                            + Add Event Need
-                        </button>
-
-                    </div>
                 ) : (
-                    <div className="planning-checklist">
 
-                        {needs.map(
-                            (
-                                task: PlanningTask
-                            ) => (
-                                <div
-                                    key={task.id}
-                                    className={`checklist-item ${
+                    /* =================================================
+                       CHECKLIST TAB
+                    ================================================= */
+
+                    <div className="planning-list">
+
+                        {needs.length === 0 ? (
+
+                            <div className="planning-empty">
+
+                                <div className="empty-icon">
+                                    ☑
+                                </div>
+
+                                <h3>
+                                    Checklist is Empty
+                                </h3>
+
+                                <p>
+                                    Add event needs
+                                    to create your
+                                    preparation
+                                    checklist.
+                                </p>
+
+                                <button
+                                    type="button"
+                                    className="planning-primary-btn"
+                                    onClick={
+                                        openAddModal
+                                    }
+                                >
+                                    + Add Event Need
+                                </button>
+
+                            </div>
+
+                        ) : (
+
+                            needs.map(task => (
+
+                                <article
+                                    className={`planning-item checklist-item ${
                                         task.completed
-                                            ? "completed"
+                                            ? "is-complete"
                                             : ""
                                     }`}
+                                    key={task.id}
                                 >
+
+                                    <div className="item-status-indicator" />
 
                                     <button
                                         type="button"
-                                        className="check-button"
+                                        className={`checklist-toggle ${
+                                            task.completed
+                                                ? "checked"
+                                                : ""
+                                        }`}
                                         onClick={() =>
                                             void toggleComplete(
                                                 task
@@ -1445,7 +1822,7 @@ const EventPlanningPanel: React.FC<
                                         title={
                                             task.completed
                                                 ? "Mark as pending"
-                                                : "Mark as complete"
+                                                : "Mark as ready"
                                         }
                                     >
                                         {task.completed
@@ -1453,53 +1830,126 @@ const EventPlanningPanel: React.FC<
                                             : ""}
                                     </button>
 
-                                    <div className="checklist-main">
+                                    <div className="item-main">
 
-                                        <h3>
-                                            {
-                                                task.title
-                                            }
-                                        </h3>
+                                        <div className="item-title-row">
 
-                                        <p>
+                                            <h3>
+                                                {
+                                                    task.title
+                                                }
+                                            </h3>
+
+                                            <span
+                                                className={`priority-badge ${task.priority}`}
+                                            >
+                                                {
+                                                    task.priority
+                                                }
+                                            </span>
+
+                                        </div>
+
+                                        <p className="item-description">
                                             {
                                                 task.description
                                             }
-
-                                            {" • "}
-
-                                            {
-                                                formatDate(
-                                                    task.dueDate
-                                                )
-                                            }
                                         </p>
+
+                                        <div className="item-details">
+
+                                            <span>
+                                                <b>
+                                                    Status
+                                                </b>
+
+                                                <strong>
+                                                    {
+                                                        getStatusLabel(
+                                                            task.status
+                                                        )
+                                                    }
+                                                </strong>
+                                            </span>
+
+                                            <span>
+                                                <b>
+                                                    Responsible
+                                                </b>
+
+                                                <strong>
+                                                    {
+                                                        task.assignedTo
+                                                    }
+                                                </strong>
+                                            </span>
+
+                                            <span>
+                                                <b>
+                                                    Needed By
+                                                </b>
+
+                                                <strong>
+                                                    {formatDate(
+                                                        task.dueDate
+                                                    )}
+                                                </strong>
+                                            </span>
+
+                                        </div>
 
                                     </div>
 
-                                    <span
-                                        className={`priority-badge ${task.priority}`}
-                                    >
-                                        {
-                                            task.priority
-                                        }
-                                    </span>
+                                    <div className="item-actions">
 
-                                </div>
-                            )
+                                        <button
+                                            type="button"
+                                            className="icon-action edit"
+                                            title="Edit event need"
+                                            onClick={() =>
+                                                openEditModal(
+                                                    task
+                                                )
+                                            }
+                                        >
+                                            ✎
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            className="icon-action danger"
+                                            title="Delete event need"
+                                            onClick={() =>
+                                                void deleteNeed(
+                                                    task
+                                                )
+                                            }
+                                        >
+                                            🗑
+                                        </button>
+
+                                    </div>
+
+                                </article>
+
+                            ))
+
                         )}
 
                     </div>
+
                 )}
 
             </div>
 
+            {/* =================================================
+                ADD / EDIT MODAL
+            ================================================= */}
+
             {showModal && (
                 <div
                     className="planning-modal-overlay"
-                    onMouseDown={(
-                        e: React.MouseEvent<HTMLDivElement>
-                    ) => {
+                    onMouseDown={e => {
                         if (
                             e.target ===
                                 e.currentTarget &&
@@ -1512,36 +1962,56 @@ const EventPlanningPanel: React.FC<
 
                     <div className="planning-modal">
 
+                        {/* MODAL HEADER */}
+
                         <div className="modal-header">
 
                             <div>
+
                                 <span>
                                     EVENT MANAGEMENT
                                 </span>
 
                                 <h2>
-                                    Add Event Need
+                                    {editingTask
+                                        ? "Edit Event Need"
+                                        : "Add Event Need"}
                                 </h2>
+
+                                <p>
+                                    {editingTask
+                                        ? "Update the event preparation requirement."
+                                        : "Add a requirement to your event preparation plan."}
+                                </p>
+
                             </div>
 
                             <button
                                 type="button"
-                                onClick={closeModal}
-                                disabled={saving}
-                                title="Close"
+                                onClick={
+                                    closeModal
+                                }
+                                disabled={
+                                    saving
+                                }
+                                aria-label="Close modal"
                             >
                                 ×
                             </button>
 
                         </div>
 
+                        {/* FORM */}
+
                         <form
                             onSubmit={
-                                handleAddNeed
+                                handleSaveNeed
                             }
                         >
 
                             <div className="modal-body">
+
+                                {/* EVENT NEED */}
 
                                 <div className="form-group full">
 
@@ -1555,19 +2025,21 @@ const EventPlanningPanel: React.FC<
                                         value={
                                             form.needName
                                         }
-                                        onChange={(
-                                            e: React.ChangeEvent<HTMLInputElement>
-                                        ) =>
+                                        onChange={e =>
                                             updateFormField(
                                                 "needName",
-                                                e.target.value
+                                                e.target
+                                                    .value
                                             )
                                         }
-                                        placeholder="e.g. Sound System"
+                                        placeholder="e.g. Water System"
                                         required
+                                        autoFocus
                                     />
 
                                 </div>
+
+                                {/* DESCRIPTION */}
 
                                 <div className="form-group full">
 
@@ -1580,18 +2052,19 @@ const EventPlanningPanel: React.FC<
                                         value={
                                             form.description
                                         }
-                                        onChange={(
-                                            e: React.ChangeEvent<HTMLTextAreaElement>
-                                        ) =>
+                                        onChange={e =>
                                             updateFormField(
                                                 "description",
-                                                e.target.value
+                                                e.target
+                                                    .value
                                             )
                                         }
                                         placeholder="Describe what needs to be prepared..."
                                     />
 
                                 </div>
+
+                                {/* CATEGORY */}
 
                                 <div className="form-group full">
 
@@ -1604,16 +2077,14 @@ const EventPlanningPanel: React.FC<
                                         value={
                                             form.category
                                         }
-                                        onChange={(
-                                            e: React.ChangeEvent<HTMLSelectElement>
-                                        ) =>
+                                        onChange={e =>
                                             updateFormField(
                                                 "category",
-                                                e.target.value
+                                                e.target
+                                                    .value
                                             )
                                         }
                                     >
-
                                         <option value="">
                                             Select Category
                                         </option>
@@ -1646,13 +2117,18 @@ const EventPlanningPanel: React.FC<
                                             Decoration
                                         </option>
 
+                                        <option value="People">
+                                            People
+                                        </option>
+
                                         <option value="Others">
                                             Others
                                         </option>
-
                                     </select>
 
                                 </div>
+
+                                {/* QUANTITY / UNIT */}
 
                                 <div className="form-row">
 
@@ -1670,12 +2146,11 @@ const EventPlanningPanel: React.FC<
                                             value={
                                                 form.quantity
                                             }
-                                            onChange={(
-                                                e: React.ChangeEvent<HTMLInputElement>
-                                            ) =>
+                                            onChange={e =>
                                                 updateFormField(
                                                     "quantity",
-                                                    e.target.value
+                                                    e.target
+                                                        .value
                                                 )
                                             }
                                         />
@@ -1694,12 +2169,11 @@ const EventPlanningPanel: React.FC<
                                             value={
                                                 form.unit
                                             }
-                                            onChange={(
-                                                e: React.ChangeEvent<HTMLInputElement>
-                                            ) =>
+                                            onChange={e =>
                                                 updateFormField(
                                                     "unit",
-                                                    e.target.value
+                                                    e.target
+                                                        .value
                                                 )
                                             }
                                             placeholder="pcs, sets, boxes..."
@@ -1708,6 +2182,8 @@ const EventPlanningPanel: React.FC<
                                     </div>
 
                                 </div>
+
+                                {/* PRIORITY / STATUS */}
 
                                 <div className="form-row">
 
@@ -1722,16 +2198,14 @@ const EventPlanningPanel: React.FC<
                                             value={
                                                 form.priority
                                             }
-                                            onChange={(
-                                                e: React.ChangeEvent<HTMLSelectElement>
-                                            ) =>
+                                            onChange={e =>
                                                 updateFormField(
                                                     "priority",
-                                                    e.target.value
+                                                    e.target
+                                                        .value
                                                 )
                                             }
                                         >
-
                                             <option value="LOW">
                                                 Low
                                             </option>
@@ -1747,7 +2221,6 @@ const EventPlanningPanel: React.FC<
                                             <option value="URGENT">
                                                 Urgent
                                             </option>
-
                                         </select>
 
                                     </div>
@@ -1763,16 +2236,14 @@ const EventPlanningPanel: React.FC<
                                             value={
                                                 form.status
                                             }
-                                            onChange={(
-                                                e: React.ChangeEvent<HTMLSelectElement>
-                                            ) =>
+                                            onChange={e =>
                                                 updateFormField(
                                                     "status",
-                                                    e.target.value
+                                                    e.target
+                                                        .value
                                                 )
                                             }
                                         >
-
                                             <option value="PENDING">
                                                 Pending
                                             </option>
@@ -1788,12 +2259,13 @@ const EventPlanningPanel: React.FC<
                                             <option value="CANCELLED">
                                                 Cancelled
                                             </option>
-
                                         </select>
 
                                     </div>
 
                                 </div>
+
+                                {/* RESPONSIBLE / NEEDED BY */}
 
                                 <div className="form-row">
 
@@ -1809,12 +2281,11 @@ const EventPlanningPanel: React.FC<
                                             value={
                                                 form.responsiblePerson
                                             }
-                                            onChange={(
-                                                e: React.ChangeEvent<HTMLInputElement>
-                                            ) =>
+                                            onChange={e =>
                                                 updateFormField(
                                                     "responsiblePerson",
-                                                    e.target.value
+                                                    e.target
+                                                        .value
                                                 )
                                             }
                                             placeholder="Person or team"
@@ -1834,12 +2305,11 @@ const EventPlanningPanel: React.FC<
                                             value={
                                                 form.neededBy
                                             }
-                                            onChange={(
-                                                e: React.ChangeEvent<HTMLInputElement>
-                                            ) =>
+                                            onChange={e =>
                                                 updateFormField(
                                                     "neededBy",
-                                                    e.target.value
+                                                    e.target
+                                                        .value
                                                 )
                                             }
                                         />
@@ -1847,6 +2317,8 @@ const EventPlanningPanel: React.FC<
                                     </div>
 
                                 </div>
+
+                                {/* NOTES */}
 
                                 <div className="form-group full">
 
@@ -1859,12 +2331,11 @@ const EventPlanningPanel: React.FC<
                                         value={
                                             form.notes
                                         }
-                                        onChange={(
-                                            e: React.ChangeEvent<HTMLTextAreaElement>
-                                        ) =>
+                                        onChange={e =>
                                             updateFormField(
                                                 "notes",
-                                                e.target.value
+                                                e.target
+                                                    .value
                                             )
                                         }
                                         placeholder="Additional notes..."
@@ -1874,13 +2345,19 @@ const EventPlanningPanel: React.FC<
 
                             </div>
 
+                            {/* MODAL FOOTER */}
+
                             <div className="modal-footer">
 
                                 <button
                                     type="button"
                                     className="secondary-btn"
-                                    onClick={closeModal}
-                                    disabled={saving}
+                                    onClick={
+                                        closeModal
+                                    }
+                                    disabled={
+                                        saving
+                                    }
                                 >
                                     Cancel
                                 </button>
@@ -1888,10 +2365,14 @@ const EventPlanningPanel: React.FC<
                                 <button
                                     type="submit"
                                     className="planning-primary-btn"
-                                    disabled={saving}
+                                    disabled={
+                                        saving
+                                    }
                                 >
                                     {saving
                                         ? "Saving..."
+                                        : editingTask
+                                        ? "Update Event Need"
                                         : "Save Event Need"}
                                 </button>
 
