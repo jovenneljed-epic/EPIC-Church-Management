@@ -1,0 +1,1012 @@
+﻿/* =========================================================
+   EPIC CONTACT PAGE
+   ========================================================= */
+
+.epic-contact-page {
+    min-height: 100vh;
+    background: #f7f8fb;
+    color: #101828;
+    font-family: inherit;
+}
+
+/* =========================================================
+   CONTAINER
+   ========================================================= */
+
+.epic-contact-container {
+    width: min(1180px, calc(100% - 48px));
+    margin: 0 auto;
+}
+
+/* =========================================================
+   NAVBAR
+   ========================================================= */
+
+.epic-contact-navbar {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    background: rgba(255, 255, 255, 0.96);
+    border-bottom: 1px solid #e8ebf0;
+    backdrop-filter: blur(16px);
+}
+
+.epic-contact-nav-inner {
+    width: min(1280px, calc(100% - 48px));
+    min-height: 78px;
+    margin: 0 auto;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 28px;
+}
+
+.epic-contact-logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    border: 0;
+    background: transparent;
+    padding: 0;
+
+    cursor: pointer;
+    text-align: left;
+}
+
+.epic-contact-logo-mark {
+    width: 46px;
+    height: 46px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 12px;
+
+    background: #102a56;
+    color: #f3c969;
+
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: 1px;
+}
+
+.epic-contact-logo-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.epic-contact-logo-text strong {
+    color: #102a56;
+    font-size: 15px;
+    letter-spacing: 0.7px;
+}
+
+.epic-contact-logo-text small {
+    color: #7a8494;
+    font-size: 9px;
+    letter-spacing: 0.5px;
+}
+
+.epic-contact-nav-links {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.epic-contact-nav-links button {
+    border: 0;
+    background: transparent;
+
+    padding: 10px 13px;
+
+    color: #667085;
+
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+
+    cursor: pointer;
+
+    transition:
+        color 0.2s ease,
+        background 0.2s ease;
+}
+
+.epic-contact-nav-links button:hover {
+    color: #102a56;
+}
+
+.epic-contact-nav-links button.active {
+    color: #102a56;
+    background: #f0f3f8;
+    border-radius: 8px;
+}
+
+.epic-contact-login {
+    border: 1px solid #d7dce5;
+    background: #ffffff;
+
+    color: #102a56;
+
+    padding: 10px 19px;
+    border-radius: 8px;
+
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition:
+        background 0.2s ease,
+        color 0.2s ease,
+        border-color 0.2s ease;
+}
+
+.epic-contact-login:hover {
+    background: #102a56;
+    border-color: #102a56;
+    color: #ffffff;
+}
+
+/* =========================================================
+   HERO
+   ========================================================= */
+
+.epic-contact-hero {
+    position: relative;
+    overflow: hidden;
+
+    min-height: 600px;
+
+    display: flex;
+    align-items: center;
+
+    background:
+        radial-gradient(
+            circle at 80% 20%,
+            rgba(243, 201, 105, 0.14),
+            transparent 30%
+        ),
+        linear-gradient(
+            135deg,
+            #091a36 0%,
+            #102a56 50%,
+            #173c70 100%
+        );
+
+    color: #ffffff;
+}
+
+.epic-contact-hero-glow {
+    position: absolute;
+
+    width: 520px;
+    height: 520px;
+
+    right: -180px;
+    bottom: -260px;
+
+    border-radius: 50%;
+
+    border: 1px solid rgba(243, 201, 105, 0.2);
+    box-shadow:
+        0 0 0 70px rgba(243, 201, 105, 0.025),
+        0 0 0 140px rgba(243, 201, 105, 0.018);
+}
+
+.epic-contact-hero .epic-contact-container {
+    position: relative;
+    z-index: 2;
+
+    display: grid;
+    grid-template-columns: 1.4fr 0.6fr;
+    align-items: center;
+    gap: 80px;
+}
+
+.epic-contact-hero-content {
+    max-width: 720px;
+}
+
+.epic-contact-label {
+    display: inline-block;
+
+    color: #b98b25;
+
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 2.4px;
+}
+
+.epic-contact-hero .epic-contact-label {
+    color: #f3c969;
+}
+
+.epic-contact-hero h1 {
+    margin: 20px 0 24px;
+
+    font-size: clamp(48px, 6vw, 78px);
+    line-height: 0.98;
+
+    letter-spacing: -3px;
+}
+
+.epic-contact-hero h1 span {
+    color: #f3c969;
+}
+
+.epic-contact-hero p {
+    max-width: 650px;
+
+    margin: 0;
+
+    color: rgba(255, 255, 255, 0.74);
+
+    font-size: 17px;
+    line-height: 1.8;
+}
+
+.epic-contact-hero-actions {
+    display: flex;
+    gap: 14px;
+    margin-top: 36px;
+}
+
+.epic-contact-primary-button,
+.epic-contact-secondary-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+
+    min-height: 52px;
+
+    padding: 0 24px;
+
+    border-radius: 8px;
+
+    font: inherit;
+    font-size: 13px;
+    font-weight: 800;
+
+    cursor: pointer;
+
+    transition:
+        transform 0.2s ease,
+        background 0.2s ease,
+        border-color 0.2s ease;
+}
+
+.epic-contact-primary-button {
+    border: 1px solid #f3c969;
+    background: #f3c969;
+    color: #102a56;
+}
+
+.epic-contact-primary-button:hover {
+    transform: translateY(-2px);
+    background: #ffd982;
+}
+
+.epic-contact-primary-button span {
+    font-size: 19px;
+}
+
+.epic-contact-secondary-button {
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: transparent;
+    color: #ffffff;
+}
+
+.epic-contact-secondary-button:hover {
+    border-color: rgba(255, 255, 255, 0.55);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.epic-contact-hero-mark {
+    min-height: 330px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 24px;
+
+    background: rgba(255, 255, 255, 0.045);
+
+    text-align: center;
+
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.epic-contact-cross {
+    margin-bottom: 14px;
+
+    color: #f3c969;
+
+    font-size: 62px;
+}
+
+.epic-contact-hero-mark strong {
+    color: #ffffff;
+
+    font-size: 54px;
+    line-height: 1;
+
+    letter-spacing: 5px;
+}
+
+.epic-contact-hero-mark span {
+    margin-top: 14px;
+
+    color: rgba(255, 255, 255, 0.55);
+
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+/* =========================================================
+   INFO SECTION
+   ========================================================= */
+
+.epic-contact-info-section {
+    padding: 110px 0;
+    background: #ffffff;
+}
+
+.epic-contact-section-heading {
+    max-width: 700px;
+    margin-bottom: 52px;
+}
+
+.epic-contact-section-heading h2 {
+    margin: 16px 0;
+
+    color: #102a56;
+
+    font-size: clamp(38px, 5vw, 58px);
+    line-height: 1;
+    letter-spacing: -2px;
+}
+
+.epic-contact-section-heading h2 span {
+    color: #b98b25;
+}
+
+.epic-contact-section-heading p {
+    margin: 0;
+
+    color: #667085;
+
+    font-size: 16px;
+    line-height: 1.8;
+}
+
+.epic-contact-info-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 22px;
+}
+
+.epic-contact-info-card {
+    padding: 34px;
+
+    border: 1px solid #e7eaf0;
+    border-radius: 16px;
+
+    background: #ffffff;
+
+    transition:
+        transform 0.25s ease,
+        box-shadow 0.25s ease;
+}
+
+.epic-contact-info-card:hover {
+    transform: translateY(-5px);
+
+    box-shadow:
+        0 18px 45px rgba(16, 42, 86, 0.09);
+}
+
+.epic-contact-info-icon {
+    width: 54px;
+    height: 54px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    margin-bottom: 24px;
+
+    border-radius: 13px;
+
+    background: #f3f5f8;
+    color: #b98b25;
+
+    font-size: 24px;
+}
+
+.epic-contact-info-card > span {
+    color: #9aa2af;
+
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.8px;
+}
+
+.epic-contact-info-card h3 {
+    margin: 9px 0 12px;
+
+    color: #102a56;
+
+    font-size: 22px;
+}
+
+.epic-contact-info-card p {
+    min-height: 56px;
+
+    margin: 0 0 18px;
+
+    color: #667085;
+
+    font-size: 14px;
+    line-height: 1.7;
+}
+
+.epic-contact-info-card a,
+.epic-contact-info-card button {
+    border: 0;
+    background: transparent;
+    padding: 0;
+
+    color: #102a56;
+
+    font: inherit;
+    font-size: 13px;
+    font-weight: 800;
+
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.epic-contact-info-card a:hover,
+.epic-contact-info-card button:hover {
+    color: #b98b25;
+}
+
+/* =========================================================
+   FORM SECTION
+   ========================================================= */
+
+.epic-contact-form-section {
+    padding: 110px 0;
+
+    background:
+        linear-gradient(
+            180deg,
+            #f7f8fb 0%,
+            #eef1f6 100%
+        );
+}
+
+.epic-contact-form-card {
+    display: grid;
+    grid-template-columns: 0.8fr 1.2fr;
+    gap: 70px;
+
+    padding: 58px;
+
+    border-radius: 24px;
+
+    background: #ffffff;
+
+    box-shadow:
+        0 25px 70px rgba(16, 42, 86, 0.1);
+}
+
+.epic-contact-form-intro h2 {
+    margin: 18px 0;
+
+    color: #102a56;
+
+    font-size: clamp(38px, 4vw, 55px);
+    line-height: 1;
+    letter-spacing: -2px;
+}
+
+.epic-contact-form-intro h2 span {
+    color: #b98b25;
+}
+
+.epic-contact-form-intro p {
+    margin: 0;
+
+    color: #667085;
+
+    font-size: 15px;
+    line-height: 1.8;
+}
+
+.epic-contact-form-points {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+
+    margin-top: 32px;
+}
+
+.epic-contact-form-points div {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    color: #344054;
+
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.epic-contact-form-points span {
+    width: 25px;
+    height: 25px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 50%;
+
+    background: #eef4ee;
+    color: #2e7d32;
+
+    font-size: 12px;
+}
+
+.epic-contact-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.epic-contact-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+}
+
+.epic-contact-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.epic-contact-field label {
+    color: #344054;
+
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.epic-contact-field input,
+.epic-contact-field select,
+.epic-contact-field textarea {
+    width: 100%;
+
+    box-sizing: border-box;
+
+    border: 1px solid #dfe3e9;
+    border-radius: 9px;
+
+    background: #fafbfc;
+
+    padding: 13px 14px;
+
+    color: #101828;
+
+    font: inherit;
+    font-size: 14px;
+
+    outline: none;
+
+    transition:
+        border-color 0.2s ease,
+        background 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.epic-contact-field textarea {
+    resize: vertical;
+    min-height: 145px;
+}
+
+.epic-contact-field input:focus,
+.epic-contact-field select:focus,
+.epic-contact-field textarea:focus {
+    border-color: #102a56;
+    background: #ffffff;
+
+    box-shadow:
+        0 0 0 3px rgba(16, 42, 86, 0.08);
+}
+
+.epic-contact-field input::placeholder,
+.epic-contact-field textarea::placeholder {
+    color: #a0a7b2;
+}
+
+.epic-contact-success {
+    padding: 14px 16px;
+
+    border: 1px solid #cce5d0;
+    border-radius: 9px;
+
+    background: #effaf1;
+    color: #26702d;
+
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.epic-contact-submit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+
+    width: 100%;
+    min-height: 54px;
+
+    border: 0;
+    border-radius: 9px;
+
+    background: #102a56;
+    color: #ffffff;
+
+    font: inherit;
+    font-size: 13px;
+    font-weight: 800;
+
+    cursor: pointer;
+
+    transition:
+        transform 0.2s ease,
+        background 0.2s ease;
+}
+
+.epic-contact-submit:hover {
+    transform: translateY(-2px);
+    background: #173c70;
+}
+
+.epic-contact-submit span {
+    color: #f3c969;
+    font-size: 20px;
+}
+
+.epic-contact-form-note {
+    color: #98a2b3;
+
+    text-align: center;
+
+    font-size: 11px;
+}
+
+/* =========================================================
+   CTA
+   ========================================================= */
+
+.epic-contact-cta {
+    position: relative;
+    overflow: hidden;
+
+    padding: 110px 0;
+
+    background:
+        radial-gradient(
+            circle at 50% 0%,
+            rgba(243, 201, 105, 0.13),
+            transparent 32%
+        ),
+        #0a1c38;
+
+    color: #ffffff;
+
+    text-align: center;
+}
+
+.epic-contact-cta .epic-contact-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.epic-contact-cta-cross {
+    color: #f3c969;
+
+    font-size: 40px;
+}
+
+.epic-contact-cta h2 {
+    margin: 20px 0 8px;
+
+    font-size: clamp(34px, 5vw, 58px);
+    line-height: 1;
+    letter-spacing: -2px;
+}
+
+.epic-contact-cta h3 {
+    margin: 0;
+
+    color: #f3c969;
+
+    font-size: clamp(24px, 3vw, 36px);
+}
+
+.epic-contact-cta p {
+    margin: 24px 0 32px;
+
+    color: rgba(255, 255, 255, 0.6);
+
+    font-size: 15px;
+    line-height: 1.7;
+}
+
+/* =========================================================
+   FOOTER
+   ========================================================= */
+
+.epic-contact-footer {
+    padding: 70px 0 24px;
+
+    background: #07162c;
+    color: #ffffff;
+}
+
+.epic-contact-footer-grid {
+    display: grid;
+    grid-template-columns: 1.5fr repeat(3, 1fr);
+    gap: 50px;
+
+    padding-bottom: 55px;
+
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.epic-contact-footer-grid > div {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.epic-contact-footer-logo {
+    width: 46px;
+    height: 46px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    margin-bottom: 13px;
+
+    border-radius: 11px;
+
+    background: #f3c969;
+    color: #102a56;
+
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.epic-contact-footer-grid strong {
+    color: #ffffff;
+
+    font-size: 13px;
+    letter-spacing: 0.5px;
+}
+
+.epic-contact-footer-grid p {
+    margin: 10px 0 5px;
+
+    color: rgba(255, 255, 255, 0.65);
+
+    font-size: 13px;
+}
+
+.epic-contact-footer-grid small {
+    color: rgba(255, 255, 255, 0.35);
+
+    font-size: 10px;
+    line-height: 1.6;
+}
+
+.epic-contact-footer-grid button {
+    border: 0;
+    background: transparent;
+
+    margin-top: 14px;
+    padding: 0;
+
+    color: rgba(255, 255, 255, 0.52);
+
+    font: inherit;
+    font-size: 12px;
+
+    cursor: pointer;
+    text-align: left;
+
+    transition: color 0.2s ease;
+}
+
+.epic-contact-footer-grid button:hover,
+.epic-contact-footer-grid button.active {
+    color: #f3c969;
+}
+
+.epic-contact-footer-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding-top: 22px;
+
+    color: rgba(255, 255, 255, 0.35);
+
+    font-size: 10px;
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 1050px) {
+
+    .epic-contact-nav-links {
+        gap: 0;
+    }
+
+    .epic-contact-nav-links button {
+        padding: 9px 8px;
+        font-size: 12px;
+    }
+
+    .epic-contact-hero .epic-contact-container {
+        gap: 45px;
+    }
+
+    .epic-contact-form-card {
+        gap: 45px;
+        padding: 42px;
+    }
+
+}
+
+@media (max-width: 850px) {
+
+    .epic-contact-nav-links {
+        display: none;
+    }
+
+    .epic-contact-hero {
+        min-height: auto;
+        padding: 90px 0;
+    }
+
+    .epic-contact-hero .epic-contact-container {
+        grid-template-columns: 1fr;
+    }
+
+    .epic-contact-hero-mark {
+        max-width: 360px;
+    }
+
+    .epic-contact-info-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .epic-contact-form-card {
+        grid-template-columns: 1fr;
+    }
+
+    .epic-contact-footer-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+}
+
+@media (max-width: 600px) {
+
+    .epic-contact-container {
+        width: min(100% - 30px, 1180px);
+    }
+
+    .epic-contact-nav-inner {
+        width: min(100% - 30px, 1280px);
+        min-height: 68px;
+    }
+
+    .epic-contact-logo-text small {
+        display: none;
+    }
+
+    .epic-contact-login {
+        padding: 9px 13px;
+    }
+
+    .epic-contact-hero {
+        padding: 75px 0;
+    }
+
+    .epic-contact-hero h1 {
+        font-size: 48px;
+        letter-spacing: -2px;
+    }
+
+    .epic-contact-hero p {
+        font-size: 15px;
+    }
+
+    .epic-contact-hero-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .epic-contact-hero-mark {
+        min-height: 260px;
+    }
+
+    .epic-contact-info-section,
+    .epic-contact-form-section,
+    .epic-contact-cta {
+        padding: 75px 0;
+    }
+
+    .epic-contact-form-card {
+        padding: 28px 20px;
+        border-radius: 16px;
+    }
+
+    .epic-contact-form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .epic-contact-footer-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 35px 25px;
+    }
+
+    .epic-contact-footer-bottom {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+}
+
+@media (max-width: 420px) {
+
+    .epic-contact-logo-mark {
+        width: 40px;
+        height: 40px;
+    }
+
+    .epic-contact-logo-text strong {
+        font-size: 12px;
+    }
+
+    .epic-contact-login {
+        font-size: 11px;
+    }
+
+    .epic-contact-footer-grid {
+        grid-template-columns: 1fr;
+    }
+
+}

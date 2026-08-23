@@ -36,9 +36,28 @@ type AttendanceStatus =
 interface AttendanceRecord {
     memberId: number;
     memberCode?: string | null;
+
     firstName?: string | null;
     middleName?: string | null;
     lastName?: string | null;
+
+    // Additional possible API name fields
+    memberName?: string | null;
+    fullName?: string | null;
+    name?: string | null;
+
+    member?: {
+        memberId?: number | null;
+        memberCode?: string | null;
+
+        firstName?: string | null;
+        middleName?: string | null;
+        lastName?: string | null;
+
+        memberName?: string | null;
+        fullName?: string | null;
+        name?: string | null;
+    } | null;
 
     status: AttendanceStatus;
 
@@ -187,49 +206,178 @@ const AttendanceReportBuilder: React.FC = () => {
     };
 
     // =====================================================
+    // GET VALUE FROM POSSIBLE OBJECT PROPERTIES
+    // =====================================================
+
+    const getStringValue = (
+        ...values: unknown[]
+    ): string | null => {
+        for (const value of values) {
+            if (
+                typeof value === "string" &&
+                value.trim().length > 0
+            ) {
+                return value.trim();
+            }
+        }
+
+        return null;
+    };
+
+    // =====================================================
     // NORMALIZE ATTENDANCE RECORD
     // =====================================================
 
     const normalizeAttendanceRecord = (
         record: any
     ): AttendanceRecord => {
+
+        const member =
+            record?.member ??
+            record?.Member ??
+            null;
+
         return {
             memberId:
-                Number(record?.memberId) || 0,
+                Number(
+                    record?.memberId ??
+                    record?.MemberId ??
+                    member?.memberId ??
+                    member?.MemberId
+                ) || 0,
 
             memberCode:
-                record?.memberCode ??
-                record?.member?.memberCode ??
-                null,
+                getStringValue(
+                    record?.memberCode,
+                    record?.MemberCode,
+                    member?.memberCode,
+                    member?.MemberCode
+                ),
 
             firstName:
-                record?.firstName ??
-                record?.member?.firstName ??
-                null,
+                getStringValue(
+                    record?.firstName,
+                    record?.FirstName,
+                    member?.firstName,
+                    member?.FirstName
+                ),
 
             middleName:
-                record?.middleName ??
-                record?.member?.middleName ??
-                null,
+                getStringValue(
+                    record?.middleName,
+                    record?.MiddleName,
+                    member?.middleName,
+                    member?.MiddleName
+                ),
 
             lastName:
-                record?.lastName ??
-                record?.member?.lastName ??
-                null,
+                getStringValue(
+                    record?.lastName,
+                    record?.LastName,
+                    member?.lastName,
+                    member?.LastName
+                ),
+
+            // =================================================
+            // IMPORTANT:
+            // Some API responses may already return a name
+            // instead of separate first/middle/last names.
+            // =================================================
+
+            memberName:
+                getStringValue(
+                    record?.memberName,
+                    record?.MemberName,
+                    member?.memberName,
+                    member?.MemberName
+                ),
+
+            fullName:
+                getStringValue(
+                    record?.fullName,
+                    record?.FullName,
+                    member?.fullName,
+                    member?.FullName
+                ),
+
+            name:
+                getStringValue(
+                    record?.name,
+                    record?.Name,
+                    member?.name,
+                    member?.Name
+                ),
+
+            member: member
+                ? {
+                      memberId:
+                          Number(
+                              member?.memberId ??
+                              member?.MemberId
+                          ) || null,
+
+                      memberCode:
+                          getStringValue(
+                              member?.memberCode,
+                              member?.MemberCode
+                          ),
+
+                      firstName:
+                          getStringValue(
+                              member?.firstName,
+                              member?.FirstName
+                          ),
+
+                      middleName:
+                          getStringValue(
+                              member?.middleName,
+                              member?.MiddleName
+                          ),
+
+                      lastName:
+                          getStringValue(
+                              member?.lastName,
+                              member?.LastName
+                          ),
+
+                      memberName:
+                          getStringValue(
+                              member?.memberName,
+                              member?.MemberName
+                          ),
+
+                      fullName:
+                          getStringValue(
+                              member?.fullName,
+                              member?.FullName
+                          ),
+
+                      name:
+                          getStringValue(
+                              member?.name,
+                              member?.Name
+                          ),
+                  }
+                : null,
 
             status:
                 normalizeStatus(
-                    record?.status
+                    record?.status ??
+                    record?.Status
                 ),
 
             attendanceId:
                 record?.attendanceId ??
+                record?.AttendanceId ??
                 record?.id ??
+                record?.Id ??
                 null,
 
             attendanceDate:
                 record?.attendanceDate ??
+                record?.AttendanceDate ??
                 record?.date ??
+                record?.Date ??
                 null,
         };
     };
@@ -241,9 +389,12 @@ const AttendanceReportBuilder: React.FC = () => {
     const normalizeReportResponse = (
         data: any
     ): AttendanceReportResponse => {
+
         const rawAttendance =
             Array.isArray(data?.attendance)
                 ? data.attendance
+                : Array.isArray(data?.Attendance)
+                ? data.Attendance
                 : [];
 
         const normalizedAttendance =
@@ -252,83 +403,101 @@ const AttendanceReportBuilder: React.FC = () => {
             );
 
         const rawSummary =
-            data?.summary ?? {};
+            data?.summary ??
+            data?.Summary ??
+            {};
 
         return {
             churchServiceId:
                 Number(
-                    data?.churchServiceId
+                    data?.churchServiceId ??
+                    data?.ChurchServiceId
                 ) || 0,
 
             serviceName:
                 data?.serviceName ??
+                data?.ServiceName ??
                 "Church Service",
 
             serviceDate:
                 data?.serviceDate ??
+                data?.ServiceDate ??
                 "",
 
             startTime:
                 data?.startTime ??
+                data?.StartTime ??
                 null,
 
             endTime:
                 data?.endTime ??
+                data?.EndTime ??
                 null,
 
             location:
                 data?.location ??
+                data?.Location ??
                 null,
 
             status:
                 String(
                     data?.status ??
+                    data?.Status ??
                     ""
                 ).toUpperCase(),
 
             canRecordAttendance:
                 Boolean(
-                    data?.canRecordAttendance
+                    data?.canRecordAttendance ??
+                    data?.CanRecordAttendance
                 ),
 
             attendanceStarted:
                 Boolean(
-                    data?.attendanceStarted
+                    data?.attendanceStarted ??
+                    data?.AttendanceStarted
                 ),
 
             message:
                 data?.message ??
+                data?.Message ??
                 null,
 
             summary: {
                 total:
                     Number(
-                        rawSummary?.total
+                        rawSummary?.total ??
+                        rawSummary?.Total
                     ) || 0,
 
                 present:
                     Number(
-                        rawSummary?.present
+                        rawSummary?.present ??
+                        rawSummary?.Present
                     ) || 0,
 
                 late:
                     Number(
-                        rawSummary?.late
+                        rawSummary?.late ??
+                        rawSummary?.Late
                     ) || 0,
 
                 early:
                     Number(
-                        rawSummary?.early
+                        rawSummary?.early ??
+                        rawSummary?.Early
                     ) || 0,
 
                 absent:
                     Number(
-                        rawSummary?.absent
+                        rawSummary?.absent ??
+                        rawSummary?.Absent
                     ) || 0,
 
                 excused:
                     Number(
-                        rawSummary?.excused
+                        rawSummary?.excused ??
+                        rawSummary?.Excused
                     ) || 0,
             },
 
@@ -407,7 +576,7 @@ const AttendanceReportBuilder: React.FC = () => {
                     setError(
                         err?.response?.data
                             ?.message ||
-                            "Unable to load church services."
+                        "Unable to load church services."
                     );
                 }
 
@@ -457,6 +626,11 @@ const AttendanceReportBuilder: React.FC = () => {
                             response.data
                         );
 
+                    console.log(
+                        "Normalized Attendance:",
+                        normalizedReport.attendance
+                    );
+
                     setReport(
                         normalizedReport
                     );
@@ -470,17 +644,13 @@ const AttendanceReportBuilder: React.FC = () => {
                         "ALL"
                     );
 
-                    // =================================
-                    // SERVICE STATUS
-                    // =================================
-
                     if (
                         normalizedReport.status !==
                         "COMPLETED"
                     ) {
                         setSuccess(
                             normalizedReport.message ||
-                                "Attendance is not yet available for this service."
+                            "Attendance is not yet available for this service."
                         );
                     } else {
                         setSuccess(
@@ -522,7 +692,7 @@ const AttendanceReportBuilder: React.FC = () => {
                         setError(
                             err?.response?.data
                                 ?.message ||
-                                "Unable to load attendance records."
+                            "Unable to load attendance records."
                         );
                     }
 
@@ -543,6 +713,7 @@ const AttendanceReportBuilder: React.FC = () => {
         (
             event: React.ChangeEvent<HTMLSelectElement>
         ) => {
+
             const value =
                 event.target.value;
 
@@ -592,6 +763,7 @@ const AttendanceReportBuilder: React.FC = () => {
     const formatDate = (
         value?: string | null
     ) => {
+
         if (!value) {
             return "—";
         }
@@ -624,6 +796,7 @@ const AttendanceReportBuilder: React.FC = () => {
     const formatTime = (
         value?: string | null
     ) => {
+
         if (!value) {
             return "—";
         }
@@ -692,6 +865,31 @@ const AttendanceReportBuilder: React.FC = () => {
     const getMemberName = (
         record: AttendanceRecord
     ) => {
+
+        // =================================================
+        // FIRST PRIORITY:
+        // Explicit full/member name from API
+        // =================================================
+
+        const directName =
+            getStringValue(
+                record.memberName,
+                record.fullName,
+                record.name,
+                record.member?.memberName,
+                record.member?.fullName,
+                record.member?.name
+            );
+
+        if (directName) {
+            return directName;
+        }
+
+        // =================================================
+        // SECOND PRIORITY:
+        // First + Middle + Last
+        // =================================================
+
         const parts = [
             record.firstName,
             record.middleName,
@@ -702,7 +900,10 @@ const AttendanceReportBuilder: React.FC = () => {
                     value?.trim()
             )
             .filter(
-                Boolean
+                (
+                    value
+                ): value is string =>
+                    Boolean(value)
             );
 
         if (
@@ -713,11 +914,49 @@ const AttendanceReportBuilder: React.FC = () => {
             );
         }
 
+        // =================================================
+        // THIRD PRIORITY:
+        // MEMBER OBJECT
+        // =================================================
+
+        const memberParts = [
+            record.member?.firstName,
+            record.member?.middleName,
+            record.member?.lastName,
+        ]
+            .map(
+                value =>
+                    value?.trim()
+            )
+            .filter(
+                (
+                    value
+                ): value is string =>
+                    Boolean(value)
+            );
+
+        if (
+            memberParts.length > 0
+        ) {
+            return memberParts.join(
+                " "
+            );
+        }
+
+        // =================================================
+        // FOURTH PRIORITY:
+        // MEMBER CODE
+        // =================================================
+
         if (
             record.memberCode
         ) {
             return record.memberCode;
         }
+
+        // =================================================
+        // FINAL FALLBACK
+        // =================================================
 
         return `Member #${record.memberId}`;
     };
@@ -729,6 +968,7 @@ const AttendanceReportBuilder: React.FC = () => {
     const getStatusLabel = (
         status: string
     ) => {
+
         switch (
             status
                 .toUpperCase()
@@ -761,6 +1001,7 @@ const AttendanceReportBuilder: React.FC = () => {
     const getStatusClass = (
         status: string
     ) => {
+
         switch (
             status
                 .toUpperCase()
@@ -793,6 +1034,7 @@ const AttendanceReportBuilder: React.FC = () => {
     const getStatusIcon = (
         status: string
     ) => {
+
         switch (
             status
                 .toUpperCase()
@@ -824,6 +1066,7 @@ const AttendanceReportBuilder: React.FC = () => {
 
     const filteredAttendance =
         useMemo(() => {
+
             const search =
                 searchText
                     .trim()
@@ -831,6 +1074,7 @@ const AttendanceReportBuilder: React.FC = () => {
 
             return attendance.filter(
                 record => {
+
                     const name =
                         getMemberName(
                             record
@@ -870,6 +1114,7 @@ const AttendanceReportBuilder: React.FC = () => {
                     );
                 }
             );
+
         }, [
             attendance,
             searchText,
@@ -882,6 +1127,7 @@ const AttendanceReportBuilder: React.FC = () => {
 
     const summary: AttendanceSummary =
         report?.summary ?? {
+
             total:
                 attendance.length,
 
@@ -940,129 +1186,157 @@ const AttendanceReportBuilder: React.FC = () => {
               )
             : 0;
 
-// =========================================================
-// PRINT / SAVE PDF
-// =========================================================
+    // =====================================================
+    // PRINT
+    // =====================================================
 
-// =========================================================
-// PRINT
-// =========================================================
+    const handlePrint = () => {
 
-const handlePrint = () => {
+        if (!report) {
+            alert(
+                "Please select a completed church service first."
+            );
+            return;
+        }
 
-    if (!report) {
-        alert("Please select a completed church service first.");
-        return;
-    }
+        if (
+            filteredAttendance.length ===
+            0
+        ) {
+            alert(
+                "There are no attendance records to print."
+            );
+            return;
+        }
 
-    if (filteredAttendance.length === 0) {
-        alert("There are no attendance records to print.");
-        return;
-    }
+        const printWindow =
+            window.open(
+                "",
+                "_blank",
+                "width=1000,height=800"
+            );
 
-    const printWindow = window.open(
-        "",
-        "_blank",
-        "width=1000,height=800"
-    );
+        if (!printWindow) {
+            alert(
+                "Unable to open the print document. Please allow pop-ups for EPIC Church Management System."
+            );
+            return;
+        }
 
-    if (!printWindow) {
-        alert(
-            "Unable to open the print document. Please allow pop-ups for EPIC Church Management System."
-        );
-        return;
-    }
+        import("react-dom/server")
+            .then(
+                ({
+                    renderToStaticMarkup,
+                }) => {
 
-    import("react-dom/server")
-        .then(({ renderToStaticMarkup }) => {
+                    const printMarkup =
+                        renderToStaticMarkup(
+                            <AttendanceReportPrint
+                                report={
+                                    report
+                                }
+                                rows={
+                                    filteredAttendance
+                                }
+                                summary={
+                                    summary
+                                }
+                                attendanceRate={
+                                    attendanceRate
+                                }
+                                formatDate={
+                                    formatDate
+                                }
+                                formatTime={
+                                    formatTime
+                                }
+                                getStatusLabel={
+                                    getStatusLabel
+                                }
+                            />
+                        );
 
-            const printMarkup =
-                renderToStaticMarkup(
-                    <AttendanceReportPrint
-                        report={report}
-                        rows={filteredAttendance}
-                        summary={summary}
-                        attendanceRate={attendanceRate}
-                        formatDate={formatDate}
-                        formatTime={formatTime}
-                      
-                        getStatusLabel={getStatusLabel}
-                    />
-                );
+                    printWindow.document.open();
 
-            printWindow.document.open();
+                    printWindow.document.write(`
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
 
-            printWindow.document.write(`
-                <!DOCTYPE html>
-                <html>
-                <head>
+                            <meta charset="UTF-8" />
 
-                    <meta charset="UTF-8" />
+                            <meta
+                                name="viewport"
+                                content="width=device-width, initial-scale=1.0"
+                            />
 
-                    <meta
-                        name="viewport"
-                        content="width=device-width, initial-scale=1.0"
-                    />
+                            <title>
+                                ${
+                                    report.serviceName ||
+                                    "Attendance Report"
+                                }
+                            </title>
 
-                    <title>
-                        ${report.serviceName || "Attendance Report"}
-                    </title>
+                            <style>
+                                ${printStyles}
+                            </style>
 
-                    <style>
-                        ${printStyles}
-                    </style>
+                        </head>
 
-                </head>
+                        <body>
 
-                <body>
+                            ${printMarkup}
 
-                    ${printMarkup}
+                        </body>
 
-                </body>
+                        </html>
+                    `);
 
-                </html>
-            `);
+                    printWindow.document.close();
 
-            printWindow.document.close();
+                    setTimeout(() => {
 
-            setTimeout(() => {
+                        printWindow.focus();
 
-                printWindow.focus();
+                        printWindow.print();
 
-                printWindow.print();
+                    }, 700);
 
-            }, 700);
+                    printWindow.onafterprint =
+                        () => {
 
-            printWindow.onafterprint = () => {
+                            setTimeout(() => {
 
-                setTimeout(() => {
+                                printWindow.close();
+
+                            }, 300);
+
+                        };
+                }
+            )
+            .catch(
+                error => {
+
+                    console.error(
+                        "EPIC PRINT DOCUMENT ERROR:",
+                        error
+                    );
 
                     printWindow.close();
 
-                }, 300);
-
-            };
-
-        })
-        .catch(error => {
-
-            console.error(
-                "EPIC PRINT DOCUMENT ERROR:",
-                error
+                    alert(
+                        "Unable to generate the attendance print document."
+                    );
+                }
             );
+    };
 
-            printWindow.close();
-
-            alert(
-                "Unable to generate the attendance print document."
-            );
-
-        });
-};    // =====================================================
+    // =====================================================
     // CLEAR REPORT
     // =====================================================
 
     const handleClear = () => {
+
         setSelectedServiceId(
             ""
         );
@@ -1089,9 +1363,7 @@ const handlePrint = () => {
     return (
         <div className="epic-report-builder">
 
-            {/* =================================================
-                HEADER
-            ================================================= */}
+            {/* HEADER */}
 
             <div className="epic-report-builder-header">
 
@@ -1144,9 +1416,7 @@ const handlePrint = () => {
 
             </div>
 
-            {/* =================================================
-                ERROR
-            ================================================= */}
+            {/* ERROR */}
 
             {error && (
                 <div className="epic-report-alert error">
@@ -1180,9 +1450,7 @@ const handlePrint = () => {
                 </div>
             )}
 
-            {/* =================================================
-                SUCCESS
-            ================================================= */}
+            {/* SUCCESS */}
 
             {success && (
                 <div className="epic-report-alert success">
@@ -1216,9 +1484,7 @@ const handlePrint = () => {
                 </div>
             )}
 
-            {/* =================================================
-                BUILDER CARD
-            ================================================= */}
+            {/* BUILDER CARD */}
 
             <div className="epic-report-builder-card">
 
@@ -1313,11 +1579,13 @@ const handlePrint = () => {
                         </label>
 
                         <div className="epic-report-readonly-field">
+
                             {report
                                 ? formatDate(
                                       report.serviceDate
                                   )
                                 : "Select a service"}
+
                         </div>
 
                     </div>
@@ -1331,17 +1599,17 @@ const handlePrint = () => {
                         </label>
 
                         <div className="epic-report-readonly-field">
+
                             {report?.location ||
                                 "—"}
+
                         </div>
 
                     </div>
 
                 </div>
 
-                {/* =================================================
-                    SELECTED SERVICE INFO
-                ================================================= */}
+                {/* SELECTED SERVICE INFO */}
 
                 {report && (
                     <div className="epic-selected-service-info">
@@ -1410,9 +1678,7 @@ const handlePrint = () => {
                     </div>
                 )}
 
-                {/* =================================================
-                    SERVICE WARNING
-                ================================================= */}
+                {/* SERVICE WARNING */}
 
                 {report &&
                     report.status !==
@@ -1444,9 +1710,7 @@ const handlePrint = () => {
 
             </div>
 
-            {/* =================================================
-                LOADING
-            ================================================= */}
+            {/* LOADING */}
 
             {loadingAttendance && (
                 <div className="epic-report-preview">
@@ -1470,9 +1734,7 @@ const handlePrint = () => {
                 </div>
             )}
 
-            {/* =================================================
-                REPORT
-            ================================================= */}
+            {/* REPORT */}
 
             {!loadingAttendance &&
                 report &&
@@ -1480,9 +1742,7 @@ const handlePrint = () => {
                     "COMPLETED" && (
                     <div className="epic-report-preview">
 
-                        {/* =================================================
-                            REPORT HEADER
-                        ================================================= */}
+                        {/* REPORT HEADER */}
 
                         <div className="epic-report-preview-header">
 
@@ -1526,9 +1786,7 @@ const handlePrint = () => {
 
                         </div>
 
-                        {/* =================================================
-                            SERVICE DETAILS
-                        ================================================= */}
+                        {/* SERVICE DETAILS */}
 
                         <div className="epic-report-service-header">
 
@@ -1596,13 +1854,9 @@ const handlePrint = () => {
 
                         </div>
 
-                        {/* =================================================
-                            SUMMARY
-                        ================================================= */}
+                        {/* SUMMARY */}
 
                         <div className="epic-report-summary-grid">
-
-                            {/* TOTAL */}
 
                             <div className="epic-report-summary-card total">
 
@@ -1622,8 +1876,6 @@ const handlePrint = () => {
 
                             </div>
 
-                            {/* PRESENT */}
-
                             <div className="epic-report-summary-card present">
 
                                 <span>
@@ -1641,8 +1893,6 @@ const handlePrint = () => {
                                 </small>
 
                             </div>
-
-                            {/* LATE */}
 
                             <div className="epic-report-summary-card late">
 
@@ -1662,8 +1912,6 @@ const handlePrint = () => {
 
                             </div>
 
-                            {/* EARLY */}
-
                             <div className="epic-report-summary-card early">
 
                                 <span>
@@ -1681,8 +1929,6 @@ const handlePrint = () => {
                                 </small>
 
                             </div>
-
-                            {/* ABSENT */}
 
                             <div className="epic-report-summary-card absent">
 
@@ -1702,8 +1948,6 @@ const handlePrint = () => {
 
                             </div>
 
-                            {/* EXCUSED */}
-
                             <div className="epic-report-summary-card excused">
 
                                 <span>
@@ -1721,8 +1965,6 @@ const handlePrint = () => {
                                 </small>
 
                             </div>
-
-                            {/* RATE */}
 
                             <div className="epic-report-summary-card rate">
 
@@ -1745,9 +1987,7 @@ const handlePrint = () => {
 
                         </div>
 
-                        {/* =================================================
-                            TOOLBAR
-                        ================================================= */}
+                        {/* TOOLBAR */}
 
                         <div className="epic-report-preview-toolbar no-print">
 
@@ -1838,9 +2078,7 @@ const handlePrint = () => {
 
                         </div>
 
-                        {/* =================================================
-                            LEGEND
-                        ================================================= */}
+                        {/* LEGEND */}
 
                         <div className="epic-report-status-legend">
 
@@ -1890,9 +2128,7 @@ const handlePrint = () => {
 
                         </div>
 
-                        {/* =================================================
-                            TABLE
-                        ================================================= */}
+                        {/* TABLE */}
 
                         <div className="epic-report-table-wrapper">
 
@@ -2037,9 +2273,7 @@ const handlePrint = () => {
 
                         </div>
 
-                        {/* =================================================
-                            FOOTER
-                        ================================================= */}
+                        {/* FOOTER */}
 
                         <div className="epic-report-footer">
 
@@ -2079,9 +2313,7 @@ const handlePrint = () => {
                     </div>
                 )}
 
-            {/* =================================================
-                NO REPORT SELECTED
-            ================================================= */}
+            {/* NO REPORT SELECTED */}
 
             {!loadingAttendance &&
                 !report && (

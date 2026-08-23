@@ -1,7 +1,6 @@
-import { API_BASE_URL } from "../config";
 import React, { useEffect, useMemo, useState } from "react";
+import { API_BASE_URL } from "../config";
 import "./MemberAttendanceReport.css";
-
 
 type AttendanceStatus =
     | "PRESENT"
@@ -13,40 +12,42 @@ type AttendanceStatus =
 interface AttendanceRecord {
     attendanceId: number;
     memberId: number;
+
+    memberCode?: string;
+    memberName?: string;
+
     churchServiceId?: number;
-    attendanceDate: string;
-    status: AttendanceStatus;
+    eventId?: number;
+
+    serviceName?: string;
     service?: string;
 
-    member?: {
-        memberId?: number;
-        memberCode?: string;
-        firstName?: string;
-        middleName?: string;
-        lastName?: string;
-        status?: string;
-    };
+    attendanceDate: string;
+    status: AttendanceStatus;
 
-    churchService?: {
-        churchServiceId?: number;
-        serviceName?: string;
-        serviceDate?: string;
-    };
+    recordedBy?: string;
+    recordedDate?: string;
 }
 
 interface MemberSummary {
     memberId: number;
     memberCode: string;
     name: string;
+
     total: number;
     present: number;
     late: number;
     early: number;
     absent: number;
     excused: number;
+
     percentage: number;
     classification: string;
 }
+
+// ============================================================
+// AUTH
+// ============================================================
 
 const getToken = (): string | null =>
     localStorage.getItem("token") ||
@@ -61,53 +62,87 @@ const getHeaders = (): HeadersInit => {
     return {
         Accept: "application/json",
         ...(token
-            ? { Authorization: `Bearer ${token}` }
+            ? {
+                Authorization: `Bearer ${token}`,
+            }
             : {}),
     };
 };
 
-const getMemberName = (record: AttendanceRecord): string => {
-    const member = record.member;
+// ============================================================
+// HELPERS
+// ============================================================
 
-    if (!member) {
-        return `Member #${record.memberId}`;
-    }
-
+const getMemberName = (
+    record: AttendanceRecord
+): string => {
     return (
-        [
-            member.firstName,
-            member.middleName,
-            member.lastName,
-        ]
-            .filter(Boolean)
-            .join(" ")
-            .trim() || `Member #${record.memberId}`
+        record.memberName?.trim() ||
+        `Member #${record.memberId}`
     );
 };
 
-const getServiceName = (record: AttendanceRecord): string =>
-    record.churchService?.serviceName ||
-    record.service ||
-    "Church Service";
+const getMemberCode = (
+    record: AttendanceRecord
+): string => {
+    return (
+        record.memberCode?.trim() ||
+        `MEM-${record.memberId}`
+    );
+};
 
-const getClassification = (percentage: number): string => {
-    if (percentage >= 90) return "EXCELLENT";
-    if (percentage >= 75) return "GOOD";
-    if (percentage >= 60) return "NEEDS FOLLOW-UP";
+const getServiceName = (
+    record: AttendanceRecord
+): string => {
+    return (
+        record.serviceName?.trim() ||
+        record.service?.trim() ||
+        "Church Service"
+    );
+};
+
+const getClassification = (
+    percentage: number
+): string => {
+    if (percentage >= 90) {
+        return "EXCELLENT";
+    }
+
+    if (percentage >= 75) {
+        return "GOOD";
+    }
+
+    if (percentage >= 60) {
+        return "NEEDS FOLLOW-UP";
+    }
+
     return "PASTORAL FOLLOW-UP";
 };
 
 const getClassificationClass = (
     percentage: number
 ): string => {
-    if (percentage >= 90) return "excellent";
-    if (percentage >= 75) return "good";
-    if (percentage >= 60) return "needs-follow-up";
+    if (percentage >= 90) {
+        return "excellent";
+    }
+
+    if (percentage >= 75) {
+        return "good";
+    }
+
+    if (percentage >= 60) {
+        return "needs-follow-up";
+    }
+
     return "pastoral-follow-up";
 };
 
-const formatDate = (value: string): string => {
-    if (!value) return "-";
+const formatDate = (
+    value: string
+): string => {
+    if (!value) {
+        return "-";
+    }
 
     const date = new Date(value);
 
@@ -115,25 +150,48 @@ const formatDate = (value: string): string => {
         return value;
     }
 
-    return date.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-    });
+    return date.toLocaleDateString(
+        "en-US",
+        {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+        }
+    );
 };
 
-const MemberAttendanceReport: React.FC = () => {
-    const [records, setRecords] = useState<AttendanceRecord[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState("");
+// ============================================================
+// COMPONENT
+// ============================================================
 
-    const [search, setSearch] = useState("");
-    const [serviceFilter, setServiceFilter] = useState("ALL");
-    const [dateFrom, setDateFrom] = useState("");
-    const [dateTo, setDateTo] = useState("");
+const MemberAttendanceReport: React.FC = () => {
+    const [records, setRecords] =
+        useState<AttendanceRecord[]>([]);
+
+    const [loading, setLoading] =
+        useState(true);
+
+    const [error, setError] =
+        useState("");
+
+    const [search, setSearch] =
+        useState("");
+
+    const [serviceFilter, setServiceFilter] =
+        useState("ALL");
+
+    const [dateFrom, setDateFrom] =
+        useState("");
+
+    const [dateTo, setDateTo] =
+        useState("");
 
     const [selectedMemberId, setSelectedMemberId] =
         useState<number | null>(null);
+
+    // ========================================================
+    // LOAD ATTENDANCE
+    // ========================================================
 
     const loadAttendance = async () => {
         try {
@@ -163,7 +221,8 @@ const MemberAttendanceReport: React.FC = () => {
             }
 
             if (!response.ok) {
-                const text = await response.text();
+                const text =
+                    await response.text();
 
                 throw new Error(
                     text ||
@@ -171,7 +230,8 @@ const MemberAttendanceReport: React.FC = () => {
                 );
             }
 
-            const data = await response.json();
+            const data =
+                await response.json();
 
             if (!Array.isArray(data)) {
                 throw new Error(
@@ -196,66 +256,85 @@ const MemberAttendanceReport: React.FC = () => {
         }
     };
 
+    // ========================================================
+    // INITIAL LOAD
+    // ========================================================
+
     useEffect(() => {
         loadAttendance();
     }, []);
 
+    // ========================================================
+    // SERVICES
+    // ========================================================
+
     const services = useMemo(() => {
         return Array.from(
             new Set(
-                records.map(getServiceName)
+                records.map(
+                    getServiceName
+                )
             )
         ).sort((a, b) =>
             a.localeCompare(b)
         );
     }, [records]);
 
+    // ========================================================
+    // FILTER RECORDS
+    // ========================================================
+
     const filteredRecords = useMemo(() => {
-        const keyword = search
-            .trim()
-            .toLowerCase();
+        const keyword =
+            search.trim().toLowerCase();
 
-        return records.filter((record) => {
-            const memberName =
-                getMemberName(record).toLowerCase();
+        return records.filter(
+            (record) => {
+                const memberName =
+                    getMemberName(record)
+                        .toLowerCase();
 
-            const memberCode =
-                record.member?.memberCode
-                    ?.toLowerCase() || "";
+                const memberCode =
+                    getMemberCode(record)
+                        .toLowerCase();
 
-            const serviceName =
-                getServiceName(record);
+                const serviceName =
+                    getServiceName(record);
 
-            const recordDate =
-                record.attendanceDate?.substring(
-                    0,
-                    10
-                ) || "";
+                const recordDate =
+                    record.attendanceDate
+                        ?.substring(0, 10) || "";
 
-            const matchesSearch =
-                !keyword ||
-                memberName.includes(keyword) ||
-                memberCode.includes(keyword);
+                const matchesSearch =
+                    !keyword ||
+                    memberName.includes(
+                        keyword
+                    ) ||
+                    memberCode.includes(
+                        keyword
+                    );
 
-            const matchesService =
-                serviceFilter === "ALL" ||
-                serviceName === serviceFilter;
+                const matchesService =
+                    serviceFilter === "ALL" ||
+                    serviceName ===
+                    serviceFilter;
 
-            const matchesFrom =
-                !dateFrom ||
-                recordDate >= dateFrom;
+                const matchesFrom =
+                    !dateFrom ||
+                    recordDate >= dateFrom;
 
-            const matchesTo =
-                !dateTo ||
-                recordDate <= dateTo;
+                const matchesTo =
+                    !dateTo ||
+                    recordDate <= dateTo;
 
-            return (
-                matchesSearch &&
-                matchesService &&
-                matchesFrom &&
-                matchesTo
-            );
-        });
+                return (
+                    matchesSearch &&
+                    matchesService &&
+                    matchesFrom &&
+                    matchesTo
+                );
+            }
+        );
     }, [
         records,
         search,
@@ -264,119 +343,172 @@ const MemberAttendanceReport: React.FC = () => {
         dateTo,
     ]);
 
-    const memberSummaries = useMemo(() => {
-        const map =
-            new Map<number, MemberSummary>();
+    // ========================================================
+    // MEMBER SUMMARIES
+    // ========================================================
 
-        filteredRecords.forEach((record) => {
-            const memberId = record.memberId;
+    const memberSummaries =
+        useMemo(() => {
+            const map =
+                new Map<
+                    number,
+                    MemberSummary
+                >();
 
-            if (!map.has(memberId)) {
-                map.set(memberId, {
-                    memberId,
-                    memberCode:
-                        record.member?.memberCode ||
-                        `MEM-${memberId}`,
-                    name: getMemberName(record),
-                    total: 0,
-                    present: 0,
-                    late: 0,
-                    early: 0,
-                    absent: 0,
-                    excused: 0,
-                    percentage: 0,
-                    classification:
-                        "PASTORAL FOLLOW-UP",
-                });
-            }
+            filteredRecords.forEach(
+                (record) => {
+                    const memberId =
+                        record.memberId;
 
-            const member = map.get(memberId)!;
+                    if (!map.has(memberId)) {
+                        map.set(
+                            memberId,
+                            {
+                                memberId,
 
-            member.total++;
+                                memberCode:
+                                    getMemberCode(
+                                        record
+                                    ),
 
-            switch (record.status) {
-                case "PRESENT":
-                    member.present++;
-                    break;
+                                name:
+                                    getMemberName(
+                                        record
+                                    ),
 
-                case "LATE":
-                    member.late++;
-                    break;
+                                total: 0,
+                                present: 0,
+                                late: 0,
+                                early: 0,
+                                absent: 0,
+                                excused: 0,
 
-                case "EARLY":
-                    member.early++;
-                    break;
+                                percentage: 0,
 
-                case "ABSENT":
-                    member.absent++;
-                    break;
+                                classification:
+                                    "PASTORAL FOLLOW-UP",
+                            }
+                        );
+                    }
 
-                case "EXCUSED":
-                    member.excused++;
-                    break;
-            }
-        });
+                    const member =
+                        map.get(
+                            memberId
+                        )!;
 
-        return Array.from(map.values())
-            .map((member) => {
-                const attended =
-                    member.present +
-                    member.late +
-                    member.early;
+                    member.total++;
 
-                const percentage =
-                    member.total > 0
-                        ? Math.round(
-                            (attended /
-                                member.total) *
-                            100
-                        )
-                        : 0;
+                    switch (
+                        record.status
+                    ) {
+                        case "PRESENT":
+                            member.present++;
+                            break;
 
-                return {
-                    ...member,
-                    percentage,
-                    classification:
-                        getClassification(
-                            percentage
-                        ),
-                };
-            })
-            .sort((a, b) =>
-                a.name.localeCompare(b.name)
+                        case "LATE":
+                            member.late++;
+                            break;
+
+                        case "EARLY":
+                            member.early++;
+                            break;
+
+                        case "ABSENT":
+                            member.absent++;
+                            break;
+
+                        case "EXCUSED":
+                            member.excused++;
+                            break;
+                    }
+                }
             );
-    }, [filteredRecords]);
+
+            return Array.from(
+                map.values()
+            )
+                .map((member) => {
+                    const attended =
+                        member.present +
+                        member.late +
+                        member.early;
+
+                    const percentage =
+                        member.total > 0
+                            ? Math.round(
+                                (attended /
+                                    member.total) *
+                                100
+                            )
+                            : 0;
+
+                    return {
+                        ...member,
+
+                        percentage,
+
+                        classification:
+                            getClassification(
+                                percentage
+                            ),
+                    };
+                })
+                .sort((a, b) =>
+                    a.name.localeCompare(
+                        b.name
+                    )
+                );
+        }, [filteredRecords]);
+
+    // ========================================================
+    // STATISTICS
+    // ========================================================
 
     const statistics = useMemo(() => {
-        const total = filteredRecords.length;
+        const total =
+            filteredRecords.length;
 
-        const present = filteredRecords.filter(
-            (r) => r.status === "PRESENT"
-        ).length;
+        const present =
+            filteredRecords.filter(
+                (r) =>
+                    r.status === "PRESENT"
+            ).length;
 
-        const late = filteredRecords.filter(
-            (r) => r.status === "LATE"
-        ).length;
+        const late =
+            filteredRecords.filter(
+                (r) =>
+                    r.status === "LATE"
+            ).length;
 
-        const early = filteredRecords.filter(
-            (r) => r.status === "EARLY"
-        ).length;
+        const early =
+            filteredRecords.filter(
+                (r) =>
+                    r.status === "EARLY"
+            ).length;
 
-        const absent = filteredRecords.filter(
-            (r) => r.status === "ABSENT"
-        ).length;
+        const absent =
+            filteredRecords.filter(
+                (r) =>
+                    r.status === "ABSENT"
+            ).length;
 
-        const excused = filteredRecords.filter(
-            (r) => r.status === "EXCUSED"
-        ).length;
+        const excused =
+            filteredRecords.filter(
+                (r) =>
+                    r.status === "EXCUSED"
+            ).length;
 
         const attended =
-            present + late + early;
+            present +
+            late +
+            early;
 
         const percentage =
             total > 0
                 ? Math.round(
-                    (attended / total) * 100
+                    (attended /
+                        total) *
+                    100
                 )
                 : 0;
 
@@ -392,6 +524,10 @@ const MemberAttendanceReport: React.FC = () => {
         };
     }, [filteredRecords]);
 
+    // ========================================================
+    // SELECTED MEMBER
+    // ========================================================
+
     const selectedMember =
         selectedMemberId === null
             ? null
@@ -401,30 +537,42 @@ const MemberAttendanceReport: React.FC = () => {
                     selectedMemberId
             ) || null;
 
-    const selectedMemberHistory = useMemo(() => {
-        if (selectedMemberId === null) {
-            return [];
-        }
+    // ========================================================
+    // MEMBER HISTORY
+    // ========================================================
 
-        return filteredRecords
-            .filter(
-                (record) =>
-                    record.memberId ===
-                    selectedMemberId
-            )
-            .sort(
-                (a, b) =>
-                    new Date(
-                        b.attendanceDate
-                    ).getTime() -
-                    new Date(
-                        a.attendanceDate
-                    ).getTime()
-            );
-    }, [
-        filteredRecords,
-        selectedMemberId,
-    ]);
+    const selectedMemberHistory =
+        useMemo(() => {
+            if (
+                selectedMemberId ===
+                null
+            ) {
+                return [];
+            }
+
+            return filteredRecords
+                .filter(
+                    (record) =>
+                        record.memberId ===
+                        selectedMemberId
+                )
+                .sort(
+                    (a, b) =>
+                        new Date(
+                            b.attendanceDate
+                        ).getTime() -
+                        new Date(
+                            a.attendanceDate
+                        ).getTime()
+                );
+        }, [
+            filteredRecords,
+            selectedMemberId,
+        ]);
+
+    // ========================================================
+    // CLEAR FILTERS
+    // ========================================================
 
     const clearFilters = () => {
         setSearch("");
@@ -433,9 +581,17 @@ const MemberAttendanceReport: React.FC = () => {
         setDateTo("");
     };
 
+    // ========================================================
+    // PRINT
+    // ========================================================
+
     const printReport = () => {
         window.print();
     };
+
+    // ========================================================
+    // LOADING
+    // ========================================================
 
     if (loading) {
         return (
@@ -453,6 +609,10 @@ const MemberAttendanceReport: React.FC = () => {
             </div>
         );
     }
+
+    // ========================================================
+    // ERROR
+    // ========================================================
 
     if (error) {
         return (
@@ -477,8 +637,17 @@ const MemberAttendanceReport: React.FC = () => {
         );
     }
 
+    // ========================================================
+    // RENDER
+    // ========================================================
+
     return (
         <div className="member-attendance-report">
+
+            {/* ==================================================
+                HEADER
+            ================================================== */}
+
             <div className="mar-page-header">
                 <div>
                     <div className="mar-eyebrow">
@@ -513,6 +682,10 @@ const MemberAttendanceReport: React.FC = () => {
                 </div>
             </div>
 
+            {/* ==================================================
+                FILTERS
+            ================================================== */}
+
             <div className="mar-filter-panel">
                 <div className="mar-filter-title">
                     <span>⌕</span>
@@ -520,6 +693,7 @@ const MemberAttendanceReport: React.FC = () => {
                 </div>
 
                 <div className="mar-filter-grid">
+
                     <div className="mar-field">
                         <label>
                             Search Member
@@ -606,7 +780,9 @@ const MemberAttendanceReport: React.FC = () => {
                     <div className="mar-filter-button">
                         <button
                             type="button"
-                            onClick={clearFilters}
+                            onClick={
+                                clearFilters
+                            }
                         >
                             Clear
                         </button>
@@ -614,7 +790,12 @@ const MemberAttendanceReport: React.FC = () => {
                 </div>
             </div>
 
+            {/* ==================================================
+                STATISTICS
+            ================================================== */}
+
             <div className="mar-stat-grid">
+
                 <div className="mar-stat-card total">
                     <div className="mar-stat-icon">
                         👥
@@ -637,7 +818,10 @@ const MemberAttendanceReport: React.FC = () => {
                     </div>
 
                     <div>
-                        <span>Present</span>
+                        <span>
+                            Present
+                        </span>
+
                         <strong>
                             {statistics.present}
                         </strong>
@@ -650,7 +834,10 @@ const MemberAttendanceReport: React.FC = () => {
                     </div>
 
                     <div>
-                        <span>Late</span>
+                        <span>
+                            Late
+                        </span>
+
                         <strong>
                             {statistics.late}
                         </strong>
@@ -663,7 +850,10 @@ const MemberAttendanceReport: React.FC = () => {
                     </div>
 
                     <div>
-                        <span>Early</span>
+                        <span>
+                            Early
+                        </span>
+
                         <strong>
                             {statistics.early}
                         </strong>
@@ -676,7 +866,10 @@ const MemberAttendanceReport: React.FC = () => {
                     </div>
 
                     <div>
-                        <span>Absent</span>
+                        <span>
+                            Absent
+                        </span>
+
                         <strong>
                             {statistics.absent}
                         </strong>
@@ -689,15 +882,24 @@ const MemberAttendanceReport: React.FC = () => {
                     </div>
 
                     <div>
-                        <span>Excused</span>
+                        <span>
+                            Excused
+                        </span>
+
                         <strong>
                             {statistics.excused}
                         </strong>
                     </div>
                 </div>
+
             </div>
 
+            {/* ==================================================
+                OVERVIEW
+            ================================================== */}
+
             <div className="mar-overview-grid">
+
                 <div className="mar-overview-card">
                     <div className="mar-overview-label">
                         Overall Attendance
@@ -757,9 +959,15 @@ const MemberAttendanceReport: React.FC = () => {
                         attendance.
                     </div>
                 </div>
+
             </div>
 
+            {/* ==================================================
+                MEMBER TABLE
+            ================================================== */}
+
             <div className="mar-panel">
+
                 <div className="mar-panel-header">
                     <div>
                         <h2>
@@ -779,27 +987,51 @@ const MemberAttendanceReport: React.FC = () => {
 
                 <div className="mar-table-wrapper">
                     <table className="mar-table">
+
                         <thead>
                             <tr>
-                                <th>Member</th>
+                                <th>
+                                    Member
+                                </th>
+
                                 <th>
                                     Attendance %
                                 </th>
-                                <th>Present</th>
-                                <th>Late</th>
-                                <th>Early</th>
-                                <th>Absent</th>
-                                <th>Excused</th>
+
+                                <th>
+                                    Present
+                                </th>
+
+                                <th>
+                                    Late
+                                </th>
+
+                                <th>
+                                    Early
+                                </th>
+
+                                <th>
+                                    Absent
+                                </th>
+
+                                <th>
+                                    Excused
+                                </th>
+
                                 <th>
                                     Pastoral Status
                                 </th>
-                                <th>Action</th>
+
+                                <th>
+                                    Action
+                                </th>
                             </tr>
                         </thead>
 
                         <tbody>
+
                             {memberSummaries.length ===
-                                0 ? (
+                            0 ? (
                                 <tr>
                                     <td
                                         colSpan={9}
@@ -819,8 +1051,10 @@ const MemberAttendanceReport: React.FC = () => {
                                                 member.memberId
                                             }
                                         >
+
                                             <td>
                                                 <div className="mar-member">
+
                                                     <div className="mar-avatar">
                                                         {member.name
                                                             .charAt(
@@ -842,16 +1076,17 @@ const MemberAttendanceReport: React.FC = () => {
                                                             }
                                                         </span>
                                                     </div>
+
                                                 </div>
                                             </td>
 
                                             <td>
                                                 <div className="mar-percentage">
+
                                                     <strong>
                                                         {
                                                             member.percentage
-                                                        }
-                                                        %
+                                                        }%
                                                     </strong>
 
                                                     <div className="mar-mini-progress">
@@ -864,6 +1099,7 @@ const MemberAttendanceReport: React.FC = () => {
                                                             }}
                                                         />
                                                     </div>
+
                                                 </div>
                                             </td>
 
@@ -932,18 +1168,27 @@ const MemberAttendanceReport: React.FC = () => {
                                                     View
                                                 </button>
                                             </td>
+
                                         </tr>
                                     )
                                 )
                             )}
+
                         </tbody>
+
                     </table>
                 </div>
             </div>
 
+            {/* ==================================================
+                MEMBER HISTORY
+            ================================================== */}
+
             {selectedMember && (
                 <div className="mar-panel mar-history-panel">
+
                     <div className="mar-panel-header">
+
                         <div>
                             <h2>
                                 {selectedMember.name}
@@ -966,21 +1211,28 @@ const MemberAttendanceReport: React.FC = () => {
                         >
                             ×
                         </button>
+
                     </div>
 
                     <div className="mar-member-summary">
+
                         <div>
-                            <span>Attendance</span>
+                            <span>
+                                Attendance
+                            </span>
+
                             <strong>
                                 {
                                     selectedMember.percentage
-                                }
-                                %
+                                }%
                             </strong>
                         </div>
 
                         <div>
-                            <span>Present</span>
+                            <span>
+                                Present
+                            </span>
+
                             <strong>
                                 {
                                     selectedMember.present
@@ -989,7 +1241,10 @@ const MemberAttendanceReport: React.FC = () => {
                         </div>
 
                         <div>
-                            <span>Late</span>
+                            <span>
+                                Late
+                            </span>
+
                             <strong>
                                 {
                                     selectedMember.late
@@ -998,7 +1253,10 @@ const MemberAttendanceReport: React.FC = () => {
                         </div>
 
                         <div>
-                            <span>Early</span>
+                            <span>
+                                Early
+                            </span>
+
                             <strong>
                                 {
                                     selectedMember.early
@@ -1007,7 +1265,10 @@ const MemberAttendanceReport: React.FC = () => {
                         </div>
 
                         <div>
-                            <span>Absent</span>
+                            <span>
+                                Absent
+                            </span>
+
                             <strong>
                                 {
                                     selectedMember.absent
@@ -1016,30 +1277,43 @@ const MemberAttendanceReport: React.FC = () => {
                         </div>
 
                         <div>
-                            <span>Excused</span>
+                            <span>
+                                Excused
+                            </span>
+
                             <strong>
                                 {
                                     selectedMember.excused
                                 }
                             </strong>
                         </div>
+
                     </div>
 
                     <div className="mar-table-wrapper">
+
                         <table className="mar-table history">
+
                             <thead>
                                 <tr>
-                                    <th>Date</th>
+                                    <th>
+                                        Date
+                                    </th>
+
                                     <th>
                                         Church Service
                                     </th>
-                                    <th>Status</th>
+
+                                    <th>
+                                        Status
+                                    </th>
                                 </tr>
                             </thead>
 
                             <tbody>
+
                                 {selectedMemberHistory.length ===
-                                    0 ? (
+                                0 ? (
                                     <tr>
                                         <td
                                             colSpan={3}
@@ -1057,6 +1331,7 @@ const MemberAttendanceReport: React.FC = () => {
                                                     record.attendanceId
                                                 }
                                             >
+
                                                 <td>
                                                     {formatDate(
                                                         record.attendanceDate
@@ -1078,18 +1353,29 @@ const MemberAttendanceReport: React.FC = () => {
                                                         }
                                                     </span>
                                                 </td>
+
                                             </tr>
                                         )
                                     )
                                 )}
+
                             </tbody>
+
                         </table>
+
                     </div>
+
                 </div>
             )}
 
+            {/* ==================================================
+                CLASSIFICATION
+            ================================================== */}
+
             <div className="mar-panel">
+
                 <div className="mar-panel-header">
+
                     <div>
                         <h2>
                             Pastoral Attendance
@@ -1102,9 +1388,11 @@ const MemberAttendanceReport: React.FC = () => {
                             member follow-up.
                         </p>
                     </div>
+
                 </div>
 
                 <div className="mar-classification-grid">
+
                     <div className="mar-classification excellent">
                         <div className="mar-classification-icon">
                             🟢
@@ -1127,7 +1415,10 @@ const MemberAttendanceReport: React.FC = () => {
                         </div>
 
                         <div>
-                            <strong>GOOD</strong>
+                            <strong>
+                                GOOD
+                            </strong>
+
                             <span>
                                 75–89%
                             </span>
@@ -1165,8 +1456,13 @@ const MemberAttendanceReport: React.FC = () => {
                             </span>
                         </div>
                     </div>
+
                 </div>
             </div>
+
+            {/* ==================================================
+                FOOTER
+            ================================================== */}
 
             <div className="mar-footer-note">
                 <span>
@@ -1177,6 +1473,7 @@ const MemberAttendanceReport: React.FC = () => {
                     Engaging People Into Christ
                 </span>
             </div>
+
         </div>
     );
 };

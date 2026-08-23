@@ -1,10 +1,20 @@
-import React, { useEffect, useState } from "react";
+import React, {
+    useCallback,
+    useEffect,
+    useState,
+} from "react";
+
 import "./LandingPage.css";
 import { API_BASE_URL } from "../config";
 import { initializeWebsiteAnalytics } from "../analytics/websiteAnalytics";
 
+// =========================================================
+// TYPES
+// =========================================================
+
 interface LandingPageProps {
     onLogin: () => void;
+    onNavigate?: (page: string) => void;
 }
 
 interface DemoFormData {
@@ -22,289 +32,101 @@ interface DemoResponse {
     demoRequestId?: number;
 }
 
-const LandingPage: React.FC<LandingPageProps> = ({ onLogin }) => {
+// =========================================================
+// CONSTANTS
+// =========================================================
 
+const INITIAL_DEMO_FORM: DemoFormData = {
+    churchName: "",
+    fullName: "",
+    email: "",
+    phone: "",
+    churchSize: "",
+    message: "",
+};
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// =========================================================
+// COMPONENT
+// =========================================================
+
+const LandingPage: React.FC<LandingPageProps> = ({
+    onLogin,
+    onNavigate,
+}) => {
+    // =====================================================
+    // STATE
+    // =====================================================
 
     const [menuOpen, setMenuOpen] = useState(false);
-useEffect(() => {
-    initializeWebsiteAnalytics();
-}, []);
 
-    // =========================================================
-    // DEMO FORM
-    // =========================================================
+    const [demoForm, setDemoForm] =
+        useState<DemoFormData>(INITIAL_DEMO_FORM);
 
-    const [demoForm, setDemoForm] = useState<DemoFormData>({
-        churchName: "",
-        fullName: "",
-        email: "",
-        phone: "",
-        churchSize: "",
-        message: ""
-    });
+    const [demoSubmitting, setDemoSubmitting] =
+        useState(false);
 
-    const [demoSubmitting, setDemoSubmitting] = useState(false);
-    const [demoSuccess, setDemoSuccess] = useState("");
-    const [demoError, setDemoError] = useState("");
+    const [demoSuccess, setDemoSuccess] =
+        useState("");
 
-    // =========================================================
-    // HANDLE DEMO INPUT
-    // =========================================================
+    const [demoError, setDemoError] =
+        useState("");
 
-    const handleDemoChange = (
-        event: React.ChangeEvent<
-            HTMLInputElement |
-            HTMLTextAreaElement |
-            HTMLSelectElement
-        >
-    ) => {
-
-        const { name, value } = event.target;
-
-        setDemoForm(previous => ({
-            ...previous,
-            [name]: value
-        }));
-
-        setDemoError("");
-        setDemoSuccess("");
-    };
-
-    // =========================================================
-    // SUBMIT DEMO REQUEST
-    // =========================================================
-
-    const handleDemoSubmit = async (
-        event?: React.FormEvent
-    ) => {
-
-        if (event) {
-            event.preventDefault();
-        }
-
-        setDemoError("");
-        setDemoSuccess("");
-
-        // -----------------------------------------------------
-        // VALIDATION
-        // -----------------------------------------------------
-
-        if (!demoForm.churchName.trim()) {
-            setDemoError(
-                "Please enter your church name."
-            );
-            return;
-        }
-
-        if (!demoForm.fullName.trim()) {
-            setDemoError(
-                "Please enter your name."
-            );
-            return;
-        }
-
-        if (!demoForm.email.trim()) {
-            setDemoError(
-                "Please enter your email address."
-            );
-            return;
-        }
-
-        if (!demoForm.churchSize) {
-            setDemoError(
-                "Please select your church size."
-            );
-            return;
-        }
-
-        // -----------------------------------------------------
-        // EMAIL VALIDATION
-        // -----------------------------------------------------
-
-        const emailRegex =
-            /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-        if (
-            !emailRegex.test(
-                demoForm.email.trim()
-            )
-        ) {
-            setDemoError(
-                "Please enter a valid email address."
-            );
-            return;
-        }
-
-        // -----------------------------------------------------
-        // PREPARE MESSAGE
-        // -----------------------------------------------------
-
-        const finalMessage = [
-            `Church Size: ${demoForm.churchSize}`,
-            demoForm.message.trim()
-                ? demoForm.message.trim()
-                : ""
-        ]
-            .filter(Boolean)
-            .join("\n\n");
-
-        // -----------------------------------------------------
-        // API PAYLOAD
-        // -----------------------------------------------------
-
-        const payload = {
-            fullName:
-                demoForm.fullName.trim(),
-
-            churchName:
-                demoForm.churchName.trim(),
-
-            email:
-                demoForm.email.trim().toLowerCase(),
-
-            phone:
-                demoForm.phone.trim(),
-
-            position:
-                "Church Representative",
-
-            message:
-                finalMessage
-        };
-
-        console.log(
-            "Submitting demo request:",
-            payload
-        );
-
-        // -----------------------------------------------------
-        // SUBMIT
-        // -----------------------------------------------------
-
-        try {
-
-            setDemoSubmitting(true);
-
-            const response = await fetch(
-                `${API_BASE_URL}/DemoRequests`,
-                {
-                    method: "POST",
-
-                    headers: {
-                        "Content-Type":
-                            "application/json",
-
-                        "Accept":
-                            "application/json"
-                    },
-
-                    body:
-                        JSON.stringify(
-                            payload
-                        )
-                }
-            );
-
-            // -------------------------------------------------
-            // READ RESPONSE SAFELY
-            // -------------------------------------------------
-
-            let data:
-                DemoResponse | null = null;
-
-            try {
-
-                data =
-                    await response.json();
-
-            } catch {
-
-                data = null;
-
-            }
-
-            // -------------------------------------------------
-            // API ERROR
-            // -------------------------------------------------
-
-            if (!response.ok) {
-
-                throw new Error(
-                    data?.message ||
-                    `Unable to submit your demo request. Server returned ${response.status}.`
-                );
-            }
-
-            // -------------------------------------------------
-            // SUCCESS
-            // -------------------------------------------------
-
-            setDemoSuccess(
-                data?.message ||
-                "Your demo request has been submitted successfully. Our team will contact you soon."
-            );
-
-            // -------------------------------------------------
-            // CLEAR FORM
-            // -------------------------------------------------
-
-            setDemoForm({
-                churchName: "",
-                fullName: "",
-                email: "",
-                phone: "",
-                churchSize: "",
-                message: ""
-            });
-
-        } catch (error) {
-
-            console.error(
-                "Demo request submission error:",
-                error
-            );
-
-            setDemoError(
-                error instanceof Error
-                    ? error.message
-                    : "Something went wrong while submitting your request. Please try again."
-            );
-
-        } finally {
-
-            setDemoSubmitting(false);
-
-        }
-    };
-
-    // =========================================================
+    // =====================================================
     // NAVIGATION
-    // =========================================================
+    // =====================================================
 
-    const scrollToSection = (id: string) => {
-
-        const element =
-            document.getElementById(id);
-
-        if (element) {
-
-            element.scrollIntoView({
-                behavior: "smooth"
-            });
-
-        }
-
+    const closeMobileMenu = useCallback(() => {
         setMenuOpen(false);
-    };
+    }, []);
 
-    // =========================================================
-    // NAVBAR SCROLL
-    // =========================================================
+    const scrollToSection = useCallback(
+        (id: string) => {
+            const element =
+                document.getElementById(id);
+
+            if (element) {
+                element.scrollIntoView({
+                    behavior: "smooth",
+                    block: "start",
+                });
+            }
+
+            closeMobileMenu();
+        },
+        [closeMobileMenu]
+    );
+
+    const navigateTo = useCallback(
+        (page: string) => {
+            closeMobileMenu();
+            onNavigate?.(page);
+        },
+        [closeMobileMenu, onNavigate]
+    );
+
+    // =====================================================
+    // WEBSITE ANALYTICS
+    // =====================================================
 
     useEffect(() => {
+        try {
+            initializeWebsiteAnalytics();
+        } catch (error) {
+            console.error(
+                "EPIC website analytics initialization failed:",
+                error
+            );
+        }
+    }, []);
 
+    // =====================================================
+    // NAVBAR SCROLL EFFECT
+    // =====================================================
+
+    useEffect(() => {
         const handleScroll = () => {
-
             const navbar =
                 document.querySelector(
                     ".epic-public-navbar"
@@ -314,43 +136,221 @@ useEffect(() => {
                 return;
             }
 
-            if (window.scrollY > 40) {
-
-                navbar.classList.add(
-                    "epic-public-navbar-scrolled"
-                );
-
-            } else {
-
-                navbar.classList.remove(
-                    "epic-public-navbar-scrolled"
-                );
-
-            }
+            navbar.classList.toggle(
+                "epic-public-navbar-scrolled",
+                window.scrollY > 40
+            );
         };
 
         window.addEventListener(
             "scroll",
-            handleScroll
+            handleScroll,
+            { passive: true }
         );
 
-        return () => {
+        handleScroll();
 
+        return () => {
             window.removeEventListener(
                 "scroll",
                 handleScroll
             );
-
         };
-
     }, []);
 
-    // =========================================================
+    // =====================================================
+    // DEMO FORM
+    // =====================================================
+
+    const handleDemoChange = useCallback(
+        (
+            event: React.ChangeEvent<
+                HTMLInputElement |
+                HTMLTextAreaElement |
+                HTMLSelectElement
+            >
+        ) => {
+            const {
+                name,
+                value,
+            } = event.target;
+
+            setDemoForm((previous) => ({
+                ...previous,
+                [name]: value,
+            }));
+
+            setDemoError("");
+            setDemoSuccess("");
+        },
+        []
+    );
+
+    // =====================================================
+    // DEMO FORM VALIDATION
+    // =====================================================
+
+    const validateDemoForm = useCallback(() => {
+        if (!demoForm.churchName.trim()) {
+            return "Please enter your church name.";
+        }
+
+        if (!demoForm.fullName.trim()) {
+            return "Please enter your name.";
+        }
+
+        if (!demoForm.email.trim()) {
+            return "Please enter your email address.";
+        }
+
+        if (
+            !EMAIL_REGEX.test(
+                demoForm.email.trim()
+            )
+        ) {
+            return "Please enter a valid email address.";
+        }
+
+        if (!demoForm.churchSize) {
+            return "Please select your church size.";
+        }
+
+        return null;
+    }, [demoForm]);
+
+    // =====================================================
+    // SUBMIT DEMO REQUEST
+    // =====================================================
+
+    const handleDemoSubmit = useCallback(
+        async (
+            event: React.FormEvent<HTMLFormElement>
+        ) => {
+            event.preventDefault();
+
+            setDemoError("");
+            setDemoSuccess("");
+
+            const validationError =
+                validateDemoForm();
+
+            if (validationError) {
+                setDemoError(validationError);
+                return;
+            }
+
+            const finalMessage = [
+                `Church Size: ${demoForm.churchSize}`,
+                demoForm.message.trim(),
+            ]
+                .filter(Boolean)
+                .join("\n\n");
+
+            const payload = {
+                fullName:
+                    demoForm.fullName.trim(),
+
+                churchName:
+                    demoForm.churchName.trim(),
+
+                email:
+                    demoForm.email
+                        .trim()
+                        .toLowerCase(),
+
+                phone:
+                    demoForm.phone.trim(),
+
+                position:
+                    "Church Representative",
+
+                message:
+                    finalMessage,
+            };
+
+            try {
+                setDemoSubmitting(true);
+
+                const response =
+                    await fetch(
+                        `${API_BASE_URL}/DemoRequests`,
+                        {
+                            method: "POST",
+
+                            headers: {
+                                "Content-Type":
+                                    "application/json",
+
+                                Accept:
+                                    "application/json",
+                            },
+
+                            body:
+                                JSON.stringify(
+                                    payload
+                                ),
+                        }
+                    );
+
+                let data:
+                    DemoResponse | null = null;
+
+                try {
+                    data =
+                        await response.json();
+                } catch {
+                    data = null;
+                }
+
+                if (!response.ok) {
+                    throw new Error(
+                        data?.message ||
+                            `Unable to submit your demo request. Server returned ${response.status}.`
+                    );
+                }
+
+                setDemoSuccess(
+                    data?.message ||
+                        "Your demo request has been submitted successfully. Our team will contact you soon."
+                );
+
+                setDemoForm(
+                    INITIAL_DEMO_FORM
+                );
+            } catch (error) {
+                console.error(
+                    "Demo request submission error:",
+                    error
+                );
+
+                setDemoError(
+                    error instanceof Error
+                        ? error.message
+                        : "Something went wrong while submitting your request. Please try again."
+                );
+            } finally {
+                setDemoSubmitting(false);
+            }
+        },
+        [
+            demoForm,
+            validateDemoForm,
+        ]
+    );
+
+    // =====================================================
+    // MOBILE MENU
+    // =====================================================
+
+    const toggleMobileMenu = useCallback(() => {
+        setMenuOpen((previous) => !previous);
+    }, []);
+
+    // =====================================================
     // RENDER
-    // =========================================================
+    // =====================================================
 
     return (
-
         <div className="epic-landing-page">
 
             {/* =====================================================
@@ -358,7 +358,6 @@ useEffect(() => {
             ===================================================== */}
 
             <header className="epic-public-navbar">
-
                 <div className="epic-public-nav-inner">
 
                     <button
@@ -367,14 +366,13 @@ useEffect(() => {
                         onClick={() =>
                             scrollToSection("home")
                         }
+                        aria-label="Go to EPIC Church home"
                     >
-
                         <span className="epic-public-logo-mark">
                             EPIC
                         </span>
 
                         <span className="epic-public-logo-text">
-
                             <strong>
                                 EPIC CHURCH
                             </strong>
@@ -382,21 +380,15 @@ useEffect(() => {
                             <small>
                                 Engaging People Into Christ
                             </small>
-
                         </span>
-
                     </button>
 
                     <nav
-                        className={
-                            `epic-public-nav-links ${
-                                menuOpen
-                                    ? "open"
-                                    : ""
-                            }`
-                        }
+                        className={`epic-public-nav-links ${
+                            menuOpen ? "open" : ""
+                        }`}
+                        aria-label="Main navigation"
                     >
-
                         <button
                             type="button"
                             onClick={() =>
@@ -409,7 +401,7 @@ useEffect(() => {
                         <button
                             type="button"
                             onClick={() =>
-                                scrollToSection("about")
+                                navigateTo("about")
                             }
                         >
                             About
@@ -451,6 +443,14 @@ useEffect(() => {
                             Pricing
                         </button>
 
+                        <button
+                            type="button"
+                            onClick={() =>
+                                navigateTo("contact")
+                            }
+                        >
+                            Contact
+                        </button>
                     </nav>
 
                     <div className="epic-public-nav-actions">
@@ -467,7 +467,7 @@ useEffect(() => {
                             type="button"
                             className="epic-nav-cta"
                             onClick={() =>
-                                scrollToSection("contact")
+                                navigateTo("contact")
                             }
                         >
                             Connect With Us
@@ -478,19 +478,18 @@ useEffect(() => {
                     <button
                         type="button"
                         className="epic-mobile-menu"
-                        onClick={() =>
-                            setMenuOpen(
-                                previous =>
-                                    !previous
-                            )
+                        onClick={toggleMobileMenu}
+                        aria-label={
+                            menuOpen
+                                ? "Close navigation"
+                                : "Open navigation"
                         }
-                        aria-label="Toggle navigation"
+                        aria-expanded={menuOpen}
                     >
-                        ☰
+                        {menuOpen ? "✕" : "☰"}
                     </button>
 
                 </div>
-
             </header>
 
             {/* =====================================================
@@ -501,7 +500,6 @@ useEffect(() => {
                 id="home"
                 className="epic-public-hero"
             >
-
                 <div className="epic-hero-overlay" />
 
                 <div className="epic-hero-content">
@@ -582,7 +580,6 @@ useEffect(() => {
                         </div>
 
                     </div>
-
                 </div>
 
                 <button
@@ -597,7 +594,6 @@ useEffect(() => {
                     </span>
                     ↓
                 </button>
-
             </section>
 
             {/* =====================================================
@@ -608,7 +604,6 @@ useEffect(() => {
                 id="about"
                 className="epic-public-section epic-vision-section"
             >
-
                 <div className="epic-section-container">
 
                     <div className="epic-section-heading">
@@ -620,7 +615,9 @@ useEffect(() => {
                         <h2>
                             Engaging People
                             <br />
-                            <span>Into Christ.</span>
+                            <span>
+                                Into Christ.
+                            </span>
                         </h2>
 
                         <p>
@@ -636,7 +633,6 @@ useEffect(() => {
                     <div className="epic-vision-cards">
 
                         <article className="epic-vision-card">
-
                             <div className="epic-card-number">
                                 01
                             </div>
@@ -654,11 +650,9 @@ useEffect(() => {
                                 transforming message of
                                 Jesus Christ.
                             </p>
-
                         </article>
 
                         <article className="epic-vision-card">
-
                             <div className="epic-card-number">
                                 02
                             </div>
@@ -676,11 +670,9 @@ useEffect(() => {
                                 biblical teaching, fellowship
                                 and spiritual growth.
                             </p>
-
                         </article>
 
                         <article className="epic-vision-card">
-
                             <div className="epic-card-number">
                                 03
                             </div>
@@ -698,13 +690,10 @@ useEffect(() => {
                                 and fulfill the mission of
                                 the Gospel.
                             </p>
-
                         </article>
 
                     </div>
-
                 </div>
-
             </section>
 
             {/* =====================================================
@@ -715,15 +704,12 @@ useEffect(() => {
                 id="ministries"
                 className="epic-public-section epic-church-section"
             >
-
                 <div className="epic-section-container">
 
                     <div className="epic-church-grid">
 
                         <div className="epic-church-image">
-
                             <div className="epic-image-placeholder">
-
                                 <span>
                                     EPIC CHURCH
                                 </span>
@@ -732,9 +718,7 @@ useEffect(() => {
                                     Your church photo can
                                     be placed here
                                 </small>
-
                             </div>
-
                         </div>
 
                         <div className="epic-church-content">
@@ -785,11 +769,8 @@ useEffect(() => {
                             </div>
 
                         </div>
-
                     </div>
-
                 </div>
-
             </section>
 
             {/* =====================================================
@@ -800,7 +781,6 @@ useEffect(() => {
                 id="system"
                 className="epic-public-section epic-system-section"
             >
-
                 <div className="epic-section-container">
 
                     <div className="epic-system-header">
@@ -901,7 +881,6 @@ useEffect(() => {
                                     </div>
 
                                     <div className="preview-chart">
-
                                         <span />
                                         <span />
                                         <span />
@@ -909,15 +888,11 @@ useEffect(() => {
                                         <span />
                                         <span />
                                         <span />
-
                                     </div>
 
                                 </div>
-
                             </div>
-
                         </div>
-
                     </div>
 
                     <div className="epic-feature-grid">
@@ -975,9 +950,7 @@ useEffect(() => {
                         </article>
 
                     </div>
-
                 </div>
-
             </section>
 
             {/* =====================================================
@@ -988,7 +961,6 @@ useEffect(() => {
                 id="learning"
                 className="epic-public-section epic-learning-section"
             >
-
                 <div className="epic-section-container">
 
                     <div className="epic-learning-grid">
@@ -1015,7 +987,6 @@ useEffect(() => {
                             </p>
 
                             <div className="epic-learning-flow">
-
                                 <span>COURSES</span>
                                 <b>→</b>
                                 <span>LESSONS</span>
@@ -1023,7 +994,6 @@ useEffect(() => {
                                 <span>PROGRESS</span>
                                 <b>→</b>
                                 <span>CERTIFICATE</span>
-
                             </div>
 
                             <button
@@ -1040,7 +1010,6 @@ useEffect(() => {
                         <div className="epic-learning-card">
 
                             <div className="learning-card-header">
-
                                 <span>
                                     EPIC LEARNING
                                 </span>
@@ -1048,7 +1017,6 @@ useEffect(() => {
                                 <span>
                                     ●
                                 </span>
-
                             </div>
 
                             <div className="learning-course">
@@ -1117,11 +1085,8 @@ useEffect(() => {
                             </div>
 
                         </div>
-
                     </div>
-
                 </div>
-
             </section>
 
             {/* =====================================================
@@ -1129,7 +1094,6 @@ useEffect(() => {
             ===================================================== */}
 
             <section className="epic-public-section epic-why-section">
-
                 <div className="epic-section-container">
 
                     <div className="epic-section-heading centered">
@@ -1151,7 +1115,6 @@ useEffect(() => {
                     <div className="epic-why-grid">
 
                         <article>
-
                             <span>01</span>
 
                             <h3>
@@ -1163,11 +1126,9 @@ useEffect(() => {
                                 ministries, reports and learning
                                 connected in one platform.
                             </p>
-
                         </article>
 
                         <article>
-
                             <span>02</span>
 
                             <h3>
@@ -1179,11 +1140,9 @@ useEffect(() => {
                                 participation, growth and
                                 ministry activity.
                             </p>
-
                         </article>
 
                         <article>
-
                             <span>03</span>
 
                             <h3>
@@ -1195,13 +1154,10 @@ useEffect(() => {
                                 create intentional discipleship
                                 pathways.
                             </p>
-
                         </article>
 
                     </div>
-
                 </div>
-
             </section>
 
             {/* =====================================================
@@ -1209,7 +1165,6 @@ useEffect(() => {
             ===================================================== */}
 
             <section className="epic-sunday-section">
-
                 <div className="epic-section-container">
 
                     <div className="epic-sunday-card">
@@ -1313,9 +1268,7 @@ useEffect(() => {
                         </div>
 
                     </div>
-
                 </div>
-
             </section>
 
             {/* =====================================================
@@ -1323,7 +1276,6 @@ useEffect(() => {
             ===================================================== */}
 
             <section className="epic-ministry-tech-section">
-
                 <div className="epic-section-container">
 
                     <div className="epic-ministry-tech-grid">
@@ -1426,11 +1378,8 @@ useEffect(() => {
                             </div>
 
                         </div>
-
                     </div>
-
                 </div>
-
             </section>
 
             {/* =====================================================
@@ -1438,7 +1387,6 @@ useEffect(() => {
             ===================================================== */}
 
             <section className="epic-platform-section">
-
                 <div className="epic-section-container">
 
                     <div className="epic-platform-header">
@@ -1669,13 +1617,9 @@ useEffect(() => {
                                         </div>
 
                                     </div>
-
                                 </div>
-
                             </div>
-
                         </div>
-
                     </div>
 
                     <div className="epic-module-grid">
@@ -1799,37 +1743,54 @@ useEffect(() => {
                         <div className="epic-learning-flow">
 
                             <div>
-                                <strong>PEOPLE</strong>
-                                <small>Connect</small>
+                                <strong>
+                                    PEOPLE
+                                </strong>
+
+                                <small>
+                                    Connect
+                                </small>
                             </div>
 
                             <span>→</span>
 
                             <div>
-                                <strong>LEARN</strong>
-                                <small>Grow</small>
+                                <strong>
+                                    LEARN
+                                </strong>
+
+                                <small>
+                                    Grow
+                                </small>
                             </div>
 
                             <span>→</span>
 
                             <div>
-                                <strong>SERVE</strong>
-                                <small>Minister</small>
+                                <strong>
+                                    SERVE
+                                </strong>
+
+                                <small>
+                                    Minister
+                                </small>
                             </div>
 
                             <span>→</span>
 
                             <div>
-                                <strong>DISCIPLE</strong>
-                                <small>Multiply</small>
+                                <strong>
+                                    DISCIPLE
+                                </strong>
+
+                                <small>
+                                    Multiply
+                                </small>
                             </div>
 
                         </div>
-
                     </div>
-
                 </div>
-
             </section>
 
             {/* =====================================================
@@ -1837,7 +1798,6 @@ useEffect(() => {
             ===================================================== */}
 
             <section className="epic-for-church-section">
-
                 <div className="epic-section-container">
 
                     <div className="epic-for-church-header">
@@ -1935,9 +1895,7 @@ useEffect(() => {
                         </div>
 
                     </div>
-
                 </div>
-
             </section>
 
             {/* =====================================================
@@ -1948,7 +1906,6 @@ useEffect(() => {
                 className="epic-pricing-section"
                 id="pricing"
             >
-
                 <div className="epic-section-container">
 
                     <div className="epic-pricing-header">
@@ -1973,6 +1930,8 @@ useEffect(() => {
                     </div>
 
                     <div className="epic-pricing-grid">
+
+                        {/* STARTER */}
 
                         <div className="epic-pricing-card">
 
@@ -2041,6 +2000,8 @@ useEffect(() => {
                             </button>
 
                         </div>
+
+                        {/* COMPLETE */}
 
                         <div className="epic-pricing-card epic-pricing-featured">
 
@@ -2122,6 +2083,8 @@ useEffect(() => {
 
                         </div>
 
+                        {/* ENTERPRISE */}
+
                         <div className="epic-pricing-card">
 
                             <div className="epic-pricing-card-top">
@@ -2202,7 +2165,6 @@ useEffect(() => {
                     </div>
 
                 </div>
-
             </section>
 
             {/* =====================================================
@@ -2213,7 +2175,6 @@ useEffect(() => {
                 className="epic-demo-section"
                 id="contact"
             >
-
                 <div className="epic-section-container">
 
                     <div className="epic-demo-card">
@@ -2267,6 +2228,7 @@ useEffect(() => {
                         <form
                             className="epic-demo-form"
                             onSubmit={handleDemoSubmit}
+                            noValidate
                         >
 
                             <div className="epic-form-title">
@@ -2278,25 +2240,21 @@ useEffect(() => {
                             </div>
 
                             {demoSuccess && (
-
                                 <div
                                     className="epic-demo-success"
                                     role="alert"
                                 >
                                     ✓ {demoSuccess}
                                 </div>
-
                             )}
 
                             {demoError && (
-
                                 <div
                                     className="epic-demo-error"
                                     role="alert"
                                 >
                                     {demoError}
                                 </div>
-
                             )}
 
                             <input
@@ -2306,6 +2264,8 @@ useEffect(() => {
                                 value={demoForm.churchName}
                                 onChange={handleDemoChange}
                                 disabled={demoSubmitting}
+                                autoComplete="organization"
+                                required
                             />
 
                             <input
@@ -2315,6 +2275,8 @@ useEffect(() => {
                                 value={demoForm.fullName}
                                 onChange={handleDemoChange}
                                 disabled={demoSubmitting}
+                                autoComplete="name"
+                                required
                             />
 
                             <input
@@ -2324,6 +2286,8 @@ useEffect(() => {
                                 value={demoForm.email}
                                 onChange={handleDemoChange}
                                 disabled={demoSubmitting}
+                                autoComplete="email"
+                                required
                             />
 
                             <input
@@ -2333,6 +2297,7 @@ useEffect(() => {
                                 value={demoForm.phone}
                                 onChange={handleDemoChange}
                                 disabled={demoSubmitting}
+                                autoComplete="tel"
                             />
 
                             <select
@@ -2340,8 +2305,8 @@ useEffect(() => {
                                 value={demoForm.churchSize}
                                 onChange={handleDemoChange}
                                 disabled={demoSubmitting}
+                                required
                             >
-
                                 <option
                                     value=""
                                     disabled
@@ -2364,7 +2329,6 @@ useEffect(() => {
                                 <option value="1,000+ members">
                                     1,000+ members
                                 </option>
-
                             </select>
 
                             <textarea
@@ -2381,18 +2345,15 @@ useEffect(() => {
                                 className="epic-primary-button epic-demo-submit"
                                 disabled={demoSubmitting}
                             >
-
                                 {demoSubmitting
                                     ? "Submitting..."
-                                    : "Request My Demo"
-                                }
+                                    : "Request My Demo"}
 
                                 {!demoSubmitting && (
                                     <span>
                                         →
                                     </span>
                                 )}
-
                             </button>
 
                             <small className="epic-form-note">
@@ -2401,11 +2362,8 @@ useEffect(() => {
                             </small>
 
                         </form>
-
                     </div>
-
                 </div>
-
             </section>
 
             {/* =====================================================
@@ -2460,9 +2418,7 @@ useEffect(() => {
                         </button>
 
                     </div>
-
                 </div>
-
             </section>
 
             {/* =====================================================
@@ -2522,7 +2478,7 @@ useEffect(() => {
                             <button
                                 type="button"
                                 onClick={() =>
-                                    scrollToSection("contact")
+                                    navigateTo("contact")
                                 }
                             >
                                 Connect With Us
@@ -2574,7 +2530,7 @@ useEffect(() => {
                             <button
                                 type="button"
                                 onClick={() =>
-                                    scrollToSection("contact")
+                                    navigateTo("contact")
                                 }
                             >
                                 Contact EPIC
@@ -2583,7 +2539,7 @@ useEffect(() => {
                             <button
                                 type="button"
                                 onClick={() =>
-                                    scrollToSection("contact")
+                                    navigateTo("contact")
                                 }
                             >
                                 Facebook
@@ -2592,7 +2548,7 @@ useEffect(() => {
                             <button
                                 type="button"
                                 onClick={() =>
-                                    scrollToSection("contact")
+                                    navigateTo("contact")
                                 }
                             >
                                 Email Us
@@ -2614,9 +2570,7 @@ useEffect(() => {
                         </span>
 
                     </div>
-
                 </div>
-
             </footer>
 
         </div>

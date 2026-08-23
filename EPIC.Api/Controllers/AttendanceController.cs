@@ -23,8 +23,7 @@ namespace EPIC.Api.Controllers
             "EXCUSED"
         };
 
-        public AttendanceController(
-            ApplicationDbContext context)
+        public AttendanceController(ApplicationDbContext context)
         {
             _context = context;
         }
@@ -44,55 +43,38 @@ namespace EPIC.Api.Controllers
                 .Include(a => a.Member)
                 .Include(a => a.ChurchService)
                 .OrderByDescending(a => a.AttendanceDate)
-                .Select(a => new
-                {
-                    attendanceId = a.AttendanceId,
-
-                    memberId = a.MemberId,
-
-                    memberCode =
-                        a.Member != null
-                            ? a.Member.MemberCode
-                            : "",
-
-                    memberName =
-                        a.Member != null
-                            ? (
-                                a.Member.LastName + ", " +
-                                a.Member.FirstName +
-                                (
-                                    string.IsNullOrWhiteSpace(
-                                        a.Member.MiddleName)
-                                    ? ""
-                                    : " " + a.Member.MiddleName
-                                )
-                            )
-                            : "",
-
-                    churchServiceId =
-                        a.ChurchServiceId,
-
-                    serviceName =
-                        a.ChurchService != null
-                            ? a.ChurchService.ServiceName
-                            : a.Service,
-
-                    attendanceDate =
-                        a.AttendanceDate,
-
-                    status =
-                        NormalizeAttendanceStatus(
-                            a.Status),
-
-                    recordedBy =
-                        a.RecordedBy,
-
-                    recordedDate =
-                        a.RecordedDate
-                })
                 .ToListAsync();
 
-            return Ok(records);
+            var result = records.Select(a => new
+            {
+                attendanceId = a.AttendanceId,
+
+                memberId = a.MemberId,
+
+                memberCode = a.Member?.MemberCode ?? "",
+
+                memberName = a.Member != null
+                    ? BuildMemberName(a.Member)
+                    : "",
+
+                churchServiceId = a.ChurchServiceId,
+
+                eventId = a.EventId,
+
+                serviceName = a.ChurchService != null
+                    ? a.ChurchService.ServiceName
+                    : a.Service,
+
+                attendanceDate = a.AttendanceDate,
+
+                status = NormalizeAttendanceStatus(a.Status),
+
+                recordedBy = a.RecordedBy,
+
+                recordedDate = a.RecordedDate
+            }).ToList();
+
+            return Ok(result);
         }
 
         // =========================================================
@@ -103,30 +85,24 @@ namespace EPIC.Api.Controllers
 
         [HttpGet("church-service/{churchServiceId:int}")]
         [Permission("Attendance", "view")]
-        public async Task<IActionResult>
-            GetAttendanceForChurchService(
-                int churchServiceId)
+        public async Task<IActionResult> GetAttendanceForChurchService(
+            int churchServiceId)
         {
-            var service =
-                await _context.ChurchServices
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(
-                        s =>
-                            s.ChurchServiceId ==
-                            churchServiceId);
+            var service = await _context.ChurchServices
+                .AsNoTracking()
+                .FirstOrDefaultAsync(
+                    s => s.ChurchServiceId == churchServiceId);
 
             if (service == null)
             {
                 return NotFound(new
                 {
-                    message =
-                        "The selected church service was not found."
+                    message = "The selected church service was not found."
                 });
             }
 
             var serviceStatus =
-                NormalizeServiceStatus(
-                    service.Status);
+                NormalizeServiceStatus(service.Status);
 
             // =====================================================
             // CANCELLED
@@ -162,78 +138,56 @@ namespace EPIC.Api.Controllers
             // GET ACTIVE MEMBERS
             // =====================================================
 
-            var members =
-                await _context.Members
-                    .AsNoTracking()
-                    .Where(m =>
-                        m.Status == "ACTIVE")
-                    .OrderBy(m => m.LastName)
-                    .ThenBy(m => m.FirstName)
-                    .Select(m => new
-                    {
-                        memberId =
-                            m.MemberId,
-
-                        memberCode =
-                            m.MemberCode,
-
-                        firstName =
-                            m.FirstName,
-
-                        middleName =
-                            m.MiddleName,
-
-                        lastName =
-                            m.LastName
-                    })
-                    .ToListAsync();
+            var members = await _context.Members
+                .AsNoTracking()
+                .Where(m => m.Status == "ACTIVE")
+                .OrderBy(m => m.LastName)
+                .ThenBy(m => m.FirstName)
+                .Select(m => new
+                {
+                    memberId = m.MemberId,
+                    memberCode = m.MemberCode,
+                    firstName = m.FirstName,
+                    middleName = m.MiddleName,
+                    lastName = m.LastName
+                })
+                .ToListAsync();
 
             // =====================================================
             // GET EXISTING ATTENDANCE
             // =====================================================
 
-            var attendanceRecords =
-                await _context.Attendances
-                    .AsNoTracking()
-                    .Where(a =>
-                        a.ChurchServiceId ==
-                        churchServiceId)
-                    .ToListAsync();
+            var attendanceRecords = await _context.Attendances
+                .AsNoTracking()
+                .Where(a =>
+                    a.ChurchServiceId == churchServiceId)
+                .ToListAsync();
 
             // =====================================================
             // COMBINE MEMBERS + ATTENDANCE
             // =====================================================
 
-            var attendance =
-                members.Select(member =>
+            var attendance = members
+                .Select(member =>
                 {
-                    var record =
-                        attendanceRecords
-                            .FirstOrDefault(
-                                a =>
-                                    a.MemberId ==
-                                    member.memberId);
+                    var record = attendanceRecords
+                        .FirstOrDefault(
+                            a => a.MemberId == member.memberId);
 
                     return new
                     {
-                        memberId =
-                            member.memberId,
+                        memberId = member.memberId,
 
-                        memberCode =
-                            member.memberCode,
+                        memberCode = member.memberCode,
 
-                        firstName =
-                            member.firstName,
+                        firstName = member.firstName,
 
-                        middleName =
-                            member.middleName,
+                        middleName = member.middleName,
 
-                        lastName =
-                            member.lastName,
+                        lastName = member.lastName,
 
-                        status =
-                            NormalizeAttendanceStatus(
-                                record?.Status),
+                        status = NormalizeAttendanceStatus(
+                            record?.Status),
 
                         attendanceId =
                             record?.AttendanceId,
@@ -250,8 +204,7 @@ namespace EPIC.Api.Controllers
             // =====================================================
 
             var summary =
-                BuildAttendanceSummary(
-                    attendance);
+                BuildAttendanceSummary(attendance);
 
             return Ok(new
             {
@@ -293,7 +246,6 @@ namespace EPIC.Api.Controllers
 
         // =========================================================
         // SAVE / UPDATE ATTENDANCE
-        //
         // POST:
         // /api/Attendance/church-service/{churchServiceId}
         //
@@ -302,10 +254,9 @@ namespace EPIC.Api.Controllers
 
         [HttpPost("church-service/{churchServiceId:int}")]
         [Permission("Attendance", "create")]
-        public async Task<IActionResult>
-            SaveAttendance(
-                int churchServiceId,
-                [FromBody] AttendanceRequest request)
+        public async Task<IActionResult> SaveAttendance(
+            int churchServiceId,
+            [FromBody] AttendanceRequest request)
         {
             // =====================================================
             // VALIDATE REQUEST
@@ -326,12 +277,9 @@ namespace EPIC.Api.Controllers
             // GET SERVICE
             // =====================================================
 
-            var service =
-                await _context.ChurchServices
-                    .FirstOrDefaultAsync(
-                        s =>
-                            s.ChurchServiceId ==
-                            churchServiceId);
+            var service = await _context.ChurchServices
+                .FirstOrDefaultAsync(
+                    s => s.ChurchServiceId == churchServiceId);
 
             if (service == null)
             {
@@ -347,8 +295,7 @@ namespace EPIC.Api.Controllers
             // =====================================================
 
             var serviceStatus =
-                NormalizeServiceStatus(
-                    service.Status);
+                NormalizeServiceStatus(service.Status);
 
             if (serviceStatus == "CANCELLED")
             {
@@ -392,14 +339,13 @@ namespace EPIC.Api.Controllers
             }
 
             // =====================================================
-            // VALIDATE STATUSES FIRST
+            // VALIDATE STATUSES
             // =====================================================
 
             foreach (var item in request.Attendance)
             {
                 var status =
-                    NormalizeAttendanceStatus(
-                        item.Status);
+                    NormalizeAttendanceStatus(item.Status);
 
                 if (!AllowedStatuses.Contains(status))
                 {
@@ -415,7 +361,7 @@ namespace EPIC.Api.Controllers
             }
 
             // =====================================================
-            // GET MEMBER IDS
+            // MEMBER IDS
             // =====================================================
 
             var memberIds =
@@ -433,10 +379,8 @@ namespace EPIC.Api.Controllers
                     .AsNoTracking()
                     .Where(m =>
                         m.Status == "ACTIVE" &&
-                        memberIds.Contains(
-                            m.MemberId))
-                    .Select(m =>
-                        m.MemberId)
+                        memberIds.Contains(m.MemberId))
+                    .Select(m => m.MemberId)
                     .ToListAsync();
 
             var invalidMemberIds =
@@ -465,24 +409,17 @@ namespace EPIC.Api.Controllers
                     .Where(a =>
                         a.ChurchServiceId ==
                             churchServiceId &&
-                        memberIds.Contains(
-                            a.MemberId))
+                        memberIds.Contains(a.MemberId))
                     .ToListAsync();
 
             // =====================================================
-            // CREATE OR UPDATE
-            //
-            // If a record exists:
-            // require Attendance / edit permission.
+            // CHECK EDIT PERMISSION
             // =====================================================
 
             var canEdit =
                 User.HasClaim(
                     "permission",
                     "Attendance:edit");
-
-            // Also support authorization implementations
-            // that expose permissions in another claim format.
 
             if (existingRecords.Count > 0 &&
                 !canEdit)
@@ -502,6 +439,10 @@ namespace EPIC.Api.Controllers
                     });
             }
 
+            // =====================================================
+            // CURRENT USER
+            // =====================================================
+
             var recordedBy =
                 GetCurrentUserName();
 
@@ -519,13 +460,14 @@ namespace EPIC.Api.Controllers
             foreach (var item in request.Attendance)
             {
                 var status =
-                    NormalizeAttendanceStatus(
-                        item.Status);
+                    NormalizeAttendanceStatus(item.Status);
 
                 if (existingLookup.TryGetValue(
                     item.MemberId,
                     out var existing))
                 {
+                    // UPDATE
+
                     existing.Status =
                         status;
 
@@ -534,6 +476,14 @@ namespace EPIC.Api.Controllers
 
                     existing.Service =
                         service.ServiceName;
+
+                    existing.ChurchServiceId =
+                        churchServiceId;
+
+                    // Church-service attendance
+                    // is not automatically an event attendance.
+                    existing.EventId =
+                        null;
 
                     existing.RecordedBy =
                         recordedBy;
@@ -545,6 +495,8 @@ namespace EPIC.Api.Controllers
                 }
                 else
                 {
+                    // CREATE
+
                     var attendance =
                         new Attendance
                         {
@@ -553,6 +505,12 @@ namespace EPIC.Api.Controllers
 
                             ChurchServiceId =
                                 churchServiceId,
+
+                            // No EventId because this
+                            // endpoint records attendance
+                            // specifically for a ChurchService.
+                            EventId =
+                                null,
 
                             AttendanceDate =
                                 service.ServiceDate,
@@ -576,6 +534,10 @@ namespace EPIC.Api.Controllers
                     savedCount++;
                 }
             }
+
+            // =====================================================
+            // SAVE
+            // =====================================================
 
             await _context.SaveChangesAsync();
 
@@ -607,17 +569,11 @@ namespace EPIC.Api.Controllers
 
         // =========================================================
         // GET MY ATTENDANCE
-        //
         // GET: /api/Attendance/me
-        //
-        // MEMBER PORTAL
-        //
-        // Does NOT require Attendance / view.
         // =========================================================
 
         [HttpGet("me")]
-        public async Task<IActionResult>
-            GetMyAttendance()
+        public async Task<IActionResult> GetMyAttendance()
         {
             var memberIdClaim =
                 User.FindFirst("memberId")?.Value
@@ -643,8 +599,7 @@ namespace EPIC.Api.Controllers
                 await _context.Members
                     .AsNoTracking()
                     .Where(m =>
-                        m.MemberId ==
-                        memberId)
+                        m.MemberId == memberId)
                     .Select(m => new
                     {
                         memberId =
@@ -680,68 +635,76 @@ namespace EPIC.Api.Controllers
             var records =
                 await _context.Attendances
                     .AsNoTracking()
+                    .Include(a => a.ChurchService)
                     .Where(a =>
-                        a.MemberId ==
-                        memberId)
+                        a.MemberId == memberId)
                     .OrderByDescending(
-                        a =>
-                            a.AttendanceDate)
-                    .Select(a => new
-                    {
-                        attendanceId =
-                            a.AttendanceId,
-
-                        memberId =
-                            a.MemberId,
-
-                        churchServiceId =
-                            a.ChurchServiceId,
-
-                        attendanceDate =
-                            a.AttendanceDate,
-
-                        service =
-                            a.Service,
-
-                        status =
-                            NormalizeAttendanceStatus(
-                                a.Status),
-
-                        recordedBy =
-                            a.RecordedBy,
-
-                        recordedDate =
-                            a.RecordedDate,
-
-                        serviceName =
-                            a.ChurchService != null
-                                ? a.ChurchService.ServiceName
-                                : a.Service,
-
-                        location =
-                            a.ChurchService != null
-                                ? a.ChurchService.Location
-                                : null,
-
-                        startTime =
-                            a.ChurchService != null
-                                ? a.ChurchService.StartTime
-                                : null,
-
-                        endTime =
-                            a.ChurchService != null
-                                ? a.ChurchService.EndTime
-                                : null
-                    })
+                        a => a.AttendanceDate)
                     .ToListAsync();
+
+            // =====================================================
+            // PROJECT AFTER DATABASE QUERY
+            // =====================================================
+
+            var attendance =
+                records.Select(a => new
+                {
+                    attendanceId =
+                        a.AttendanceId,
+
+                    memberId =
+                        a.MemberId,
+
+                    churchServiceId =
+                        a.ChurchServiceId,
+
+                    eventId =
+                        a.EventId,
+
+                    attendanceDate =
+                        a.AttendanceDate,
+
+                    service =
+                        a.Service,
+
+                    status =
+                        NormalizeAttendanceStatus(
+                            a.Status),
+
+                    recordedBy =
+                        a.RecordedBy,
+
+                    recordedDate =
+                        a.RecordedDate,
+
+                    serviceName =
+                        a.ChurchService != null
+                            ? a.ChurchService.ServiceName
+                            : a.Service,
+
+                    location =
+                        a.ChurchService != null
+                            ? a.ChurchService.Location
+                            : null,
+
+                    startTime =
+                        a.ChurchService != null
+                            ? a.ChurchService.StartTime
+                            : null,
+
+                    endTime =
+                        a.ChurchService != null
+                            ? a.ChurchService.EndTime
+                            : null
+                })
+                .ToList();
 
             // =====================================================
             // SUMMARY
             // =====================================================
 
             var summary =
-                BuildAttendanceSummary(
-                    records);
+                BuildAttendanceSummary(attendance);
 
             return Ok(new
             {
@@ -749,8 +712,7 @@ namespace EPIC.Api.Controllers
 
                 summary,
 
-                attendance =
-                    records
+                attendance
             });
         }
 
@@ -762,15 +724,14 @@ namespace EPIC.Api.Controllers
 
         [HttpDelete("{id:int}")]
         [Permission("Attendance", "delete")]
-        public async Task<IActionResult>
-            DeleteAttendance(int id)
+        public async Task<IActionResult> DeleteAttendance(
+            int id)
         {
             var attendance =
                 await _context.Attendances
                     .FirstOrDefaultAsync(
                         a =>
-                            a.AttendanceId ==
-                            id);
+                            a.AttendanceId == id);
 
             if (attendance == null)
             {
@@ -800,9 +761,8 @@ namespace EPIC.Api.Controllers
         // NORMALIZE ATTENDANCE STATUS
         // =========================================================
 
-        private static string
-            NormalizeAttendanceStatus(
-                string? status)
+        private static string NormalizeAttendanceStatus(
+            string? status)
         {
             if (string.IsNullOrWhiteSpace(status))
             {
@@ -828,9 +788,8 @@ namespace EPIC.Api.Controllers
         // NORMALIZE SERVICE STATUS
         // =========================================================
 
-        private static string
-            NormalizeServiceStatus(
-                string? status)
+        private static string NormalizeServiceStatus(
+            string? status)
         {
             if (string.IsNullOrWhiteSpace(status))
             {
@@ -858,12 +817,30 @@ namespace EPIC.Api.Controllers
         }
 
         // =========================================================
+        // MEMBER NAME
+        // =========================================================
+
+        private static string BuildMemberName(
+            Member member)
+        {
+            var middleName =
+                string.IsNullOrWhiteSpace(
+                    member.MiddleName)
+                    ? ""
+                    : " " + member.MiddleName;
+
+            return
+                $"{member.LastName}, " +
+                $"{member.FirstName}" +
+                middleName;
+        }
+
+        // =========================================================
         // BUILD ATTENDANCE SUMMARY
         // =========================================================
 
-        private static object
-            BuildAttendanceSummary<T>(
-                IEnumerable<T> records)
+        private static object BuildAttendanceSummary<T>(
+            IEnumerable<T> records)
         {
             var list =
                 records.ToList();
@@ -908,8 +885,7 @@ namespace EPIC.Api.Controllers
             T record)
         {
             var property =
-                typeof(T).GetProperty(
-                    "status");
+                typeof(T).GetProperty("status");
 
             if (property == null)
             {
@@ -920,19 +896,17 @@ namespace EPIC.Api.Controllers
                 property.GetValue(record)
                 ?.ToString();
 
-            return NormalizeAttendanceStatus(
-                value);
+            return NormalizeAttendanceStatus(value);
         }
 
         // =========================================================
         // UNAVAILABLE SERVICE RESPONSE
         // =========================================================
 
-        private static object
-            BuildUnavailableServiceResponse(
-                ChurchService service,
-                string status,
-                string message)
+        private static object BuildUnavailableServiceResponse(
+            ChurchService service,
+            string status,
+            string message)
         {
             return new
             {

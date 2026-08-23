@@ -6,8 +6,8 @@
 } from "react";
 
 import "./Attendance.css";
-
 import { API_BASE_URL } from "./config";
+
 // =============================================================
 // TYPES
 // =============================================================
@@ -21,10 +21,23 @@ type AttendanceStatus =
 
 interface Member {
     memberId: number;
-    memberCode: string;
+    memberCode?: string;
+
     firstName?: string;
     middleName?: string;
     lastName?: string;
+
+    fullName?: string;
+    name?: string;
+
+    // Possible backend naming variants
+    FirstName?: string;
+    MiddleName?: string;
+    LastName?: string;
+    FullName?: string;
+    Name?: string;
+    MemberCode?: string;
+
     gender?: string;
     birthDate?: string;
     contactNumber?: string;
@@ -47,10 +60,24 @@ interface ChurchService {
 
 interface AttendanceApiRecord {
     memberId: number;
+
     memberCode?: string;
+
     firstName?: string;
     middleName?: string;
     lastName?: string;
+
+    fullName?: string;
+    name?: string;
+
+    // Possible backend naming variants
+    FirstName?: string;
+    MiddleName?: string;
+    LastName?: string;
+    FullName?: string;
+    Name?: string;
+    MemberCode?: string;
+
     status?: string;
     attendanceId?: number;
     attendanceDate?: string;
@@ -73,10 +100,14 @@ interface AttendanceApiResponse {
     endTime?: string;
     location?: string;
     status?: string;
+
     canRecordAttendance?: boolean;
     attendanceStarted?: boolean;
+
     message?: string;
+
     summary?: AttendanceSummary;
+
     attendance?: AttendanceApiRecord[];
 }
 
@@ -151,14 +182,16 @@ const readResponseMessage = async (
     response: Response
 ): Promise<string> => {
     try {
-        const text = await response.text();
+        const text =
+            await response.text();
 
         if (!text) {
             return "";
         }
 
         try {
-            const json = JSON.parse(text);
+            const json =
+                JSON.parse(text);
 
             return (
                 json?.message ||
@@ -182,11 +215,14 @@ const apiFetch = async (
     url: string,
     options: RequestInit = {}
 ): Promise<Response> => {
-    const token = getToken();
 
-    const headers = new Headers(
-        options.headers || {}
-    );
+    const token =
+        getToken();
+
+    const headers =
+        new Headers(
+            options.headers || {}
+        );
 
     headers.set(
         "Accept",
@@ -195,7 +231,9 @@ const apiFetch = async (
 
     if (
         options.body &&
-        !headers.has("Content-Type")
+        !headers.has(
+            "Content-Type"
+        )
     ) {
         headers.set(
             "Content-Type",
@@ -219,14 +257,18 @@ const apiFetch = async (
     let response: Response;
 
     try {
-        response = await fetch(
-            url,
-            {
-                ...options,
-                headers
-            }
-        );
+
+        response =
+            await fetch(
+                url,
+                {
+                    ...options,
+                    headers
+                }
+            );
+
     } catch (error) {
+
         console.error(
             "EPIC API NETWORK ERROR:",
             error
@@ -245,14 +287,18 @@ const apiFetch = async (
         url
     );
 
-    if (response.status === 401) {
+    if (
+        response.status === 401
+    ) {
         throw new ApiError(
             "Your session has expired. Please log in again.",
             401
         );
     }
 
-    if (response.status === 403) {
+    if (
+        response.status === 403
+    ) {
         throw new ApiError(
             "You do not have permission to access this EPIC module.",
             403
@@ -260,8 +306,11 @@ const apiFetch = async (
     }
 
     if (!response.ok) {
+
         const message =
-            await readResponseMessage(response);
+            await readResponseMessage(
+                response
+            );
 
         throw new ApiError(
             message ||
@@ -274,10 +323,183 @@ const apiFetch = async (
 };
 
 // =============================================================
+// SAFE STRING
+// =============================================================
+
+const safeString = (
+    value: unknown
+): string => {
+
+    if (
+        value === null ||
+        value === undefined
+    ) {
+        return "";
+    }
+
+    return String(value).trim();
+};
+
+// =============================================================
+// GET MEMBER NAME
+// =============================================================
+
+const getMemberName = (
+    member: Member |
+        AttendanceApiRecord
+): string => {
+
+    const data =
+        member as any;
+
+    // ---------------------------------------------------------
+    // 1. FULL NAME
+    // ---------------------------------------------------------
+
+    const fullName =
+        safeString(
+            data.fullName
+        ) ||
+        safeString(
+            data.FullName
+        );
+
+    if (fullName) {
+        return fullName;
+    }
+
+    // ---------------------------------------------------------
+    // 2. NAME
+    // ---------------------------------------------------------
+
+    const name =
+        safeString(
+            data.name
+        ) ||
+        safeString(
+            data.Name
+        );
+
+    if (name) {
+        return name;
+    }
+
+    // ---------------------------------------------------------
+    // 3. FIRST + MIDDLE + LAST
+    // ---------------------------------------------------------
+
+    const firstName =
+        safeString(
+            data.firstName
+        ) ||
+        safeString(
+            data.FirstName
+        );
+
+    const middleName =
+        safeString(
+            data.middleName
+        ) ||
+        safeString(
+            data.MiddleName
+        );
+
+    const lastName =
+        safeString(
+            data.lastName
+        ) ||
+        safeString(
+            data.LastName
+        );
+
+    const constructedName =
+        [
+            firstName,
+            middleName,
+            lastName
+        ]
+            .filter(Boolean)
+            .join(" ")
+            .trim();
+
+    if (constructedName) {
+        return constructedName;
+    }
+
+    // ---------------------------------------------------------
+    // 4. MEMBER CODE
+    // ---------------------------------------------------------
+
+    const memberCode =
+        safeString(
+            data.memberCode
+        ) ||
+        safeString(
+            data.MemberCode
+        );
+
+    if (memberCode) {
+        return memberCode;
+    }
+
+    return "Unnamed Member";
+};
+
+// =============================================================
+// GET MEMBER CODE
+// =============================================================
+
+const getMemberCode = (
+    member: Member |
+        AttendanceApiRecord
+): string => {
+
+    const data =
+        member as any;
+
+    return (
+        safeString(
+            data.memberCode
+        ) ||
+        safeString(
+            data.MemberCode
+        ) ||
+        "—"
+    );
+};
+
+// =============================================================
+// GET MINISTRY
+// =============================================================
+
+const getMemberMinistry = (
+    member: Member
+): string => {
+
+    const data =
+        member as any;
+
+    return (
+        safeString(
+            data.ministry
+        ) ||
+        safeString(
+            data.Ministry
+        ) ||
+        "—"
+    );
+};
+
+// =============================================================
 // COMPONENT
 // =============================================================
 
 const Attendance: React.FC = () => {
+
+    // =========================================================
+    // STATE
+    // =========================================================
+
     const [members, setMembers] =
         useState<Member[]>([]);
 
@@ -326,289 +548,393 @@ const Attendance: React.FC = () => {
     // RESET DASHBOARD
     // =========================================================
 
-    const resetDashboard = useCallback(() => {
-        setDashboard({
-            totalRecords: 0,
-            present: 0,
-            late: 0,
-            early: 0,
-            absent: 0,
-            excused: 0,
-            attendanceRate: 0
-        });
-    }, []);
+    const resetDashboard =
+        useCallback(() => {
+
+            setDashboard({
+                totalRecords: 0,
+                present: 0,
+                late: 0,
+                early: 0,
+                absent: 0,
+                excused: 0,
+                attendanceRate: 0
+            });
+
+        }, []);
 
     // =========================================================
     // DASHBOARD CALCULATION
     // =========================================================
 
-    const calculateDashboard = useCallback(
-        (rows: AttendanceRow[]) => {
-            const total = rows.length;
+    const calculateDashboard =
+        useCallback(
+            (
+                rows: AttendanceRow[]
+            ) => {
 
-            const present = rows.filter(
-                x => x.status === "PRESENT"
-            ).length;
+                const total =
+                    rows.length;
 
-            const late = rows.filter(
-                x => x.status === "LATE"
-            ).length;
+                const present =
+                    rows.filter(
+                        x =>
+                            x.status ===
+                            "PRESENT"
+                    ).length;
 
-            const early = rows.filter(
-                x => x.status === "EARLY"
-            ).length;
+                const late =
+                    rows.filter(
+                        x =>
+                            x.status ===
+                            "LATE"
+                    ).length;
 
-            const absent = rows.filter(
-                x => x.status === "ABSENT"
-            ).length;
+                const early =
+                    rows.filter(
+                        x =>
+                            x.status ===
+                            "EARLY"
+                    ).length;
 
-            const excused = rows.filter(
-                x => x.status === "EXCUSED"
-            ).length;
+                const absent =
+                    rows.filter(
+                        x =>
+                            x.status ===
+                            "ABSENT"
+                    ).length;
 
-            const attended =
-                present +
-                late +
-                early;
+                const excused =
+                    rows.filter(
+                        x =>
+                            x.status ===
+                            "EXCUSED"
+                    ).length;
 
-            const rate =
-                total === 0
-                    ? 0
-                    : Math.round(
-                        (
-                            attended /
-                            total
-                        ) * 10000
-                    ) / 100;
+                const attended =
+                    present +
+                    late +
+                    early;
 
-            setDashboard({
-                totalRecords: total,
-                present,
-                late,
-                early,
-                absent,
-                excused,
-                attendanceRate: rate
-            });
-        },
-        []
-    );
+                const rate =
+                    total === 0
+                        ? 0
+                        : Math.round(
+                            (
+                                attended /
+                                total
+                            ) *
+                            10000
+                        ) / 100;
+
+                setDashboard({
+                    totalRecords:
+                        total,
+
+                    present,
+                    late,
+                    early,
+                    absent,
+                    excused,
+
+                    attendanceRate:
+                        rate
+                });
+            },
+            []
+        );
 
     // =========================================================
     // LOAD MEMBERS
     // =========================================================
 
-    const loadMembers = useCallback(
-        async (): Promise<Member[]> => {
-            const url =
-                `${API_BASE_URL}/Members`;
+    const loadMembers =
+        useCallback(
+            async (): Promise<Member[]> => {
 
-            console.log(
-                "ATTENDANCE: Loading members:",
-                url
-            );
+                const url =
+                    `${API_BASE_URL}/Members`;
 
-            const response =
-                await apiFetch(url);
+                console.log(
+                    "ATTENDANCE: Loading members:",
+                    url
+                );
 
-            const data =
-                await response.json();
+                const response =
+                    await apiFetch(url);
 
-            const list: Member[] =
-                Array.isArray(data)
-                    ? data
-                    : Array.isArray(data?.members)
-                        ? data.members
-                        : Array.isArray(data?.data)
-                            ? data.data
-                            : [];
+                const data =
+                    await response.json();
 
-            const active =
-                list.filter(member => {
-                    const status =
-                        (
-                            member.status ||
-                            "ACTIVE"
+                console.log(
+                    "ATTENDANCE MEMBERS RAW DATA:",
+                    data
+                );
+
+                const list: Member[] =
+                    Array.isArray(data)
+                        ? data
+                        : Array.isArray(
+                            data?.members
                         )
-                            .trim()
-                            .toUpperCase();
+                            ? data.members
+                            : Array.isArray(
+                                data?.data
+                            )
+                                ? data.data
+                                : [];
 
-                    return status === "ACTIVE";
-                });
+                console.log(
+                    "ATTENDANCE MEMBER SAMPLE:",
+                    list[0]
+                );
 
-            console.log(
-                "ATTENDANCE: Members loaded:",
-                active.length
-            );
+                const active =
+                    list.filter(
+                        member => {
 
-            setMembers(active);
+                            const status =
+                                (
+                                    member.status ||
+                                    (member as any).Status ||
+                                    "ACTIVE"
+                                )
+                                    .trim()
+                                    .toUpperCase();
 
-            return active;
-        },
-        []
-    );
+                            return (
+                                status ===
+                                "ACTIVE"
+                            );
+                        }
+                    );
+
+                console.log(
+                    "ATTENDANCE: Members loaded:",
+                    active.length
+                );
+
+                console.log(
+                    "ATTENDANCE: FIRST MEMBER NAME:",
+                    active.length
+                        ? getMemberName(
+                            active[0]
+                        )
+                        : "NONE"
+                );
+
+                setMembers(
+                    active
+                );
+
+                return active;
+            },
+            []
+        );
 
     // =========================================================
     // LOAD CHURCH SERVICES
     // =========================================================
 
-    const loadChurchServices = useCallback(
-        async (): Promise<ChurchService[]> => {
-            const endpoints = [
-                `${API_BASE_URL}/ChurchServices`,
-                `${API_BASE_URL}/ChurchService`
-            ];
+    const loadChurchServices =
+        useCallback(
+            async (): Promise<
+                ChurchService[]
+            > => {
 
-            let lastError: unknown = null;
+                const endpoints = [
+                    `${API_BASE_URL}/ChurchServices`,
+                    `${API_BASE_URL}/ChurchService`
+                ];
 
-            for (const url of endpoints) {
-                try {
-                    console.log(
-                        "ATTENDANCE: Trying services endpoint:",
-                        url
-                    );
+                let lastError:
+                    unknown = null;
 
-                    const response =
-                        await apiFetch(url);
+                for (
+                    const url
+                    of endpoints
+                ) {
 
-                    const data =
-                        await response.json();
+                    try {
 
-                    const list: ChurchService[] =
-                        Array.isArray(data)
-                            ? data
-                            : Array.isArray(data?.services)
-                                ? data.services
-                                : Array.isArray(data?.churchServices)
-                                    ? data.churchServices
-                                    : Array.isArray(data?.data)
-                                        ? data.data
-                                        : [];
+                        console.log(
+                            "ATTENDANCE: Trying services endpoint:",
+                            url
+                        );
 
-                    console.log(
-                        "ATTENDANCE: Services loaded:",
-                        list.length,
-                        list
-                    );
+                        const response =
+                            await apiFetch(
+                                url
+                            );
 
-                    setServices(list);
+                        const data =
+                            await response.json();
 
-                    return list;
-                } catch (error) {
-                    console.warn(
-                        "ATTENDANCE: Service endpoint failed:",
-                        url,
+                        const list:
+                            ChurchService[] =
+                            Array.isArray(
+                                data
+                            )
+                                ? data
+                                : Array.isArray(
+                                    data?.services
+                                )
+                                    ? data.services
+                                    : Array.isArray(
+                                        data?.churchServices
+                                    )
+                                        ? data.churchServices
+                                        : Array.isArray(
+                                            data?.data
+                                        )
+                                            ? data.data
+                                            : [];
+
+                        console.log(
+                            "ATTENDANCE: Services loaded:",
+                            list.length,
+                            list
+                        );
+
+                        setServices(
+                            list
+                        );
+
+                        return list;
+
+                    } catch (
                         error
-                    );
+                    ) {
 
-                    lastError = error;
+                        console.warn(
+                            "ATTENDANCE: Service endpoint failed:",
+                            url,
+                            error
+                        );
+
+                        lastError =
+                            error;
+                    }
                 }
-            }
 
-            throw (
-                lastError instanceof Error
-                    ? lastError
-                    : new Error(
-                        "Unable to load church services."
-                    )
-            );
-        },
-        []
-    );
+                throw (
+                    lastError instanceof Error
+                        ? lastError
+                        : new Error(
+                            "Unable to load church services."
+                        )
+                );
+            },
+            []
+        );
 
     // =========================================================
     // INITIAL LOAD
     // =========================================================
 
-    const loadInitialData = useCallback(
-        async () => {
-            setLoading(true);
-            setError("");
-            setMessage("");
+    const loadInitialData =
+        useCallback(
+            async () => {
 
-            try {
-                if (!getToken()) {
-                    throw new ApiError(
-                        "Unauthorized. Please login again.",
-                        401
-                    );
-                }
+                setLoading(true);
+                setError("");
+                setMessage("");
 
-                const results =
-                    await Promise.allSettled([
-                        loadMembers(),
-                        loadChurchServices()
-                    ]);
+                try {
 
-                const memberResult =
-                    results[0];
+                    if (!getToken()) {
 
-                const serviceResult =
-                    results[1];
+                        throw new ApiError(
+                            "Unauthorized. Please login again.",
+                            401
+                        );
+                    }
 
-                if (
-                    memberResult.status ===
-                    "rejected"
-                ) {
+                    const results =
+                        await Promise.allSettled([
+                            loadMembers(),
+                            loadChurchServices()
+                        ]);
+
+                    const memberResult =
+                        results[0];
+
+                    const serviceResult =
+                        results[1];
+
+                    if (
+                        memberResult.status ===
+                        "rejected"
+                    ) {
+
+                        console.error(
+                            "ATTENDANCE MEMBERS LOAD ERROR:",
+                            memberResult.reason
+                        );
+                    }
+
+                    if (
+                        serviceResult.status ===
+                        "rejected"
+                    ) {
+
+                        console.error(
+                            "ATTENDANCE SERVICES LOAD ERROR:",
+                            serviceResult.reason
+                        );
+
+                        setError(
+                            serviceResult.reason instanceof Error
+                                ? serviceResult.reason.message
+                                : "Unable to load church services."
+                        );
+                    }
+
+                    if (
+                        memberResult.status ===
+                        "rejected" &&
+                        serviceResult.status ===
+                        "rejected"
+                    ) {
+
+                        throw new Error(
+                            "Unable to load attendance data."
+                        );
+                    }
+
+                } catch (err) {
+
                     console.error(
-                        "ATTENDANCE MEMBERS LOAD ERROR:",
-                        memberResult.reason
-                    );
-                }
-
-                if (
-                    serviceResult.status ===
-                    "rejected"
-                ) {
-                    console.error(
-                        "ATTENDANCE SERVICES LOAD ERROR:",
-                        serviceResult.reason
+                        "ATTENDANCE INITIAL LOAD ERROR:",
+                        err
                     );
 
                     setError(
-                        serviceResult.reason instanceof Error
-                            ? serviceResult.reason.message
-                            : "Unable to load church services."
+                        err instanceof Error
+                            ? err.message
+                            : "Unable to load attendance."
                     );
+
+                } finally {
+
+                    setLoading(false);
                 }
 
-                if (
-                    memberResult.status ===
-                    "rejected" &&
-                    serviceResult.status ===
-                    "rejected"
-                ) {
-                    throw new Error(
-                        "Unable to load attendance data."
-                    );
-                }
-            } catch (err) {
-                console.error(
-                    "ATTENDANCE INITIAL LOAD ERROR:",
-                    err
-                );
-
-                setError(
-                    err instanceof Error
-                        ? err.message
-                        : "Unable to load attendance."
-                );
-            } finally {
-                setLoading(false);
-            }
-        },
-        [
-            loadMembers,
-            loadChurchServices
-        ]
-    );
+            },
+            [
+                loadMembers,
+                loadChurchServices
+            ]
+        );
 
     // =========================================================
     // INITIAL EFFECT
     // =========================================================
 
     useEffect(() => {
-        loadInitialData();
+
+        void loadInitialData();
+
     }, [loadInitialData]);
 
     // =========================================================
@@ -622,11 +948,13 @@ const Attendance: React.FC = () => {
                 suppliedServices?: ChurchService[],
                 suppliedMembers?: Member[]
             ) => {
+
                 setLoading(true);
                 setError("");
                 setMessage("");
 
                 try {
+
                     const currentServices =
                         suppliedServices ||
                         services;
@@ -641,10 +969,13 @@ const Attendance: React.FC = () => {
                                 Number(
                                     item.churchServiceId
                                 ) ===
-                                Number(serviceId)
+                                Number(
+                                    serviceId
+                                )
                         );
 
                     if (!service) {
+
                         const freshServices =
                             await loadChurchServices();
 
@@ -654,17 +985,22 @@ const Attendance: React.FC = () => {
                                     Number(
                                         item.churchServiceId
                                     ) ===
-                                    Number(serviceId)
+                                    Number(
+                                        serviceId
+                                    )
                             );
                     }
 
                     if (!service) {
+
                         throw new Error(
                             "The selected church service was not found."
                         );
                     }
 
-                    setSelectedService(service);
+                    setSelectedService(
+                        service
+                    );
 
                     const serviceStatus =
                         (
@@ -682,7 +1018,10 @@ const Attendance: React.FC = () => {
                         serviceStatus !==
                         "COMPLETED"
                     ) {
-                        setAttendance([]);
+
+                        setAttendance(
+                            []
+                        );
 
                         resetDashboard();
 
@@ -694,10 +1033,13 @@ const Attendance: React.FC = () => {
                             serviceStatus ===
                             "CANCELLED"
                         ) {
+
                             setMessage(
                                 "This church service was cancelled. Attendance cannot be recorded."
                             );
+
                         } else {
+
                             setMessage(
                                 "This church service has not been completed yet. Attendance will become available after the service is completed."
                             );
@@ -719,7 +1061,9 @@ const Attendance: React.FC = () => {
                     );
 
                     const response =
-                        await apiFetch(url);
+                        await apiFetch(
+                            url
+                        );
 
                     const text =
                         await response.text();
@@ -729,11 +1073,16 @@ const Attendance: React.FC = () => {
                         null = null;
 
                     try {
+
                         data =
                             text
-                                ? JSON.parse(text)
+                                ? JSON.parse(
+                                    text
+                                )
                                 : null;
+
                     } catch {
+
                         console.error(
                             "ATTENDANCE INVALID JSON:",
                             text
@@ -745,6 +1094,7 @@ const Attendance: React.FC = () => {
                     }
 
                     if (!data) {
+
                         throw new Error(
                             "The attendance API returned an empty response."
                         );
@@ -763,7 +1113,10 @@ const Attendance: React.FC = () => {
                         data.canRecordAttendance ===
                         false
                     ) {
-                        setAttendance([]);
+
+                        setAttendance(
+                            []
+                        );
 
                         resetDashboard();
 
@@ -790,13 +1143,20 @@ const Attendance: React.FC = () => {
                             ? data.attendance
                             : [];
 
+                    console.log(
+                        "ATTENDANCE EXISTING RECORDS:",
+                        existing
+                    );
+
                     // -------------------------------------------------
                     // BUILD MEMBER ROWS
                     // -------------------------------------------------
 
-                    const rows: AttendanceRow[] =
+                    const rows:
+                        AttendanceRow[] =
                         currentMembers.map(
                             member => {
+
                                 const record =
                                     existing.find(
                                         item =>
@@ -808,23 +1168,101 @@ const Attendance: React.FC = () => {
                                             )
                                     );
 
+                                // -------------------------------------------------
+                                // IMPORTANT:
+                                // Combine MEMBER API + ATTENDANCE API
+                                // so names are not lost.
+                                // -------------------------------------------------
+
+                                const mergedMember:
+                                    Member = {
+
+                                    ...member,
+
+                                    memberCode:
+                                        getMemberCode(
+                                            member
+                                        ) !== "—"
+                                            ? getMemberCode(
+                                                member
+                                            )
+                                            : getMemberCode(
+                                                record ||
+                                                member
+                                            ),
+
+                                    firstName:
+                                        member.firstName ||
+                                        member.FirstName ||
+                                        record?.firstName ||
+                                        record?.FirstName,
+
+                                    middleName:
+                                        member.middleName ||
+                                        member.MiddleName ||
+                                        record?.middleName ||
+                                        record?.MiddleName,
+
+                                    lastName:
+                                        member.lastName ||
+                                        member.LastName ||
+                                        record?.lastName ||
+                                        record?.LastName,
+
+                                    fullName:
+                                        member.fullName ||
+                                        member.FullName ||
+                                        record?.fullName ||
+                                        record?.FullName,
+
+                                    name:
+                                        member.name ||
+                                        member.Name ||
+                                        record?.name ||
+                                        record?.Name
+                                };
+
+                                const resolvedName =
+                                    getMemberName(
+                                        mergedMember
+                                    );
+
+                                console.log(
+                                    "ATTENDANCE MEMBER ROW:",
+                                    {
+                                        memberId:
+                                            member.memberId,
+
+                                        memberCode:
+                                            getMemberCode(
+                                                mergedMember
+                                            ),
+
+                                        name:
+                                            resolvedName,
+
+                                        member,
+                                        record
+                                    }
+                                );
+
                                 return {
+
                                     memberId:
                                         member.memberId,
 
                                     memberCode:
-                                        member.memberCode ||
-                                        record?.memberCode ||
-                                        "—",
-
-                                    fullName:
-                                        getMemberName(
-                                            member
+                                        getMemberCode(
+                                            mergedMember
                                         ),
 
+                                    fullName:
+                                        resolvedName,
+
                                     ministry:
-                                        member.ministry ||
-                                        "—",
+                                        getMemberMinistry(
+                                            member
+                                        ),
 
                                     status:
                                         normalizeStatus(
@@ -837,25 +1275,38 @@ const Attendance: React.FC = () => {
                             }
                         );
 
-                    setAttendance(rows);
+                    console.log(
+                        "ATTENDANCE FINAL ROWS:",
+                        rows
+                    );
+
+                    setAttendance(
+                        rows
+                    );
 
                     setAttendanceAvailable(
                         true
                     );
 
-                    calculateDashboard(rows);
+                    calculateDashboard(
+                        rows
+                    );
 
                     setMessage(
                         data.message ||
                         "Attendance is available for this completed church service."
                     );
+
                 } catch (err) {
+
                     console.error(
                         "LOAD ATTENDANCE ERROR:",
                         err
                     );
 
-                    setAttendance([]);
+                    setAttendance(
+                        []
+                    );
 
                     resetDashboard();
 
@@ -868,9 +1319,12 @@ const Attendance: React.FC = () => {
                             ? err.message
                             : "Unable to load attendance."
                     );
+
                 } finally {
+
                     setLoading(false);
                 }
+
             },
             [
                 services,
@@ -886,16 +1340,31 @@ const Attendance: React.FC = () => {
     // =========================================================
 
     const handleServiceChange =
-        async (value: string) => {
+        async (
+            value: string
+        ) => {
+
             setError("");
             setMessage("");
             setSearch("");
 
             if (!value) {
-                setSelectedServiceId("");
-                setSelectedService(null);
-                setAttendance([]);
-                setAttendanceAvailable(false);
+
+                setSelectedServiceId(
+                    ""
+                );
+
+                setSelectedService(
+                    null
+                );
+
+                setAttendance(
+                    []
+                );
+
+                setAttendanceAvailable(
+                    false
+                );
 
                 resetDashboard();
 
@@ -909,6 +1378,7 @@ const Attendance: React.FC = () => {
                 !Number.isFinite(id) ||
                 id <= 0
             ) {
+
                 setError(
                     "Invalid church service selected."
                 );
@@ -916,9 +1386,13 @@ const Attendance: React.FC = () => {
                 return;
             }
 
-            setSelectedServiceId(id);
+            setSelectedServiceId(
+                id
+            );
 
-            await loadAttendanceForService(id);
+            await loadAttendanceForService(
+                id
+            );
         };
 
     // =========================================================
@@ -929,6 +1403,7 @@ const Attendance: React.FC = () => {
         memberId: number,
         status: AttendanceStatus
     ) => {
+
         if (!attendanceAvailable) {
             return;
         }
@@ -936,7 +1411,8 @@ const Attendance: React.FC = () => {
         const updated =
             attendance.map(
                 row =>
-                    row.memberId === memberId
+                    row.memberId ===
+                    memberId
                         ? {
                             ...row,
                             status
@@ -944,9 +1420,13 @@ const Attendance: React.FC = () => {
                         : row
             );
 
-        setAttendance(updated);
+        setAttendance(
+            updated
+        );
 
-        calculateDashboard(updated);
+        calculateDashboard(
+            updated
+        );
     };
 
     // =========================================================
@@ -955,7 +1435,9 @@ const Attendance: React.FC = () => {
 
     const saveAttendance =
         async () => {
+
             if (!selectedServiceId) {
+
                 setError(
                     "Please select a church service."
                 );
@@ -964,6 +1446,7 @@ const Attendance: React.FC = () => {
             }
 
             if (!selectedService) {
+
                 setError(
                     "Church service information is unavailable."
                 );
@@ -983,6 +1466,7 @@ const Attendance: React.FC = () => {
                 status !==
                 "COMPLETED"
             ) {
+
                 setError(
                     "Attendance cannot be saved until the church service is completed."
                 );
@@ -994,6 +1478,7 @@ const Attendance: React.FC = () => {
                 attendance.length ===
                 0
             ) {
+
                 setError(
                     "There are no active members to record."
                 );
@@ -1002,7 +1487,11 @@ const Attendance: React.FC = () => {
             }
 
             try {
-                setSaving(true);
+
+                setSaving(
+                    true
+                );
+
                 setError("");
                 setMessage("");
 
@@ -1027,35 +1516,40 @@ const Attendance: React.FC = () => {
                 const url =
                     `${API_BASE_URL}/Attendance/church-service/${selectedServiceId}`;
 
-                console.log(
-                    "SAVE ATTENDANCE URL:",
-                    url
-                );
-
                 const response =
                     await apiFetch(
                         url,
                         {
-                            method: "POST",
-                            body: JSON.stringify(
-                                payload
-                            )
+                            method:
+                                "POST",
+
+                            body:
+                                JSON.stringify(
+                                    payload
+                                )
                         }
                     );
 
                 const text =
                     await response.text();
 
-                let data: any = {};
+                let data:
+                    any = {};
 
                 try {
+
                     data =
                         text
-                            ? JSON.parse(text)
+                            ? JSON.parse(
+                                text
+                            )
                             : {};
+
                 } catch {
+
                     data = {
-                        message: text
+                        message:
+                            text
                     };
                 }
 
@@ -1066,6 +1560,7 @@ const Attendance: React.FC = () => {
                 );
 
                 if (!response.ok) {
+
                     throw new ApiError(
                         data?.message ||
                         text ||
@@ -1081,16 +1576,14 @@ const Attendance: React.FC = () => {
                     } record(s) saved.`
                 );
 
-                // -------------------------------------------------
-                // RELOAD FROM DATABASE
-                // -------------------------------------------------
-
                 await loadAttendanceForService(
                     Number(
                         selectedServiceId
                     )
                 );
+
             } catch (err) {
+
                 console.error(
                     "SAVE ATTENDANCE ERROR:",
                     err
@@ -1101,8 +1594,12 @@ const Attendance: React.FC = () => {
                         ? err.message
                         : "Unable to save attendance."
                 );
+
             } finally {
-                setSaving(false);
+
+                setSaving(
+                    false
+                );
             }
         };
 
@@ -1112,11 +1609,15 @@ const Attendance: React.FC = () => {
 
     const handleRefresh =
         async () => {
+
             setError("");
             setMessage("");
 
             try {
-                setLoading(true);
+
+                setLoading(
+                    true
+                );
 
                 const [
                     freshMembers,
@@ -1127,7 +1628,10 @@ const Attendance: React.FC = () => {
                         loadChurchServices()
                     ]);
 
-                if (selectedServiceId) {
+                if (
+                    selectedServiceId
+                ) {
+
                     const service =
                         freshServices.find(
                             item =>
@@ -1140,9 +1644,18 @@ const Attendance: React.FC = () => {
                         );
 
                     if (!service) {
-                        setSelectedService(null);
-                        setAttendance([]);
-                        setAttendanceAvailable(false);
+
+                        setSelectedService(
+                            null
+                        );
+
+                        setAttendance(
+                            []
+                        );
+
+                        setAttendanceAvailable(
+                            false
+                        );
 
                         resetDashboard();
 
@@ -1153,7 +1666,9 @@ const Attendance: React.FC = () => {
                         return;
                     }
 
-                    setSelectedService(service);
+                    setSelectedService(
+                        service
+                    );
 
                     await loadAttendanceForService(
                         Number(
@@ -1162,12 +1677,16 @@ const Attendance: React.FC = () => {
                         freshServices,
                         freshMembers
                     );
+
                 } else {
+
                     setMessage(
                         "Attendance module refreshed successfully."
                     );
                 }
+
             } catch (err) {
+
                 console.error(
                     "ATTENDANCE REFRESH ERROR:",
                     err
@@ -1178,8 +1697,12 @@ const Attendance: React.FC = () => {
                         ? err.message
                         : "Unable to refresh attendance."
                 );
+
             } finally {
-                setLoading(false);
+
+                setLoading(
+                    false
+                );
             }
         };
 
@@ -1189,6 +1712,7 @@ const Attendance: React.FC = () => {
 
     const filteredAttendance =
         useMemo(() => {
+
             const keyword =
                 search
                     .trim()
@@ -1202,16 +1726,23 @@ const Attendance: React.FC = () => {
                 row =>
                     row.fullName
                         .toLowerCase()
-                        .includes(keyword) ||
+                        .includes(
+                            keyword
+                        ) ||
 
                     row.memberCode
                         .toLowerCase()
-                        .includes(keyword) ||
+                        .includes(
+                            keyword
+                        ) ||
 
                     row.ministry
                         .toLowerCase()
-                        .includes(keyword)
+                        .includes(
+                            keyword
+                        )
             );
+
         }, [
             attendance,
             search
@@ -1222,6 +1753,7 @@ const Attendance: React.FC = () => {
     // =========================================================
 
     return (
+
         <div className="attendance-page">
 
             {/* HEADER */}
@@ -1235,6 +1767,7 @@ const Attendance: React.FC = () => {
                     </div>
 
                     <div>
+
                         <h1>
                             EPIC ATTENDANCE
                         </h1>
@@ -1242,6 +1775,7 @@ const Attendance: React.FC = () => {
                         <p>
                             Church Attendance Management
                         </p>
+
                     </div>
 
                 </div>
@@ -1249,7 +1783,9 @@ const Attendance: React.FC = () => {
                 <button
                     type="button"
                     className="attendance-refresh-btn"
-                    onClick={handleRefresh}
+                    onClick={
+                        handleRefresh
+                    }
                     disabled={
                         loading ||
                         saving
@@ -1263,14 +1799,20 @@ const Attendance: React.FC = () => {
             {/* ALERTS */}
 
             {message && (
+
                 <div className="attendance-success">
+
                     ✓ {message}
+
                 </div>
             )}
 
             {error && (
+
                 <div className="attendance-error">
+
                     ⚠ {error}
+
                 </div>
             )}
 
@@ -1290,7 +1832,7 @@ const Attendance: React.FC = () => {
                         }
                         onChange={
                             e =>
-                                handleServiceChange(
+                                void handleServiceChange(
                                     e.target.value
                                 )
                         }
@@ -1306,6 +1848,7 @@ const Attendance: React.FC = () => {
 
                         {services.map(
                             service => (
+
                                 <option
                                     key={
                                         service.churchServiceId
@@ -1314,20 +1857,26 @@ const Attendance: React.FC = () => {
                                         service.churchServiceId
                                     }
                                 >
+
                                     {
                                         service.serviceName
                                     }
+
                                     {" — "}
+
                                     {
                                         formatDate(
                                             service.serviceDate
                                         )
                                     }
+
                                     {" — "}
+
                                     {
                                         service.status ||
                                         "SCHEDULED"
                                     }
+
                                 </option>
                             )
                         )}
@@ -1366,7 +1915,9 @@ const Attendance: React.FC = () => {
                     <input
                         type="text"
                         placeholder="Search name, code, ministry..."
-                        value={search}
+                        value={
+                            search
+                        }
                         onChange={
                             e =>
                                 setSearch(
@@ -1385,6 +1936,7 @@ const Attendance: React.FC = () => {
             {/* SERVICE STATUS */}
 
             {selectedService && (
+
                 <div
                     className={
                         `attendance-service-banner ${(
@@ -1410,8 +1962,11 @@ const Attendance: React.FC = () => {
                     </span>
 
                     {selectedService.startTime && (
+
                         <span>
+
                             {" • "}
+
                             {
                                 formatTime(
                                     selectedService.startTime
@@ -1423,18 +1978,23 @@ const Attendance: React.FC = () => {
                                     selectedService.endTime
                                 )}`
                                 : ""}
+
                         </span>
                     )}
 
                     <span>
+
                         {" • "}
+
                         {
                             selectedService.status ||
                             "SCHEDULED"
                         }
+
                     </span>
 
                     {!attendanceAvailable && (
+
                         <span>
                             {" — Attendance not yet available"}
                         </span>
@@ -1502,9 +2062,11 @@ const Attendance: React.FC = () => {
                     </div>
 
                     <div className="rate-value">
+
                         {
                             dashboard.attendanceRate
                         }%
+
                     </div>
 
                     <div className="rate-bar">
@@ -1539,9 +2101,11 @@ const Attendance: React.FC = () => {
                         </h2>
 
                         <p>
+
                             {attendanceAvailable
                                 ? "Mark the attendance status of each active member."
                                 : "Attendance becomes available after the church service is completed."}
+
                         </p>
 
                     </div>
@@ -1559,9 +2123,11 @@ const Attendance: React.FC = () => {
                             attendance.length === 0
                         }
                     >
+
                         {saving
                             ? "Saving..."
                             : "✓ Save All Attendance"}
+
                     </button>
 
                 </div>
@@ -1583,7 +2149,9 @@ const Attendance: React.FC = () => {
                 ) : !selectedServiceId ? (
 
                     <div className="empty-attendance">
+
                         Select a church service to begin.
+
                     </div>
 
                 ) : !attendanceAvailable ? (
@@ -1599,13 +2167,17 @@ const Attendance: React.FC = () => {
                         </h3>
 
                         <p>
+
                             {(
                                 selectedService?.status ||
                                 ""
                             ).toUpperCase() ===
                             "CANCELLED"
+
                                 ? "This church service was cancelled. Attendance cannot be recorded."
+
                                 : "This church service is still scheduled. Once the service is completed, attendance recording will become available."}
+
                         </p>
 
                     </div>
@@ -1651,10 +2223,14 @@ const Attendance: React.FC = () => {
                                     <tr>
 
                                         <td
-                                            colSpan={5}
+                                            colSpan={
+                                                5
+                                            }
                                             className="empty-attendance"
                                         >
+
                                             No members found.
+
                                         </td>
 
                                     </tr>
@@ -1674,10 +2250,12 @@ const Attendance: React.FC = () => {
                                             >
 
                                                 <td>
+
                                                     {
                                                         index +
                                                         1
                                                     }
+
                                                 </td>
 
                                                 <td>
@@ -1695,9 +2273,11 @@ const Attendance: React.FC = () => {
                                                         </div>
 
                                                         <strong>
+
                                                             {
                                                                 row.fullName
                                                             }
+
                                                         </strong>
 
                                                     </div>
@@ -1707,17 +2287,21 @@ const Attendance: React.FC = () => {
                                                 <td>
 
                                                     <span className="member-code">
+
                                                         {
                                                             row.memberCode
                                                         }
+
                                                     </span>
 
                                                 </td>
 
                                                 <td>
+
                                                     {
                                                         row.ministry
                                                     }
+
                                                 </td>
 
                                                 <td>
@@ -1787,7 +2371,6 @@ const Attendance: React.FC = () => {
 
                                         )
                                     )
-
                                 )}
 
                             </tbody>
@@ -1795,7 +2378,6 @@ const Attendance: React.FC = () => {
                         </table>
 
                     </div>
-
                 )}
 
             </div>
@@ -1814,12 +2396,16 @@ interface StatCardProps {
     className: string;
 }
 
-const StatCard: React.FC<StatCardProps> = ({
+const StatCard: React.FC<
+    StatCardProps
+> = ({
     label,
     value,
     className
 }) => {
+
     return (
+
         <div
             className={
                 `attendance-stat-card ${className}`
@@ -1827,37 +2413,18 @@ const StatCard: React.FC<StatCardProps> = ({
         >
 
             <div className="stat-label">
+
                 {label}
+
             </div>
 
             <div className="stat-number">
+
                 {value}
+
             </div>
 
         </div>
-    );
-};
-
-// =============================================================
-// MEMBER NAME
-// =============================================================
-
-const getMemberName = (
-    member: Member
-): string => {
-    const name = [
-        member.firstName,
-        member.middleName,
-        member.lastName
-    ]
-        .filter(Boolean)
-        .join(" ")
-        .trim();
-
-    return (
-        name ||
-        member.memberCode ||
-        "Unnamed Member"
     );
 };
 
@@ -1868,11 +2435,13 @@ const getMemberName = (
 const normalizeStatus = (
     status?: string
 ): AttendanceStatus => {
+
     switch (
         status
             ?.trim()
             .toUpperCase()
     ) {
+
         case "LATE":
             return "LATE";
 
@@ -1898,7 +2467,9 @@ const normalizeStatus = (
 const statusLabel = (
     status: AttendanceStatus
 ): string => {
+
     switch (status) {
+
         case "PRESENT":
             return "Present";
 
@@ -1923,6 +2494,7 @@ const statusLabel = (
 const statusClass = (
     status: AttendanceStatus
 ): string => {
+
     return (
         `attendance-status status-${status.toLowerCase()}`
     );
@@ -1935,7 +2507,9 @@ const statusClass = (
 const statusIcon = (
     status: AttendanceStatus
 ): string => {
+
     switch (status) {
+
         case "PRESENT":
             return "✓";
 
@@ -1960,17 +2534,26 @@ const statusIcon = (
 const getInitials = (
     name: string
 ): string => {
-    const parts =
+
+    const cleanName =
         name
             .trim()
-            .split(/\s+/)
-            .filter(Boolean);
+            .replace(/\s+/g, " ");
 
-    if (!parts.length) {
+    if (!cleanName) {
         return "?";
     }
 
-    if (parts.length === 1) {
+    const parts =
+        cleanName
+            .split(" ")
+            .filter(Boolean);
+
+    if (
+        parts.length ===
+        1
+    ) {
+
         return parts[0]
             .substring(0, 2)
             .toUpperCase();
@@ -1978,7 +2561,9 @@ const getInitials = (
 
     return (
         parts[0][0] +
-        parts[parts.length - 1][0]
+        parts[
+            parts.length - 1
+        ][0]
     ).toUpperCase();
 };
 
@@ -1987,20 +2572,24 @@ const getInitials = (
 // =============================================================
 
 const formatDate = (
-    dateString: string
+    dateString?: string
 ): string => {
+
     if (!dateString) {
         return "";
     }
 
     const date =
-        new Date(dateString);
+        new Date(
+            dateString
+        );
 
     if (
         Number.isNaN(
             date.getTime()
         )
     ) {
+
         return dateString;
     }
 
@@ -2022,6 +2611,7 @@ const formatDate = (
 const formatTime = (
     time?: string
 ): string => {
+
     if (!time) {
         return "";
     }
@@ -2036,15 +2626,20 @@ const formatTime = (
     }
 
     const hours =
-        Number(parts[0]);
+        Number(
+            parts[0]
+        );
 
     const minutes =
-        Number(parts[1]);
+        Number(
+            parts[1]
+        );
 
     if (
         Number.isNaN(hours) ||
         Number.isNaN(minutes)
     ) {
+
         return time;
     }
 

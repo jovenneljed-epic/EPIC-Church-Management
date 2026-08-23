@@ -1,6 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import "./DemoRequests.css";
+import React, {
+    useCallback,
+    useEffect,
+    useMemo,
+    useState
+} from "react";
 
+import "./DemoRequests.css";
 import { API_BASE_URL } from "../config";
 
 // =========================================================
@@ -40,6 +45,8 @@ interface DemoSummary {
 interface ApiResponse {
     success?: boolean;
     message?: string;
+    title?: string;
+    errors?: Record<string, string[]>;
 }
 
 // =========================================================
@@ -76,7 +83,6 @@ const getAuthToken = (): string | null => {
         if (token) {
             return token;
         }
-
     }
 
     return null;
@@ -94,8 +100,7 @@ const formatDate = (
         return "—";
     }
 
-    const date =
-        new Date(value);
+    const date = new Date(value);
 
     if (Number.isNaN(date.getTime())) {
         return "—";
@@ -110,6 +115,38 @@ const formatDate = (
             hour: "numeric",
             minute: "2-digit"
         }
+    );
+};
+
+// =========================================================
+// DATETIME LOCAL
+// =========================================================
+
+const toDateTimeLocal = (
+    value?: string | null
+): string => {
+
+    if (!value) {
+        return "";
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return "";
+    }
+
+    const pad = (
+        number: number
+    ) =>
+        String(number).padStart(2, "0");
+
+    return (
+        `${date.getFullYear()}-` +
+        `${pad(date.getMonth() + 1)}-` +
+        `${pad(date.getDate())}T` +
+        `${pad(date.getHours())}:` +
+        `${pad(date.getMinutes())}`
     );
 };
 
@@ -150,40 +187,40 @@ const DemoRequests: React.FC = () => {
         });
 
     const [loading, setLoading] =
-        useState<boolean>(true);
+        useState(true);
 
     const [refreshing, setRefreshing] =
-        useState<boolean>(false);
+        useState(false);
 
     const [error, setError] =
-        useState<string>("");
+        useState("");
 
     const [searchTerm, setSearchTerm] =
-        useState<string>("");
+        useState("");
 
     const [statusFilter, setStatusFilter] =
-        useState<string>("All");
+        useState("All");
 
     const [selectedRequest, setSelectedRequest] =
         useState<DemoRequest | null>(null);
 
     const [editingStatus, setEditingStatus] =
-        useState<string>("Pending");
+        useState("Pending");
 
     const [adminNotes, setAdminNotes] =
-        useState<string>("");
+        useState("");
 
     const [contactedDate, setContactedDate] =
-        useState<string>("");
+        useState("");
 
     const [demoDate, setDemoDate] =
-        useState<string>("");
+        useState("");
 
     const [saving, setSaving] =
-        useState<boolean>(false);
+        useState(false);
 
     const [deleting, setDeleting] =
-        useState<boolean>(false);
+        useState(false);
 
     // =====================================================
     // AUTH HEADERS
@@ -204,7 +241,6 @@ const DemoRequests: React.FC = () => {
                 }
                 : {})
         };
-
     };
 
     // =====================================================
@@ -242,17 +278,14 @@ const DemoRequests: React.FC = () => {
                         response.status === 401 ||
                         response.status === 403
                     ) {
-
                         throw new Error(
                             "You are not authorized to view demo requests."
                         );
-
                     }
 
                     throw new Error(
                         `Failed to load demo requests. (${response.status})`
                     );
-
                 }
 
                 const data =
@@ -381,7 +414,7 @@ const DemoRequests: React.FC = () => {
     }, [loadData]);
 
     // =====================================================
-    // FILTER REQUESTS
+    // FILTER
     // =====================================================
 
     const filteredRequests =
@@ -423,7 +456,6 @@ const DemoRequests: React.FC = () => {
                         matchesSearch &&
                         matchesStatus
                     );
-
                 }
             );
 
@@ -434,280 +466,314 @@ const DemoRequests: React.FC = () => {
         ]);
 
     // =====================================================
-    // OPEN REQUEST
+    // VIEW REQUEST
     // =====================================================
 
-    const handleView =
-        (request: DemoRequest) => {
+    const handleView = (
+        request: DemoRequest
+    ) => {
 
-            setSelectedRequest(
-                request
-            );
+        setSelectedRequest(request);
 
-            setEditingStatus(
-                request.status ||
-                "Pending"
-            );
+        setEditingStatus(
+            request.status ||
+            "Pending"
+        );
 
-            setAdminNotes(
-                request.adminNotes ||
-                ""
-            );
+        setAdminNotes(
+            request.adminNotes ||
+            ""
+        );
 
-            setContactedDate(
+        setContactedDate(
+            toDateTimeLocal(
                 request.contactedDate
-                    ? toDateTimeLocal(
-                        request.contactedDate
-                    )
-                    : ""
-            );
+            )
+        );
 
-            setDemoDate(
+        setDemoDate(
+            toDateTimeLocal(
                 request.demoDate
-                    ? toDateTimeLocal(
-                        request.demoDate
-                    )
-                    : ""
-            );
-
-        };
-
-    // =====================================================
-    // DATE → DATETIME LOCAL
-    // =====================================================
-
-    const toDateTimeLocal =
-        (
-            value: string
-        ): string => {
-
-            const date =
-                new Date(value);
-
-            if (
-                Number.isNaN(
-                    date.getTime()
-                )
-            ) {
-                return "";
-            }
-
-            const pad =
-                (number: number) =>
-                    String(number)
-                        .padStart(2, "0");
-
-            return (
-                `${date.getFullYear()}-` +
-                `${pad(date.getMonth() + 1)}-` +
-                `${pad(date.getDate())}T` +
-                `${pad(date.getHours())}:` +
-                `${pad(date.getMinutes())}`
-            );
-
-        };
+            )
+        );
+    };
 
     // =====================================================
     // SAVE REQUEST
     // =====================================================
 
-    const handleSave =
-        async () => {
+    const handleSave = async () => {
 
-            if (!selectedRequest) {
-                return;
-            }
+        if (!selectedRequest) {
+            return;
+        }
 
-            try {
+        try {
 
-                setSaving(true);
+            setSaving(true);
 
-                const response =
-                    await fetch(
-                        `${API_BASE_URL}/DemoRequests/${selectedRequest.demoRequestId}`,
-                        {
-                            method: "PUT",
+            setError("");
 
-                            headers:
-                                getHeaders(),
+            // -------------------------------------------------
+            // REQUEST BODY
+            // -------------------------------------------------
 
-                            body:
-                                JSON.stringify({
-                                    status:
-                                        editingStatus,
+            const requestBody = {
+                status:
+                    editingStatus,
 
-                                    adminNotes:
-                                        adminNotes
-                                            .trim() ||
-                                        null,
+                adminNotes:
+                    adminNotes.trim() ||
+                    null,
 
-                                    contactedDate:
-                                        contactedDate
-                                            ? new Date(
-                                                contactedDate
-                                            ).toISOString()
-                                            : null,
+                contactedDate:
+                    contactedDate
+                        ? new Date(
+                            contactedDate
+                        ).toISOString()
+                        : null,
 
-                                    demoDate:
-                                        demoDate
-                                            ? new Date(
-                                                demoDate
-                                            ).toISOString()
-                                            : null
-                                })
-                        }
+                demoDate:
+                    demoDate
+                        ? new Date(
+                            demoDate
+                        ).toISOString()
+                        : null
+            };
+
+            console.log(
+                "Updating Demo Request:",
+                selectedRequest.demoRequestId
+            );
+
+            console.log(
+                "Request Body:",
+                requestBody
+            );
+
+            // -------------------------------------------------
+            // API
+            // -------------------------------------------------
+
+            const response =
+                await fetch(
+                    `${API_BASE_URL}/DemoRequests/${selectedRequest.demoRequestId}`,
+                    {
+                        method: "PUT",
+
+                        headers:
+                            getHeaders(),
+
+                        body:
+                            JSON.stringify(
+                                requestBody
+                            )
+                    }
+                );
+
+            // -------------------------------------------------
+            // READ RESPONSE
+            // -------------------------------------------------
+
+            const data:
+                ApiResponse =
+                await response
+                    .json()
+                    .catch(
+                        () => ({})
                     );
 
-                const data:
-                    ApiResponse =
-                    await response
-                        .json()
-                        .catch(
-                            () => ({})
-                        );
+            console.log(
+                "Demo request update API response:",
+                response.status,
+                data
+            );
 
-                if (!response.ok) {
+            // -------------------------------------------------
+            // HANDLE ERROR
+            // -------------------------------------------------
 
-                    throw new Error(
-                        data.message ||
-                        "Failed to update demo request."
-                    );
+            if (!response.ok) {
 
+                let errorMessage =
+                    data.message ||
+                    data.title ||
+                    `Request failed with status ${response.status}.`;
+
+                if (data.errors) {
+
+                    const validationErrors =
+                        Object.entries(
+                            data.errors
+                        )
+                            .flatMap(
+                                ([
+                                    field,
+                                    messages
+                                ]) =>
+                                    (
+                                        messages ||
+                                        []
+                                    ).map(
+                                        message =>
+                                            `${field}: ${message}`
+                                    )
+                            );
+
+                    if (
+                        validationErrors.length >
+                        0
+                    ) {
+
+                        errorMessage +=
+                            " " +
+                            validationErrors.join(
+                                " "
+                            );
+                    }
                 }
 
-                alert(
-                    "Demo request updated successfully."
-                );
-
-                setSelectedRequest(
-                    null
-                );
-
-                await loadData(true);
-
-            }
-            catch (err) {
-
                 console.error(
-                    "DemoRequests save error:",
-                    err
+                    "Demo request update API error:",
+                    data
                 );
 
-                alert(
-                    err instanceof Error
-                        ? err.message
-                        : "Unable to update demo request."
+                throw new Error(
+                    errorMessage
                 );
-
-            }
-            finally {
-
-                setSaving(false);
-
             }
 
-        };
+            // -------------------------------------------------
+            // SUCCESS
+            // -------------------------------------------------
+
+            alert(
+                data.message ||
+                "Demo request updated successfully."
+            );
+
+            setSelectedRequest(null);
+
+            await loadData(true);
+
+        }
+        catch (err) {
+
+            console.error(
+                "DemoRequests save error:",
+                err
+            );
+
+            alert(
+                err instanceof Error
+                    ? err.message
+                    : "Unable to update demo request."
+            );
+
+        }
+        finally {
+
+            setSaving(false);
+
+        }
+    };
 
     // =====================================================
-    // DELETE REQUEST
+    // DELETE
     // =====================================================
 
-    const handleDelete =
-        async () => {
+    const handleDelete = async () => {
 
-            if (!selectedRequest) {
-                return;
-            }
+        if (!selectedRequest) {
+            return;
+        }
 
-            const confirmed =
-                window.confirm(
-                    `Delete the demo request from ${selectedRequest.fullName}?`
+        const confirmed =
+            window.confirm(
+                `Delete the demo request from ${selectedRequest.fullName}?`
+            );
+
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+
+            setDeleting(true);
+
+            const response =
+                await fetch(
+                    `${API_BASE_URL}/DemoRequests/${selectedRequest.demoRequestId}`,
+                    {
+                        method: "DELETE",
+                        headers:
+                            getHeaders()
+                    }
                 );
 
-            if (!confirmed) {
-                return;
-            }
-
-            try {
-
-                setDeleting(true);
-
-                const response =
-                    await fetch(
-                        `${API_BASE_URL}/DemoRequests/${selectedRequest.demoRequestId}`,
-                        {
-                            method: "DELETE",
-                            headers:
-                                getHeaders()
-                        }
+            const data:
+                ApiResponse =
+                await response
+                    .json()
+                    .catch(
+                        () => ({})
                     );
 
-                const data:
-                    ApiResponse =
-                    await response
-                        .json()
-                        .catch(
-                            () => ({})
-                        );
+            if (!response.ok) {
 
-                if (!response.ok) {
-
-                    throw new Error(
-                        data.message ||
-                        "Failed to delete demo request."
-                    );
-
-                }
-
-                alert(
-                    "Demo request deleted successfully."
+                throw new Error(
+                    data.message ||
+                    data.title ||
+                    "Failed to delete demo request."
                 );
-
-                setSelectedRequest(
-                    null
-                );
-
-                await loadData(true);
-
-            }
-            catch (err) {
-
-                console.error(
-                    "DemoRequests delete error:",
-                    err
-                );
-
-                alert(
-                    err instanceof Error
-                        ? err.message
-                        : "Unable to delete demo request."
-                );
-
-            }
-            finally {
-
-                setDeleting(false);
-
             }
 
-        };
+            alert(
+                data.message ||
+                "Demo request deleted successfully."
+            );
+
+            setSelectedRequest(null);
+
+            await loadData(true);
+
+        }
+        catch (err) {
+
+            console.error(
+                "DemoRequests delete error:",
+                err
+            );
+
+            alert(
+                err instanceof Error
+                    ? err.message
+                    : "Unable to delete demo request."
+            );
+
+        }
+        finally {
+
+            setDeleting(false);
+
+        }
+    };
 
     // =====================================================
     // CLOSE MODAL
     // =====================================================
 
-    const closeModal =
-        () => {
+    const closeModal = () => {
 
-            if (saving || deleting) {
-                return;
-            }
+        if (
+            saving ||
+            deleting
+        ) {
+            return;
+        }
 
-            setSelectedRequest(
-                null
-            );
-
-        };
+        setSelectedRequest(null);
+    };
 
     // =====================================================
     // LOADING
@@ -737,7 +803,6 @@ const DemoRequests: React.FC = () => {
 
             </div>
         );
-
     }
 
     // =====================================================
@@ -775,11 +840,9 @@ const DemoRequests: React.FC = () => {
                     }
                     disabled={refreshing}
                 >
-
                     {refreshing
                         ? "Refreshing..."
                         : "↻ Refresh"}
-
                 </button>
 
             </div>
@@ -799,9 +862,7 @@ const DemoRequests: React.FC = () => {
                         marginBottom: "20px"
                     }}
                 >
-
                     {error}
-
                 </div>
 
             )}
@@ -813,13 +874,11 @@ const DemoRequests: React.FC = () => {
             <div className="demo-summary-grid">
 
                 <div className="demo-summary-card">
-
                     <span className="summary-icon">
                         📋
                     </span>
 
                     <div>
-
                         <strong>
                             {summary.total}
                         </strong>
@@ -827,19 +886,15 @@ const DemoRequests: React.FC = () => {
                         <span>
                             Total Requests
                         </span>
-
                     </div>
-
                 </div>
 
                 <div className="demo-summary-card">
-
                     <span className="summary-icon">
                         ⏳
                     </span>
 
                     <div>
-
                         <strong>
                             {summary.pending}
                         </strong>
@@ -847,19 +902,15 @@ const DemoRequests: React.FC = () => {
                         <span>
                             Pending
                         </span>
-
                     </div>
-
                 </div>
 
                 <div className="demo-summary-card">
-
                     <span className="summary-icon">
                         📞
                     </span>
 
                     <div>
-
                         <strong>
                             {summary.contacted}
                         </strong>
@@ -867,19 +918,15 @@ const DemoRequests: React.FC = () => {
                         <span>
                             Contacted
                         </span>
-
                     </div>
-
                 </div>
 
                 <div className="demo-summary-card">
-
                     <span className="summary-icon">
                         📅
                     </span>
 
                     <div>
-
                         <strong>
                             {summary.scheduled}
                         </strong>
@@ -887,19 +934,15 @@ const DemoRequests: React.FC = () => {
                         <span>
                             Scheduled
                         </span>
-
                     </div>
-
                 </div>
 
                 <div className="demo-summary-card">
-
                     <span className="summary-icon">
                         ✓
                     </span>
 
                     <div>
-
                         <strong>
                             {summary.completed}
                         </strong>
@@ -907,19 +950,15 @@ const DemoRequests: React.FC = () => {
                         <span>
                             Completed
                         </span>
-
                     </div>
-
                 </div>
 
                 <div className="demo-summary-card">
-
                     <span className="summary-icon">
                         ✕
                     </span>
 
                     <div>
-
                         <strong>
                             {summary.cancelled}
                         </strong>
@@ -927,15 +966,13 @@ const DemoRequests: React.FC = () => {
                         <span>
                             Cancelled
                         </span>
-
                     </div>
-
                 </div>
 
             </div>
 
             {/* =================================================
-                TABLE CARD
+                TABLE
             ================================================= */}
 
             <div className="demo-table-card">
@@ -949,10 +986,6 @@ const DemoRequests: React.FC = () => {
                     <span>
                         Churches interested in EPIC
                     </span>
-
-                    {/* =================================================
-                        FILTERS
-                    ================================================= */}
 
                     <div
                         style={{
@@ -975,9 +1008,11 @@ const DemoRequests: React.FC = () => {
                             style={{
                                 flex: "1",
                                 minWidth: "240px",
-                                border: "1px solid #cbd5e1",
+                                border:
+                                    "1px solid #cbd5e1",
                                 borderRadius: "8px",
-                                padding: "10px 12px",
+                                padding:
+                                    "10px 12px",
                                 outline: "none"
                             }}
                         />
@@ -990,9 +1025,11 @@ const DemoRequests: React.FC = () => {
                                 )
                             }
                             style={{
-                                border: "1px solid #cbd5e1",
+                                border:
+                                    "1px solid #cbd5e1",
                                 borderRadius: "8px",
-                                padding: "10px 12px",
+                                padding:
+                                    "10px 12px",
                                 background: "white"
                             }}
                         >
@@ -1019,10 +1056,6 @@ const DemoRequests: React.FC = () => {
                     </div>
 
                 </div>
-
-                {/* =================================================
-                    TABLE
-                ================================================= */}
 
                 {filteredRequests.length === 0 ? (
 
@@ -1097,23 +1130,19 @@ const DemoRequests: React.FC = () => {
                                         >
 
                                             <td>
-
                                                 <strong>
                                                     {
                                                         request.fullName
                                                     }
                                                 </strong>
-
                                             </td>
 
                                             <td>
-
                                                 <strong>
                                                     {
                                                         request.churchName
                                                     }
                                                 </strong>
-
                                             </td>
 
                                             <td>
@@ -1157,11 +1186,11 @@ const DemoRequests: React.FC = () => {
                                             </td>
 
                                             <td>
-
-                                                {formatDate(
-                                                    request.createdDate
-                                                )}
-
+                                                {
+                                                    formatDate(
+                                                        request.createdDate
+                                                    )
+                                                }
                                             </td>
 
                                             <td>
@@ -1217,9 +1246,7 @@ const DemoRequests: React.FC = () => {
 
                     <div className="demo-modal">
 
-                        {/* =================================================
-                            MODAL HEADER
-                        ================================================= */}
+                        {/* HEADER */}
 
                         <div className="demo-modal-header">
 
@@ -1254,9 +1281,7 @@ const DemoRequests: React.FC = () => {
 
                         </div>
 
-                        {/* =================================================
-                            DETAILS
-                        ================================================= */}
+                        {/* DETAILS */}
 
                         <div className="demo-detail-grid">
 
@@ -1382,9 +1407,7 @@ const DemoRequests: React.FC = () => {
 
                         </div>
 
-                        {/* =================================================
-                            MESSAGE
-                        ================================================= */}
+                        {/* MESSAGE */}
 
                         {selectedRequest.message && (
 
@@ -1404,17 +1427,13 @@ const DemoRequests: React.FC = () => {
 
                         )}
 
-                        {/* =================================================
-                            ADMIN SECTION
-                        ================================================= */}
+                        {/* ADMIN */}
 
                         <div className="demo-admin-section">
 
                             <h3>
                                 Admin Management
                             </h3>
-
-                            {/* STATUS */}
 
                             <div className="demo-form-group">
 
@@ -1450,8 +1469,6 @@ const DemoRequests: React.FC = () => {
 
                             </div>
 
-                            {/* CONTACTED DATE */}
-
                             <div className="demo-form-group">
 
                                 <label>
@@ -1472,8 +1489,6 @@ const DemoRequests: React.FC = () => {
 
                             </div>
 
-                            {/* DEMO DATE */}
-
                             <div className="demo-form-group">
 
                                 <label>
@@ -1493,8 +1508,6 @@ const DemoRequests: React.FC = () => {
                                 />
 
                             </div>
-
-                            {/* ADMIN NOTES */}
 
                             <div className="demo-form-group">
 
@@ -1519,9 +1532,7 @@ const DemoRequests: React.FC = () => {
 
                         </div>
 
-                        {/* =================================================
-                            ACTIONS
-                        ================================================= */}
+                        {/* ACTIONS */}
 
                         <div className="demo-modal-actions">
 
@@ -1588,9 +1599,7 @@ const DemoRequests: React.FC = () => {
             )}
 
         </div>
-
     );
-
 };
 
 export default DemoRequests;

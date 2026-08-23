@@ -2,6 +2,7 @@ using EPIC.Api.Authorization;
 using EPIC.Api.Data;
 using EPIC.Api.Services;
 using EPIC.Core.Interfaces;
+using Resend;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -35,16 +36,53 @@ builder.Configuration
         $"appsettings.{builder.Environment.EnvironmentName}.json",
         optional: true,
         reloadOnChange: false)
+    .AddUserSecrets<Program>(optional: true)
     .AddEnvironmentVariables();
 
 var configuration = builder.Configuration;
+
+
+// ============================================================
+// RESEND EMAIL SERVICE
+// ============================================================
+
+// ============================================================
+// RESEND EMAIL SERVICE
+// ============================================================
+
+var resendApiKey =
+    configuration["Resend:ApiKey"];
+
+if (string.IsNullOrWhiteSpace(resendApiKey))
+{
+    throw new InvalidOperationException(
+        "Resend API key is missing. Check appsettings.json or environment variables.");
+}
+
+// Resend requires HttpClient
+builder.Services.AddHttpClient();
+
+// Configure Resend
+builder.Services.Configure<ResendClientOptions>(
+    options =>
+    {
+        options.ApiToken = resendApiKey;
+    });
+
+// Register Resend client
+builder.Services.AddScoped<IResend, ResendClient>();
+
+// Register EPIC email service
+builder.Services.AddScoped<ResendEmailService>();
+
 
 // ============================================================
 // DATABASE
 // ============================================================
 
 var connectionString =
-    configuration.GetConnectionString("EPICChurchDB");
+    configuration.GetConnectionString(
+        "EPICChurchDB");
 
 if (string.IsNullOrWhiteSpace(connectionString))
 {
@@ -52,10 +90,12 @@ if (string.IsNullOrWhiteSpace(connectionString))
         "Database connection string 'EPICChurchDB' is missing.");
 }
 
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-{
-    options.UseSqlServer(connectionString);
-});
+builder.Services.AddDbContext<ApplicationDbContext>(
+    options =>
+    {
+        options.UseSqlServer(connectionString);
+    });
+
 
 // ============================================================
 // CONTROLLERS
@@ -63,48 +103,64 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 builder.Services.AddControllers();
 
+
 // ============================================================
 // CORS
 // ============================================================
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("EPICWebPolicy", policy =>
-    {
-        policy
-            .SetIsOriginAllowed(origin =>
-            {
-                // LOCAL DEVELOPMENT
-                if (origin.StartsWith(
-                    "http://localhost:",
-                    StringComparison.OrdinalIgnoreCase))
+    options.AddPolicy(
+        "EPICWebPolicy",
+        policy =>
+        {
+            policy
+                .SetIsOriginAllowed(origin =>
                 {
-                    return true;
-                }
+                    // ------------------------------------------------
+                    // LOCAL DEVELOPMENT
+                    // ------------------------------------------------
 
-                // LAN DEVELOPMENT
-                if (origin.StartsWith(
-                    "http://192.168.1.10:",
-                    StringComparison.OrdinalIgnoreCase))
-                {
-                    return true;
-                }
+                    if (origin.StartsWith(
+                        "http://localhost:",
+                        StringComparison.OrdinalIgnoreCase))
+                    {
+                        return true;
+                    }
 
-                // PRODUCTION FRONTEND
-                if (origin.Equals(
-                    "https://epic-cms.vercel.app",
-                    StringComparison.OrdinalIgnoreCase))
-                {
-                    return true;
-                }
 
-                return false;
-            })
-            .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials();
-    });
+                    // ------------------------------------------------
+                    // LAN DEVELOPMENT
+                    // ------------------------------------------------
+
+                    if (origin.StartsWith(
+                        "http://192.168.1.10:",
+                        StringComparison.OrdinalIgnoreCase))
+                    {
+                        return true;
+                    }
+
+
+                    // ------------------------------------------------
+                    // PRODUCTION FRONTEND
+                    // ------------------------------------------------
+
+                    if (origin.Equals(
+                        "https://epic-cms.vercel.app",
+                        StringComparison.OrdinalIgnoreCase))
+                    {
+                        return true;
+                    }
+
+
+                    return false;
+                })
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowCredentials();
+        });
 });
+
 
 // ============================================================
 // APPLICATION SERVICES
@@ -118,6 +174,7 @@ builder.Services.AddScoped<
     IPermissionService,
     PermissionService>();
 
+
 // ------------------------------------------------------------
 // SUBSCRIPTION SERVICES
 // ------------------------------------------------------------
@@ -127,6 +184,7 @@ builder.Services.AddScoped<
 
 builder.Services.AddHostedService<
     SubscriptionLifecycleWorker>();
+
 
 // ============================================================
 // JWT CONFIGURATION
@@ -141,11 +199,13 @@ var jwtIssuer =
 var jwtAudience =
     configuration["Jwt:Audience"];
 
+
 if (string.IsNullOrWhiteSpace(jwtKey))
 {
     throw new InvalidOperationException(
         "JWT Key is missing. Check appsettings.json.");
 }
+
 
 if (string.IsNullOrWhiteSpace(jwtIssuer))
 {
@@ -153,11 +213,13 @@ if (string.IsNullOrWhiteSpace(jwtIssuer))
         "JWT Issuer is missing. Check appsettings.json.");
 }
 
+
 if (string.IsNullOrWhiteSpace(jwtAudience))
 {
     throw new InvalidOperationException(
         "JWT Audience is missing. Check appsettings.json.");
 }
+
 
 // ============================================================
 // AUTHENTICATION
@@ -166,33 +228,36 @@ if (string.IsNullOrWhiteSpace(jwtAudience))
 builder.Services
     .AddAuthentication(
         JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters =
-            new TokenValidationParameters
-            {
-                ValidateIssuer = true,
+    .AddJwtBearer(
+        options =>
+        {
+            options.TokenValidationParameters =
+                new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
 
-                ValidateAudience = true,
+                    ValidateAudience = true,
 
-                ValidateLifetime = true,
+                    ValidateLifetime = true,
 
-                ValidateIssuerSigningKey = true,
+                    ValidateIssuerSigningKey = true,
 
-                ValidIssuer =
-                    jwtIssuer,
+                    ValidIssuer =
+                        jwtIssuer,
 
-                ValidAudience =
-                    jwtAudience,
+                    ValidAudience =
+                        jwtAudience,
 
-                IssuerSigningKey =
-                    new SymmetricSecurityKey(
-                        Encoding.UTF8.GetBytes(jwtKey)),
+                    IssuerSigningKey =
+                        new SymmetricSecurityKey(
+                            Encoding.UTF8.GetBytes(
+                                jwtKey)),
 
-                ClockSkew =
-                    TimeSpan.Zero
-            };
-    });
+                    ClockSkew =
+                        TimeSpan.Zero
+                };
+        });
+
 
 // ============================================================
 // AUTHORIZATION
@@ -200,78 +265,85 @@ builder.Services
 
 builder.Services.AddAuthorization();
 
+
 // ============================================================
 // SWAGGER
 // ============================================================
 
 builder.Services.AddEndpointsApiExplorer();
 
-builder.Services.AddSwaggerGen(options =>
-{
-    options.SwaggerDoc(
-        "v1",
-        new Microsoft.OpenApi.OpenApiInfo
-        {
-            Title =
-                "EPIC Church Management API",
-
-            Version =
-                "v1",
-
-            Description =
-                "EPIC Church Management System API"
-        });
-
-    // --------------------------------------------------------
-    // JWT SECURITY DEFINITION
-    // --------------------------------------------------------
-
-    options.AddSecurityDefinition(
-        "Bearer",
-        new Microsoft.OpenApi.OpenApiSecurityScheme
-        {
-            Name =
-                "Authorization",
-
-            Type =
-                Microsoft.OpenApi.SecuritySchemeType.Http,
-
-            Scheme =
-                "bearer",
-
-            BearerFormat =
-                "JWT",
-
-            In =
-                Microsoft.OpenApi.ParameterLocation.Header,
-
-            Description =
-                "Enter your JWT token."
-        });
-
-    // --------------------------------------------------------
-    // JWT SECURITY REQUIREMENT
-    // --------------------------------------------------------
-
-    options.AddSecurityRequirement(
-        document =>
-            new Microsoft.OpenApi.OpenApiSecurityRequirement
+builder.Services.AddSwaggerGen(
+    options =>
+    {
+        options.SwaggerDoc(
+            "v1",
+            new Microsoft.OpenApi.OpenApiInfo
             {
-                {
-                    new Microsoft.OpenApi.OpenApiSecuritySchemeReference(
-                        "Bearer",
-                        document),
+                Title =
+                    "EPIC Church Management API",
 
-                    new List<string>()
-                }
+                Version =
+                    "v1",
+
+                Description =
+                    "EPIC Church Management System API"
             });
-});
+
+
+        // --------------------------------------------------------
+        // JWT SECURITY DEFINITION
+        // --------------------------------------------------------
+
+        options.AddSecurityDefinition(
+            "Bearer",
+            new Microsoft.OpenApi.OpenApiSecurityScheme
+            {
+                Name =
+                    "Authorization",
+
+                Type =
+                    Microsoft.OpenApi.SecuritySchemeType.Http,
+
+                Scheme =
+                    "bearer",
+
+                BearerFormat =
+                    "JWT",
+
+                In =
+                    Microsoft.OpenApi.ParameterLocation.Header,
+
+                Description =
+                    "Enter your JWT token."
+            });
+
+
+        // --------------------------------------------------------
+        // JWT SECURITY REQUIREMENT
+        // --------------------------------------------------------
+
+        options.AddSecurityRequirement(
+            document =>
+                new Microsoft.OpenApi.OpenApiSecurityRequirement
+                {
+                    {
+                        new Microsoft.OpenApi
+                            .OpenApiSecuritySchemeReference(
+                                "Bearer",
+                                document),
+
+                        new List<string>()
+                    }
+                });
+    });
+
 
 // ============================================================
 // BUILD
 // ============================================================
 
 var app = builder.Build();
+
 
 // ============================================================
 // MEMBER PHOTO STORAGE
@@ -285,21 +357,24 @@ var memberPhotoFolder =
 Directory.CreateDirectory(
     memberPhotoFolder);
 
+
 // ============================================================
 // SWAGGER
 // ============================================================
 
 app.UseSwagger();
 
-app.UseSwaggerUI(options =>
-{
-    options.SwaggerEndpoint(
-        "/swagger/v1/swagger.json",
-        "EPIC Church Management API v1");
+app.UseSwaggerUI(
+    options =>
+    {
+        options.SwaggerEndpoint(
+            "/swagger/v1/swagger.json",
+            "EPIC Church Management API v1");
 
-    options.DocumentTitle =
-        "EPIC Church Management API";
-});
+        options.DocumentTitle =
+            "EPIC Church Management API";
+    });
+
 
 // ============================================================
 // CORS
@@ -309,7 +384,9 @@ app.UseSwaggerUI(options =>
 //
 // ============================================================
 
-app.UseCors("EPICWebPolicy");
+app.UseCors(
+    "EPICWebPolicy");
+
 
 // ============================================================
 // STATIC MEMBER PHOTOS
@@ -325,6 +402,7 @@ app.UseStaticFiles(
         RequestPath =
             "/member-photos"
     });
+
 
 // ============================================================
 // HTTPS REDIRECTION
@@ -342,11 +420,13 @@ app.UseStaticFiles(
 
 // app.UseHttpsRedirection();
 
+
 // ============================================================
 // AUTHENTICATION
 // ============================================================
 
 app.UseAuthentication();
+
 
 // ============================================================
 // AUTHORIZATION
@@ -354,11 +434,13 @@ app.UseAuthentication();
 
 app.UseAuthorization();
 
+
 // ============================================================
 // CONTROLLERS
 // ============================================================
 
 app.MapControllers();
+
 
 // ============================================================
 // RUN

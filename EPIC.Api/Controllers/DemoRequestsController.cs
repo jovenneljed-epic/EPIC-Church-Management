@@ -1,6 +1,8 @@
 ﻿using EPIC.Api.Data;
 using EPIC.Api.Models;
+using EPIC.Api.Services;
 using EPIC.Core.Interfaces;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -14,23 +16,23 @@ namespace EPIC.Api.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly IPermissionService _permissionService;
+        private readonly ResendEmailService _emailService;
 
         private const string MODULE = "Demo Requests";
 
         public DemoRequestsController(
             ApplicationDbContext context,
-            IPermissionService permissionService)
+            IPermissionService permissionService,
+            ResendEmailService emailService)
         {
             _context = context;
             _permissionService = permissionService;
+            _emailService = emailService;
         }
-
 
         // =========================================================
         // PUBLIC - SUBMIT DEMO REQUEST
         // POST: /api/DemoRequests
-        //
-        // PUBLIC LANDING PAGE
         // =========================================================
 
         [HttpPost]
@@ -70,6 +72,10 @@ namespace EPIC.Api.Controllers
                     request.Message.Trim();
             }
 
+            // =====================================================
+            // SYSTEM-CONTROLLED VALUES
+            // =====================================================
+
             request.DemoRequestId = 0;
 
             request.Status = "Pending";
@@ -83,16 +89,41 @@ namespace EPIC.Api.Controllers
 
             request.DemoDate = null;
 
+            // =====================================================
+            // SAVE DEMO REQUEST
+            // =====================================================
+
             _context.DemoRequests.Add(request);
 
             await _context.SaveChangesAsync();
+
+            // =====================================================
+            // SEND AUTOMATIC CONFIRMATION EMAIL
+            //
+            // The email service handles its own errors so a
+            // temporary email failure will not prevent the demo
+            // request from being saved successfully.
+            // =====================================================
+
+            await _emailService
+                .SendDemoRequestConfirmationAsync(
+                    request.FullName,
+                    request.Email,
+                    request.ChurchName
+                );
+
+            // =====================================================
+            // RESPONSE
+            // =====================================================
 
             return Ok(new
             {
                 success = true,
 
                 message =
-                    "Your demo request has been submitted to EPIC Admin successfully. Our EPIC team will contact you soon. God bless you!",
+                    "Your demo request has been submitted successfully. " +
+                    "Please check your email for confirmation. " +
+                    "Our EPIC team will contact you soon. God bless you!",
 
                 demoRequestId =
                     request.DemoRequestId
@@ -191,11 +222,6 @@ namespace EPIC.Api.Controllers
                 return Forbid();
             }
 
-            if (!ModelState.IsValid)
-            {
-                return ValidationProblem(ModelState);
-            }
-
             var request =
                 await _context.DemoRequests
                     .FirstOrDefaultAsync(
@@ -240,8 +266,7 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            request.Status =
-                status;
+            request.Status = status;
 
             request.AdminNotes =
                 string.IsNullOrWhiteSpace(
@@ -255,6 +280,7 @@ namespace EPIC.Api.Controllers
             request.DemoDate =
                 updatedRequest.DemoDate;
 
+            // Automatically set contacted date
             if (
                 status.Equals(
                     "Contacted",
