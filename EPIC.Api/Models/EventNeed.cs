@@ -1,10 +1,15 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace EPIC.Api.Models
 {
     public class EventNeed
     {
+        // =========================================================
+        // PRIMARY KEY
+        // =========================================================
+
         [Key]
         public int EventNeedId { get; set; }
 
@@ -17,7 +22,6 @@ namespace EPIC.Api.Models
 
         [ForeignKey(nameof(EventId))]
         public Event? Event { get; set; }
-
 
         // =========================================================
         // NEED INFORMATION
@@ -33,26 +37,15 @@ namespace EPIC.Api.Models
         [MaxLength(100)]
         public string? Category { get; set; }
 
-        // Examples:
-        // Equipment
-        // Supplies
-        // Food
-        // Transportation
-        // Venue
-        // Technical
-        // Decoration
-        // Others
-
-
         // =========================================================
         // QUANTITY
         // =========================================================
 
-        public decimal Quantity { get; set; } = 1;
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal Quantity { get; set; } = 1m;
 
         [MaxLength(50)]
         public string? Unit { get; set; }
-
 
         // =========================================================
         // RESPONSIBILITY
@@ -65,7 +58,6 @@ namespace EPIC.Api.Models
 
         [ForeignKey(nameof(ResponsibleMemberId))]
         public Member? ResponsibleMember { get; set; }
-
 
         // =========================================================
         // STATUS
@@ -80,7 +72,6 @@ namespace EPIC.Api.Models
         // READY
         // CANCELLED
 
-
         // =========================================================
         // PRIORITY
         // =========================================================
@@ -94,13 +85,11 @@ namespace EPIC.Api.Models
         // HIGH
         // URGENT
 
-
         // =========================================================
         // NOTES
         // =========================================================
 
         public string? Notes { get; set; }
-
 
         // =========================================================
         // DATES
@@ -108,6 +97,7 @@ namespace EPIC.Api.Models
 
         public DateTime? NeededBy { get; set; }
 
+        [Required]
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
         public DateTime? UpdatedAt { get; set; }

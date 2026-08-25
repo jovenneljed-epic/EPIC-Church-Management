@@ -12,7 +12,6 @@ namespace EPIC.Api.Models
         [Key]
         public int EventDepartmentId { get; set; }
 
-
         // =========================================================
         // EVENT
         // =========================================================
@@ -22,7 +21,6 @@ namespace EPIC.Api.Models
 
         [ForeignKey(nameof(EventId))]
         public Event? Event { get; set; }
-
 
         // =========================================================
         // DEPARTMENT INFORMATION
@@ -35,7 +33,6 @@ namespace EPIC.Api.Models
         [MaxLength(500)]
         public string? DepartmentDescription { get; set; }
 
-
         // =========================================================
         // DEPARTMENT HEAD
         // =========================================================
@@ -45,7 +42,6 @@ namespace EPIC.Api.Models
         [ForeignKey(nameof(DepartmentHeadMemberId))]
         public Member? DepartmentHeadMember { get; set; }
 
-
         // =========================================================
         // PRIORITY
         // =========================================================
@@ -53,7 +49,6 @@ namespace EPIC.Api.Models
         [Required]
         [MaxLength(20)]
         public string Priority { get; set; } = "NORMAL";
-
 
         // =========================================================
         // STATUS
@@ -63,11 +58,11 @@ namespace EPIC.Api.Models
         [MaxLength(30)]
         public string Status { get; set; } = "PLANNING";
 
-
         // =========================================================
         // AUDIT
         // =========================================================
 
+        [Required]
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
         public DateTime? UpdatedAt { get; set; }

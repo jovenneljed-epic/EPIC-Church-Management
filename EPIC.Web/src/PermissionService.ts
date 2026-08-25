@@ -1,6 +1,14 @@
+
 // ============================================================
 // EPIC CHURCH MANAGEMENT SYSTEM
 // PermissionService.ts
+//
+// Frontend permission service.
+// IMPORTANT:
+// - Frontend permissions control UI visibility.
+// - Backend authorization remains the REAL security layer.
+// - ADMIN receives full UI access.
+// - Permission names are normalized consistently.
 // ============================================================
 
 export type PermissionAction =
@@ -29,16 +37,17 @@ export const EPIC_PERMISSION_MODULES = [
     "Attendance",
     "Visitors",
     "Church Services",
+    "Events",
     "Giving",
     "Income",
     "Expenses",
     "Ministries",
-    "Events",
     "Reports",
     "Settings",
     "Demo Requests",
     "Subscriptions",
-    "EPIC Learning"
+    "Website Analytics",
+    "EPIC Learning",
 ] as const;
 
 // ============================================================
@@ -47,6 +56,7 @@ export const EPIC_PERMISSION_MODULES = [
 
 const STORAGE_KEYS = {
     permissions: "permissions",
+    epicPermissions: "epicPermissions",
 
     currentUser: "currentUser",
     username: "username",
@@ -58,7 +68,15 @@ const STORAGE_KEYS = {
     role: "role",
 
     currentRoleId: "currentRoleId",
-    roleId: "roleId"
+    roleId: "roleId",
+
+    token: "token",
+    accessToken: "accessToken",
+    jwt: "jwt",
+    authToken: "authToken",
+    epicToken: "epicToken",
+
+    userId: "userId",
 } as const;
 
 // ============================================================
@@ -144,6 +162,7 @@ class PermissionService {
                 case "1":
                 case "yes":
                 case "y":
+                case "on":
                     return true;
 
                 default:
@@ -223,10 +242,36 @@ class PermissionService {
             return null;
         }
 
-        const roleId = Number(value);
+        const roleId =
+            Number(value);
 
-        return Number.isFinite(roleId)
+        return Number.isInteger(roleId) &&
+            roleId > 0
             ? roleId
+            : null;
+    }
+
+    // ============================================================
+    // CURRENT USER ID
+    // ============================================================
+
+    getCurrentUserId(): number | null {
+
+        const value =
+            localStorage.getItem(
+                STORAGE_KEYS.userId
+            );
+
+        if (!value) {
+            return null;
+        }
+
+        const userId =
+            Number(value);
+
+        return Number.isInteger(userId) &&
+            userId > 0
+            ? userId
             : null;
     }
 
@@ -251,21 +296,36 @@ class PermissionService {
         const role =
             this.getNormalizedRole();
 
+        const roleId =
+            this.getCurrentRoleId();
+
+        /*
+         * EPIC default ADMIN role ID is 1.
+         *
+         * We support both:
+         * - role name
+         * - role ID
+         *
+         * This prevents the UI from breaking when one of the
+         * stored values is missing.
+         */
+
+        if (roleId === 1) {
+            return true;
+        }
+
         return [
             "admin",
             "administrator",
             "system administrator",
             "super admin",
-            "superadmin"
+            "superadmin",
+            "system admin",
         ].includes(role);
     }
 
     // ============================================================
     // MEMBER CHECK
-    //
-    // INFORMATIONAL ONLY.
-    //
-    // Member status does NOT automatically deny permissions.
     // ============================================================
 
     isMemberOnly(): boolean {
@@ -297,9 +357,22 @@ class PermissionService {
 
     getPermissions(): unknown[] {
 
+        /*
+         * Support both storage keys.
+         *
+         * Older Login.tsx:
+         *     permissions
+         *
+         * Newer Login.tsx:
+         *     epicPermissions
+         */
+
         const stored =
             localStorage.getItem(
                 STORAGE_KEYS.permissions
+            ) ||
+            localStorage.getItem(
+                STORAGE_KEYS.epicPermissions
             );
 
         if (!stored) {
@@ -312,7 +385,7 @@ class PermissionService {
                 JSON.parse(stored);
 
             // ----------------------------------------------------
-            // Handle double-encoded JSON
+            // Double encoded JSON
             // ----------------------------------------------------
 
             if (typeof parsed === "string") {
@@ -337,7 +410,7 @@ class PermissionService {
             }
 
             // ----------------------------------------------------
-            // { permissions: [...] }
+            // Wrapped permissions
             // ----------------------------------------------------
 
             if (
@@ -346,26 +419,34 @@ class PermissionService {
             ) {
 
                 const object =
-                    parsed as Record<string, unknown>;
+                    parsed as Record<
+                        string,
+                        unknown
+                    >;
 
-                if (
-                    Array.isArray(
-                        object.permissions
-                    )
+                const possibleKeys = [
+                    "permissions",
+                    "Permissions",
+                    "permission",
+                    "Permission",
+                    "data",
+                    "Data",
+                ];
+
+                for (
+                    const key of possibleKeys
                 ) {
-                    return object.permissions;
-                }
 
-                // ------------------------------------------------
-                // { Permissions: [...] }
-                // ------------------------------------------------
+                    const value =
+                        object[key];
 
-                if (
-                    Array.isArray(
-                        object.Permissions
-                    )
-                ) {
-                    return object.Permissions;
+                    if (
+                        Array.isArray(
+                            value
+                        )
+                    ) {
+                        return value;
+                    }
                 }
             }
 
@@ -391,7 +472,7 @@ class PermissionService {
     ): Permission | null {
 
         // --------------------------------------------------------
-        // JSON STRING
+        // STRING JSON
         // --------------------------------------------------------
 
         if (typeof item === "string") {
@@ -407,6 +488,10 @@ class PermissionService {
             }
         }
 
+        // --------------------------------------------------------
+        // OBJECT
+        // --------------------------------------------------------
+
         if (
             !item ||
             typeof item !== "object"
@@ -415,7 +500,10 @@ class PermissionService {
         }
 
         const source =
-            item as Record<string, unknown>;
+            item as Record<
+                string,
+                unknown
+            >;
 
         // --------------------------------------------------------
         // MODULE NAME
@@ -438,7 +526,7 @@ class PermissionService {
         }
 
         // --------------------------------------------------------
-        // PERMISSION OBJECT
+        // NORMALIZED PERMISSION
         // --------------------------------------------------------
 
         return {
@@ -498,7 +586,7 @@ class PermissionService {
                     source.CanExport ??
                     source.allowExport ??
                     source.AllowExport
-                )
+                ),
         };
     }
 
@@ -516,8 +604,11 @@ class PermissionService {
         }
 
         return raw
-            .map(item =>
-                this.parsePermissionItem(item)
+            .map(
+                item =>
+                    this.parsePermissionItem(
+                        item
+                    )
             )
             .filter(
                 (
@@ -542,26 +633,103 @@ class PermissionService {
             return null;
         }
 
-        return (
-            this.getParsedPermissions()
-                .find(
+        const permissions =
+            this.getParsedPermissions();
+
+        /*
+         * First attempt: exact normalized match.
+         */
+
+        const exact =
+            permissions.find(
+                permission =>
+                    this.normalizeModule(
+                        permission.module
+                    ) === requested
+            );
+
+        if (exact) {
+            return exact;
+        }
+
+        /*
+         * Compatibility aliases.
+         */
+
+        const aliases:
+            Record<string, string[]> = {
+
+                "event management": [
+                    "events",
+                    "event"
+                ],
+
+                "events": [
+                    "event management",
+                    "event"
+                ],
+
+                "church services": [
+                    "services",
+                    "church service"
+                ],
+
+                "services": [
+                    "church services",
+                    "church service"
+                ],
+
+                "website analytics": [
+                    "websiteanalytics",
+                    "analytics",
+                    "website analytics dashboard"
+                ],
+
+                "epic learning": [
+                    "learning",
+                    "epic lms",
+                    "lms"
+                ],
+
+                "demo requests": [
+                    "demorequests",
+                    "demo request"
+                ],
+
+                "subscriptions": [
+                    "subscription",
+                    "subscription management"
+                ],
+            };
+
+        const requestedAliases =
+            aliases[requested] || [];
+
+        for (
+            const alias of requestedAliases
+        ) {
+
+            const match =
+                permissions.find(
                     permission =>
                         this.normalizeModule(
                             permission.module
-                        ) === requested
-                ) ||
-            null
-        );
+                        ) ===
+                        this.normalizeModule(
+                            alias
+                        )
+                );
+
+            if (match) {
+                return match;
+            }
+        }
+
+        return null;
     }
 
     // ============================================================
     // HAS PERMISSION
-    //
-    // IMPORTANT:
-    //
-    // Frontend permission state is used for UI access.
-    //
-    // Backend authorization remains the real security layer.
     // ============================================================
 
     hasPermission(
@@ -570,7 +738,7 @@ class PermissionService {
     ): boolean {
 
         // --------------------------------------------------------
-        // ADMIN = FULL ACCESS
+        // ADMIN = FULL UI ACCESS
         // --------------------------------------------------------
 
         if (this.isAdministrator()) {
@@ -589,7 +757,7 @@ class PermissionService {
         }
 
         // --------------------------------------------------------
-        // FIND MODULE
+        // FIND PERMISSION
         // --------------------------------------------------------
 
         const permission =
@@ -603,9 +771,11 @@ class PermissionService {
         // CHECK ACTION
         // --------------------------------------------------------
 
-        return permission[
-            normalizedAction
-        ] === true;
+        return (
+            permission[
+                normalizedAction
+            ] === true
+        );
     }
 
     // ============================================================
@@ -686,7 +856,21 @@ class PermissionService {
         module: string
     ): Permission | null {
 
-        return this.findPermission(module);
+        if (this.isAdministrator()) {
+
+            return {
+                module,
+                view: true,
+                create: true,
+                edit: true,
+                delete: true,
+                export: true,
+            };
+        }
+
+        return this.findPermission(
+            module
+        );
     }
 
     // ============================================================
@@ -694,6 +878,25 @@ class PermissionService {
     // ============================================================
 
     getAllPermissions(): Permission[] {
+
+        /*
+         * ADMIN should appear as having all modules.
+         * This also makes debugging much clearer.
+         */
+
+        if (this.isAdministrator()) {
+
+            return EPIC_PERMISSION_MODULES.map(
+                module => ({
+                    module,
+                    view: true,
+                    create: true,
+                    edit: true,
+                    delete: true,
+                    export: true,
+                })
+            );
+        }
 
         return this.getParsedPermissions();
     }
@@ -769,9 +972,28 @@ class PermissionService {
             return;
         }
 
+        const serialized =
+            JSON.stringify(
+                permissions
+            );
+
+        /*
+         * Save to the primary key.
+         */
+
         localStorage.setItem(
             STORAGE_KEYS.permissions,
-            JSON.stringify(permissions)
+            serialized
+        );
+
+        /*
+         * Also keep epicPermissions synchronized
+         * for compatibility with older Login.tsx versions.
+         */
+
+        localStorage.setItem(
+            STORAGE_KEYS.epicPermissions,
+            serialized
         );
 
         this.notifyPermissionChange();
@@ -787,6 +1009,32 @@ class PermissionService {
             STORAGE_KEYS.permissions
         );
 
+        localStorage.removeItem(
+            STORAGE_KEYS.epicPermissions
+        );
+
+        this.notifyPermissionChange();
+    }
+
+    // ============================================================
+    // CLEAR ALL AUTHENTICATION DATA
+    // ============================================================
+
+    clearAuthentication(): void {
+
+        const keys = [
+            ...Object.values(
+                STORAGE_KEYS
+            ),
+        ];
+
+        keys.forEach(
+            key =>
+                localStorage.removeItem(
+                    key
+                )
+        );
+
         this.notifyPermissionChange();
     }
 
@@ -799,6 +1047,12 @@ class PermissionService {
         window.dispatchEvent(
             new Event(
                 "epic:permissions-changed"
+            )
+        );
+
+        window.dispatchEvent(
+            new Event(
+                "epic:auth-changed"
             )
         );
     }
@@ -834,6 +1088,11 @@ class PermissionService {
         );
 
         console.log(
+            "User ID:",
+            this.getCurrentUserId()
+        );
+
+        console.log(
             "Administrator:",
             this.isAdministrator()
         );
@@ -843,8 +1102,21 @@ class PermissionService {
             this.isMemberOnly()
         );
 
+        const raw =
+            this.getPermissions();
+
+        console.log(
+            "Raw Permission Count:",
+            raw.length
+        );
+
         const permissions =
-            this.getParsedPermissions();
+            this.getAllPermissions();
+
+        console.log(
+            "Parsed Permission Count:",
+            permissions.length
+        );
 
         console.log(
             "Permissions:",
@@ -866,25 +1138,36 @@ class PermissionService {
                     module,
                     {
                         view:
-                            this.canView(module),
+                            this.canView(
+                                module
+                            ),
 
                         create:
-                            this.canCreate(module),
+                            this.canCreate(
+                                module
+                            ),
 
                         edit:
-                            this.canEdit(module),
+                            this.canEdit(
+                                module
+                            ),
 
                         delete:
-                            this.canDelete(module),
+                            this.canDelete(
+                                module
+                            ),
 
                         export:
-                            this.canExport(module)
+                            this.canExport(
+                                module
+                            ),
                     }
                 );
             }
         );
 
         console.groupEnd();
+
         console.groupEnd();
     }
 }
@@ -897,3 +1180,4 @@ const permissionService =
     new PermissionService();
 
 export default permissionService;
+

@@ -1,9 +1,12 @@
 ﻿using EPIC.Api.Authorization;
 using EPIC.Api.Data;
 using EPIC.Api.Models;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+
+using System.Security.Claims;
 
 namespace EPIC.Api.Controllers
 {
@@ -16,6 +19,16 @@ namespace EPIC.Api.Controllers
         private readonly IWebHostEnvironment _environment;
         private readonly string _photoFolder;
 
+        private static readonly string[] AllowedPhotoExtensions =
+        {
+            ".jpg",
+            ".jpeg",
+            ".png",
+            ".webp"
+        };
+
+        private const long MaxPhotoSize = 10 * 1024 * 1024;
+
         public MembersController(
             ApplicationDbContext context,
             IWebHostEnvironment environment)
@@ -25,8 +38,7 @@ namespace EPIC.Api.Controllers
 
             _photoFolder = Path.Combine(
                 _environment.ContentRootPath,
-                "root-uploads-members"
-            );
+                "root-uploads-members");
 
             Directory.CreateDirectory(_photoFolder);
         }
@@ -41,38 +53,18 @@ namespace EPIC.Api.Controllers
         [Permission("Members", "view")]
         public async Task<IActionResult> GetMembers()
         {
-            var members = await _context.Members
+            var query = GetTenantMembersQuery();
+
+            if (query == null)
+            {
+                return CustomerIdUnauthorized();
+            }
+
+            var members = await query
                 .AsNoTracking()
                 .OrderBy(m => m.LastName)
                 .ThenBy(m => m.FirstName)
-                .Select(m => new
-                {
-                    memberId = m.MemberId,
-                    memberCode = m.MemberCode,
-
-                    firstName = m.FirstName,
-                    middleName = m.MiddleName,
-                    lastName = m.LastName,
-
-                    fullName =
-                        (m.FirstName + " " +
-                         m.MiddleName + " " +
-                         m.LastName).Trim(),
-
-                    gender = m.Gender,
-                    birthDate = m.BirthDate,
-
-                    contactNumber = m.ContactNumber,
-                    address = m.Address,
-                    civilStatus = m.CivilStatus,
-                    ministry = m.Ministry,
-                    dateJoined = m.DateJoined,
-                    status = m.Status,
-                    photoPath = m.PhotoPath,
-
-                    createdDate = m.CreatedDate,
-                    updatedDate = m.UpdatedDate
-                })
+                .Select(m => ToMemberResponseQuery(m))
                 .ToListAsync();
 
             return Ok(members);
@@ -88,14 +80,9 @@ namespace EPIC.Api.Controllers
         [Permission("Members", "view")]
         public async Task<IActionResult> GetMyProfile()
         {
-            var memberIdClaim =
-                User.FindFirst("MemberId")?.Value
-                ?? User.FindFirst("memberId")?.Value
-                ?? User.FindFirst("member_id")?.Value;
+            var memberId = GetCurrentMemberId();
 
-            if (!int.TryParse(
-                memberIdClaim,
-                out int memberId))
+            if (!memberId.HasValue)
             {
                 return Unauthorized(new
                 {
@@ -104,48 +91,42 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            var member = await _context.Members
+            // -----------------------------------------------------
+            // GET TENANT-SCOPED QUERY
+            // -----------------------------------------------------
+
+            var query = GetTenantMembersQuery();
+
+            if (query == null)
+            {
+                return CustomerIdUnauthorized();
+            }
+
+            // -----------------------------------------------------
+            // FIND MEMBER
+            // -----------------------------------------------------
+
+            var member = await query
                 .AsNoTracking()
-                .Where(m => m.MemberId == memberId)
-                .Select(m => new
-                {
-                    memberId = m.MemberId,
-                    memberCode = m.MemberCode,
-
-                    firstName = m.FirstName,
-                    middleName = m.MiddleName,
-                    lastName = m.LastName,
-
-                    fullName =
-                        (m.FirstName + " " +
-                         m.MiddleName + " " +
-                         m.LastName).Trim(),
-
-                    gender = m.Gender,
-                    birthDate = m.BirthDate,
-
-                    contactNumber = m.ContactNumber,
-                    address = m.Address,
-
-                    civilStatus = m.CivilStatus,
-                    ministry = m.Ministry,
-
-                    dateJoined = m.DateJoined,
-                    status = m.Status,
-
-                    photoPath = m.PhotoPath,
-
-                    createdDate = m.CreatedDate,
-                    updatedDate = m.UpdatedDate
-                })
+                .Where(m =>
+                    m.MemberId == memberId.Value)
+                .Select(m =>
+                    ToMemberResponseQuery(m))
                 .FirstOrDefaultAsync();
+
+            // -----------------------------------------------------
+            // NOT FOUND
+            // -----------------------------------------------------
 
             if (member == null)
             {
                 return NotFound(new
                 {
-                    message = "MEMBER PROFILE NOT FOUND.",
-                    memberId
+                    message =
+                        "MEMBER PROFILE NOT FOUND.",
+
+                    memberId =
+                        memberId.Value
                 });
             }
 
@@ -162,38 +143,7 @@ namespace EPIC.Api.Controllers
         [Permission("Members", "view")]
         public async Task<IActionResult> GetMember(int id)
         {
-            var member = await _context.Members
-                .AsNoTracking()
-                .Where(m => m.MemberId == id)
-                .Select(m => new
-                {
-                    memberId = m.MemberId,
-                    memberCode = m.MemberCode,
-
-                    firstName = m.FirstName,
-                    middleName = m.MiddleName,
-                    lastName = m.LastName,
-
-                    fullName =
-                        (m.FirstName + " " +
-                         m.MiddleName + " " +
-                         m.LastName).Trim(),
-
-                    gender = m.Gender,
-                    birthDate = m.BirthDate,
-
-                    contactNumber = m.ContactNumber,
-                    address = m.Address,
-                    civilStatus = m.CivilStatus,
-                    ministry = m.Ministry,
-                    dateJoined = m.DateJoined,
-                    status = m.Status,
-                    photoPath = m.PhotoPath,
-
-                    createdDate = m.CreatedDate,
-                    updatedDate = m.UpdatedDate
-                })
-                .FirstOrDefaultAsync();
+            var member = await FindTenantMemberAsync(id);
 
             if (member == null)
             {
@@ -204,7 +154,7 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            return Ok(member);
+            return Ok(BuildMemberResponse(member));
         }
 
         // =========================================================
@@ -220,41 +170,63 @@ namespace EPIC.Api.Controllers
         {
             if (string.IsNullOrWhiteSpace(name))
             {
-                return BadRequest(
-                    "PLEASE ENTER A NAME TO SEARCH."
-                );
+                return BadRequest(new
+                {
+                    message =
+                        "PLEASE ENTER A NAME TO SEARCH."
+                });
             }
 
-            string keyword =
-                name.Trim().ToLower();
+            var query = GetTenantMembersQuery();
 
-            var members = await _context.Members
-                .AsNoTracking()
-                .Where(m =>
-                    m.Status == "ACTIVE" &&
+            if (query == null)
+            {
+                return CustomerIdUnauthorized();
+            }
+
+            var keyword = name.Trim();
+
+            query = query.Where(m =>
+                m.Status != null &&
+                m.Status.ToLower() == "active" &&
+                (
+                    (m.FirstName != null &&
+                     m.FirstName.ToLower().Contains(keyword.ToLower()))
+
+                    ||
+
+                    (m.MiddleName != null &&
+                     m.MiddleName.ToLower().Contains(keyword.ToLower()))
+
+                    ||
+
+                    (m.LastName != null &&
+                     m.LastName.ToLower().Contains(keyword.ToLower()))
+
+                    ||
+
                     (
-                        m.FirstName.ToLower().Contains(keyword)
-                        ||
-                        m.MiddleName.ToLower().Contains(keyword)
-                        ||
-                        m.LastName.ToLower().Contains(keyword)
-                        ||
-                        (
-                            m.FirstName + " " +
-                            m.MiddleName + " " +
-                            m.LastName
-                        )
-                        .ToLower()
-                        .Contains(keyword)
-                        ||
-                        m.MemberCode.ToLower().Contains(keyword)
+                        m.FirstName + " " +
+                        m.MiddleName + " " +
+                        m.LastName
                     )
-                )
+                    .ToLower()
+                    .Contains(keyword.ToLower())
+
+                    ||
+
+                    (m.MemberCode != null &&
+                     m.MemberCode.ToLower().Contains(keyword.ToLower()))
+                ));
+
+            var members = await query
+                .AsNoTracking()
                 .OrderBy(m => m.LastName)
                 .ThenBy(m => m.FirstName)
                 .Select(m => new
                 {
                     memberId = m.MemberId,
+                    customerId = m.CustomerId,
                     memberCode = m.MemberCode,
 
                     fullName =
@@ -274,17 +246,7 @@ namespace EPIC.Api.Controllers
 
         // =========================================================
         // COMPLETE MEMBER PROFILE
-        //
-        // GET:
-        // /api/Members/{id}/profile
-        //
-        // Returns:
-        // member
-        // attendanceSummary
-        // attendanceHistory
-        // ministries
-        // visitorConversion
-        //
+        // GET: /api/Members/{id}/profile
         // Permission: Members / view
         // =========================================================
 
@@ -292,45 +254,7 @@ namespace EPIC.Api.Controllers
         [Permission("Members", "view")]
         public async Task<IActionResult> GetMemberProfile(int id)
         {
-            // =====================================================
-            // MEMBER
-            // =====================================================
-
-            var member = await _context.Members
-                .AsNoTracking()
-                .Where(m => m.MemberId == id)
-                .Select(m => new
-                {
-                    memberId = m.MemberId,
-                    memberCode = m.MemberCode,
-
-                    firstName = m.FirstName,
-                    middleName = m.MiddleName,
-                    lastName = m.LastName,
-
-                    fullName =
-                        (m.FirstName + " " +
-                         m.MiddleName + " " +
-                         m.LastName).Trim(),
-
-                    gender = m.Gender,
-                    birthDate = m.BirthDate,
-
-                    contactNumber = m.ContactNumber,
-                    address = m.Address,
-
-                    civilStatus = m.CivilStatus,
-                    ministry = m.Ministry,
-
-                    dateJoined = m.DateJoined,
-                    status = m.Status,
-
-                    photoPath = m.PhotoPath,
-
-                    createdDate = m.CreatedDate,
-                    updatedDate = m.UpdatedDate
-                })
-                .FirstOrDefaultAsync();
+            var member = await FindTenantMemberAsync(id);
 
             if (member == null)
             {
@@ -341,9 +265,9 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            // =====================================================
+            // -----------------------------------------------------
             // ATTENDANCE
-            // =====================================================
+            // -----------------------------------------------------
 
             var attendance = await _context.Attendances
                 .AsNoTracking()
@@ -353,9 +277,7 @@ namespace EPIC.Api.Controllers
                 .Select(a => new
                 {
                     attendanceId = a.AttendanceId,
-
-                    attendanceDate =
-                        a.AttendanceDate,
+                    attendanceDate = a.AttendanceDate,
 
                     service =
                         !string.IsNullOrWhiteSpace(a.Service)
@@ -364,89 +286,61 @@ namespace EPIC.Api.Controllers
                                 ? a.ChurchService.ServiceName
                                 : "—",
 
-                    status =
-                        a.Status,
-
-                    recordedBy =
-                        a.RecordedBy,
-
-                    recordedDate =
-                        a.RecordedDate
+                    status = a.Status,
+                    recordedBy = a.RecordedBy,
+                    recordedDate = a.RecordedDate
                 })
                 .ToListAsync();
 
-            // =====================================================
+            // -----------------------------------------------------
             // ATTENDANCE SUMMARY
-            // =====================================================
+            // -----------------------------------------------------
 
-            int totalRecords =
-                attendance.Count;
+            var totalRecords = attendance.Count;
 
-            int present =
-                attendance.Count(a =>
-                    string.Equals(
-                        a.status,
-                        "PRESENT",
-                        StringComparison.OrdinalIgnoreCase));
+            var present = CountStatus(
+                attendance,
+                "PRESENT");
 
-            int late =
-                attendance.Count(a =>
-                    string.Equals(
-                        a.status,
-                        "LATE",
-                        StringComparison.OrdinalIgnoreCase));
+            var late = CountStatus(
+                attendance,
+                "LATE");
 
-            int early =
-                attendance.Count(a =>
-                    string.Equals(
-                        a.status,
-                        "EARLY",
-                        StringComparison.OrdinalIgnoreCase));
+            var early = CountStatus(
+                attendance,
+                "EARLY");
 
-            int absent =
-                attendance.Count(a =>
-                    string.Equals(
-                        a.status,
-                        "ABSENT",
-                        StringComparison.OrdinalIgnoreCase));
+            var absent = CountStatus(
+                attendance,
+                "ABSENT");
 
-            int excused =
-                attendance.Count(a =>
-                    string.Equals(
-                        a.status,
-                        "EXCUSED",
-                        StringComparison.OrdinalIgnoreCase));
+            var excused = CountStatus(
+                attendance,
+                "EXCUSED");
 
-            // =====================================================
-            // ATTENDANCE RATE
-            //
-            // Present + Late + Early are counted as attended.
-            // Absent + Excused are not counted as attendance.
-            // =====================================================
+            var attendedRecords =
+                present +
+                late +
+                early;
 
-            int attendedRecords =
-                present + late + early;
-
-            decimal attendanceRate =
+            var attendanceRate =
                 totalRecords > 0
                     ? Math.Round(
-                        (decimal)attendedRecords /
-                        totalRecords *
+                        attendedRecords /
+                        (decimal)totalRecords *
                         100m,
                         2)
                     : 0m;
 
-            // =====================================================
+            // -----------------------------------------------------
             // MINISTRY ASSIGNMENTS
-            // =====================================================
+            // -----------------------------------------------------
 
             var ministries =
                 await _context.MinistryMembers
                     .AsNoTracking()
-                    .Where(mm =>
-                        mm.MemberId == id)
-                    .OrderByDescending(
-                        mm => mm.DateAssigned)
+                    .Where(mm => mm.MemberId == id)
+                    .OrderByDescending(mm => mm.DateAssigned)
                     .Select(mm => new
                     {
                         ministryMemberId =
@@ -465,21 +359,15 @@ namespace EPIC.Api.Controllers
                                 ? mm.Role
                                 : mm.Position,
 
-                        status =
-                            mm.Status,
+                        status = mm.Status,
 
-                        dateAssigned =
-                            mm.DateAssigned
+                        dateAssigned = mm.DateAssigned
                     })
                     .ToListAsync();
 
-            // =====================================================
+            // -----------------------------------------------------
             // VISITOR CONVERSION
-            // =====================================================
-            //
-            // A visitor is connected to the member through:
-            // Visitor.ConvertedMemberId
-            //
+            // -----------------------------------------------------
 
             var visitorConversion =
                 await _context.Visitors
@@ -488,43 +376,29 @@ namespace EPIC.Api.Controllers
                         v.ConvertedMemberId == id ||
                         (
                             v.IsConvertedToMember &&
-                            v.FirstName == member.firstName &&
-                            v.LastName == member.lastName
+                            v.FirstName == member.FirstName &&
+                            v.LastName == member.LastName
                         ))
-                    .OrderByDescending(
-                        v => v.ConversionDate)
+                    .OrderByDescending(v => v.ConversionDate)
                     .Select(v => new
                     {
-                        visitorId =
-                            v.VisitorId,
-
-                        visitorCode =
-                            v.VisitorCode,
-
-                        firstVisitDate =
-                            v.FirstVisitDate,
-
-                        visitCount =
-                            v.VisitCount,
-
-                        followUpStatus =
-                            v.FollowUpStatus,
-
-                        conversionDate =
-                            v.ConversionDate,
-
-                        status =
-                            v.Status
+                        visitorId = v.VisitorId,
+                        visitorCode = v.VisitorCode,
+                        firstVisitDate = v.FirstVisitDate,
+                        visitCount = v.VisitCount,
+                        followUpStatus = v.FollowUpStatus,
+                        conversionDate = v.ConversionDate,
+                        status = v.Status
                     })
                     .FirstOrDefaultAsync();
 
-            // =====================================================
-            // COMPLETE RESPONSE
-            // =====================================================
+            // -----------------------------------------------------
+            // RESPONSE
+            // -----------------------------------------------------
 
             return Ok(new
             {
-                member,
+                member = BuildMemberResponse(member),
 
                 attendanceSummary = new
                 {
@@ -537,8 +411,7 @@ namespace EPIC.Api.Controllers
                     attendanceRate
                 },
 
-                attendanceHistory =
-                    attendance,
+                attendanceHistory = attendance,
 
                 ministries,
 
@@ -559,79 +432,83 @@ namespace EPIC.Api.Controllers
         {
             if (member == null)
             {
-                return BadRequest(
-                    "MEMBER DATA IS REQUIRED."
-                );
+                return BadRequest(new
+                {
+                    message = "MEMBER DATA IS REQUIRED."
+                });
             }
 
-            if (string.IsNullOrWhiteSpace(
-                member.FirstName))
+            var validation = ValidateMember(member);
+
+            if (validation != null)
             {
-                return BadRequest(
-                    "FIRST NAME IS REQUIRED."
-                );
+                return validation;
             }
 
-            if (string.IsNullOrWhiteSpace(
-                member.LastName))
+            // -----------------------------------------------------
+            // RESOLVE CUSTOMER / TENANT
+            // -----------------------------------------------------
+
+            var customerId =
+                await ResolveCustomerIdForWrite(
+                    member.CustomerId);
+
+            if (!customerId.HasValue)
             {
-                return BadRequest(
-                    "LAST NAME IS REQUIRED."
-                );
+                return CustomerIdUnauthorized();
             }
 
-            // =====================================================
-            // CLEAN DATA FIRST
-            // =====================================================
+            member.CustomerId = customerId.Value;
+
+            // -----------------------------------------------------
+            // CLEAN DATA
+            // -----------------------------------------------------
 
             CleanMember(member);
 
-            // =====================================================
-            // CHECK MEMBER CODE
-            // =====================================================
+            // -----------------------------------------------------
+            // MEMBER CODE
+            // -----------------------------------------------------
 
-            if (!string.IsNullOrWhiteSpace(
-                member.MemberCode))
+            if (string.IsNullOrWhiteSpace(member.MemberCode))
             {
-                bool exists =
-                    await _context.Members
-                        .AnyAsync(m =>
-                            m.MemberCode ==
-                            member.MemberCode);
+                member.MemberCode =
+                    await GenerateMemberCode(
+                        member.CustomerId);
+            }
+            else
+            {
+                var codeExists =
+                    await MemberCodeExistsAsync(
+                        member.CustomerId,
+                        member.MemberCode);
 
-                if (exists)
+                if (codeExists)
                 {
                     return Conflict(new
                     {
                         message =
-                            "MEMBER CODE ALREADY EXISTS."
+                            "MEMBER CODE ALREADY EXISTS FOR THIS CUSTOMER.",
+
+                        memberCode =
+                            member.MemberCode,
+
+                        customerId =
+                            member.CustomerId
                     });
                 }
             }
 
-            // =====================================================
-            // GENERATE MEMBER CODE
-            // =====================================================
+            // -----------------------------------------------------
+            // DATES
+            // -----------------------------------------------------
 
-            if (string.IsNullOrWhiteSpace(
-                member.MemberCode))
-            {
-                member.MemberCode =
-                    await GenerateMemberCode();
-            }
-
-            // =====================================================
-            // RECORD DATES
-            // =====================================================
-
-            member.CreatedDate =
-                DateTime.Now;
-
+            member.CreatedDate = DateTime.UtcNow;
             member.UpdatedDate = null;
 
-            // =====================================================
+            // -----------------------------------------------------
             // SAVE
-            // =====================================================
+            // -----------------------------------------------------
 
             _context.Members.Add(member);
 
@@ -648,69 +525,14 @@ namespace EPIC.Api.Controllers
                     message =
                         "MEMBER ADDED SUCCESSFULLY.",
 
-                    member = new
-                    {
-                        memberId =
-                            member.MemberId,
-
-                        memberCode =
-                            member.MemberCode,
-
-                        firstName =
-                            member.FirstName,
-
-                        middleName =
-                            member.MiddleName,
-
-                        lastName =
-                            member.LastName,
-
-                        gender =
-                            member.Gender,
-
-                        birthDate =
-                            member.BirthDate,
-
-                        contactNumber =
-                            member.ContactNumber,
-
-                        address =
-                            member.Address,
-
-                        civilStatus =
-                            member.CivilStatus,
-
-                        ministry =
-                            member.Ministry,
-
-                        dateJoined =
-                            member.DateJoined,
-
-                        status =
-                            member.Status,
-
-                        photoPath =
-                            member.PhotoPath,
-
-                        createdDate =
-                            member.CreatedDate,
-
-                        updatedDate =
-                            member.UpdatedDate
-                    }
-                }
-            );
+                    member =
+                        BuildMemberResponse(member)
+                });
         }
 
         // =========================================================
         // UPDATE MEMBER
-        //
         // PUT: /api/Members/{id}
-        //
-        // IMPORTANT:
-        // React Members.tsx sends JSON.
-        // Therefore this endpoint uses [FromBody].
-        //
         // Permission: Members / edit
         // =========================================================
 
@@ -722,16 +544,24 @@ namespace EPIC.Api.Controllers
         {
             if (updatedMember == null)
             {
-                return BadRequest(
-                    "MEMBER DATA IS REQUIRED."
-                );
+                return BadRequest(new
+                {
+                    message = "MEMBER DATA IS REQUIRED."
+                });
             }
 
-            var member =
-                await _context.Members
-                    .FirstOrDefaultAsync(
-                        m => m.MemberId == id
-                    );
+            var validation = ValidateMember(updatedMember);
+
+            if (validation != null)
+            {
+                return validation;
+            }
+
+            // -----------------------------------------------------
+            // GET EXISTING TENANT-SCOPED MEMBER
+            // -----------------------------------------------------
+
+            var member = await FindTenantMemberAsync(id);
 
             if (member == null)
             {
@@ -742,133 +572,94 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            if (string.IsNullOrWhiteSpace(
-                updatedMember.FirstName))
-            {
-                return BadRequest(
-                    "FIRST NAME IS REQUIRED."
-                );
-            }
-
-            if (string.IsNullOrWhiteSpace(
-                updatedMember.LastName))
-            {
-                return BadRequest(
-                    "LAST NAME IS REQUIRED."
-                );
-            }
-
-            // =====================================================
+            // -----------------------------------------------------
             // CLEAN INPUT
-            // =====================================================
+            // -----------------------------------------------------
 
             CleanMember(updatedMember);
 
-            // =====================================================
+            // -----------------------------------------------------
             // MEMBER CODE
-            // =====================================================
-
-            string newCode =
-                updatedMember.MemberCode?.Trim() ?? "";
+            // -----------------------------------------------------
 
             if (!string.IsNullOrWhiteSpace(
-                newCode))
+                updatedMember.MemberCode))
             {
-                bool codeExists =
+                var codeExists =
                     await _context.Members
+                        .AsNoTracking()
                         .AnyAsync(m =>
                             m.MemberId != id &&
-                            m.MemberCode == newCode
-                        );
+                            m.CustomerId == member.CustomerId &&
+                            m.MemberCode ==
+                                updatedMember.MemberCode);
 
                 if (codeExists)
                 {
                     return Conflict(new
                     {
                         message =
-                            "MEMBER CODE ALREADY EXISTS."
+                            "MEMBER CODE ALREADY EXISTS FOR THIS CUSTOMER.",
+
+                        memberCode =
+                            updatedMember.MemberCode
                     });
                 }
 
                 member.MemberCode =
-                    newCode;
-            }
-            else
-            {
-                // Keep existing code if blank
-                member.MemberCode =
-                    member.MemberCode;
+                    updatedMember.MemberCode;
             }
 
-            // =====================================================
-            // UPDATE MEMBER INFORMATION
-            // =====================================================
+            // -----------------------------------------------------
+            // NEVER CHANGE CUSTOMER ID
+            // -----------------------------------------------------
 
             member.FirstName =
-                updatedMember.FirstName.Trim();
+                updatedMember.FirstName;
 
             member.MiddleName =
-                updatedMember.MiddleName?.Trim() ?? "";
+                updatedMember.MiddleName;
 
             member.LastName =
-                updatedMember.LastName.Trim();
+                updatedMember.LastName;
 
             member.Gender =
-                updatedMember.Gender?
-                    .Trim()
-                    .ToUpper() ?? "";
+                updatedMember.Gender;
 
             member.BirthDate =
                 updatedMember.BirthDate;
 
             member.ContactNumber =
-                updatedMember.ContactNumber?
-                    .Trim() ?? "";
+                updatedMember.ContactNumber;
 
             member.Address =
-                updatedMember.Address?
-                    .Trim() ?? "";
+                updatedMember.Address;
 
             member.CivilStatus =
-                updatedMember.CivilStatus?
-                    .Trim()
-                    .ToUpper() ?? "";
+                updatedMember.CivilStatus;
 
             member.Ministry =
-                updatedMember.Ministry?
-                    .Trim()
-                    .ToUpper() ?? "";
+                updatedMember.Ministry;
 
             member.DateJoined =
                 updatedMember.DateJoined;
 
-            member.Status =
-                string.IsNullOrWhiteSpace(
-                    updatedMember.Status)
-                    ? member.Status
-                    : updatedMember.Status
-                        .Trim()
-                        .ToUpper();
-
-            // =====================================================
-            // PHOTO PATH
-            //
-            // JSON update may preserve an existing path.
-            // =====================================================
+            if (!string.IsNullOrWhiteSpace(
+                updatedMember.Status))
+            {
+                member.Status =
+                    updatedMember.Status;
+            }
 
             if (!string.IsNullOrWhiteSpace(
                 updatedMember.PhotoPath))
             {
                 member.PhotoPath =
-                    updatedMember.PhotoPath.Trim();
+                    updatedMember.PhotoPath;
             }
 
-            // =====================================================
-            // UPDATED DATE
-            // =====================================================
-
             member.UpdatedDate =
-                DateTime.Now;
+                DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
 
@@ -877,80 +668,25 @@ namespace EPIC.Api.Controllers
                 message =
                     "MEMBER UPDATED SUCCESSFULLY.",
 
-                member = new
-                {
-                    memberId =
-                        member.MemberId,
-
-                    memberCode =
-                        member.MemberCode,
-
-                    firstName =
-                        member.FirstName,
-
-                    middleName =
-                        member.MiddleName,
-
-                    lastName =
-                        member.LastName,
-
-                    gender =
-                        member.Gender,
-
-                    birthDate =
-                        member.BirthDate,
-
-                    contactNumber =
-                        member.ContactNumber,
-
-                    address =
-                        member.Address,
-
-                    civilStatus =
-                        member.CivilStatus,
-
-                    ministry =
-                        member.Ministry,
-
-                    dateJoined =
-                        member.DateJoined,
-
-                    status =
-                        member.Status,
-
-                    photoPath =
-                        member.PhotoPath,
-
-                    createdDate =
-                        member.CreatedDate,
-
-                    updatedDate =
-                        member.UpdatedDate
-                }
+                member =
+                    BuildMemberResponse(member)
             });
         }
 
         // =========================================================
-        // UPDATE MEMBER WITH PHOTO
-        //
-        // PUT:
-        // /api/Members/{id}/photo
-        //
+        // UPDATE MEMBER PHOTO
+        // PUT: /api/Members/{id}/photo
         // Permission: Members / edit
         // =========================================================
 
         [HttpPut("{id:int}/photo")]
         [Permission("Members", "edit")]
-        [RequestSizeLimit(10_000_000)]
+        [RequestSizeLimit(MaxPhotoSize)]
         public async Task<IActionResult> UpdateMemberPhoto(
             int id,
             IFormFile photo)
         {
-            var member =
-                await _context.Members
-                    .FirstOrDefaultAsync(
-                        m => m.MemberId == id
-                    );
+            var member = await FindTenantMemberAsync(id);
 
             if (member == null)
             {
@@ -961,101 +697,83 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            if (photo == null ||
-                photo.Length == 0)
+            if (photo == null || photo.Length == 0)
             {
-                return BadRequest(
-                    "PHOTO IS REQUIRED."
-                );
+                return BadRequest(new
+                {
+                    message = "PHOTO IS REQUIRED."
+                });
             }
 
-            string[] allowedExtensions =
+            if (photo.Length > MaxPhotoSize)
             {
-                ".jpg",
-                ".jpeg",
-                ".png",
-                ".webp"
-            };
-
-            string extension =
-                Path.GetExtension(
-                    photo.FileName)
-                .ToLowerInvariant();
-
-            if (!allowedExtensions.Contains(
-                extension))
-            {
-                return BadRequest(
-                    "ONLY JPG, JPEG, PNG, AND WEBP PHOTOS ARE ALLOWED."
-                );
+                return BadRequest(new
+                {
+                    message =
+                        "PHOTO SIZE MUST NOT EXCEED 10 MB."
+                });
             }
 
-            if (photo.Length >
-                10 * 1024 * 1024)
+            var extension =
+                Path.GetExtension(photo.FileName)
+                    .ToLowerInvariant();
+
+            if (!AllowedPhotoExtensions.Contains(extension))
             {
-                return BadRequest(
-                    "PHOTO SIZE MUST NOT EXCEED 10 MB."
-                );
+                return BadRequest(new
+                {
+                    message =
+                        "ONLY JPG, JPEG, PNG, AND WEBP PHOTOS ARE ALLOWED."
+                });
             }
 
-            // =====================================================
+            // -----------------------------------------------------
             // DELETE OLD PHOTO
-            // =====================================================
+            // -----------------------------------------------------
 
-            DeleteExistingPhoto(
-                member.PhotoPath
-            );
+            DeleteExistingPhoto(member.PhotoPath);
 
-            // =====================================================
-            // SAFE FILE NAME
-            // =====================================================
+            // -----------------------------------------------------
+            // CREATE SAFE FILE NAME
+            // -----------------------------------------------------
 
-            string safeCode =
-                string.IsNullOrWhiteSpace(
-                    member.MemberCode)
+            var safeCode =
+                string.IsNullOrWhiteSpace(member.MemberCode)
                     ? $"MEM-{member.MemberId:0000}"
                     : member.MemberCode;
 
-            foreach (
-                char c in
-                Path.GetInvalidFileNameChars())
-            {
-                safeCode =
-                    safeCode.Replace(
-                        c,
-                        '-'
-                    );
-            }
+            safeCode = SanitizeFileName(safeCode);
 
-            string fileName =
+            var fileName =
                 $"{safeCode}-{Guid.NewGuid():N}{extension}";
 
-            string filePath =
+            var filePath =
                 Path.Combine(
                     _photoFolder,
-                    fileName
-                );
+                    fileName);
 
-            // =====================================================
-            // SAVE PHOTO
-            // =====================================================
+            // -----------------------------------------------------
+            // SAVE FILE
+            // -----------------------------------------------------
 
-            await using (
-                var stream =
-                    new FileStream(
-                        filePath,
-                        FileMode.Create,
-                        FileAccess.Write,
-                        FileShare.None))
-            {
-                await photo.CopyToAsync(stream);
-            }
+            await using var stream =
+                new FileStream(
+                    filePath,
+                    FileMode.Create,
+                    FileAccess.Write,
+                    FileShare.None);
+
+            await photo.CopyToAsync(stream);
+
+            // -----------------------------------------------------
+            // UPDATE DATABASE
+            // -----------------------------------------------------
 
             member.PhotoPath =
                 $"/member-photos/{fileName}";
 
             member.UpdatedDate =
-                DateTime.Now;
+                DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
 
@@ -1066,6 +784,9 @@ namespace EPIC.Api.Controllers
 
                 memberId =
                     member.MemberId,
+
+                customerId =
+                    member.CustomerId,
 
                 photoPath =
                     member.PhotoPath
@@ -1080,14 +801,10 @@ namespace EPIC.Api.Controllers
 
         [HttpDelete("{id:int}/photo")]
         [Permission("Members", "edit")]
-        public async Task<IActionResult>
-            DeleteMemberPhoto(int id)
+        public async Task<IActionResult> DeleteMemberPhoto(
+            int id)
         {
-            var member =
-                await _context.Members
-                    .FirstOrDefaultAsync(
-                        m => m.MemberId == id
-                    );
+            var member = await FindTenantMemberAsync(id);
 
             if (member == null)
             {
@@ -1098,14 +815,10 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            DeleteExistingPhoto(
-                member.PhotoPath
-            );
+            DeleteExistingPhoto(member.PhotoPath);
 
             member.PhotoPath = "";
-
-            member.UpdatedDate =
-                DateTime.Now;
+            member.UpdatedDate = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
 
@@ -1114,30 +827,26 @@ namespace EPIC.Api.Controllers
                 message =
                     "MEMBER PHOTO REMOVED.",
 
-                memberId = id
+                memberId =
+                    member.MemberId,
+
+                customerId =
+                    member.CustomerId
             });
         }
 
         // =========================================================
         // DEACTIVATE MEMBER
-        //
         // DELETE: /api/Members/{id}
-        //
-        // This is a SOFT DELETE.
-        //
         // Permission: Members / delete
         // =========================================================
 
         [HttpDelete("{id:int}")]
         [Permission("Members", "delete")]
-        public async Task<IActionResult>
-            DeactivateMember(int id)
+        public async Task<IActionResult> DeactivateMember(
+            int id)
         {
-            var member =
-                await _context.Members
-                    .FirstOrDefaultAsync(
-                        m => m.MemberId == id
-                    );
+            var member = await FindTenantMemberAsync(id);
 
             if (member == null)
             {
@@ -1148,11 +857,8 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            member.Status =
-                "INACTIVE";
-
-            member.UpdatedDate =
-                DateTime.Now;
+            member.Status = "INACTIVE";
+            member.UpdatedDate = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
 
@@ -1164,11 +870,366 @@ namespace EPIC.Api.Controllers
                 memberId =
                     member.MemberId,
 
+                customerId =
+                    member.CustomerId,
+
                 memberCode =
                     member.MemberCode,
 
                 status =
                     member.Status
+            });
+        }
+
+        // =========================================================
+        // TENANT-SCOPED MEMBER QUERY
+        // =========================================================
+
+        private IQueryable<Member>? GetTenantMembersQuery()
+        {
+            var query =
+                _context.Members.AsQueryable();
+
+            // -----------------------------------------------------
+            // ADMIN
+            // -----------------------------------------------------
+
+            if (IsCurrentUserAdmin())
+            {
+                return query;
+            }
+
+            // -----------------------------------------------------
+            // NON-ADMIN
+            // -----------------------------------------------------
+
+            var customerId =
+                GetCurrentCustomerId();
+
+            if (!customerId.HasValue)
+            {
+                return null;
+            }
+
+            return query.Where(m =>
+                m.CustomerId == customerId.Value);
+        }
+
+        // =========================================================
+        // FIND TENANT MEMBER
+        // =========================================================
+
+        private async Task<Member?> FindTenantMemberAsync(
+            int memberId)
+        {
+            var query = GetTenantMembersQuery();
+
+            if (query == null)
+            {
+                return null;
+            }
+
+            return await query
+                .FirstOrDefaultAsync(
+                    m => m.MemberId == memberId);
+        }
+
+        // =========================================================
+        // RESOLVE CUSTOMER FOR CREATE
+        // =========================================================
+
+        private async Task<int?>
+            ResolveCustomerIdForWrite(
+                int suppliedCustomerId)
+        {
+            // -----------------------------------------------------
+            // ADMIN
+            // -----------------------------------------------------
+
+            if (IsCurrentUserAdmin())
+            {
+                if (suppliedCustomerId <= 0)
+                {
+                    return null;
+                }
+
+                var exists =
+                    await _context.Customers
+                        .AsNoTracking()
+                        .AnyAsync(c =>
+                            c.CustomerId ==
+                            suppliedCustomerId);
+
+                return exists
+                    ? suppliedCustomerId
+                    : null;
+            }
+
+            // -----------------------------------------------------
+            // NON-ADMIN
+            // NEVER TRUST CUSTOMER ID FROM CLIENT
+            // -----------------------------------------------------
+
+            return GetCurrentCustomerId();
+        }
+
+        // =========================================================
+        // VALIDATE MEMBER
+        // =========================================================
+
+        private static BadRequestObjectResult?
+            ValidateMember(Member member)
+        {
+            if (string.IsNullOrWhiteSpace(
+                member.FirstName))
+            {
+                return new BadRequestObjectResult(new
+                {
+                    message =
+                        "FIRST NAME IS REQUIRED."
+                });
+            }
+
+            if (string.IsNullOrWhiteSpace(
+                member.LastName))
+            {
+                return new BadRequestObjectResult(new
+                {
+                    message =
+                        "LAST NAME IS REQUIRED."
+                });
+            }
+
+            return null;
+        }
+
+        // =========================================================
+        // MEMBER CODE EXISTS
+        // =========================================================
+
+        private async Task<bool> MemberCodeExistsAsync(
+            int customerId,
+            string memberCode)
+        {
+            return await _context.Members
+                .AsNoTracking()
+                .AnyAsync(m =>
+                    m.CustomerId == customerId &&
+                    m.MemberCode == memberCode);
+        }
+
+        // =========================================================
+        // MEMBER QUERY PROJECTION
+        // =========================================================
+
+        private static object ToMemberResponseQuery(
+            Member member)
+        {
+            return new
+            {
+                memberId = member.MemberId,
+                customerId = member.CustomerId,
+
+                memberCode = member.MemberCode,
+
+                firstName = member.FirstName,
+                middleName = member.MiddleName,
+                lastName = member.LastName,
+
+                fullName =
+                    (member.FirstName + " " +
+                     member.MiddleName + " " +
+                     member.LastName).Trim(),
+
+                gender = member.Gender,
+                birthDate = member.BirthDate,
+
+                contactNumber = member.ContactNumber,
+                address = member.Address,
+
+                civilStatus = member.CivilStatus,
+                ministry = member.Ministry,
+
+                dateJoined = member.DateJoined,
+                status = member.Status,
+                photoPath = member.PhotoPath,
+
+                createdDate = member.CreatedDate,
+                updatedDate = member.UpdatedDate
+            };
+        }
+
+        // =========================================================
+        // BUILD MEMBER RESPONSE
+        // =========================================================
+
+        private static object BuildMemberResponse(
+            Member member)
+        {
+            return new
+            {
+                memberId = member.MemberId,
+                customerId = member.CustomerId,
+
+                memberCode = member.MemberCode,
+
+                firstName = member.FirstName,
+                middleName = member.MiddleName,
+                lastName = member.LastName,
+
+                fullName =
+                    BuildFullName(
+                        member.FirstName,
+                        member.MiddleName,
+                        member.LastName),
+
+                gender = member.Gender,
+                birthDate = member.BirthDate,
+
+                contactNumber = member.ContactNumber,
+                address = member.Address,
+
+                civilStatus = member.CivilStatus,
+                ministry = member.Ministry,
+
+                dateJoined = member.DateJoined,
+                status = member.Status,
+                photoPath = member.PhotoPath,
+
+                createdDate = member.CreatedDate,
+                updatedDate = member.UpdatedDate
+            };
+        }
+
+        // =========================================================
+        // BUILD FULL NAME
+        // =========================================================
+
+        private static string BuildFullName(
+            string? firstName,
+            string? middleName,
+            string? lastName)
+        {
+            return string.Join(
+                " ",
+                new[]
+                {
+                    firstName,
+                    middleName,
+                    lastName
+                }
+                .Where(x =>
+                    !string.IsNullOrWhiteSpace(x)))
+                .Trim();
+        }
+
+        // =========================================================
+        // COUNT ATTENDANCE STATUS
+        // =========================================================
+
+        private static int CountStatus<T>(
+            IEnumerable<T> records,
+            string status)
+            where T : class
+        {
+            var property =
+                typeof(T).GetProperty("status");
+
+            if (property == null)
+            {
+                return 0;
+            }
+
+            return records.Count(record =>
+                string.Equals(
+                    property.GetValue(record)?.ToString(),
+                    status,
+                    StringComparison.OrdinalIgnoreCase));
+        }
+
+        // =========================================================
+        // GET CUSTOMER ID FROM JWT
+        // =========================================================
+
+        private int? GetCurrentCustomerId()
+        {
+            var claim =
+                User.FindFirst("CustomerId")?.Value
+                ??
+                User.FindFirst("customerId")?.Value
+                ??
+                User.FindFirst("customer_id")?.Value;
+
+            return int.TryParse(
+                    claim,
+                    out var customerId) &&
+                customerId > 0
+                    ? customerId
+                    : null;
+        }
+
+        // =========================================================
+        // GET MEMBER ID FROM JWT
+        // =========================================================
+
+        private int? GetCurrentMemberId()
+        {
+            var claim =
+                User.FindFirst("MemberId")?.Value
+                ??
+                User.FindFirst("memberId")?.Value
+                ??
+                User.FindFirst("member_id")?.Value;
+
+            return int.TryParse(
+                    claim,
+                    out var memberId) &&
+                memberId > 0
+                    ? memberId
+                    : null;
+        }
+
+        // =========================================================
+        // GET CURRENT ROLE
+        // =========================================================
+
+        private string GetCurrentRole()
+        {
+            var role =
+                User.FindFirst(
+                    ClaimTypes.Role)?.Value
+                ??
+                User.FindFirst("role")?.Value;
+
+            return role?
+                .Trim()
+                .ToUpperInvariant()
+                ?? "";
+        }
+
+        // =========================================================
+        // ADMIN CHECK
+        // =========================================================
+
+        private bool IsCurrentUserAdmin()
+        {
+            return string.Equals(
+                GetCurrentRole(),
+                "ADMIN",
+                StringComparison.OrdinalIgnoreCase);
+        }
+
+        // =========================================================
+        // CUSTOMER ID ERROR
+        // =========================================================
+
+        private UnauthorizedObjectResult
+            CustomerIdUnauthorized()
+        {
+            return Unauthorized(new
+            {
+                message =
+                    "CUSTOMER ID CLAIM IS MISSING OR INVALID."
             });
         }
 
@@ -1179,43 +1240,57 @@ namespace EPIC.Api.Controllers
         private void DeleteExistingPhoto(
             string? photoPath)
         {
-            if (string.IsNullOrWhiteSpace(
-                photoPath))
+            if (string.IsNullOrWhiteSpace(photoPath))
             {
                 return;
             }
 
-            string fileName =
+            var fileName =
                 Path.GetFileName(photoPath);
 
-            if (string.IsNullOrWhiteSpace(
-                fileName))
+            if (string.IsNullOrWhiteSpace(fileName))
             {
                 return;
             }
 
-            string filePath =
+            var filePath =
                 Path.Combine(
                     _photoFolder,
-                    fileName
-                );
+                    fileName);
 
-            if (System.IO.File.Exists(
-                filePath))
+            if (!System.IO.File.Exists(filePath))
             {
-                try
-                {
-                    System.IO.File.Delete(
-                        filePath
-                    );
-                }
-                catch
-                {
-                    // Do not fail the request
-                    // if the old photo cannot
-                    // be deleted.
-                }
+                return;
             }
+
+            try
+            {
+                System.IO.File.Delete(filePath);
+            }
+            catch
+            {
+                // Do not fail the request
+                // if the old photo cannot be deleted.
+            }
+        }
+
+        // =========================================================
+        // SANITIZE FILE NAME
+        // =========================================================
+
+        private static string SanitizeFileName(
+            string value)
+        {
+            foreach (var character in
+                     Path.GetInvalidFileNameChars())
+            {
+                value =
+                    value.Replace(
+                        character,
+                        '-');
+            }
+
+            return value.Trim();
         }
 
         // =========================================================
@@ -1227,42 +1302,51 @@ namespace EPIC.Api.Controllers
         {
             member.MemberCode =
                 member.MemberCode?
-                    .Trim() ?? "";
+                    .Trim()
+                ?? "";
 
             member.FirstName =
                 member.FirstName?
-                    .Trim() ?? "";
+                    .Trim()
+                ?? "";
 
             member.MiddleName =
                 member.MiddleName?
-                    .Trim() ?? "";
+                    .Trim()
+                ?? "";
 
             member.LastName =
                 member.LastName?
-                    .Trim() ?? "";
+                    .Trim()
+                ?? "";
 
             member.Gender =
                 member.Gender?
                     .Trim()
-                    .ToUpper() ?? "";
+                    .ToUpperInvariant()
+                ?? "";
 
             member.ContactNumber =
                 member.ContactNumber?
-                    .Trim() ?? "";
+                    .Trim()
+                ?? "";
 
             member.Address =
                 member.Address?
-                    .Trim() ?? "";
+                    .Trim()
+                ?? "";
 
             member.CivilStatus =
                 member.CivilStatus?
                     .Trim()
-                    .ToUpper() ?? "";
+                    .ToUpperInvariant()
+                ?? "";
 
             member.Ministry =
                 member.Ministry?
                     .Trim()
-                    .ToUpper() ?? "";
+                    .ToUpperInvariant()
+                ?? "";
 
             member.Status =
                 string.IsNullOrWhiteSpace(
@@ -1270,11 +1354,12 @@ namespace EPIC.Api.Controllers
                     ? "ACTIVE"
                     : member.Status
                         .Trim()
-                        .ToUpper();
+                        .ToUpperInvariant();
 
             member.PhotoPath =
                 member.PhotoPath?
-                    .Trim() ?? "";
+                    .Trim()
+                ?? "";
         }
 
         // =========================================================
@@ -1282,14 +1367,19 @@ namespace EPIC.Api.Controllers
         // =========================================================
 
         private async Task<string>
-            GenerateMemberCode()
+            GenerateMemberCode(
+                int customerId)
         {
-            int nextNumber = 1;
+            var nextNumber = 1;
 
             var lastMember =
                 await _context.Members
-                    .OrderByDescending(
-                        m => m.MemberId)
+                    .AsNoTracking()
+                    .Where(m =>
+                        m.CustomerId ==
+                        customerId)
+                    .OrderByDescending(m =>
+                        m.MemberId)
                     .FirstOrDefaultAsync();
 
             if (lastMember != null)
@@ -1298,22 +1388,25 @@ namespace EPIC.Api.Controllers
                     lastMember.MemberId + 1;
             }
 
-            string code;
-
-            do
+            while (true)
             {
-                code =
+                var code =
                     $"MEM-{nextNumber:0000}";
 
+                var exists =
+                    await _context.Members
+                        .AsNoTracking()
+                        .AnyAsync(m =>
+                            m.CustomerId == customerId &&
+                            m.MemberCode == code);
+
+                if (!exists)
+                {
+                    return code;
+                }
+
                 nextNumber++;
-
-            } while (
-                await _context.Members
-                    .AnyAsync(
-                        m => m.MemberCode == code)
-            );
-
-            return code;
+            }
         }
     }
 }

@@ -1,734 +1,1309 @@
 ﻿/* ============================================================
-   EPIC MEMBER ATTENDANCE REPORT
+   EPIC CMS — MEMBER ATTENDANCE REPORT
+   Modern / Professional / Futuristic Dashboard Design
+   ============================================================ */
+
+/* ============================================================
+   ROOT
    ============================================================ */
 
 .member-attendance-report {
+    --mar-bg: #f4f7fb;
+    --mar-surface: #ffffff;
+    --mar-surface-soft: #f8fafc;
+    --mar-border: #e5eaf1;
+    --mar-border-strong: #d7dee9;
+
+    --mar-text: #172033;
+    --mar-text-soft: #64748b;
+    --mar-text-muted: #94a3b8;
+
+    --mar-primary: #172033;
+    --mar-primary-soft: #eef2f7;
+
+    --mar-present: #10b981;
+    --mar-present-dark: #047857;
+    --mar-present-soft: #ecfdf5;
+
+    --mar-late: #f59e0b;
+    --mar-late-dark: #b45309;
+    --mar-late-soft: #fffbeb;
+
+    --mar-early: #06b6d4;
+    --mar-early-dark: #0e7490;
+    --mar-early-soft: #ecfeff;
+
+    --mar-absent: #ef4444;
+    --mar-absent-dark: #b91c1c;
+    --mar-absent-soft: #fef2f2;
+
+    --mar-excused: #8b5cf6;
+    --mar-excused-dark: #6d28d9;
+    --mar-excused-soft: #f5f3ff;
+
+    --mar-blue: #3b82f6;
+    --mar-blue-soft: #eff6ff;
+
+    --mar-shadow-sm:
+        0 2px 8px rgba(15, 23, 42, 0.04);
+
+    --mar-shadow:
+        0 8px 30px rgba(15, 23, 42, 0.07);
+
+    --mar-shadow-lg:
+        0 20px 50px rgba(15, 23, 42, 0.10);
+
     width: 100%;
-    min-height: 100%;
-    padding: 28px;
-    background: #f5f7fb;
-    color: #172033;
+    min-height: 100vh;
+
+    padding: 30px;
+
+    background:
+        radial-gradient(
+            circle at 10% 0%,
+            rgba(59, 130, 246, 0.055),
+            transparent 28%
+        ),
+        radial-gradient(
+            circle at 90% 10%,
+            rgba(139, 92, 246, 0.045),
+            transparent 25%
+        ),
+        var(--mar-bg);
+
+    color: var(--mar-text);
+
+    font-family:
+        Inter,
+        "Segoe UI",
+        Roboto,
+        Helvetica,
+        Arial,
+        sans-serif;
+
     box-sizing: border-box;
 }
 
+.member-attendance-report *,
+.member-attendance-report *::before,
+.member-attendance-report *::after {
+    box-sizing: border-box;
+}
 
 /* ============================================================
-   PAGE HEADER
+   SCREEN HEADER
    ============================================================ */
 
-.mar-page-header {
+.mar-header {
     display: flex;
-    justify-content: space-between;
     align-items: flex-end;
-    gap: 24px;
-    margin-bottom: 24px;
+    justify-content: space-between;
+
+    gap: 30px;
+
+    margin-bottom: 28px;
+
+    padding: 28px 30px;
+
+    border: 1px solid rgba(255, 255, 255, 0.8);
+
+    border-radius: 20px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #ffffff 0%,
+            #f8fafc 60%,
+            #f1f5f9 100%
+        );
+
+    box-shadow: var(--mar-shadow);
+
+    position: relative;
+
+    overflow: hidden;
+}
+
+.mar-header::before {
+    content: "";
+
+    position: absolute;
+
+    width: 260px;
+    height: 260px;
+
+    right: -100px;
+    top: -150px;
+
+    border-radius: 50%;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(59, 130, 246, 0.10),
+            transparent 68%
+        );
+
+    pointer-events: none;
+}
+
+.mar-header::after {
+    content: "";
+
+    position: absolute;
+
+    width: 180px;
+    height: 180px;
+
+    left: -90px;
+    bottom: -120px;
+
+    border-radius: 50%;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(16, 185, 129, 0.07),
+            transparent 68%
+        );
+
+    pointer-events: none;
+}
+
+.mar-header > div {
+    position: relative;
+    z-index: 1;
 }
 
 .mar-eyebrow {
+    display: inline-flex;
+    align-items: center;
+
+    gap: 7px;
+
+    margin-bottom: 8px;
+
+    color: var(--mar-blue);
+
     font-size: 11px;
+
     font-weight: 800;
-    letter-spacing: 1.8px;
+
+    letter-spacing: 1.7px;
+
     text-transform: uppercase;
-    color: #64748b;
-    margin-bottom: 7px;
 }
 
-.mar-page-header h1 {
+.mar-eyebrow::before {
+    content: "";
+
+    width: 7px;
+    height: 7px;
+
+    border-radius: 50%;
+
+    background: var(--mar-blue);
+
+    box-shadow:
+        0 0 0 4px rgba(59, 130, 246, 0.10);
+}
+
+.mar-header h1 {
     margin: 0;
-    font-size: 30px;
+
+    color: var(--mar-text);
+
+    font-size: clamp(28px, 3vw, 38px);
+
+    line-height: 1.1;
+
     font-weight: 800;
-    letter-spacing: -0.7px;
+
+    letter-spacing: -1.2px;
 }
 
-.mar-page-header p {
-    margin: 7px 0 0;
-    color: #64748b;
+.mar-header p {
+    margin: 9px 0 0;
+
+    max-width: 700px;
+
+    color: var(--mar-text-soft);
+
     font-size: 14px;
+
+    line-height: 1.6;
 }
+
+/* ============================================================
+   HEADER ACTIONS
+   ============================================================ */
 
 .mar-header-actions {
     display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-}
+    align-items: center;
 
+    justify-content: flex-end;
+
+    flex-wrap: wrap;
+
+    gap: 10px;
+
+    position: relative;
+
+    z-index: 2;
+}
 
 /* ============================================================
    BUTTONS
    ============================================================ */
 
-.mar-primary-button,
-.mar-secondary-button {
-    border: 0;
-    border-radius: 9px;
-    padding: 11px 17px;
+.mar-button {
+    min-height: 42px;
+
+    padding: 0 16px;
+
+    border: 1px solid transparent;
+
+    border-radius: 10px;
+
+    font-family: inherit;
+
     font-size: 13px;
+
     font-weight: 700;
+
     cursor: pointer;
-    transition: 0.2s ease;
-}
 
-.mar-primary-button {
-    background: #18233a;
-    color: white;
-}
+    transition:
+        transform 0.18s ease,
+        box-shadow 0.18s ease,
+        border-color 0.18s ease,
+        background 0.18s ease;
 
-    .mar-primary-button:hover {
-        background: #0f172a;
-        transform: translateY(-1px);
-    }
-
-.mar-secondary-button {
-    background: white;
-    color: #334155;
-    border: 1px solid #dbe1ea;
-}
-
-    .mar-secondary-button:hover {
-        background: #f8fafc;
-    }
-
-
-/* ============================================================
-   FILTER PANEL
-   ============================================================ */
-
-.mar-filter-panel {
-    background: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 14px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 3px 12px rgba(15, 23, 42, 0.04);
-}
-
-.mar-filter-title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 14px;
-    font-weight: 800;
-    margin-bottom: 17px;
-}
-
-    .mar-filter-title span {
-        font-size: 18px;
-    }
-
-.mar-filter-grid {
-    display: grid;
-    grid-template-columns: 2fr 1.4fr 1fr 1fr auto;
-    gap: 12px;
-    align-items: end;
-}
-
-.mar-field {
-    display: flex;
-    flex-direction: column;
-    gap: 7px;
-}
-
-    .mar-field label {
-        font-size: 11px;
-        font-weight: 800;
-        color: #64748b;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    .mar-field input,
-    .mar-field select {
-        width: 100%;
-        height: 42px;
-        box-sizing: border-box;
-        border: 1px solid #d9e0e9;
-        border-radius: 8px;
-        background: #fff;
-        padding: 0 12px;
-        color: #1e293b;
-        font-size: 13px;
-        outline: none;
-    }
-
-        .mar-field input:focus,
-        .mar-field select:focus {
-            border-color: #64748b;
-            box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.08);
-        }
-
-.mar-input-icon {
-    position: relative;
-}
-
-    .mar-input-icon span {
-        position: absolute;
-        left: 12px;
-        top: 12px;
-        font-size: 14px;
-    }
-
-    .mar-input-icon input {
-        padding-left: 35px;
-    }
-
-.mar-filter-button button {
-    height: 42px;
-    border: 1px solid #d9e0e9;
-    background: #f8fafc;
-    border-radius: 8px;
-    padding: 0 15px;
-    font-weight: 700;
-    color: #475569;
-    cursor: pointer;
-}
-
-
-/* ============================================================
-   STAT CARDS
-   ============================================================ */
-
-.mar-stat-grid {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    gap: 13px;
-    margin-bottom: 18px;
-}
-
-.mar-stat-card {
-    background: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 13px;
-    padding: 17px;
-    display: flex;
-    align-items: center;
-    gap: 13px;
-    min-width: 0;
-}
-
-.mar-stat-icon {
-    width: 43px;
-    height: 43px;
-    border-radius: 11px;
-    display: grid;
-    place-items: center;
-    font-size: 18px;
-    font-weight: 900;
-    flex-shrink: 0;
-}
-
-.mar-stat-card > div:last-child {
-    min-width: 0;
-}
-
-.mar-stat-card span {
-    display: block;
-    color: #64748b;
-    font-size: 11px;
-    font-weight: 700;
     white-space: nowrap;
 }
 
-.mar-stat-card strong {
-    display: block;
-    margin-top: 3px;
-    font-size: 23px;
-    line-height: 1;
+.mar-button:hover {
+    transform: translateY(-1px);
 }
 
-.mar-stat-card.total .mar-stat-icon {
-    background: #eef2ff;
+.mar-button:active {
+    transform: translateY(0);
 }
 
-.mar-stat-card.present .mar-stat-icon {
-    background: #ecfdf5;
+.mar-button.primary {
+    color: #ffffff;
+
+    background:
+        linear-gradient(
+            135deg,
+            #172033,
+            #26344d
+        );
+
+    border-color: #172033;
+
+    box-shadow:
+        0 7px 18px rgba(23, 32, 51, 0.18);
 }
 
-.mar-stat-card.late .mar-stat-icon {
-    background: #fff7ed;
+.mar-button.primary:hover {
+    box-shadow:
+        0 10px 24px rgba(23, 32, 51, 0.24);
 }
 
-.mar-stat-card.early .mar-stat-icon {
-    background: #eff6ff;
+.mar-button.secondary {
+    color: #334155;
+
+    background: #ffffff;
+
+    border-color: var(--mar-border-strong);
+
+    box-shadow: var(--mar-shadow-sm);
 }
 
-.mar-stat-card.absent .mar-stat-icon {
-    background: #fef2f2;
-}
+.mar-button.secondary:hover {
+    background: #f8fafc;
 
-.mar-stat-card.excused .mar-stat-icon {
-    background: #f5f3ff;
+    border-color: #cbd5e1;
 }
-
 
 /* ============================================================
-   OVERVIEW CARDS
+   SUMMARY GRID
    ============================================================ */
 
-.mar-overview-grid {
+.mar-summary-grid {
     display: grid;
-    grid-template-columns: 1.4fr 1fr 1fr;
-    gap: 14px;
-    margin-bottom: 20px;
+
+    grid-template-columns:
+        repeat(4, minmax(0, 1fr));
+
+    gap: 16px;
+
+    margin-bottom: 22px;
 }
-
-.mar-overview-card {
-    background: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 13px;
-    padding: 20px;
-}
-
-.mar-overview-label {
-    font-size: 12px;
-    font-weight: 800;
-    color: #64748b;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.mar-overview-value {
-    margin-top: 7px;
-    font-size: 34px;
-    font-weight: 850;
-    letter-spacing: -1px;
-}
-
-    .mar-overview-value.pastoral {
-        color: #dc2626;
-    }
-
-.mar-progress {
-    height: 8px;
-    border-radius: 10px;
-    background: #edf1f5;
-    overflow: hidden;
-    margin-top: 12px;
-}
-
-    .mar-progress div {
-        height: 100%;
-        background: #1e293b;
-        border-radius: inherit;
-        transition: width 0.3s ease;
-    }
-
-.mar-overview-note {
-    color: #64748b;
-    font-size: 12px;
-    margin-top: 9px;
-}
-
 
 /* ============================================================
-   PANEL
+   SUMMARY CARD
    ============================================================ */
 
-.mar-panel {
-    background: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 14px;
-    margin-bottom: 20px;
+.mar-summary-card {
+    position: relative;
+
+    min-height: 150px;
+
+    padding: 22px;
+
     overflow: hidden;
-    box-shadow: 0 3px 12px rgba(15, 23, 42, 0.03);
+
+    border:
+        1px solid var(--mar-border);
+
+    border-radius: 17px;
+
+    background: var(--mar-surface);
+
+    box-shadow: var(--mar-shadow-sm);
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
 }
 
-.mar-panel-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 15px;
-    padding: 20px 21px;
-    border-bottom: 1px solid #edf1f5;
+.mar-summary-card:hover {
+    transform: translateY(-3px);
+
+    box-shadow: var(--mar-shadow);
 }
 
-    .mar-panel-header h2 {
-        margin: 0;
-        font-size: 17px;
-        font-weight: 800;
-    }
+.mar-summary-card::before {
+    content: "";
 
-    .mar-panel-header p {
-        margin: 5px 0 0;
-        color: #64748b;
-        font-size: 12px;
-    }
+    position: absolute;
 
-.mar-record-count {
+    top: 0;
+    left: 0;
+
+    width: 100%;
+    height: 4px;
+
+    background:
+        linear-gradient(
+            90deg,
+            #172033,
+            #3b82f6
+        );
+}
+
+.mar-summary-card::after {
+    content: "";
+
+    position: absolute;
+
+    width: 110px;
+    height: 110px;
+
+    right: -50px;
+    bottom: -50px;
+
+    border-radius: 50%;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(59, 130, 246, 0.07),
+            transparent 70%
+        );
+
+    pointer-events: none;
+}
+
+.mar-summary-card:nth-child(2)::before {
+    background:
+        linear-gradient(
+            90deg,
+            #3b82f6,
+            #06b6d4
+        );
+}
+
+.mar-summary-card:nth-child(3)::before {
+    background:
+        linear-gradient(
+            90deg,
+            #10b981,
+            #06b6d4
+        );
+}
+
+.mar-summary-card:nth-child(4)::before {
+    background:
+        linear-gradient(
+            90deg,
+            #f59e0b,
+            #ef4444
+        );
+}
+
+.mar-summary-card span {
+    display: block;
+
+    color: var(--mar-text-muted);
+
+    font-size: 10px;
+
+    font-weight: 800;
+
+    letter-spacing: 1.4px;
+
+    text-transform: uppercase;
+}
+
+.mar-summary-card strong {
+    display: block;
+
+    margin-top: 11px;
+
+    color: var(--mar-text);
+
+    font-size: 36px;
+
+    line-height: 1;
+
+    font-weight: 850;
+
+    letter-spacing: -1.2px;
+
+    position: relative;
+    z-index: 1;
+}
+
+.mar-summary-card small {
+    display: block;
+
+    margin-top: 9px;
+
+    color: var(--mar-text-soft);
+
     font-size: 12px;
-    color: #64748b;
-    font-weight: 700;
 }
-
 
 /* ============================================================
-   TABLE
+   DETAILED ATTENDANCE KPI COLORS
+   ============================================================ */
+
+.mar-summary-card:nth-child(1) strong {
+    color: #3b82f6;
+}
+
+.mar-summary-card:nth-child(2) strong {
+    color: #8b5cf6;
+}
+
+.mar-summary-card:nth-child(3) strong {
+    color: var(--mar-present);
+}
+
+.mar-summary-card:nth-child(4) strong {
+    color: var(--mar-absent);
+}
+
+/* ============================================================
+   GENERIC CARD
+   ============================================================ */
+
+.mar-card {
+    margin-bottom: 22px;
+
+    border:
+        1px solid var(--mar-border);
+
+    border-radius: 18px;
+
+    background: rgba(255, 255, 255, 0.96);
+
+    box-shadow: var(--mar-shadow-sm);
+
+    overflow: hidden;
+}
+
+/* ============================================================
+   CARD HEADER
+   ============================================================ */
+
+.mar-card-header {
+    padding: 23px 25px 18px;
+
+    border-bottom:
+        1px solid var(--mar-border);
+
+    background:
+        linear-gradient(
+            180deg,
+            #ffffff,
+            #fbfcfe
+        );
+}
+
+.mar-card-header span,
+.mar-report-toolbar span {
+    display: block;
+
+    margin-bottom: 6px;
+
+    color: var(--mar-blue);
+
+    font-size: 10px;
+
+    font-weight: 800;
+
+    letter-spacing: 1.5px;
+
+    text-transform: uppercase;
+}
+
+.mar-card-header h2,
+.mar-report-toolbar h2 {
+    margin: 0;
+
+    color: var(--mar-text);
+
+    font-size: 20px;
+
+    font-weight: 800;
+
+    letter-spacing: -0.4px;
+}
+
+.mar-card-header p,
+.mar-report-toolbar p {
+    margin: 6px 0 0;
+
+    color: var(--mar-text-soft);
+
+    font-size: 13px;
+
+    line-height: 1.5;
+}
+
+/* ============================================================
+   FILTERS
+   ============================================================ */
+
+.mar-filters {
+    display: grid;
+
+    grid-template-columns:
+        minmax(240px, 1.6fr)
+        minmax(200px, 1fr)
+        minmax(160px, 0.8fr)
+        minmax(160px, 0.8fr);
+
+    gap: 15px;
+
+    padding: 22px 25px 25px;
+}
+
+.mar-field {
+    min-width: 0;
+}
+
+.mar-field label {
+    display: block;
+
+    margin-bottom: 7px;
+
+    color: #475569;
+
+    font-size: 11px;
+
+    font-weight: 750;
+
+    letter-spacing: 0.4px;
+}
+
+.mar-field input,
+.mar-field select {
+    width: 100%;
+
+    height: 45px;
+
+    padding:
+        0 13px;
+
+    border:
+        1px solid var(--mar-border-strong);
+
+    border-radius: 10px;
+
+    outline: none;
+
+    background: #ffffff;
+
+    color: var(--mar-text);
+
+    font-family: inherit;
+
+    font-size: 13px;
+
+    transition:
+        border-color 0.18s ease,
+        box-shadow 0.18s ease,
+        background 0.18s ease;
+}
+
+.mar-field input::placeholder {
+    color: #a0aabd;
+}
+
+.mar-field input:hover,
+.mar-field select:hover {
+    border-color: #c1cad8;
+}
+
+.mar-field input:focus,
+.mar-field select:focus {
+    border-color: #3b82f6;
+
+    background: #ffffff;
+
+    box-shadow:
+        0 0 0 4px rgba(59, 130, 246, 0.10);
+}
+
+/* ============================================================
+   SEARCH FIELD
+   ============================================================ */
+
+.mar-field.search {
+    position: relative;
+}
+
+.mar-field.search::before {
+    content: "⌕";
+
+    position: absolute;
+
+    left: 13px;
+
+    bottom: 11px;
+
+    color: #94a3b8;
+
+    font-size: 19px;
+
+    line-height: 1;
+
+    z-index: 2;
+
+    pointer-events: none;
+}
+
+.mar-field.search input {
+    padding-left: 38px;
+}
+
+/* ============================================================
+   REPORT TOOLBAR
+   ============================================================ */
+
+.mar-report-toolbar {
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 20px;
+
+    padding: 24px 25px;
+
+    border-bottom:
+        1px solid var(--mar-border);
+
+    background:
+        linear-gradient(
+            135deg,
+            #ffffff,
+            #f8fafc
+        );
+}
+
+.mar-report-toolbar strong {
+    color: var(--mar-text);
+}
+
+/* ============================================================
+   TABLE WRAPPER
    ============================================================ */
 
 .mar-table-wrapper {
     width: 100%;
+
     overflow-x: auto;
+
+    scrollbar-width: thin;
+
+    scrollbar-color:
+        #cbd5e1
+        transparent;
 }
 
-.mar-table {
-    width: 100%;
-    min-width: 1050px;
-    border-collapse: collapse;
+.mar-table-wrapper::-webkit-scrollbar {
+    height: 8px;
 }
 
-    .mar-table th {
-        background: #f8fafc;
-        color: #64748b;
-        font-size: 10px;
-        font-weight: 850;
-        letter-spacing: 0.7px;
-        text-transform: uppercase;
-        text-align: left;
-        padding: 13px 15px;
-        border-bottom: 1px solid #e5eaf0;
-        white-space: nowrap;
-    }
+.mar-table-wrapper::-webkit-scrollbar-track {
+    background: #f8fafc;
+}
 
-    .mar-table td {
-        padding: 14px 15px;
-        border-bottom: 1px solid #edf1f5;
-        font-size: 13px;
-        vertical-align: middle;
-    }
+.mar-table-wrapper::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
 
-    .mar-table tbody tr:hover {
-        background: #fafbfc;
-    }
-
-    .mar-table tbody tr:last-child td {
-        border-bottom: 0;
-    }
-
+    border-radius: 20px;
+}
 
 /* ============================================================
-   MEMBER
+   SCREEN TABLE
    ============================================================ */
 
-.mar-member {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-width: 190px;
-}
+.mar-screen-table {
+    width: 100%;
 
-.mar-avatar {
-    width: 37px;
-    height: 37px;
-    border-radius: 10px;
-    background: #e8edf4;
-    color: #334155;
-    display: grid;
-    place-items: center;
-    font-size: 13px;
-    font-weight: 850;
-}
+    min-width: 980px;
 
-.mar-member strong {
-    display: block;
-    color: #1e293b;
+    border-collapse: separate;
+
+    border-spacing: 0;
+
+    table-layout: auto;
+
     font-size: 13px;
 }
-
-.mar-member span {
-    display: block;
-    margin-top: 2px;
-    color: #94a3b8;
-    font-size: 10px;
-}
-
 
 /* ============================================================
-   PERCENTAGE
+   TABLE HEADER
+   ============================================================ */
+
+.mar-screen-table thead th {
+    position: sticky;
+
+    top: 0;
+
+    z-index: 5;
+
+    padding:
+        13px 12px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #172033,
+            #26344d
+        );
+
+    color: #ffffff;
+
+    border-bottom:
+        1px solid #172033;
+
+    font-size: 10px;
+
+    font-weight: 800;
+
+    letter-spacing: 0.8px;
+
+    text-transform: uppercase;
+
+    white-space: nowrap;
+
+    text-align: left;
+}
+
+.mar-screen-table thead th:first-child {
+    padding-left: 20px;
+}
+
+.mar-screen-table thead th:last-child {
+    padding-right: 20px;
+}
+
+/* ============================================================
+   TABLE BODY
+   ============================================================ */
+
+.mar-screen-table tbody td {
+    padding:
+        14px 12px;
+
+    border-bottom:
+        1px solid #edf0f4;
+
+    color: #475569;
+
+    background: #ffffff;
+
+    vertical-align: middle;
+
+    white-space: nowrap;
+
+    transition:
+        background 0.15s ease;
+}
+
+.mar-screen-table tbody tr:hover td {
+    background: #f8fafc;
+}
+
+.mar-screen-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.mar-screen-table tbody td:first-child {
+    padding-left: 20px;
+
+    color: #a0aabd;
+
+    font-size: 11px;
+
+    font-weight: 700;
+}
+
+.mar-screen-table tbody td:last-child {
+    padding-right: 20px;
+}
+
+/* ============================================================
+   MEMBER NAME
+   ============================================================ */
+
+.mar-screen-table tbody td:nth-child(2) strong {
+    color: var(--mar-text);
+
+    font-size: 13px;
+
+    font-weight: 750;
+}
+
+.mar-screen-table tbody td:nth-child(3) {
+    color: #64748b;
+
+    font-size: 11px;
+
+    font-weight: 650;
+
+    letter-spacing: 0.3px;
+}
+
+/* ============================================================
+   RATE
    ============================================================ */
 
 .mar-percentage {
-    min-width: 105px;
-}
-
-    .mar-percentage strong {
-        font-size: 13px;
-    }
-
-.mar-mini-progress {
-    width: 80px;
-    height: 5px;
-    background: #edf1f5;
-    border-radius: 5px;
-    overflow: hidden;
-    margin-top: 6px;
-}
-
-    .mar-mini-progress div {
-        height: 100%;
-        border-radius: inherit;
-    }
-
-    .mar-mini-progress .excellent {
-        background: #16a34a;
-    }
-
-    .mar-mini-progress .good {
-        background: #2563eb;
-    }
-
-    .mar-mini-progress .needs-follow-up {
-        background: #d97706;
-    }
-
-    .mar-mini-progress .pastoral-follow-up {
-        background: #dc2626;
-    }
-
-
-/* ============================================================
-   NUMBERS
-   ============================================================ */
-
-.mar-number {
-    font-weight: 800;
-}
-
-    .mar-number.present {
-        color: #16a34a;
-    }
-
-    .mar-number.late {
-        color: #d97706;
-    }
-
-    .mar-number.early {
-        color: #2563eb;
-    }
-
-    .mar-number.absent {
-        color: #dc2626;
-    }
-
-    .mar-number.excused {
-        color: #7c3aed;
-    }
-
-
-/* ============================================================
-   STATUS
-   ============================================================ */
-
-.mar-status {
     display: inline-flex;
+
     align-items: center;
-    border-radius: 20px;
-    padding: 5px 9px;
-    font-size: 9px;
+
+    justify-content: center;
+
+    min-width: 62px;
+
+    padding: 7px 9px;
+
+    border-radius: 9px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #eff6ff,
+            #dbeafe
+        );
+
+    color: #2563eb;
+
+    font-size: 13px;
+
     font-weight: 850;
-    letter-spacing: 0.3px;
+
+    box-shadow:
+        inset 0 0 0 1px
+        rgba(59, 130, 246, 0.10);
+}
+
+/* ============================================================
+   COLORFUL ATTENDANCE NUMBERS
+   ============================================================ */
+
+/*
+   PRESENT
+   Table column 5
+*/
+
+.mar-screen-table tbody td:nth-child(5) {
+    color: var(--mar-present-dark);
+
+    font-weight: 850;
+
+    font-size: 14px;
+}
+
+.mar-screen-table tbody td:nth-child(5)::before {
+    content: "●";
+
+    margin-right: 5px;
+
+    color: var(--mar-present);
+
+    font-size: 8px;
+
+    vertical-align: middle;
+}
+
+/*
+   LATE
+   Table column 6
+*/
+
+.mar-screen-table tbody td:nth-child(6) {
+    color: var(--mar-late-dark);
+
+    font-weight: 850;
+
+    font-size: 14px;
+}
+
+.mar-screen-table tbody td:nth-child(6)::before {
+    content: "●";
+
+    margin-right: 5px;
+
+    color: var(--mar-late);
+
+    font-size: 8px;
+
+    vertical-align: middle;
+}
+
+/*
+   EARLY
+   Table column 7
+*/
+
+.mar-screen-table tbody td:nth-child(7) {
+    color: var(--mar-early-dark);
+
+    font-weight: 850;
+
+    font-size: 14px;
+}
+
+.mar-screen-table tbody td:nth-child(7)::before {
+    content: "●";
+
+    margin-right: 5px;
+
+    color: var(--mar-early);
+
+    font-size: 8px;
+
+    vertical-align: middle;
+}
+
+/*
+   ABSENT
+   Table column 8
+*/
+
+.mar-screen-table tbody td:nth-child(8) {
+    color: var(--mar-absent-dark);
+
+    font-weight: 850;
+
+    font-size: 14px;
+}
+
+.mar-screen-table tbody td:nth-child(8)::before {
+    content: "●";
+
+    margin-right: 5px;
+
+    color: var(--mar-absent);
+
+    font-size: 8px;
+
+    vertical-align: middle;
+}
+
+/*
+   EXCUSED
+   Table column 9
+*/
+
+.mar-screen-table tbody td:nth-child(9) {
+    color: var(--mar-excused-dark);
+
+    font-weight: 850;
+
+    font-size: 14px;
+}
+
+.mar-screen-table tbody td:nth-child(9)::before {
+    content: "●";
+
+    margin-right: 5px;
+
+    color: var(--mar-excused);
+
+    font-size: 8px;
+
+    vertical-align: middle;
+}
+
+/* ============================================================
+   CLASSIFICATION BADGES
+   ============================================================ */
+
+.mar-classification {
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    min-height: 27px;
+
+    padding:
+        5px 10px;
+
+    border-radius: 999px;
+
+    font-size: 9px;
+
+    font-weight: 850;
+
+    letter-spacing: 0.45px;
+
+    text-transform: uppercase;
+
     white-space: nowrap;
 }
 
-    .mar-status.excellent {
-        background: #dcfce7;
-        color: #15803d;
-    }
+.mar-classification::before {
+    content: "";
 
-    .mar-status.good {
-        background: #dbeafe;
-        color: #1d4ed8;
-    }
+    width: 6px;
+    height: 6px;
 
-    .mar-status.needs-follow-up {
-        background: #fef3c7;
-        color: #a16207;
-    }
+    margin-right: 6px;
 
-    .mar-status.pastoral-follow-up {
-        background: #fee2e2;
-        color: #b91c1c;
-    }
+    border-radius: 50%;
 
-    .mar-status.status-present {
-        background: #dcfce7;
-        color: #15803d;
-    }
-
-    .mar-status.status-late {
-        background: #fef3c7;
-        color: #a16207;
-    }
-
-    .mar-status.status-early {
-        background: #dbeafe;
-        color: #1d4ed8;
-    }
-
-    .mar-status.status-absent {
-        background: #fee2e2;
-        color: #b91c1c;
-    }
-
-    .mar-status.status-excused {
-        background: #ede9fe;
-        color: #6d28d9;
-    }
-
-
-/* ============================================================
-   VIEW BUTTON
-   ============================================================ */
-
-.mar-view-button {
-    border: 1px solid #d8dee8;
-    background: white;
-    border-radius: 7px;
-    padding: 7px 11px;
-    font-size: 11px;
-    font-weight: 750;
-    color: #334155;
-    cursor: pointer;
+    background: currentColor;
 }
 
-    .mar-view-button:hover {
-        background: #f8fafc;
-    }
+/* ============================================================
+   EXCELLENT
+   ============================================================ */
 
+.mar-classification.excellent {
+    color: var(--mar-present-dark);
+
+    background:
+        linear-gradient(
+            135deg,
+            #ecfdf5,
+            #d1fae5
+        );
+
+    border:
+        1px solid #a7f3d0;
+}
 
 /* ============================================================
-   EMPTY
+   GOOD
+   ============================================================ */
+
+.mar-classification.good {
+    color: #1d4ed8;
+
+    background:
+        linear-gradient(
+            135deg,
+            #eff6ff,
+            #dbeafe
+        );
+
+    border:
+        1px solid #bfdbfe;
+}
+
+/* ============================================================
+   NEEDS FOLLOW-UP
+   ============================================================ */
+
+.mar-classification.needs-follow-up {
+    color: var(--mar-late-dark);
+
+    background:
+        linear-gradient(
+            135deg,
+            #fffbeb,
+            #fef3c7
+        );
+
+    border:
+        1px solid #fde68a;
+}
+
+/* ============================================================
+   PASTORAL FOLLOW-UP
+   ============================================================ */
+
+.mar-classification.pastoral-follow-up {
+    color: var(--mar-absent-dark);
+
+    background:
+        linear-gradient(
+            135deg,
+            #fef2f2,
+            #fee2e2
+        );
+
+    border:
+        1px solid #fecaca;
+}
+
+/* ============================================================
+   EMPTY STATE
    ============================================================ */
 
 .mar-empty {
-    text-align: center !important;
-    padding: 45px 20px !important;
+    padding: 70px 30px !important;
+
     color: #94a3b8 !important;
-}
 
+    text-align: center;
+
+    font-size: 14px !important;
+
+    font-weight: 600;
+
+    background:
+        linear-gradient(
+            180deg,
+            #ffffff,
+            #f8fafc
+        ) !important;
+}
 
 /* ============================================================
-   MEMBER HISTORY
+   SCREEN FOOTER
    ============================================================ */
 
-.mar-history-panel {
-    scroll-margin-top: 20px;
-}
-
-.mar-close-button {
-    width: 34px;
-    height: 34px;
-    border: 1px solid #dbe1e8;
-    background: white;
-    border-radius: 8px;
-    font-size: 20px;
-    color: #64748b;
-    cursor: pointer;
-}
-
-    .mar-close-button:hover {
-        background: #f8fafc;
-    }
-
-.mar-member-summary {
-    display: grid;
-    grid-template-columns: repeat(6, 1fr);
-    border-bottom: 1px solid #edf1f5;
-}
-
-    .mar-member-summary > div {
-        padding: 17px 20px;
-        border-right: 1px solid #edf1f5;
-    }
-
-        .mar-member-summary > div:last-child {
-            border-right: 0;
-        }
-
-    .mar-member-summary span {
-        display: block;
-        font-size: 10px;
-        color: #64748b;
-        text-transform: uppercase;
-        font-weight: 800;
-    }
-
-    .mar-member-summary strong {
-        display: block;
-        margin-top: 5px;
-        font-size: 21px;
-    }
-
-
-/* ============================================================
-   CLASSIFICATION
-   ============================================================ */
-
-.mar-classification-grid {
-    padding: 20px;
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 12px;
-}
-
-.mar-classification {
-    border: 1px solid #e5eaf0;
-    border-radius: 11px;
-    padding: 15px;
+.mar-screen-footer {
     display: flex;
-    align-items: center;
-    gap: 11px;
-}
 
-.mar-classification-icon {
-    font-size: 20px;
-}
-
-.mar-classification strong {
-    display: block;
-    font-size: 11px;
-}
-
-.mar-classification span {
-    display: block;
-    color: #64748b;
-    margin-top: 3px;
-    font-size: 11px;
-}
-
-
-/* ============================================================
-   FOOTER
-   ============================================================ */
-
-.mar-footer-note {
-    display: flex;
     justify-content: space-between;
-    color: #94a3b8;
+
+    align-items: center;
+
+    gap: 20px;
+
+    margin-top: 28px;
+
+    padding:
+        20px 5px 10px;
+
+    border-top:
+        1px solid var(--mar-border);
+
+    color: var(--mar-text-soft);
+
     font-size: 11px;
-    padding: 5px 2px 20px;
 }
 
+.mar-screen-footer > div:last-child {
+    text-align: right;
+}
+
+.mar-screen-footer strong {
+    display: block;
+
+    color: #334155;
+
+    font-size: 11px;
+
+    font-weight: 750;
+}
+
+.mar-screen-footer span {
+    display: inline-block;
+
+    margin-top: 3px;
+
+    color: #94a3b8;
+}
 
 /* ============================================================
-   LOADING
+   LOADING PAGE
    ============================================================ */
 
 .mar-loading-page {
-    min-height: 500px;
+    min-height: 70vh;
+
     display: flex;
+
     flex-direction: column;
+
     align-items: center;
+
     justify-content: center;
+
+    padding: 40px;
+
     text-align: center;
+
+    color: var(--mar-text);
 }
 
+.mar-loading-page h2 {
+    margin:
+        20px 0 6px;
+
+    font-size: 22px;
+
+    font-weight: 800;
+}
+
+.mar-loading-page p {
+    margin: 0;
+
+    color: var(--mar-text-soft);
+
+    font-size: 13px;
+}
+
+/* ============================================================
+   LOADING SPINNER
+   ============================================================ */
+
 .mar-loading-spinner {
-    width: 38px;
-    height: 38px;
-    border: 4px solid #e2e8f0;
-    border-top-color: #334155;
+    width: 48px;
+    height: 48px;
+
+    border:
+        4px solid #e2e8f0;
+
+    border-top-color:
+        #3b82f6;
+
+    border-right-color:
+        #8b5cf6;
+
     border-radius: 50%;
-    animation: mar-spin 0.8s linear infinite;
-    margin-bottom: 18px;
+
+    animation:
+        mar-spin 0.8s linear infinite;
 }
 
 @keyframes mar-spin {
@@ -737,191 +1312,380 @@
     }
 }
 
-.mar-loading-page h2 {
-    margin: 0;
-    font-size: 19px;
-}
-
-.mar-loading-page p {
-    color: #64748b;
-    font-size: 13px;
-}
-
-
 /* ============================================================
-   ERROR
+   ERROR PAGE
    ============================================================ */
 
 .mar-error-page {
-    min-height: 500px;
+    min-height: 70vh;
+
     display: flex;
+
     flex-direction: column;
-    justify-content: center;
+
     align-items: center;
+
+    justify-content: center;
+
+    padding: 40px;
+
     text-align: center;
 }
 
 .mar-error-icon {
-    width: 48px;
-    height: 48px;
-    display: grid;
-    place-items: center;
-    border-radius: 50%;
-    background: #fee2e2;
+    width: 62px;
+    height: 62px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    margin-bottom: 18px;
+
+    border-radius: 18px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #fef2f2,
+            #fee2e2
+        );
+
     color: #dc2626;
-    font-size: 25px;
+
+    font-size: 28px;
+
     font-weight: 900;
-    margin-bottom: 15px;
+
+    box-shadow:
+        0 8px 25px
+        rgba(239, 68, 68, 0.12);
 }
 
 .mar-error-page h2 {
     margin: 0;
+
+    color: var(--mar-text);
+
+    font-size: 24px;
+
+    font-weight: 800;
 }
 
 .mar-error-page p {
-    color: #64748b;
-    max-width: 500px;
+    max-width: 620px;
+
+    margin:
+        9px auto 0;
+
+    color: var(--mar-text-soft);
+
     font-size: 13px;
-    margin: 8px 0 20px;
+
+    line-height: 1.6;
 }
 
+.mar-error-actions {
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    gap: 10px;
+
+    margin-top: 22px;
+}
 
 /* ============================================================
-   RESPONSIVE
+   STATUS VISUAL HELPERS
    ============================================================ */
 
-@media (max-width: 1300px) {
+.mar-status-present {
+    color: var(--mar-present-dark);
 
-    .mar-stat-grid {
-        grid-template-columns: repeat(3, 1fr);
-    }
-
-    .mar-filter-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-
-    .mar-filter-button {
-        grid-column: span 2;
-    }
-
-        .mar-filter-button button {
-            width: 100%;
-        }
+    background: var(--mar-present-soft);
 }
 
-@media (max-width: 900px) {
+.mar-status-late {
+    color: var(--mar-late-dark);
+
+    background: var(--mar-late-soft);
+}
+
+.mar-status-early {
+    color: var(--mar-early-dark);
+
+    background: var(--mar-early-soft);
+}
+
+.mar-status-absent {
+    color: var(--mar-absent-dark);
+
+    background: var(--mar-absent-soft);
+}
+
+.mar-status-excused {
+    color: var(--mar-excused-dark);
+
+    background: var(--mar-excused-soft);
+}
+
+/* ============================================================
+   RESPONSIVE — LARGE TABLETS
+   ============================================================ */
+
+@media (max-width: 1200px) {
 
     .member-attendance-report {
-        padding: 18px;
+        padding: 22px;
     }
 
-    .mar-page-header {
+    .mar-header {
         align-items: flex-start;
+
         flex-direction: column;
     }
 
     .mar-header-actions {
         width: 100%;
+
+        justify-content: flex-start;
     }
 
-        .mar-header-actions button {
-            flex: 1;
-        }
-
-    .mar-overview-grid {
-        grid-template-columns: 1fr;
+    .mar-summary-grid {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
     }
 
-    .mar-member-summary {
-        grid-template-columns: repeat(3, 1fr);
-    }
-
-        .mar-member-summary > div:nth-child(3) {
-            border-right: 0;
-        }
-}
-
-@media (max-width: 600px) {
-
-    .mar-page-header h1 {
-        font-size: 24px;
-    }
-
-    .mar-stat-grid {
-        grid-template-columns: 1fr 1fr;
-    }
-
-    .mar-filter-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .mar-filter-button {
-        grid-column: auto;
-    }
-
-    .mar-classification-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .mar-member-summary {
-        grid-template-columns: 1fr 1fr;
-    }
-
-        .mar-member-summary > div {
-            border-right: 0;
-            border-bottom: 1px solid #edf1f5;
-        }
-
-    .mar-footer-note {
-        flex-direction: column;
-        gap: 5px;
+    .mar-filters {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
     }
 }
-
 
 /* ============================================================
-   PRINT
+   RESPONSIVE — TABLET
    ============================================================ */
+
+@media (max-width: 800px) {
+
+    .member-attendance-report {
+        padding: 16px;
+    }
+
+    .mar-header {
+        padding: 22px;
+
+        border-radius: 16px;
+    }
+
+    .mar-header h1 {
+        font-size: 28px;
+    }
+
+    .mar-header-actions {
+        display: grid;
+
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+
+        width: 100%;
+    }
+
+    .mar-header-actions .mar-button {
+        width: 100%;
+    }
+
+    .mar-summary-grid {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+
+        gap: 12px;
+    }
+
+    .mar-summary-card {
+        min-height: 135px;
+
+        padding: 18px;
+    }
+
+    .mar-summary-card strong {
+        font-size: 31px;
+    }
+
+    .mar-card-header,
+    .mar-report-toolbar {
+        padding: 20px;
+    }
+
+    .mar-filters {
+        padding: 18px 20px 20px;
+
+        grid-template-columns:
+            1fr;
+    }
+
+    .mar-report-toolbar {
+        align-items: flex-start;
+
+        flex-direction: column;
+    }
+
+    .mar-report-toolbar .mar-button {
+        width: 100%;
+    }
+
+    .mar-screen-footer {
+        align-items: flex-start;
+
+        flex-direction: column;
+    }
+
+    .mar-screen-footer > div:last-child {
+        text-align: left;
+    }
+}
+
+/* ============================================================
+   RESPONSIVE — MOBILE
+   ============================================================ */
+
+@media (max-width: 560px) {
+
+    .member-attendance-report {
+        padding: 10px;
+    }
+
+    .mar-header {
+        margin-bottom: 14px;
+
+        padding: 19px;
+
+        border-radius: 14px;
+    }
+
+    .mar-header h1 {
+        font-size: 24px;
+
+        letter-spacing: -0.7px;
+    }
+
+    .mar-header p {
+        font-size: 12px;
+    }
+
+    .mar-header-actions {
+        grid-template-columns: 1fr;
+    }
+
+    .mar-summary-grid {
+        grid-template-columns: 1fr;
+
+        gap: 10px;
+
+        margin-bottom: 14px;
+    }
+
+    .mar-summary-card {
+        min-height: 120px;
+    }
+
+    .mar-card {
+        margin-bottom: 14px;
+
+        border-radius: 14px;
+    }
+
+    .mar-card-header,
+    .mar-report-toolbar {
+        padding: 17px;
+    }
+
+    .mar-card-header h2,
+    .mar-report-toolbar h2 {
+        font-size: 18px;
+    }
+
+    .mar-filters {
+        padding: 16px 17px 18px;
+    }
+
+    .mar-screen-footer {
+        margin-top: 18px;
+
+        padding:
+            16px 3px 8px;
+    }
+
+    .mar-error-actions {
+        width: 100%;
+
+        flex-direction: column;
+    }
+
+    .mar-error-actions .mar-button {
+        width: 100%;
+    }
+}
+
+/* ============================================================
+   REDUCED MOTION
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .member-attendance-report *,
+    .member-attendance-report *::before,
+    .member-attendance-report *::after {
+        animation-duration: 0.01ms !important;
+
+        animation-iteration-count: 1 !important;
+
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* ============================================================
+   DARKER TABLE ROW ACCENTS
+   ============================================================ */
+
+.mar-screen-table tbody tr {
+    position: relative;
+}
+
+/* ============================================================
+   PRINT SAFETY
+   ============================================================ */
+
+/*
+   IMPORTANT:
+   The actual printing is generated by handlePrint()
+   inside MemberAttendanceReport.tsx.
+
+   These styles DO NOT modify the generated print document.
+   The print feature remains untouched.
+*/
 
 @media print {
 
-    body {
-        background: white !important;
+    .member-attendance-report {
+        background: #ffffff;
+
+        padding: 0;
     }
 
-    .member-attendance-report {
-        padding: 0;
-        background: white;
+    .mar-header,
+    .mar-summary-grid,
+    .mar-card,
+    .mar-screen-footer {
+        box-shadow: none;
     }
 
     .mar-header-actions,
-    .mar-filter-panel,
-    .mar-view-button,
-    .mar-close-button,
-    .epic-sidebar,
-    .epic-topbar,
-    .epic-footer {
-        display: none !important;
-    }
-
-    .mar-page-header {
-        margin-bottom: 15px;
-    }
-
-    .mar-stat-grid {
-        grid-template-columns: repeat(3, 1fr);
-    }
-
-    .mar-panel {
-        box-shadow: none;
-        break-inside: avoid;
-    }
-
-    .mar-table {
-        min-width: 0;
-    }
-
-    .mar-footer-note {
+    .mar-filters,
+    .mar-report-toolbar .mar-button {
         display: none;
     }
 }

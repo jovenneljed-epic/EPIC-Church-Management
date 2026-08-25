@@ -1,9 +1,10 @@
-﻿
-using EPIC.Api.Data;
+﻿using EPIC.Api.Data;
 using EPIC.Api.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
+using System.Linq.Expressions;
 
 namespace EPIC.Api.Controllers
 {
@@ -24,28 +25,39 @@ namespace EPIC.Api.Controllers
             "CANCELLED"
         };
 
-        private static readonly string[] AllowedBillingCycles =
+        private static readonly string[] BlockingStatuses =
         {
-            "Monthly",
-            "Annual"
+            "TRIAL",
+            "ACTIVE",
+            "PAST_DUE",
+            "SUSPENDED"
         };
 
-        public SubscriptionsController(ApplicationDbContext context)
+        private static readonly string[] RenewableStatuses =
+        {
+            "CANCELLED",
+            "EXPIRED",
+            "PAST_DUE",
+            "SUSPENDED"
+        };
+
+        public SubscriptionsController(
+            ApplicationDbContext context)
         {
             _context = context;
         }
 
         // =========================================================
-        // GET ALL SUBSCRIPTIONS
+        // GET ALL
         // GET: api/Subscriptions
         // =========================================================
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Subscription>>> GetSubscriptions()
+        public async Task<IActionResult> GetSubscriptions()
         {
             var subscriptions = await _context.Subscriptions
                 .AsNoTracking()
-                .Include(s => s.SubscriptionPlan)
+                .Select(ToResponse())
                 .OrderByDescending(s => s.CreatedDate)
                 .ToListAsync();
 
@@ -53,12 +65,12 @@ namespace EPIC.Api.Controllers
         }
 
         // =========================================================
-        // GET SUBSCRIPTION BY ID
-        // GET: api/Subscriptions/5
+        // GET BY ID
+        // GET: api/Subscriptions/{id}
         // =========================================================
 
         [HttpGet("{id:int}")]
-        public async Task<ActionResult<Subscription>> GetSubscription(int id)
+        public async Task<IActionResult> GetSubscription(int id)
         {
             if (id <= 0)
             {
@@ -70,9 +82,10 @@ namespace EPIC.Api.Controllers
 
             var subscription = await _context.Subscriptions
                 .AsNoTracking()
-                .Include(s => s.SubscriptionPlan)
-                .FirstOrDefaultAsync(s =>
-                    s.SubscriptionId == id);
+                .Where(s =>
+                    s.SubscriptionId == id)
+                .Select(ToResponse())
+                .FirstOrDefaultAsync();
 
             if (subscription == null)
             {
@@ -86,13 +99,13 @@ namespace EPIC.Api.Controllers
         }
 
         // =========================================================
-        // CREATE SUBSCRIPTION
+        // CREATE
         // POST: api/Subscriptions
         // =========================================================
 
         [HttpPost]
-        public async Task<ActionResult<Subscription>> CreateSubscription(
-            [FromBody] Subscription request)
+        public async Task<IActionResult> CreateSubscription(
+            [FromBody] CreateSubscriptionDto request)
         {
             if (request == null)
             {
@@ -102,47 +115,39 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            if (!ModelState.IsValid)
-            {
-                return ValidationProblem(ModelState);
-            }
-
-            // -----------------------------------------------------
-            // Validate church
-            // -----------------------------------------------------
-
-            if (string.IsNullOrWhiteSpace(request.ChurchName))
+            if (request.CustomerId <= 0)
             {
                 return BadRequest(new
                 {
-                    message = "Church name is required."
+                    message = "A valid customer is required."
                 });
             }
-
-            if (string.IsNullOrWhiteSpace(request.ContactEmail))
-            {
-                return BadRequest(new
-                {
-                    message = "Contact email is required."
-                });
-            }
-
-            // -----------------------------------------------------
-            // Validate plan
-            // -----------------------------------------------------
 
             if (request.SubscriptionPlanId <= 0)
             {
                 return BadRequest(new
                 {
-                    message = "A valid subscription plan is required."
+                    message =
+                        "A valid subscription plan is required."
+                });
+            }
+
+            var customer = await _context.Customers
+                .FirstOrDefaultAsync(c =>
+                    c.CustomerId == request.CustomerId);
+
+            if (customer == null)
+            {
+                return NotFound(new
+                {
+                    message = "Customer not found."
                 });
             }
 
             var plan = await _context.SubscriptionPlans
-                .AsNoTracking()
                 .FirstOrDefaultAsync(p =>
-                    p.SubscriptionPlanId == request.SubscriptionPlanId &&
+                    p.SubscriptionPlanId ==
+                    request.SubscriptionPlanId &&
                     p.IsActive);
 
             if (plan == null)
@@ -154,41 +159,9 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            // -----------------------------------------------------
-            // Normalize email
-            // -----------------------------------------------------
-
-            var contactEmail =
-                request.ContactEmail.Trim();
-
-            // -----------------------------------------------------
-            // Prevent duplicate active subscription
-            // -----------------------------------------------------
-
-            var hasExistingSubscription =
-                await _context.Subscriptions.AnyAsync(s =>
-                    s.ContactEmail == contactEmail &&
-                    (
-                        s.Status == "TRIAL" ||
-                        s.Status == "ACTIVE" ||
-                        s.Status == "PAST_DUE"
-                    ));
-
-            if (hasExistingSubscription)
-            {
-                return Conflict(new
-                {
-                    message =
-                        "This email already has an active or pending subscription."
-                });
-            }
-
-            // -----------------------------------------------------
-            // Billing cycle
-            // -----------------------------------------------------
-
             var billingCycle =
-                NormalizeBillingCycle(request.BillingCycle);
+                NormalizeBillingCycle(
+                    request.BillingCycle);
 
             if (billingCycle == null)
             {
@@ -199,20 +172,25 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            // -----------------------------------------------------
-            // Determine price
-            // -----------------------------------------------------
+            // =====================================================
+            // CHECK EXISTING ACTIVE/PENDING SUBSCRIPTION
+            // =====================================================
 
-            var amount =
-                billingCycle == "Annual"
-                    ? plan.AnnualPrice
-                    : plan.MonthlyPrice;
+            var hasExistingSubscription =
+                await _context.Subscriptions.AnyAsync(s =>
+                    s.CustomerId == customer.CustomerId &&
+                    BlockingStatuses.Contains(s.Status));
 
-            // -----------------------------------------------------
-            // Dates
-            // -----------------------------------------------------
+            if (hasExistingSubscription)
+            {
+                return Conflict(new
+                {
+                    message =
+                        "This customer already has an active or pending subscription."
+                });
+            }
 
-            var now = DateTime.Now;
+            var now = DateTime.UtcNow;
 
             var hasTrial =
                 plan.TrialDays > 0;
@@ -229,25 +207,29 @@ namespace EPIC.Api.Controllers
                         now,
                         billingCycle);
 
-            // -----------------------------------------------------
-            // Create subscription
-            // -----------------------------------------------------
+            var amount =
+                billingCycle.Equals(
+                    "Annual",
+                    StringComparison.OrdinalIgnoreCase)
+                    ? plan.AnnualPrice
+                    : plan.MonthlyPrice;
 
             var subscription = new Subscription
             {
+                CustomerId =
+                    customer.CustomerId,
+
                 ChurchName =
-                    request.ChurchName.Trim(),
+                    customer.ChurchName,
 
                 ContactName =
-                    request.ContactName?.Trim()
-                    ?? string.Empty,
+                    customer.ContactPerson,
 
                 ContactEmail =
-                    contactEmail,
+                    customer.Email,
 
                 ContactPhone =
-                    request.ContactPhone?.Trim()
-                    ?? string.Empty,
+                    customer.Phone ?? string.Empty,
 
                 SubscriptionPlanId =
                     plan.SubscriptionPlanId,
@@ -281,14 +263,10 @@ namespace EPIC.Api.Controllers
                 CancelledDate =
                     null,
 
-                PaymentCustomerId =
-                    null,
-
-                PaymentSubscriptionId =
-                    null,
-
                 Notes =
-                    request.Notes?.Trim(),
+                    string.IsNullOrWhiteSpace(request.Notes)
+                        ? null
+                        : request.Notes.Trim(),
 
                 CreatedDate =
                     now,
@@ -301,32 +279,34 @@ namespace EPIC.Api.Controllers
 
             await _context.SaveChangesAsync();
 
-            // -----------------------------------------------------
-            // Load plan
-            // -----------------------------------------------------
-
-            await _context.Entry(subscription)
-                .Reference(s => s.SubscriptionPlan)
-                .LoadAsync();
-
             return CreatedAtAction(
                 nameof(GetSubscription),
                 new
                 {
                     id = subscription.SubscriptionId
                 },
-                subscription);
+                new
+                {
+                    success = true,
+                    message =
+                        "Subscription created successfully.",
+
+                    subscription =
+                        ToResponseDto(
+                            subscription,
+                            plan.PlanName)
+                });
         }
 
         // =========================================================
-        // UPDATE SUBSCRIPTION
-        // PUT: api/Subscriptions/5
+        // UPDATE
+        // PUT: api/Subscriptions/{id}
         // =========================================================
 
         [HttpPut("{id:int}")]
         public async Task<IActionResult> UpdateSubscription(
             int id,
-            [FromBody] Subscription request)
+            [FromBody] UpdateSubscriptionDto request)
         {
             if (id <= 0)
             {
@@ -340,13 +320,9 @@ namespace EPIC.Api.Controllers
             {
                 return BadRequest(new
                 {
-                    message = "Subscription data is required."
+                    message =
+                        "Subscription data is required."
                 });
-            }
-
-            if (!ModelState.IsValid)
-            {
-                return ValidationProblem(ModelState);
             }
 
             var subscription =
@@ -358,140 +334,130 @@ namespace EPIC.Api.Controllers
             {
                 return NotFound(new
                 {
-                    message = "Subscription not found."
-                });
-            }
-
-            // -----------------------------------------------------
-            // Validate plan
-            // -----------------------------------------------------
-
-            if (request.SubscriptionPlanId <= 0)
-            {
-                return BadRequest(new
-                {
                     message =
-                        "A valid subscription plan is required."
+                        "Subscription not found."
                 });
             }
 
-            var plan =
-                await _context.SubscriptionPlans
-                    .FirstOrDefaultAsync(p =>
-                        p.SubscriptionPlanId ==
-                        request.SubscriptionPlanId);
+            // =====================================================
+            // CUSTOMER
+            // =====================================================
 
-            if (plan == null)
+            if (request.CustomerId.HasValue)
             {
-                return BadRequest(new
+                if (request.CustomerId.Value <= 0)
                 {
-                    message =
-                        "Subscription plan not found."
-                });
-            }
+                    return BadRequest(new
+                    {
+                        message =
+                            "Invalid customer ID."
+                    });
+                }
 
-            // -----------------------------------------------------
-            // Billing cycle
-            // -----------------------------------------------------
+                var customer =
+                    await _context.Customers
+                        .FirstOrDefaultAsync(c =>
+                            c.CustomerId ==
+                            request.CustomerId.Value);
 
-            var billingCycle =
-                NormalizeBillingCycle(
-                    request.BillingCycle);
-
-            if (billingCycle == null)
-            {
-                billingCycle =
-                    NormalizeBillingCycle(
-                        subscription.BillingCycle);
-            }
-
-            if (billingCycle == null)
-            {
-                return BadRequest(new
+                if (customer == null)
                 {
-                    message =
-                        "Billing cycle must be either Monthly or Annual."
-                });
+                    return NotFound(new
+                    {
+                        message =
+                            "Customer not found."
+                    });
+                }
+
+                subscription.CustomerId =
+                    customer.CustomerId;
+
+                subscription.ChurchName =
+                    customer.ChurchName;
+
+                subscription.ContactName =
+                    customer.ContactPerson;
+
+                subscription.ContactEmail =
+                    customer.Email;
+
+                subscription.ContactPhone =
+                    customer.Phone ?? string.Empty;
             }
 
-            // -----------------------------------------------------
-            // Validate church information
-            // -----------------------------------------------------
+            // =====================================================
+            // PLAN
+            // =====================================================
 
-            if (string.IsNullOrWhiteSpace(
-                    request.ChurchName))
+            if (request.SubscriptionPlanId.HasValue)
             {
-                return BadRequest(new
+                if (request.SubscriptionPlanId.Value <= 0)
                 {
-                    message =
-                        "Church name is required."
-                });
+                    return BadRequest(new
+                    {
+                        message =
+                            "Invalid subscription plan."
+                    });
+                }
+
+                var plan =
+                    await _context.SubscriptionPlans
+                        .FirstOrDefaultAsync(p =>
+                            p.SubscriptionPlanId ==
+                            request.SubscriptionPlanId.Value &&
+                            p.IsActive);
+
+                if (plan == null)
+                {
+                    return BadRequest(new
+                    {
+                        message =
+                            "The selected subscription plan is not available."
+                    });
+
+                }
+
+                subscription.SubscriptionPlanId =
+                    plan.SubscriptionPlanId;
             }
 
-            if (string.IsNullOrWhiteSpace(
-                    request.ContactEmail))
-            {
-                return BadRequest(new
-                {
-                    message =
-                        "Contact email is required."
-                });
-            }
-
-            // -----------------------------------------------------
-            // Update subscription
-            // -----------------------------------------------------
-
-            subscription.ChurchName =
-                request.ChurchName.Trim();
-
-            subscription.ContactName =
-                request.ContactName?.Trim()
-                ?? string.Empty;
-
-            subscription.ContactEmail =
-                request.ContactEmail.Trim();
-
-            subscription.ContactPhone =
-                request.ContactPhone?.Trim()
-                ?? string.Empty;
-
-            subscription.SubscriptionPlanId =
-                plan.SubscriptionPlanId;
-
-            subscription.BillingCycle =
-                billingCycle;
-
-            subscription.Amount =
-                billingCycle == "Annual"
-                    ? plan.AnnualPrice
-                    : plan.MonthlyPrice;
-
-            subscription.Currency =
-                string.IsNullOrWhiteSpace(
-                    request.Currency)
-                    ? "PHP"
-                    : request.Currency
-                        .Trim()
-                        .ToUpperInvariant();
-
-            subscription.Notes =
-                request.Notes?.Trim();
-
-            // -----------------------------------------------------
-            // Status
-            // -----------------------------------------------------
+            // =====================================================
+            // BILLING CYCLE
+            // =====================================================
 
             if (!string.IsNullOrWhiteSpace(
-                    request.Status))
+                request.BillingCycle))
             {
-                var normalizedStatus =
+                var billingCycle =
+                    NormalizeBillingCycle(
+                        request.BillingCycle);
+
+                if (billingCycle == null)
+                {
+                    return BadRequest(new
+                    {
+                        message =
+                            "Billing cycle must be either Monthly or Annual."
+                    });
+                }
+
+                subscription.BillingCycle =
+                    billingCycle;
+            }
+
+            // =====================================================
+            // STATUS
+            // =====================================================
+
+            if (!string.IsNullOrWhiteSpace(
+                request.Status))
+            {
+                var status =
                     request.Status
                         .Trim()
                         .ToUpperInvariant();
 
-                if (!AllowedStatuses.Contains(
-                        normalizedStatus))
+                if (!AllowedStatuses.Contains(status))
                 {
                     return BadRequest(new
                     {
@@ -500,25 +466,123 @@ namespace EPIC.Api.Controllers
                     });
                 }
 
+                var previousStatus =
+                    subscription.Status
+                        .Trim()
+                        .ToUpperInvariant();
+
                 subscription.Status =
-                    normalizedStatus;
+                    status;
+
+                // -------------------------------------------------
+                // CANCEL
+                // -------------------------------------------------
+
+                if (status == "CANCELLED" &&
+                    previousStatus != "CANCELLED")
+                {
+                    var now = DateTime.UtcNow;
+
+                    subscription.CancelledDate =
+                        now;
+
+                    subscription.EndDate =
+                        now;
+                }
+
+                // -------------------------------------------------
+                // RESTORE
+                // -------------------------------------------------
+
+                if (status != "CANCELLED" &&
+                    previousStatus == "CANCELLED")
+                {
+                    subscription.CancelledDate =
+                        null;
+
+                    subscription.EndDate =
+                        null;
+                }
+            }
+
+            // =====================================================
+            // NOTES
+            // =====================================================
+
+            if (request.Notes != null)
+            {
+                subscription.Notes =
+                    string.IsNullOrWhiteSpace(
+                        request.Notes)
+                        ? null
+                        : request.Notes.Trim();
+            }
+
+            // =====================================================
+            // CURRENT PLAN
+            // =====================================================
+
+            var currentPlan =
+                await _context.SubscriptionPlans
+                    .FirstOrDefaultAsync(p =>
+                        p.SubscriptionPlanId ==
+                        subscription.SubscriptionPlanId &&
+                        p.IsActive);
+
+            if (currentPlan == null)
+            {
+                return BadRequest(new
+                {
+                    message =
+                        "Subscription plan not found or inactive."
+                });
+            }
+
+            // =====================================================
+            // UPDATE PRICE
+            // =====================================================
+
+            subscription.Amount =
+                subscription.BillingCycle.Equals(
+                    "Annual",
+                    StringComparison.OrdinalIgnoreCase)
+                    ? currentPlan.AnnualPrice
+                    : currentPlan.MonthlyPrice;
+
+            // =====================================================
+            // UPDATE BILLING DATE
+            // =====================================================
+
+            if (subscription.Status != "CANCELLED" &&
+                subscription.Status != "EXPIRED")
+            {
+                subscription.NextBillingDate =
+                    CalculateNextBillingDate(
+                        subscription.StartDate,
+                        subscription.BillingCycle);
             }
 
             subscription.UpdatedDate =
-                DateTime.Now;
+                DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
 
-            await _context.Entry(subscription)
-                .Reference(s => s.SubscriptionPlan)
-                .LoadAsync();
+            return Ok(new
+            {
+                success = true,
+                message =
+                    "Subscription updated successfully.",
 
-            return Ok(subscription);
+                subscription =
+                    ToResponseDto(
+                        subscription,
+                        currentPlan.PlanName)
+            });
         }
 
         // =========================================================
-        // CANCEL SUBSCRIPTION
-        // POST: api/Subscriptions/5/cancel
+        // CANCEL
+        // POST: api/Subscriptions/{id}/cancel
         // =========================================================
 
         [HttpPost("{id:int}/cancel")]
@@ -548,8 +612,12 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            if (subscription.Status ==
-                "CANCELLED")
+            var currentStatus =
+                subscription.Status
+                    .Trim()
+                    .ToUpperInvariant();
+
+            if (currentStatus == "CANCELLED")
             {
                 return BadRequest(new
                 {
@@ -558,7 +626,16 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            var now = DateTime.Now;
+            if (currentStatus == "EXPIRED")
+            {
+                return BadRequest(new
+                {
+                    message =
+                        "An expired subscription cannot be cancelled."
+                });
+            }
+
+            var now = DateTime.UtcNow;
 
             subscription.Status =
                 "CANCELLED";
@@ -569,6 +646,9 @@ namespace EPIC.Api.Controllers
             subscription.EndDate =
                 now;
 
+            subscription.NextBillingDate =
+                null;
+
             subscription.UpdatedDate =
                 now;
 
@@ -576,23 +656,21 @@ namespace EPIC.Api.Controllers
 
             return Ok(new
             {
+                success = true,
+
                 message =
                     "Subscription cancelled successfully.",
 
-                subscriptionId =
-                    subscription.SubscriptionId,
-
-                status =
-                    subscription.Status,
-
-                cancelledDate =
-                    subscription.CancelledDate
+                subscription =
+                    ToResponseDto(
+                        subscription,
+                        null)
             });
         }
 
         // =========================================================
-        // RENEW SUBSCRIPTION
-        // POST: api/Subscriptions/5/renew
+        // RENEW
+        // POST: api/Subscriptions/{id}/renew
         // =========================================================
 
         [HttpPost("{id:int}/renew")]
@@ -610,7 +688,6 @@ namespace EPIC.Api.Controllers
 
             var subscription =
                 await _context.Subscriptions
-                    .Include(s => s.SubscriptionPlan)
                     .FirstOrDefaultAsync(s =>
                         s.SubscriptionId == id);
 
@@ -623,47 +700,69 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            if (subscription.SubscriptionPlan == null)
+            var currentStatus =
+                subscription.Status
+                    .Trim()
+                    .ToUpperInvariant();
+
+            if (!RenewableStatuses.Contains(
+                currentStatus))
             {
                 return BadRequest(new
                 {
                     message =
-                        "The subscription does not have a valid subscription plan."
+                        $"A subscription with status '{subscription.Status}' cannot be renewed."
                 });
             }
 
-            if (subscription.Status ==
-                "CANCELLED")
+            var plan =
+                await _context.SubscriptionPlans
+                    .FirstOrDefaultAsync(p =>
+                        p.SubscriptionPlanId ==
+                        subscription.SubscriptionPlanId &&
+                        p.IsActive);
+
+            if (plan == null)
             {
                 return BadRequest(new
                 {
                     message =
-                        "A cancelled subscription cannot be renewed."
+                        "The subscription does not have a valid active subscription plan."
                 });
             }
 
             var now =
-                DateTime.Now;
+                DateTime.UtcNow;
+
+            var amount =
+                subscription.BillingCycle.Equals(
+                    "Annual",
+                    StringComparison.OrdinalIgnoreCase)
+                    ? plan.AnnualPrice
+                    : plan.MonthlyPrice;
 
             subscription.Status =
                 "ACTIVE";
 
-            subscription.CancelledDate =
-                null;
+            subscription.Amount =
+                amount;
+
+            subscription.Currency =
+                "PHP";
+
+            subscription.StartDate =
+                now;
 
             subscription.EndDate =
+                null;
+
+            subscription.CancelledDate =
                 null;
 
             subscription.NextBillingDate =
                 CalculateNextBillingDate(
                     now,
                     subscription.BillingCycle);
-
-            subscription.Amount =
-                subscription.BillingCycle ==
-                "Annual"
-                    ? subscription.SubscriptionPlan.AnnualPrice
-                    : subscription.SubscriptionPlan.MonthlyPrice;
 
             subscription.UpdatedDate =
                 now;
@@ -672,31 +771,26 @@ namespace EPIC.Api.Controllers
 
             return Ok(new
             {
+                success = true,
+
                 message =
                     "Subscription renewed successfully.",
 
-                subscriptionId =
-                    subscription.SubscriptionId,
-
-                status =
-                    subscription.Status,
-
-                amount =
-                    subscription.Amount,
-
-                nextBillingDate =
-                    subscription.NextBillingDate
+                subscription =
+                    ToResponseDto(
+                        subscription,
+                        plan.PlanName)
             });
         }
 
         // =========================================================
-        // GET PAYMENT HISTORY
-        // GET: api/Subscriptions/5/payments
+        // PAYMENT HISTORY
+        // GET: api/Subscriptions/{id}/payments
         // =========================================================
 
         [HttpGet("{id:int}/payments")]
-        public async Task<ActionResult<IEnumerable<Payment>>>
-            GetPayments(int id)
+        public async Task<IActionResult> GetPayments(
+            int id)
         {
             if (id <= 0)
             {
@@ -707,12 +801,12 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            var subscriptionExists =
+            var exists =
                 await _context.Subscriptions
                     .AnyAsync(s =>
                         s.SubscriptionId == id);
 
-            if (!subscriptionExists)
+            if (!exists)
             {
                 return NotFound(new
                 {
@@ -734,21 +828,21 @@ namespace EPIC.Api.Controllers
         }
 
         // =========================================================
-        // GET ACTIVE SUBSCRIPTIONS
+        // ACTIVE / TRIAL
         // GET: api/Subscriptions/active
         // =========================================================
 
         [HttpGet("active")]
-        public async Task<ActionResult<IEnumerable<Subscription>>>
+        public async Task<IActionResult>
             GetActiveSubscriptions()
         {
             var subscriptions =
                 await _context.Subscriptions
                     .AsNoTracking()
-                    .Include(s => s.SubscriptionPlan)
                     .Where(s =>
                         s.Status == "TRIAL" ||
                         s.Status == "ACTIVE")
+                    .Select(ToResponse())
                     .OrderByDescending(s =>
                         s.CreatedDate)
                     .ToListAsync();
@@ -757,12 +851,12 @@ namespace EPIC.Api.Controllers
         }
 
         // =========================================================
-        // GET SUBSCRIPTIONS BY STATUS
-        // GET: api/Subscriptions/status/ACTIVE
+        // BY STATUS
+        // GET: api/Subscriptions/status/{status}
         // =========================================================
 
         [HttpGet("status/{status}")]
-        public async Task<ActionResult<IEnumerable<Subscription>>>
+        public async Task<IActionResult>
             GetByStatus(string status)
         {
             if (string.IsNullOrWhiteSpace(status))
@@ -778,7 +872,7 @@ namespace EPIC.Api.Controllers
                 status.Trim().ToUpperInvariant();
 
             if (!AllowedStatuses.Contains(
-                    normalizedStatus))
+                normalizedStatus))
             {
                 return BadRequest(new
                 {
@@ -790,9 +884,10 @@ namespace EPIC.Api.Controllers
             var subscriptions =
                 await _context.Subscriptions
                     .AsNoTracking()
-                    .Include(s => s.SubscriptionPlan)
                     .Where(s =>
-                        s.Status == normalizedStatus)
+                        s.Status ==
+                        normalizedStatus)
+                    .Select(ToResponse())
                     .OrderByDescending(s =>
                         s.CreatedDate)
                     .ToListAsync();
@@ -808,24 +903,24 @@ namespace EPIC.Api.Controllers
             string? billingCycle)
         {
             if (string.IsNullOrWhiteSpace(
-                    billingCycle))
+                billingCycle))
             {
                 return null;
             }
 
-            var normalized =
+            var value =
                 billingCycle.Trim();
 
-            if (normalized.Equals(
-                    "Monthly",
-                    StringComparison.OrdinalIgnoreCase))
+            if (value.Equals(
+                "Monthly",
+                StringComparison.OrdinalIgnoreCase))
             {
                 return "Monthly";
             }
 
-            if (normalized.Equals(
-                    "Annual",
-                    StringComparison.OrdinalIgnoreCase))
+            if (value.Equals(
+                "Annual",
+                StringComparison.OrdinalIgnoreCase))
             {
                 return "Annual";
             }
@@ -833,16 +928,242 @@ namespace EPIC.Api.Controllers
             return null;
         }
 
-        private static DateTime CalculateNextBillingDate(
-            DateTime startDate,
-            string billingCycle)
+        private static DateTime
+            CalculateNextBillingDate(
+                DateTime startDate,
+                string billingCycle)
         {
             return billingCycle.Equals(
-                    "Annual",
-                    StringComparison.OrdinalIgnoreCase)
+                "Annual",
+                StringComparison.OrdinalIgnoreCase)
                 ? startDate.AddYears(1)
                 : startDate.AddMonths(1);
         }
+
+        private static Expression
+            <Func<Subscription,
+                SubscriptionResponseDto>>
+            ToResponse()
+        {
+            return s =>
+                new SubscriptionResponseDto
+                {
+                    SubscriptionId =
+                        s.SubscriptionId,
+
+                    CustomerId =
+                        s.CustomerId,
+
+                    ChurchName =
+                        s.ChurchName,
+
+                    ContactName =
+                        s.ContactName,
+
+                    ContactEmail =
+                        s.ContactEmail,
+
+                    ContactPhone =
+                        s.ContactPhone,
+
+                    SubscriptionPlanId =
+                        s.SubscriptionPlanId,
+
+                    PlanName =
+                        s.SubscriptionPlan != null
+                            ? s.SubscriptionPlan.PlanName
+                            : null,
+
+                    BillingCycle =
+                        s.BillingCycle,
+
+                    Amount =
+                        s.Amount,
+
+                    Currency =
+                        s.Currency,
+
+                    Status =
+                        s.Status,
+
+                    StartDate =
+                        s.StartDate,
+
+                    TrialEndsAt =
+                        s.TrialEndsAt,
+
+                    NextBillingDate =
+                        s.NextBillingDate,
+
+                    EndDate =
+                        s.EndDate,
+
+                    CancelledDate =
+                        s.CancelledDate,
+
+                    Notes =
+                        s.Notes,
+
+                    CreatedDate =
+                        s.CreatedDate,
+
+                    UpdatedDate =
+                        s.UpdatedDate
+                };
+        }
+
+        private static SubscriptionResponseDto
+            ToResponseDto(
+                Subscription s,
+                string? planName)
+        {
+            return new SubscriptionResponseDto
+            {
+                SubscriptionId =
+                    s.SubscriptionId,
+
+                CustomerId =
+                    s.CustomerId,
+
+                ChurchName =
+                    s.ChurchName,
+
+                ContactName =
+                    s.ContactName,
+
+                ContactEmail =
+                    s.ContactEmail,
+
+                ContactPhone =
+                    s.ContactPhone,
+
+                SubscriptionPlanId =
+                    s.SubscriptionPlanId,
+
+                PlanName =
+                    planName,
+
+                BillingCycle =
+                    s.BillingCycle,
+
+                Amount =
+                    s.Amount,
+
+                Currency =
+                    s.Currency,
+
+                Status =
+                    s.Status,
+
+                StartDate =
+                    s.StartDate,
+
+                TrialEndsAt =
+                    s.TrialEndsAt,
+
+                NextBillingDate =
+                    s.NextBillingDate,
+
+                EndDate =
+                    s.EndDate,
+
+                CancelledDate =
+                    s.CancelledDate,
+
+                Notes =
+                    s.Notes,
+
+                CreatedDate =
+                    s.CreatedDate,
+
+                UpdatedDate =
+                    s.UpdatedDate
+            };
+        }
+    }
+
+    // =============================================================
+    // RESPONSE DTO
+    // =============================================================
+
+    public class SubscriptionResponseDto
+    {
+        public int SubscriptionId { get; set; }
+
+        public int CustomerId { get; set; }
+
+        public string? ChurchName { get; set; }
+
+        public string? ContactName { get; set; }
+
+        public string? ContactEmail { get; set; }
+
+        public string? ContactPhone { get; set; }
+
+        public int SubscriptionPlanId { get; set; }
+
+        public string? PlanName { get; set; }
+
+        public string BillingCycle { get; set; }
+            = "Monthly";
+
+        public decimal Amount { get; set; }
+
+        public string Currency { get; set; }
+            = "PHP";
+
+        public string Status { get; set; }
+            = "TRIAL";
+
+        public DateTime StartDate { get; set; }
+
+        public DateTime? TrialEndsAt { get; set; }
+
+        public DateTime? NextBillingDate { get; set; }
+
+        public DateTime? EndDate { get; set; }
+
+        public DateTime? CancelledDate { get; set; }
+
+        public string? Notes { get; set; }
+
+        public DateTime CreatedDate { get; set; }
+
+        public DateTime? UpdatedDate { get; set; }
+    }
+
+    // =============================================================
+    // CREATE DTO
+    // =============================================================
+
+    public class CreateSubscriptionDto
+    {
+        [Required]
+        public int CustomerId { get; set; }
+
+        [Required]
+        public int SubscriptionPlanId { get; set; }
+
+        public string BillingCycle { get; set; }
+            = "Monthly";
+
+        public string? Notes { get; set; }
+    }
+
+    // =============================================================
+    // UPDATE DTO
+    // =============================================================
+
+    public class UpdateSubscriptionDto
+    {
+        public int? CustomerId { get; set; }
+
+        public int? SubscriptionPlanId { get; set; }
+
+        public string? BillingCycle { get; set; }
+
+        public string? Status { get; set; }
+
+        public string? Notes { get; set; }
     }
 }
-

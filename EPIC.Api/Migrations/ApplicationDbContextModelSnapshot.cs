@@ -44,7 +44,8 @@ namespace EPIC.Api.Migrations
 
                     b.Property<string>("RecordedBy")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
 
                     b.Property<DateTime>("RecordedDate")
                         .HasColumnType("datetime2");
@@ -55,7 +56,8 @@ namespace EPIC.Api.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
 
                     b.HasKey("AttendanceId");
 
@@ -83,7 +85,8 @@ namespace EPIC.Api.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CRBreakPassId"));
 
                     b.Property<string>("CreatedBy")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
 
                     b.Property<DateTime?>("ExpiresAt")
                         .HasColumnType("datetime2");
@@ -96,15 +99,18 @@ namespace EPIC.Api.Migrations
 
                     b.Property<string>("PassCode")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("QrToken")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
 
                     b.Property<DateTime?>("TimeIn")
                         .HasColumnType("datetime2");
@@ -407,6 +413,64 @@ namespace EPIC.Api.Migrations
                     b.ToTable("CourseModules");
                 });
 
+            modelBuilder.Entity("EPIC.Api.Models.Customer", b =>
+                {
+                    b.Property<int>("CustomerId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CustomerId"));
+
+                    b.Property<string>("ChurchName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ContactPerson")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("DemoRequestId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasDefaultValue("Active");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("CustomerId");
+
+                    b.HasIndex("CreatedDate");
+
+                    b.HasIndex("DemoRequestId")
+                        .IsUnique()
+                        .HasFilter("[DemoRequestId] IS NOT NULL");
+
+                    b.HasIndex("Email");
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("Customers");
+                });
+
             modelBuilder.Entity("EPIC.Api.Models.DemoRequest", b =>
                 {
                     b.Property<int>("DemoRequestId")
@@ -427,8 +491,14 @@ namespace EPIC.Api.Migrations
                     b.Property<DateTime?>("ContactedDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("ConvertedDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<int?>("CustomerId")
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("DemoDate")
                         .HasColumnType("datetime2");
@@ -442,6 +512,9 @@ namespace EPIC.Api.Migrations
                         .IsRequired()
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
+
+                    b.Property<bool>("IsConverted")
+                        .HasColumnType("bit");
 
                     b.Property<string>("Message")
                         .HasMaxLength(1000)
@@ -1139,61 +1212,77 @@ namespace EPIC.Api.Migrations
 
                     b.Property<string>("Address")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<DateTime?>("BirthDate")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("CivilStatus")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("ContactNumber")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("DateJoined")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("FirstName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Gender")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
 
                     b.Property<string>("LastName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("MemberCode")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("MiddleName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Ministry")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
 
                     b.Property<string>("PhotoPath")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
 
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime2");
 
                     b.HasKey("MemberId");
+
+                    b.HasIndex("CustomerId");
 
                     b.ToTable("Members");
                 });
@@ -1286,24 +1375,23 @@ namespace EPIC.Api.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("Notes")
-                        .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("Position")
-                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Role")
-                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Status")
                         .IsRequired()
+                        .ValueGeneratedOnAdd()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(50)")
+                        .HasDefaultValue("ACTIVE");
 
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime2");
@@ -1313,6 +1401,10 @@ namespace EPIC.Api.Migrations
                     b.HasIndex("MemberId");
 
                     b.HasIndex("MinistryId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("MinistryId", "MemberId");
 
                     b.ToTable("MinistryMembers");
                 });
@@ -1556,8 +1648,8 @@ namespace EPIC.Api.Migrations
 
                     b.Property<string>("RoleName")
                         .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.HasKey("RoleId");
 
@@ -1618,6 +1710,9 @@ namespace EPIC.Api.Migrations
                         .HasColumnType("nvarchar(10)")
                         .HasDefaultValue("PHP");
 
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("EndDate")
                         .HasColumnType("datetime2");
 
@@ -1660,6 +1755,8 @@ namespace EPIC.Api.Migrations
                     b.HasIndex("ContactEmail");
 
                     b.HasIndex("CreatedDate");
+
+                    b.HasIndex("CustomerId");
 
                     b.HasIndex("Status");
 
@@ -1771,12 +1868,27 @@ namespace EPIC.Api.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("UserId"));
 
+                    b.Property<string>("AccountType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
                     b.Property<string>("ApprovalStatus")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasDefaultValue("APPROVED");
 
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<int?>("CustomerId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("FullName")
                         .IsRequired()
@@ -1784,10 +1896,18 @@ namespace EPIC.Api.Migrations
                         .HasColumnType("nvarchar(150)");
 
                     b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<DateTime?>("LastLoginDate")
+                        .HasColumnType("datetime2");
 
                     b.Property<int?>("MemberId")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("PasswordChangedDate")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
@@ -1796,6 +1916,9 @@ namespace EPIC.Api.Migrations
                     b.Property<int>("RoleId")
                         .HasColumnType("int");
 
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("Username")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -1803,9 +1926,18 @@ namespace EPIC.Api.Migrations
 
                     b.HasKey("UserId");
 
+                    b.HasIndex("ApprovalStatus");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("IsActive");
+
                     b.HasIndex("MemberId");
 
                     b.HasIndex("RoleId");
+
+                    b.HasIndex("Username")
+                        .IsUnique();
 
                     b.ToTable("Users");
                 });
@@ -1840,12 +1972,16 @@ namespace EPIC.Api.Migrations
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("Email")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<string>("FirstName")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<DateTime>("FirstVisitDate")
+                    b.Property<DateTime?>("FirstVisitDate")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("FollowUpStatus")
@@ -1904,6 +2040,8 @@ namespace EPIC.Api.Migrations
 
                     b.HasKey("VisitorId");
 
+                    b.HasIndex("ConvertedMemberId");
+
                     b.HasIndex("VisitorCode")
                         .IsUnique();
 
@@ -1934,15 +2072,23 @@ namespace EPIC.Api.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
+                        .ValueGeneratedOnAdd()
                         .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                        .HasColumnType("nvarchar(50)")
+                        .HasDefaultValue("PRESENT");
 
                     b.Property<int>("VisitorId")
                         .HasColumnType("int");
 
                     b.HasKey("VisitorAttendanceId");
 
+                    b.HasIndex("AttendanceDate");
+
                     b.HasIndex("ChurchServiceId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("VisitorId");
 
                     b.HasIndex("VisitorId", "ChurchServiceId")
                         .IsUnique();
@@ -2183,6 +2329,16 @@ namespace EPIC.Api.Migrations
                     b.Navigation("Course");
                 });
 
+            modelBuilder.Entity("EPIC.Api.Models.Customer", b =>
+                {
+                    b.HasOne("EPIC.Api.Models.DemoRequest", "DemoRequest")
+                        .WithMany()
+                        .HasForeignKey("DemoRequestId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("DemoRequest");
+                });
+
             modelBuilder.Entity("EPIC.Api.Models.EventAssignment", b =>
                 {
                     b.HasOne("EPIC.Api.Models.EventDepartment", "EventDepartment")
@@ -2334,12 +2490,23 @@ namespace EPIC.Api.Migrations
                     b.Navigation("Lesson");
                 });
 
+            modelBuilder.Entity("EPIC.Api.Models.Member", b =>
+                {
+                    b.HasOne("EPIC.Api.Models.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Customer");
+                });
+
             modelBuilder.Entity("EPIC.Api.Models.MinistryMember", b =>
                 {
                     b.HasOne("EPIC.Api.Models.Member", "Member")
                         .WithMany()
                         .HasForeignKey("MemberId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("EPIC.Api.Models.Ministry", "Ministry")
@@ -2388,20 +2555,34 @@ namespace EPIC.Api.Migrations
 
             modelBuilder.Entity("EPIC.Api.Models.Subscription", b =>
                 {
+                    b.HasOne("EPIC.Api.Models.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("EPIC.Api.Models.SubscriptionPlan", "SubscriptionPlan")
                         .WithMany("Subscriptions")
                         .HasForeignKey("SubscriptionPlanId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.Navigation("Customer");
+
                     b.Navigation("SubscriptionPlan");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.User", b =>
                 {
+                    b.HasOne("EPIC.Api.Models.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("EPIC.Api.Models.Member", "Member")
                         .WithMany()
-                        .HasForeignKey("MemberId");
+                        .HasForeignKey("MemberId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("EPIC.Api.Models.Role", "Role")
                         .WithMany("Users")
@@ -2409,9 +2590,20 @@ namespace EPIC.Api.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.Navigation("Customer");
+
                     b.Navigation("Member");
 
                     b.Navigation("Role");
+                });
+
+            modelBuilder.Entity("EPIC.Api.Models.Visitor", b =>
+                {
+                    b.HasOne("EPIC.Api.Models.Member", "ConvertedMember")
+                        .WithMany()
+                        .HasForeignKey("ConvertedMemberId");
+
+                    b.Navigation("ConvertedMember");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.VisitorAttendance", b =>
@@ -2423,7 +2615,7 @@ namespace EPIC.Api.Migrations
                         .IsRequired();
 
                     b.HasOne("EPIC.Api.Models.Visitor", "Visitor")
-                        .WithMany()
+                        .WithMany("VisitorAttendances")
                         .HasForeignKey("VisitorId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -2486,6 +2678,11 @@ namespace EPIC.Api.Migrations
             modelBuilder.Entity("EPIC.Api.Models.SubscriptionPlan", b =>
                 {
                     b.Navigation("Subscriptions");
+                });
+
+            modelBuilder.Entity("EPIC.Api.Models.Visitor", b =>
+                {
+                    b.Navigation("VisitorAttendances");
                 });
 #pragma warning restore 612, 618
         }

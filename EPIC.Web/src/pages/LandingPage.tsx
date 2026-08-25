@@ -453,28 +453,27 @@ const LandingPage: React.FC<LandingPageProps> = ({
                         </button>
                     </nav>
 
-                    <div className="epic-public-nav-actions">
+                 <div className="epic-public-nav-actions">
 
-                        <button
-                            type="button"
-                            className="epic-login-link"
-                            onClick={onLogin}
-                        >
-                            Login
-                        </button>
+   <button
+    type="button"
+    className="epic-client-login-button"
+    onClick={() => navigateTo("client-login")}
+>
+    <span>🔐</span>
+    LOGIN
+</button>
+    <button
+        type="button"
+        className="epic-nav-cta"
+        onClick={() =>
+            navigateTo("contact")
+        }
+    >
+        Connect With Us
+    </button>
 
-                        <button
-                            type="button"
-                            className="epic-nav-cta"
-                            onClick={() =>
-                                navigateTo("contact")
-                            }
-                        >
-                            Connect With Us
-                        </button>
-
-                    </div>
-
+</div>
                     <button
                         type="button"
                         className="epic-mobile-menu"
@@ -538,12 +537,12 @@ const LandingPage: React.FC<LandingPageProps> = ({
                         </button>
 
                         <button
-                            type="button"
-                            className="epic-secondary-button"
-                            onClick={onLogin}
-                        >
-                            Access EPIC System
-                        </button>
+    type="button"
+    className="epic-secondary-button"
+    onClick={onLogin}
+>
+    🔐 Member's Login
+</button>
 
                     </div>
 

@@ -1,17 +1,27 @@
+
 using EPIC.Api.Authorization;
 using EPIC.Api.Data;
 using EPIC.Api.Services;
 using EPIC.Core.Interfaces;
-using Resend;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 
+using Resend;
+
+using System.Security.Claims;
 using System.Text;
 
+// ============================================================
+// BUILDER
+// ============================================================
+
 var builder = WebApplication.CreateBuilder(args);
+
+var configuration = builder.Configuration;
+
 
 // ============================================================
 // CONFIGURATION
@@ -25,54 +35,31 @@ builder.Configuration.Sources
         source.ReloadOnChange = false;
     });
 
-builder.Configuration.Sources.Clear();
-
-builder.Configuration
-    .AddJsonFile(
-        "appsettings.json",
-        optional: false,
-        reloadOnChange: false)
-    .AddJsonFile(
-        $"appsettings.{builder.Environment.EnvironmentName}.json",
-        optional: true,
-        reloadOnChange: false)
-    .AddUserSecrets<Program>(optional: true)
-    .AddEnvironmentVariables();
-
-var configuration = builder.Configuration;
-
 
 // ============================================================
 // RESEND EMAIL SERVICE
 // ============================================================
 
-// ============================================================
-// RESEND EMAIL SERVICE
-// ============================================================
-
-var resendApiKey =
-    configuration["Resend:ApiKey"];
+var resendApiKey = configuration["Resend:ApiKey"];
 
 if (string.IsNullOrWhiteSpace(resendApiKey))
 {
     throw new InvalidOperationException(
-        "Resend API key is missing. Check appsettings.json or environment variables.");
+        "Resend API key is missing. " +
+        "Check appsettings.json, User Secrets, " +
+        "or environment variables.");
 }
 
-// Resend requires HttpClient
 builder.Services.AddHttpClient();
 
-// Configure Resend
 builder.Services.Configure<ResendClientOptions>(
     options =>
     {
         options.ApiToken = resendApiKey;
     });
 
-// Register Resend client
 builder.Services.AddScoped<IResend, ResendClient>();
 
-// Register EPIC email service
 builder.Services.AddScoped<ResendEmailService>();
 
 
@@ -81,8 +68,7 @@ builder.Services.AddScoped<ResendEmailService>();
 // ============================================================
 
 var connectionString =
-    configuration.GetConnectionString(
-        "EPICChurchDB");
+    configuration.GetConnectionString("EPICChurchDB");
 
 if (string.IsNullOrWhiteSpace(connectionString))
 {
@@ -108,77 +94,32 @@ builder.Services.AddControllers();
 // CORS
 // ============================================================
 
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy(
-        "EPICWebPolicy",
-        policy =>
-        {
-            policy
-                .SetIsOriginAllowed(origin =>
-                {
-                    // ------------------------------------------------
-                    // LOCAL DEVELOPMENT
-                    // ------------------------------------------------
-
-                    if (origin.StartsWith(
-                        "http://localhost:",
-                        StringComparison.OrdinalIgnoreCase))
-                    {
-                        return true;
-                    }
-
-
-                    // ------------------------------------------------
-                    // LAN DEVELOPMENT
-                    // ------------------------------------------------
-
-                    if (origin.StartsWith(
-                        "http://192.168.1.10:",
-                        StringComparison.OrdinalIgnoreCase))
-                    {
-                        return true;
-                    }
-
-
-                    // ------------------------------------------------
-                    // PRODUCTION FRONTEND
-                    // ------------------------------------------------
-
-                    if (origin.Equals(
-                        "https://epic-cms.vercel.app",
-                        StringComparison.OrdinalIgnoreCase))
-                    {
-                        return true;
-                    }
-
-
-                    return false;
-                })
-                .AllowAnyHeader()
-                .AllowAnyMethod()
-                .AllowCredentials();
-        });
-});
+builder.Services.AddCors(
+    options =>
+    {
+        options.AddPolicy(
+            "EPICWebPolicy",
+            policy =>
+            {
+                policy
+                    .SetIsOriginAllowed(IsAllowedOrigin)
+                    .AllowAnyHeader()
+                    .AllowAnyMethod()
+                    .AllowCredentials();
+            });
+    });
 
 
 // ============================================================
 // APPLICATION SERVICES
 // ============================================================
 
-// ------------------------------------------------------------
-// PERMISSION SERVICE
-// ------------------------------------------------------------
-
+// Permission service
 builder.Services.AddScoped<
     IPermissionService,
     PermissionService>();
 
-
-// ------------------------------------------------------------
-// SUBSCRIPTION SERVICES
-// ------------------------------------------------------------
-
+// Subscription lifecycle
 builder.Services.AddScoped<
     SubscriptionLifecycleService>();
 
@@ -199,20 +140,17 @@ var jwtIssuer =
 var jwtAudience =
     configuration["Jwt:Audience"];
 
-
 if (string.IsNullOrWhiteSpace(jwtKey))
 {
     throw new InvalidOperationException(
         "JWT Key is missing. Check appsettings.json.");
 }
 
-
 if (string.IsNullOrWhiteSpace(jwtIssuer))
 {
     throw new InvalidOperationException(
         "JWT Issuer is missing. Check appsettings.json.");
 }
-
 
 if (string.IsNullOrWhiteSpace(jwtAudience))
 {
@@ -228,35 +166,237 @@ if (string.IsNullOrWhiteSpace(jwtAudience))
 builder.Services
     .AddAuthentication(
         JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(
-        options =>
-        {
-            options.TokenValidationParameters =
-                new TokenValidationParameters
+    .AddJwtBearer(options =>
+    {
+        // --------------------------------------------------------
+        // HTTPS
+        // --------------------------------------------------------
+
+        options.RequireHttpsMetadata = false;
+
+        options.SaveToken = true;
+
+
+        // --------------------------------------------------------
+        // TOKEN VALIDATION
+        // --------------------------------------------------------
+
+        options.TokenValidationParameters =
+            new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+
+                ValidateAudience = true,
+
+                ValidateLifetime = true,
+
+                ValidateIssuerSigningKey = true,
+
+
+                // ------------------------------------------------
+                // ISSUER
+                // ------------------------------------------------
+
+                ValidIssuer =
+                    jwtIssuer,
+
+
+                // ------------------------------------------------
+                // AUDIENCE
+                // ------------------------------------------------
+
+                ValidAudiences = new[]
                 {
-                    ValidateIssuer = true,
+                    jwtAudience,
+                    "EPIC.Web",
+                    "EPIC.MobileApp"
+                },
 
-                    ValidateAudience = true,
 
-                    ValidateLifetime = true,
+                // ------------------------------------------------
+                // SIGNING KEY
+                // ------------------------------------------------
 
-                    ValidateIssuerSigningKey = true,
+                IssuerSigningKey =
+                    new SymmetricSecurityKey(
+                        Encoding.UTF8.GetBytes(
+                            jwtKey)),
 
-                    ValidIssuer =
-                        jwtIssuer,
+                RoleClaimType = ClaimTypes.Role,
+                NameClaimType = ClaimTypes.Name,
+                // ------------------------------------------------
+                // CLOCK SKEW
+                // ------------------------------------------------
 
-                    ValidAudience =
-                        jwtAudience,
+                ClockSkew =
+                    TimeSpan.Zero
+            };
 
-                    IssuerSigningKey =
-                        new SymmetricSecurityKey(
-                            Encoding.UTF8.GetBytes(
-                                jwtKey)),
 
-                    ClockSkew =
-                        TimeSpan.Zero
-                };
-        });
+        // ========================================================
+        // JWT DEBUGGING
+        // ========================================================
+
+        options.Events =
+            new JwtBearerEvents
+            {
+                // ------------------------------------------------
+                // AUTHENTICATION FAILED
+                // ------------------------------------------------
+
+                OnAuthenticationFailed =
+                    context =>
+                    {
+                        Console.WriteLine();
+
+                        Console.WriteLine(
+                            "================================================");
+
+                        Console.WriteLine(
+                            "JWT AUTHENTICATION FAILED");
+
+                        Console.WriteLine(
+                            "================================================");
+
+                        Console.WriteLine(
+                            "Exception Type:");
+
+                        Console.WriteLine(
+                            context.Exception
+                                .GetType()
+                                .FullName);
+
+                        Console.WriteLine();
+
+                        Console.WriteLine(
+                            "Message:");
+
+                        Console.WriteLine(
+                            context.Exception.Message);
+
+                        Console.WriteLine();
+
+                        Console.WriteLine(
+                            "Full Exception:");
+
+                        Console.WriteLine(
+                            context.Exception);
+
+                        if (context.Exception.InnerException != null)
+                        {
+                            Console.WriteLine();
+
+                            Console.WriteLine(
+                                "Inner Exception:");
+
+                            Console.WriteLine(
+                                context.Exception.InnerException);
+                        }
+
+                        Console.WriteLine(
+                            "================================================");
+
+                        Console.WriteLine();
+
+                        return Task.CompletedTask;
+                    },
+
+
+                // ------------------------------------------------
+                // TOKEN VALIDATED
+                // ------------------------------------------------
+
+                OnTokenValidated =
+                    context =>
+                    {
+                        Console.WriteLine();
+
+                        Console.WriteLine(
+                            "================================================");
+
+                        Console.WriteLine(
+                            "JWT TOKEN VALIDATED");
+
+                        Console.WriteLine(
+                            "================================================");
+
+                        Console.WriteLine(
+                            $"User: {context.Principal?.Identity?.Name}");
+
+                        Console.WriteLine(
+                            $"Authenticated: " +
+                            $"{context.Principal?.Identity?.IsAuthenticated}");
+
+                        Console.WriteLine();
+
+                        foreach (
+                            var claim
+                            in context.Principal?.Claims
+                            ?? Enumerable.Empty<Claim>())
+                        {
+                            Console.WriteLine(
+                                $"CLAIM: {claim.Type} = {claim.Value}");
+                        }
+
+                        Console.WriteLine(
+                            "================================================");
+
+                        Console.WriteLine();
+
+                        return Task.CompletedTask;
+                    },
+
+
+                // ------------------------------------------------
+                // AUTHORIZATION CHALLENGE
+                // ------------------------------------------------
+
+                OnChallenge =
+                    context =>
+                    {
+                        Console.WriteLine();
+
+                        Console.WriteLine(
+                            "================================================");
+
+                        Console.WriteLine(
+                            "JWT AUTHORIZATION CHALLENGE");
+
+                        Console.WriteLine(
+                            "================================================");
+
+                        Console.WriteLine(
+                            $"Error: " +
+                            $"{context.Error ?? "(none)"}");
+
+                        Console.WriteLine(
+                            $"Description: " +
+                            $"{context.ErrorDescription ?? "(none)"}");
+
+                        Console.WriteLine(
+                            $"AuthenticateFailure: " +
+                            $"{context.AuthenticateFailure?.GetType().FullName ?? "(none)"}");
+
+                        if (context.AuthenticateFailure != null)
+                        {
+                            Console.WriteLine();
+
+                            Console.WriteLine(
+                                "Authentication Failure:");
+
+                            Console.WriteLine(
+                                context.AuthenticateFailure);
+                        }
+
+                        Console.WriteLine(
+                            "================================================");
+
+                        Console.WriteLine();
+
+                        return Task.CompletedTask;
+                    }
+            };
+    });
 
 
 // ============================================================
@@ -291,7 +431,7 @@ builder.Services.AddSwaggerGen(
 
 
         // --------------------------------------------------------
-        // JWT SECURITY DEFINITION
+        // BEARER SECURITY DEFINITION
         // --------------------------------------------------------
 
         options.AddSecurityDefinition(
@@ -319,7 +459,7 @@ builder.Services.AddSwaggerGen(
 
 
         // --------------------------------------------------------
-        // JWT SECURITY REQUIREMENT
+        // BEARER SECURITY REQUIREMENT
         // --------------------------------------------------------
 
         options.AddSecurityRequirement(
@@ -379,10 +519,6 @@ app.UseSwaggerUI(
 // ============================================================
 // CORS
 // ============================================================
-//
-// MUST RUN BEFORE AUTHENTICATION/AUTHORIZATION
-//
-// ============================================================
 
 app.UseCors(
     "EPICWebPolicy");
@@ -408,7 +544,7 @@ app.UseStaticFiles(
 // HTTPS REDIRECTION
 // ============================================================
 //
-// INTENTIONALLY DISABLED FOR CURRENT LAN DEVELOPMENT.
+// Disabled for current LAN development.
 //
 // Local:
 // http://localhost:5109
@@ -447,3 +583,51 @@ app.MapControllers();
 // ============================================================
 
 app.Run();
+
+
+// ============================================================
+// CORS HELPER
+// ============================================================
+
+static bool IsAllowedOrigin(
+    string origin)
+{
+    // --------------------------------------------------------
+    // LOCALHOST
+    // --------------------------------------------------------
+
+    if (origin.StartsWith(
+        "http://localhost:",
+        StringComparison.OrdinalIgnoreCase))
+    {
+        return true;
+    }
+
+
+    // --------------------------------------------------------
+    // LAN
+    // --------------------------------------------------------
+
+    if (origin.StartsWith(
+        "http://192.168.1.10:",
+        StringComparison.OrdinalIgnoreCase))
+    {
+        return true;
+    }
+
+
+    // --------------------------------------------------------
+    // PRODUCTION
+    // --------------------------------------------------------
+
+    if (origin.Equals(
+        "https://epic-cms.vercel.app",
+        StringComparison.OrdinalIgnoreCase))
+    {
+        return true;
+    }
+
+
+    return false;
+}
+

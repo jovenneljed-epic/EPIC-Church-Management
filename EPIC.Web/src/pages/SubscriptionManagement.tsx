@@ -5,8 +5,11 @@ import React, {
     useState
 } from "react";
 
-import axios, {
-    AxiosError
+import axios from "axios";
+
+import type {
+    AxiosError,
+    AxiosRequestConfig
 } from "axios";
 
 import { API_BASE_URL } from "../config";
@@ -44,6 +47,7 @@ interface SubscriptionPlan {
 
 interface Subscription {
     subscriptionId: number;
+    customerId: number;
 
     churchName: string;
     contactName: string;
@@ -51,7 +55,7 @@ interface Subscription {
     contactPhone: string;
 
     subscriptionPlanId: number;
-    subscriptionPlan?: SubscriptionPlan | null;
+    planName?: string | null;
 
     billingCycle: string;
 
@@ -62,8 +66,9 @@ interface Subscription {
 
     startDate: string;
     trialEndsAt?: string | null;
-    endDate?: string | null;
     nextBillingDate?: string | null;
+
+    endDate?: string | null;
     cancelledDate?: string | null;
 
     paymentCustomerId?: string | null;
@@ -77,8 +82,15 @@ interface Subscription {
 
 interface Payment {
     paymentId: number;
-
     subscriptionId: number;
+
+    churchName?: string | null;
+    contactName?: string | null;
+    contactEmail?: string | null;
+    contactPhone?: string | null;
+
+    planName?: string | null;
+    billingCycle?: string | null;
 
     amount: number;
     currency: string;
@@ -92,13 +104,26 @@ interface Payment {
     gatewayCheckoutId?: string | null;
     gatewayCustomerId?: string | null;
 
+    billingPeriodStart?: string | null;
+    billingPeriodEnd?: string | null;
+
     invoiceNumber?: string | null;
     receiptNumber?: string | null;
+
+    paidDate?: string | null;
+    failedDate?: string | null;
 
     failureReason?: string | null;
     notes?: string | null;
 
     createdDate: string;
+    updatedDate?: string | null;
+}
+
+interface ApiErrorResponse {
+    message?: string;
+    title?: string;
+    detail?: string;
 }
 
 type FilterStatus =
@@ -110,6 +135,22 @@ type FilterStatus =
     | "EXPIRED"
     | "CANCELLED";
 
+type SubscriptionStatus =
+    | "TRIAL"
+    | "ACTIVE"
+    | "PAST_DUE"
+    | "SUSPENDED"
+    | "EXPIRED"
+    | "CANCELLED"
+    | "UNKNOWN";
+
+type PaymentStatus =
+    | "PENDING"
+    | "PAID"
+    | "FAILED"
+    | "REFUNDED"
+    | "UNKNOWN";
+
 // =========================================================
 // CONSTANTS
 // =========================================================
@@ -120,16 +161,110 @@ const SUBSCRIPTIONS_ENDPOINT =
 const PLANS_ENDPOINT =
     `${API_BASE_URL}/SubscriptionPlans`;
 
-const ACTIVE_STATUSES: string[] = [
+const PAYMENTS_ENDPOINT =
+    `${API_BASE_URL}/Payments`;
+
+const ACTIVE_STATUSES: readonly SubscriptionStatus[] = [
     "TRIAL",
     "ACTIVE",
     "PAST_DUE"
 ];
 
-const RENEWABLE_STATUSES: string[] = [
+const RENEWABLE_STATUSES: readonly SubscriptionStatus[] = [
     "CANCELLED",
     "EXPIRED"
 ];
+
+// =========================================================
+// HELPERS
+// =========================================================
+
+const normalizeStatus = (
+    status?: string | null
+): string => {
+    return (
+        status?.trim().toUpperCase() ||
+        "UNKNOWN"
+    );
+};
+
+const getSubscriptionStatus = (
+    status?: string | null
+): SubscriptionStatus => {
+
+    const normalized =
+        normalizeStatus(status);
+
+    const validStatuses: SubscriptionStatus[] = [
+        "TRIAL",
+        "ACTIVE",
+        "PAST_DUE",
+        "SUSPENDED",
+        "EXPIRED",
+        "CANCELLED",
+        "UNKNOWN"
+    ];
+
+    return validStatuses.includes(
+        normalized as SubscriptionStatus
+    )
+        ? normalized as SubscriptionStatus
+        : "UNKNOWN";
+};
+
+const getPaymentStatus = (
+    status?: string | null
+): PaymentStatus => {
+
+    const normalized =
+        normalizeStatus(status);
+
+    const validStatuses: PaymentStatus[] = [
+        "PENDING",
+        "PAID",
+        "FAILED",
+        "REFUNDED",
+        "UNKNOWN"
+    ];
+
+    return validStatuses.includes(
+        normalized as PaymentStatus
+    )
+        ? normalized as PaymentStatus
+        : "UNKNOWN";
+};
+
+const getStatusLabel = (
+    status?: string | null
+): string => {
+
+    const normalized =
+        normalizeStatus(status);
+
+    const labels: Record<string, string> = {
+        PAST_DUE: "Past Due",
+        CANCELLED: "Cancelled",
+        SUSPENDED: "Suspended",
+        EXPIRED: "Expired",
+        TRIAL: "Trial",
+        ACTIVE: "Active",
+        PENDING: "Pending",
+        PAID: "Paid",
+        FAILED: "Failed",
+        REFUNDED: "Refunded"
+    };
+
+    return labels[normalized] || normalized;
+};
+
+const getStatusClass = (
+    status?: string | null
+): string => {
+
+    return `status-${normalizeStatus(status)
+        .toLowerCase()
+        .replace(/_/g, "-")}`;
+};
 
 // =========================================================
 // COMPONENT
@@ -141,129 +276,236 @@ const SubscriptionManagement: React.FC = () => {
     // STATE
     // =====================================================
 
-    const [
-        subscriptions,
-        setSubscriptions
-    ] = useState<Subscription[]>([]);
+    const [subscriptions, setSubscriptions] =
+        useState<Subscription[]>([]);
 
-    const [
-        plans,
-        setPlans
-    ] = useState<SubscriptionPlan[]>([]);
+    const [plans, setPlans] =
+        useState<SubscriptionPlan[]>([]);
 
-    const [
-        loading,
-        setLoading
-    ] = useState<boolean>(true);
+    const [loading, setLoading] =
+        useState(true);
 
-    const [
-        refreshing,
-        setRefreshing
-    ] = useState<boolean>(false);
+    const [refreshing, setRefreshing] =
+        useState(false);
 
-    const [
-        error,
-        setError
-    ] = useState<string>("");
+    const [error, setError] =
+        useState("");
 
-    const [
-        filter,
-        setFilter
-    ] = useState<FilterStatus>("ALL");
+    const [filter, setFilter] =
+        useState<FilterStatus>("ALL");
 
-    const [
-        search,
-        setSearch
-    ] = useState<string>("");
+    const [search, setSearch] =
+        useState("");
 
-    const [
-        selectedSubscription,
-        setSelectedSubscription
-    ] = useState<Subscription | null>(null);
+    const [selectedSubscription, setSelectedSubscription] =
+        useState<Subscription | null>(null);
 
-    const [
-        selectedPayments,
-        setSelectedPayments
-    ] = useState<Payment[]>([]);
+    const [selectedPayments, setSelectedPayments] =
+        useState<Payment[]>([]);
 
-    const [
-        showDetails,
-        setShowDetails
-    ] = useState<boolean>(false);
+    const [showDetails, setShowDetails] =
+        useState(false);
 
-    const [
-        detailsLoading,
-        setDetailsLoading
-    ] = useState<boolean>(false);
+    const [detailsLoading, setDetailsLoading] =
+        useState(false);
 
-    const [
-        processingId,
-        setProcessingId
-    ] = useState<number | null>(null);
+    const [detailsError, setDetailsError] =
+        useState("");
+
+    const [processingId, setProcessingId] =
+        useState<number | null>(null);
 
     // =====================================================
-    // AUTH CONFIG
+    // AUTH
     // =====================================================
 
-    const getAuthConfig = useCallback(() => {
+    const getAuthConfig =
+        useCallback((): AxiosRequestConfig => {
 
-        const token =
-            localStorage.getItem("token") ||
-            localStorage.getItem("accessToken") ||
-            localStorage.getItem("jwt") ||
-            localStorage.getItem("authToken") ||
-            localStorage.getItem("epicToken");
+            const token =
+                localStorage.getItem("token") ||
+                localStorage.getItem("accessToken") ||
+                localStorage.getItem("jwt") ||
+                localStorage.getItem("authToken") ||
+                localStorage.getItem("epicToken");
 
-        if (!token) {
-            throw new Error(
-                "Authentication token not found."
-            );
-        }
-
-        return {
-            headers: {
-                Authorization:
-                    `Bearer ${token}`
+            if (!token) {
+                throw new Error(
+                    "Authentication token not found. Please log in again."
+                );
             }
-        };
 
-    }, []);
+            return {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            };
+
+        }, []);
 
     // =====================================================
-    // ERROR MESSAGE HELPER
+    // ERROR HANDLING
     // =====================================================
 
-    const getErrorMessage = (
-        error: unknown,
-        fallback: string
-    ): string => {
+    const getErrorMessage =
+        useCallback(
+            (
+                error: unknown,
+                fallback: string
+            ): string => {
 
-        if (
-            axios.isAxiosError(error)
-        ) {
+                if (axios.isAxiosError(error)) {
 
-            const axiosError =
-                error as AxiosError<{
-                    message?: string;
-                    title?: string;
-                }>;
+                    const axiosError =
+                        error as AxiosError<ApiErrorResponse>;
 
-            return (
-                axiosError.response?.data?.message ||
-                axiosError.response?.data?.title ||
-                axiosError.message ||
-                fallback
-            );
-        }
+                    const status =
+                        axiosError.response?.status;
 
-        if (
-            error instanceof Error
-        ) {
-            return error.message;
-        }
+                    switch (status) {
 
-        return fallback;
-    };
+                        case 401:
+                            return "Your session has expired. Please log in again.";
+
+                        case 403:
+                            return "You do not have permission to perform this action.";
+
+                        case 404:
+                            return "The requested resource was not found.";
+
+                        case 500:
+                            return "The server encountered an error. Please try again.";
+
+                        default:
+                            return (
+                                axiosError.response?.data?.message ||
+                                axiosError.response?.data?.detail ||
+                                axiosError.response?.data?.title ||
+                                axiosError.message ||
+                                fallback
+                            );
+                    }
+                }
+
+                if (error instanceof Error) {
+                    return error.message;
+                }
+
+                return fallback;
+
+            },
+            []
+        );
+
+    // =====================================================
+    // FORMATTERS
+    // =====================================================
+
+    const formatCurrency =
+        useCallback(
+            (
+                amount: number | null | undefined,
+                currency = "PHP"
+            ): string => {
+
+                const value =
+                    Number(amount ?? 0);
+
+                try {
+
+                    return new Intl.NumberFormat(
+                        "en-PH",
+                        {
+                            style: "currency",
+                            currency
+                        }
+                    ).format(value);
+
+                } catch {
+
+                    return `₱${value.toLocaleString(
+                        "en-PH",
+                        {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2
+                        }
+                    )}`;
+
+                }
+
+            },
+            []
+        );
+
+    const formatDate =
+        useCallback(
+            (
+                value?: string | null
+            ): string => {
+
+                if (!value) {
+                    return "—";
+                }
+
+                const date =
+                    new Date(value);
+
+                if (
+                    Number.isNaN(
+                        date.getTime()
+                    )
+                ) {
+                    return "—";
+                }
+
+                return date.toLocaleDateString(
+                    "en-PH",
+                    {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric"
+                    }
+                );
+
+            },
+            []
+        );
+
+    const formatDateTime =
+        useCallback(
+            (
+                value?: string | null
+            ): string => {
+
+                if (!value) {
+                    return "—";
+                }
+
+                const date =
+                    new Date(value);
+
+                if (
+                    Number.isNaN(
+                        date.getTime()
+                    )
+                ) {
+                    return "—";
+                }
+
+                return date.toLocaleString(
+                    "en-PH",
+                    {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit"
+                    }
+                );
+
+            },
+            []
+        );
 
     // =====================================================
     // LOAD SUBSCRIPTIONS
@@ -287,6 +529,7 @@ const SubscriptionManagement: React.FC = () => {
                 setSubscriptions(data);
 
                 return data;
+
             },
             [getAuthConfig]
         );
@@ -313,38 +556,37 @@ const SubscriptionManagement: React.FC = () => {
                 setPlans(data);
 
                 return data;
+
             },
             [getAuthConfig]
         );
 
     // =====================================================
-    // LOAD ALL DATA
+    // LOAD DATA
     // =====================================================
 
     const loadData =
         useCallback(
             async (
                 isRefresh = false
-            ) => {
+            ): Promise<void> => {
+
+                if (isRefresh) {
+                    setRefreshing(true);
+                } else {
+                    setLoading(true);
+                }
+
+                setError("");
 
                 try {
-
-                    if (isRefresh) {
-                        setRefreshing(true);
-                    }
-                    else {
-                        setLoading(true);
-                    }
-
-                    setError("");
 
                     await Promise.all([
                         loadSubscriptions(),
                         loadPlans()
                     ]);
 
-                }
-                catch (error) {
+                } catch (error) {
 
                     console.error(
                         "Subscription management load error:",
@@ -358,8 +600,7 @@ const SubscriptionManagement: React.FC = () => {
                         )
                     );
 
-                }
-                finally {
+                } finally {
 
                     setLoading(false);
                     setRefreshing(false);
@@ -369,7 +610,8 @@ const SubscriptionManagement: React.FC = () => {
             },
             [
                 loadSubscriptions,
-                loadPlans
+                loadPlans,
+                getErrorMessage
             ]
         );
 
@@ -378,60 +620,35 @@ const SubscriptionManagement: React.FC = () => {
     // =====================================================
 
     useEffect(() => {
-
-        loadData();
-
+        void loadData();
     }, [loadData]);
 
     // =====================================================
     // STATISTICS
     // =====================================================
 
-    const statistics = useMemo(() => {
+    const statistics =
+        useMemo(() => {
 
-        const total =
-            subscriptions.length;
+            const countByStatus =
+                (status: SubscriptionStatus): number =>
+                    subscriptions.filter(
+                        subscription =>
+                            getSubscriptionStatus(
+                                subscription.status
+                            ) === status
+                    ).length;
 
-        const active =
-            subscriptions.filter(
-                subscription =>
-                    subscription.status === "ACTIVE"
-            ).length;
+            return {
+                total: subscriptions.length,
+                active: countByStatus("ACTIVE"),
+                trial: countByStatus("TRIAL"),
+                pastDue: countByStatus("PAST_DUE"),
+                suspended: countByStatus("SUSPENDED"),
+                cancelled: countByStatus("CANCELLED")
+            };
 
-        const trial =
-            subscriptions.filter(
-                subscription =>
-                    subscription.status === "TRIAL"
-            ).length;
-
-        const pastDue =
-            subscriptions.filter(
-                subscription =>
-                    subscription.status === "PAST_DUE"
-            ).length;
-
-        const suspended =
-            subscriptions.filter(
-                subscription =>
-                    subscription.status === "SUSPENDED"
-            ).length;
-
-        const cancelled =
-            subscriptions.filter(
-                subscription =>
-                    subscription.status === "CANCELLED"
-            ).length;
-
-        return {
-            total,
-            active,
-            trial,
-            pastDue,
-            suspended,
-            cancelled
-        };
-
-    }, [subscriptions]);
+        }, [subscriptions]);
 
     // =====================================================
     // FILTERED SUBSCRIPTIONS
@@ -441,18 +658,20 @@ const SubscriptionManagement: React.FC = () => {
         useMemo(() => {
 
             const searchValue =
-                search
-                    .trim()
-                    .toLowerCase();
+                search.trim().toLowerCase();
 
             return subscriptions.filter(
                 subscription => {
 
-                    const matchesStatus =
-                        filter === "ALL" ||
-                        subscription.status === filter;
+                    const status =
+                        normalizeStatus(
+                            subscription.status
+                        );
 
-                    if (!matchesStatus) {
+                    if (
+                        filter !== "ALL" &&
+                        status !== filter
+                    ) {
                         return false;
                     }
 
@@ -460,38 +679,22 @@ const SubscriptionManagement: React.FC = () => {
                         return true;
                     }
 
-                    const churchName =
-                        subscription.churchName
-                            ?.toLowerCase() || "";
+                    const searchableText = [
+                        subscription.churchName,
+                        subscription.contactName,
+                        subscription.contactEmail,
+                        subscription.contactPhone,
+                        subscription.planName,
+                        subscription.billingCycle,
+                        subscription.status
+                    ]
+                        .filter(Boolean)
+                        .join(" ")
+                        .toLowerCase();
 
-                    const contactName =
-                        subscription.contactName
-                            ?.toLowerCase() || "";
-
-                    const email =
-                        subscription.contactEmail
-                            ?.toLowerCase() || "";
-
-                    const planName =
-                        subscription.subscriptionPlan
-                            ?.planName
-                            ?.toLowerCase() || "";
-
-                    return (
-                        churchName.includes(
-                            searchValue
-                        ) ||
-                        contactName.includes(
-                            searchValue
-                        ) ||
-                        email.includes(
-                            searchValue
-                        ) ||
-                        planName.includes(
-                            searchValue
-                        )
+                    return searchableText.includes(
+                        searchValue
                     );
-
                 }
             );
 
@@ -502,356 +705,242 @@ const SubscriptionManagement: React.FC = () => {
         ]);
 
     // =====================================================
-    // FORMAT CURRENCY
+    // PAYMENT HISTORY
     // =====================================================
 
-    const formatCurrency = (
-        amount: number | null | undefined,
-        currency = "PHP"
-    ): string => {
+    const loadPaymentHistory =
+        useCallback(
+            async (
+                subscriptionId: number
+            ): Promise<void> => {
 
-        const numericAmount =
-            Number(amount || 0);
+                setDetailsLoading(true);
+                setDetailsError("");
+                setSelectedPayments([]);
 
-        try {
+                try {
 
-            return new Intl.NumberFormat(
-                "en-PH",
-                {
-                    style: "currency",
-                    currency
+                    const response =
+                        await axios.get<Payment[]>(
+                            `${PAYMENTS_ENDPOINT}/subscription/${subscriptionId}`,
+                            getAuthConfig()
+                        );
+
+                    const payments =
+                        Array.isArray(response.data)
+                            ? response.data
+                            : [];
+
+                    setSelectedPayments(
+                        payments
+                    );
+
+                } catch (error) {
+
+                    console.error(
+                        "Payment history load error:",
+                        error
+                    );
+
+                    setDetailsError(
+                        getErrorMessage(
+                            error,
+                            "Unable to load payment history."
+                        )
+                    );
+
+                } finally {
+
+                    setDetailsLoading(false);
+
                 }
-            ).format(numericAmount);
 
-        }
-        catch {
-
-            return `₱${numericAmount.toLocaleString(
-                "en-PH",
-                {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                }
-            )}`;
-
-        }
-    };
-
-    // =====================================================
-    // FORMAT DATE
-    // =====================================================
-
-    const formatDate = (
-        value?: string | null
-    ): string => {
-
-        if (!value) {
-            return "—";
-        }
-
-        const date =
-            new Date(value);
-
-        if (
-            Number.isNaN(
-                date.getTime()
-            )
-        ) {
-            return "—";
-        }
-
-        return date.toLocaleDateString(
-            "en-PH",
-            {
-                year: "numeric",
-                month: "short",
-                day: "numeric"
-            }
+            },
+            [
+                getAuthConfig,
+                getErrorMessage
+            ]
         );
-    };
-
-    // =====================================================
-    // NORMALIZE STATUS
-    // =====================================================
-
-    const normalizeStatus = (
-        status?: string | null
-    ): string => {
-
-        return (
-            status ||
-            "UNKNOWN"
-        )
-            .trim()
-            .toUpperCase();
-
-    };
-
-    // =====================================================
-    // STATUS CLASS
-    // =====================================================
-
-    const getStatusClass = (
-        status?: string | null
-    ): string => {
-
-        const normalized =
-            normalizeStatus(status);
-
-        return `status-${normalized
-            .toLowerCase()
-            .replace(/_/g, "-")}`;
-
-    };
-
-    // =====================================================
-    // STATUS LABEL
-    // =====================================================
-
-    const getStatusLabel = (
-        status?: string | null
-    ): string => {
-
-        const normalized =
-            normalizeStatus(status);
-
-        switch (normalized) {
-
-            case "PAST_DUE":
-                return "Past Due";
-
-            case "CANCELLED":
-                return "Cancelled";
-
-            case "SUSPENDED":
-                return "Suspended";
-
-            case "EXPIRED":
-                return "Expired";
-
-            case "TRIAL":
-                return "Trial";
-
-            case "ACTIVE":
-                return "Active";
-
-            default:
-                return normalized;
-
-        }
-    };
 
     // =====================================================
     // VIEW SUBSCRIPTION
     // =====================================================
 
     const viewSubscription =
-        async (
-            subscription: Subscription
-        ) => {
-
-            try {
+        useCallback(
+            async (
+                subscription: Subscription
+            ): Promise<void> => {
 
                 setSelectedSubscription(
                     subscription
                 );
 
                 setSelectedPayments([]);
-
+                setDetailsError("");
                 setShowDetails(true);
 
-                setDetailsLoading(true);
-
-               const response =
-    await axios.get(
-        `${API_BASE_URL}/Subscriptions/${subscription.subscriptionId}/payments`,
-        getAuthConfig()
-    );
-
-                setSelectedPayments(
-                    Array.isArray(response.data)
-                        ? response.data
-                        : []
+                await loadPaymentHistory(
+                    subscription.subscriptionId
                 );
 
-            }
-            catch (error) {
+            },
+            [loadPaymentHistory]
+        );
 
-                console.error(
-                    "Failed to load payment history:",
-                    error
+    // =====================================================
+    // CLOSE MODAL
+    // =====================================================
+
+    const closeDetails =
+        useCallback(() => {
+
+            setShowDetails(false);
+            setSelectedSubscription(null);
+            setSelectedPayments([]);
+            setDetailsError("");
+            setDetailsLoading(false);
+
+        }, []);
+
+    // =====================================================
+    // SUBSCRIPTION ACTION
+    // =====================================================
+
+    const processSubscriptionAction =
+        useCallback(
+            async (
+                subscription: Subscription,
+                action: "cancel" | "renew"
+            ): Promise<void> => {
+
+                const churchName =
+                    subscription.churchName ||
+                    "this church";
+
+                const actionLabel =
+                    action === "cancel"
+                        ? "Cancel"
+                        : "Renew";
+
+                const confirmed =
+                    window.confirm(
+                        `${actionLabel} the subscription for ${churchName}?`
+                    );
+
+                if (!confirmed) {
+                    return;
+                }
+
+                const subscriptionId =
+                    subscription.subscriptionId;
+
+                setProcessingId(
+                    subscriptionId
                 );
 
-                setSelectedPayments([]);
+                setError("");
 
-            }
-            finally {
+                try {
 
-                setDetailsLoading(false);
+                    await axios.post(
+                        `${SUBSCRIPTIONS_ENDPOINT}/${subscriptionId}/${action}`,
+                        {},
+                        getAuthConfig()
+                    );
 
-            }
+                    await loadData(true);
 
-        };
+                    if (
+                        selectedSubscription?.subscriptionId ===
+                        subscriptionId
+                    ) {
+                        closeDetails();
+                    }
+
+                } catch (error) {
+
+                    console.error(
+                        `${actionLabel} subscription error:`,
+                        error
+                    );
+
+                    const message =
+                        getErrorMessage(
+                            error,
+                            `Unable to ${action} subscription.`
+                        );
+
+                    setError(message);
+
+                    window.alert(
+                        message
+                    );
+
+                } finally {
+
+                    setProcessingId(null);
+
+                }
+
+            },
+            [
+                getAuthConfig,
+                loadData,
+                selectedSubscription,
+                closeDetails,
+                getErrorMessage
+            ]
+        );
 
     // =====================================================
-    // CLOSE DETAILS
-    // =====================================================
-
-    const closeDetails = () => {
-
-        setShowDetails(false);
-
-        setSelectedSubscription(null);
-
-        setSelectedPayments([]);
-
-    };
-
-    // =====================================================
-    // CANCEL SUBSCRIPTION
+    // CANCEL
     // =====================================================
 
     const cancelSubscription =
-        async (
-            subscription: Subscription
-        ) => {
+        useCallback(
+            async (
+                subscription: Subscription
+            ) => {
 
-            const confirmed =
-                window.confirm(
-                    `Cancel the subscription for ${subscription.churchName}?`
+                await processSubscriptionAction(
+                    subscription,
+                    "cancel"
                 );
 
-            if (!confirmed) {
-                return;
-            }
-
-            try {
-
-                setProcessingId(
-                    subscription.subscriptionId
-                );
-
-                setError("");
-
-                await axios.post(
-                    `${SUBSCRIPTIONS_ENDPOINT}/${subscription.subscriptionId}/cancel`,
-                    {},
-                    getAuthConfig()
-                );
-
-                await loadData(true);
-
-                if (
-                    selectedSubscription
-                        ?.subscriptionId ===
-                    subscription.subscriptionId
-                ) {
-
-                    closeDetails();
-
-                }
-
-            }
-            catch (error) {
-
-                console.error(
-                    "Cancel subscription error:",
-                    error
-                );
-
-                alert(
-                    getErrorMessage(
-                        error,
-                        "Unable to cancel subscription."
-                    )
-                );
-
-            }
-            finally {
-
-                setProcessingId(null);
-
-            }
-
-        };
+            },
+            [processSubscriptionAction]
+        );
 
     // =====================================================
-    // RENEW SUBSCRIPTION
+    // RENEW
     // =====================================================
 
     const renewSubscription =
-        async (
-            subscription: Subscription
-        ) => {
+        useCallback(
+            async (
+                subscription: Subscription
+            ) => {
 
-            const confirmed =
-                window.confirm(
-                    `Renew the subscription for ${subscription.churchName}?`
+                await processSubscriptionAction(
+                    subscription,
+                    "renew"
                 );
 
-            if (!confirmed) {
-                return;
-            }
-
-            try {
-
-                setProcessingId(
-                    subscription.subscriptionId
-                );
-
-                setError("");
-
-                await axios.post(
-                    `${SUBSCRIPTIONS_ENDPOINT}/${subscription.subscriptionId}/renew`,
-                    {},
-                    getAuthConfig()
-                );
-
-                await loadData(true);
-
-                if (
-                    selectedSubscription
-                        ?.subscriptionId ===
-                    subscription.subscriptionId
-                ) {
-
-                    closeDetails();
-
-                }
-
-            }
-            catch (error) {
-
-                console.error(
-                    "Renew subscription error:",
-                    error
-                );
-
-                alert(
-                    getErrorMessage(
-                        error,
-                        "Unable to renew subscription."
-                    )
-                );
-
-            }
-            finally {
-
-                setProcessingId(null);
-
-            }
-
-        };
+            },
+            [processSubscriptionAction]
+        );
 
     // =====================================================
     // REFRESH
     // =====================================================
 
-    const handleRefresh = () => {
+    const handleRefresh =
+        useCallback(() => {
 
-        loadData(true);
+            void loadData(true);
 
-    };
+        }, [loadData]);
 
     // =====================================================
     // LOADING
@@ -874,8 +963,214 @@ const SubscriptionManagement: React.FC = () => {
 
             </div>
         );
-
     }
+
+    // =====================================================
+    // RENDER PLAN
+    // =====================================================
+
+    const renderPlan =
+        (plan: SubscriptionPlan) => (
+
+            <div
+                className="plan-card"
+                key={plan.subscriptionPlanId}
+            >
+
+                <div className="plan-card-top">
+
+                    <div>
+
+                        <h3>
+                            {plan.planName}
+                        </h3>
+
+                        <p>
+                            {
+                                plan.description ||
+                                "No description available."
+                            }
+                        </p>
+
+                    </div>
+
+                    <span
+                        className={
+                            plan.isActive
+                                ? "plan-active"
+                                : "plan-inactive"
+                        }
+                    >
+                        {plan.isActive
+                            ? "Active"
+                            : "Inactive"}
+                    </span>
+
+                </div>
+
+                <div className="plan-pricing">
+
+                    <div>
+
+                        <small>
+                            Monthly
+                        </small>
+
+                        <strong>
+                            {formatCurrency(
+                                plan.monthlyPrice
+                            )}
+                        </strong>
+
+                    </div>
+
+                    <div>
+
+                        <small>
+                            Annual
+                        </small>
+
+                        <strong>
+                            {formatCurrency(
+                                plan.annualPrice
+                            )}
+                        </strong>
+
+                    </div>
+
+                </div>
+
+                <div className="plan-limits">
+
+                    <span>
+                        👥 {plan.maxUsers} users
+                    </span>
+
+                    <span>
+                        🏠 {plan.maxMembers} members
+                    </span>
+
+                    {plan.trialDays > 0 && (
+
+                        <span>
+                            🎁 {plan.trialDays} day trial
+                        </span>
+
+                    )}
+
+                </div>
+
+            </div>
+        );
+
+    // =====================================================
+    // RENDER PAYMENT
+    // =====================================================
+
+    const renderPayment =
+        (payment: Payment) => (
+
+            <div
+                className="payment-row"
+                key={payment.paymentId}
+            >
+
+                <div>
+
+                    <strong>
+                        {formatCurrency(
+                            payment.amount,
+                            payment.currency
+                        )}
+                    </strong>
+
+                    <span>
+                        {
+                            payment.paymentMethod ||
+                            "Unknown method"
+                        }
+                    </span>
+
+                    {payment.referenceNumber && (
+
+                        <small>
+                            Ref:{" "}
+                            {payment.referenceNumber}
+                        </small>
+
+                    )}
+
+                    {payment.invoiceNumber && (
+
+                        <small>
+                            Invoice:{" "}
+                            {payment.invoiceNumber}
+                        </small>
+
+                    )}
+
+                    {payment.receiptNumber && (
+
+                        <small>
+                            Receipt:{" "}
+                            {payment.receiptNumber}
+                        </small>
+
+                    )}
+
+                </div>
+
+                <div>
+
+                    <span
+                        className={
+                            `payment-status ${getStatusClass(
+                                getPaymentStatus(
+                                    payment.status
+                                )
+                            )}`
+                        }
+                    >
+                        {
+                            getStatusLabel(
+                                payment.status
+                            )
+                        }
+                    </span>
+
+                    <small>
+                        Created:{" "}
+                        {formatDateTime(
+                            payment.createdDate
+                        )}
+                    </small>
+
+                    {payment.paidDate && (
+
+                        <small>
+                            Paid:{" "}
+                            {formatDateTime(
+                                payment.paidDate
+                            )}
+                        </small>
+
+                    )}
+
+                    {payment.failedDate && (
+
+                        <small>
+                            Failed:{" "}
+                            {formatDateTime(
+                                payment.failedDate
+                            )}
+                        </small>
+
+                    )}
+
+                </div>
+
+            </div>
+        );
 
     // =====================================================
     // PAGE
@@ -928,9 +1223,7 @@ const SubscriptionManagement: React.FC = () => {
             {error && (
 
                 <div className="subscription-error">
-
                     {error}
-
                 </div>
 
             )}
@@ -942,7 +1235,6 @@ const SubscriptionManagement: React.FC = () => {
             <div className="subscription-stats">
 
                 <div className="stat-card">
-
                     <span className="stat-label">
                         Total
                     </span>
@@ -950,11 +1242,9 @@ const SubscriptionManagement: React.FC = () => {
                     <strong>
                         {statistics.total}
                     </strong>
-
                 </div>
 
                 <div className="stat-card">
-
                     <span className="stat-label">
                         Active
                     </span>
@@ -962,11 +1252,9 @@ const SubscriptionManagement: React.FC = () => {
                     <strong>
                         {statistics.active}
                     </strong>
-
                 </div>
 
                 <div className="stat-card">
-
                     <span className="stat-label">
                         Trial
                     </span>
@@ -974,11 +1262,9 @@ const SubscriptionManagement: React.FC = () => {
                     <strong>
                         {statistics.trial}
                     </strong>
-
                 </div>
 
                 <div className="stat-card">
-
                     <span className="stat-label">
                         Past Due
                     </span>
@@ -986,11 +1272,9 @@ const SubscriptionManagement: React.FC = () => {
                     <strong>
                         {statistics.pastDue}
                     </strong>
-
                 </div>
 
                 <div className="stat-card">
-
                     <span className="stat-label">
                         Suspended
                     </span>
@@ -998,11 +1282,9 @@ const SubscriptionManagement: React.FC = () => {
                     <strong>
                         {statistics.suspended}
                     </strong>
-
                 </div>
 
                 <div className="stat-card">
-
                     <span className="stat-label">
                         Cancelled
                     </span>
@@ -1010,7 +1292,6 @@ const SubscriptionManagement: React.FC = () => {
                     <strong>
                         {statistics.cancelled}
                     </strong>
-
                 </div>
 
             </div>
@@ -1049,103 +1330,7 @@ const SubscriptionManagement: React.FC = () => {
                 ) : (
 
                     <div className="plans-grid">
-
-                        {plans.map(plan => (
-
-                            <div
-                                className="plan-card"
-                                key={
-                                    plan.subscriptionPlanId
-                                }
-                            >
-
-                                <div className="plan-card-top">
-
-                                    <div>
-
-                                        <h3>
-                                            {plan.planName}
-                                        </h3>
-
-                                        <p>
-                                            {
-                                                plan.description ||
-                                                "No description available."
-                                            }
-                                        </p>
-
-                                    </div>
-
-                                    <span
-                                        className={
-                                            plan.isActive
-                                                ? "plan-active"
-                                                : "plan-inactive"
-                                        }
-                                    >
-                                        {plan.isActive
-                                            ? "Active"
-                                            : "Inactive"}
-                                    </span>
-
-                                </div>
-
-                                <div className="plan-pricing">
-
-                                    <div>
-
-                                        <small>
-                                            Monthly
-                                        </small>
-
-                                        <strong>
-                                            {formatCurrency(
-                                                plan.monthlyPrice
-                                            )}
-                                        </strong>
-
-                                    </div>
-
-                                    <div>
-
-                                        <small>
-                                            Annual
-                                        </small>
-
-                                        <strong>
-                                            {formatCurrency(
-                                                plan.annualPrice
-                                            )}
-                                        </strong>
-
-                                    </div>
-
-                                </div>
-
-                                <div className="plan-limits">
-
-                                    <span>
-                                        👥 {plan.maxUsers} users
-                                    </span>
-
-                                    <span>
-                                        🏠 {plan.maxMembers} members
-                                    </span>
-
-                                    {plan.trialDays > 0 && (
-
-                                        <span>
-                                            🎁 {plan.trialDays} day trial
-                                        </span>
-
-                                    )}
-
-                                </div>
-
-                            </div>
-
-                        ))}
-
+                        {plans.map(renderPlan)}
                     </div>
 
                 )}
@@ -1298,7 +1483,7 @@ const SubscriptionManagement: React.FC = () => {
                                     subscription => {
 
                                         const status =
-                                            normalizeStatus(
+                                            getSubscriptionStatus(
                                                 subscription.status
                                             );
 
@@ -1348,9 +1533,7 @@ const SubscriptionManagement: React.FC = () => {
 
                                                 <td>
                                                     {
-                                                        subscription
-                                                            .subscriptionPlan
-                                                            ?.planName ||
+                                                        subscription.planName ||
                                                         "—"
                                                     }
                                                 </td>
@@ -1401,7 +1584,7 @@ const SubscriptionManagement: React.FC = () => {
                                                             type="button"
                                                             className="view-button"
                                                             onClick={() =>
-                                                                viewSubscription(
+                                                                void viewSubscription(
                                                                     subscription
                                                                 )
                                                             }
@@ -1418,7 +1601,7 @@ const SubscriptionManagement: React.FC = () => {
                                                                 type="button"
                                                                 className="cancel-button"
                                                                 onClick={() =>
-                                                                    cancelSubscription(
+                                                                    void cancelSubscription(
                                                                         subscription
                                                                     )
                                                                 }
@@ -1426,9 +1609,11 @@ const SubscriptionManagement: React.FC = () => {
                                                                     isProcessing
                                                                 }
                                                             >
-                                                                {isProcessing
-                                                                    ? "..."
-                                                                    : "Cancel"}
+                                                                {
+                                                                    isProcessing
+                                                                        ? "..."
+                                                                        : "Cancel"
+                                                                }
                                                             </button>
 
                                                         )}
@@ -1439,7 +1624,7 @@ const SubscriptionManagement: React.FC = () => {
                                                                 type="button"
                                                                 className="renew-button"
                                                                 onClick={() =>
-                                                                    renewSubscription(
+                                                                    void renewSubscription(
                                                                         subscription
                                                                     )
                                                                 }
@@ -1447,9 +1632,11 @@ const SubscriptionManagement: React.FC = () => {
                                                                     isProcessing
                                                                 }
                                                             >
-                                                                {isProcessing
-                                                                    ? "..."
-                                                                    : "Renew"}
+                                                                {
+                                                                    isProcessing
+                                                                        ? "..."
+                                                                        : "Renew"
+                                                                }
                                                             </button>
 
                                                         )}
@@ -1461,7 +1648,6 @@ const SubscriptionManagement: React.FC = () => {
                                             </tr>
 
                                         );
-
                                     }
                                 )
 
@@ -1495,7 +1681,7 @@ const SubscriptionManagement: React.FC = () => {
                         >
 
                             {/* =================================================
-                                MODAL HEADER
+                                HEADER
                             ================================================= */}
 
                             <div className="modal-header">
@@ -1511,7 +1697,8 @@ const SubscriptionManagement: React.FC = () => {
 
                                     <h2>
                                         {
-                                            selectedSubscription.churchName
+                                            selectedSubscription.churchName ||
+                                            "Unnamed Church"
                                         }
                                     </h2>
 
@@ -1529,7 +1716,7 @@ const SubscriptionManagement: React.FC = () => {
                             </div>
 
                             {/* =================================================
-                                MODAL BODY
+                                BODY
                             ================================================= */}
 
                             <div className="modal-body">
@@ -1537,7 +1724,6 @@ const SubscriptionManagement: React.FC = () => {
                                 <div className="detail-grid">
 
                                     <div>
-
                                         <label>
                                             Contact
                                         </label>
@@ -1548,11 +1734,9 @@ const SubscriptionManagement: React.FC = () => {
                                                 "—"
                                             }
                                         </strong>
-
                                     </div>
 
                                     <div>
-
                                         <label>
                                             Email
                                         </label>
@@ -1563,11 +1747,9 @@ const SubscriptionManagement: React.FC = () => {
                                                 "—"
                                             }
                                         </strong>
-
                                     </div>
 
                                     <div>
-
                                         <label>
                                             Phone
                                         </label>
@@ -1578,28 +1760,22 @@ const SubscriptionManagement: React.FC = () => {
                                                 "—"
                                             }
                                         </strong>
-
                                     </div>
 
                                     <div>
-
                                         <label>
                                             Plan
                                         </label>
 
                                         <strong>
                                             {
-                                                selectedSubscription
-                                                    .subscriptionPlan
-                                                    ?.planName ||
+                                                selectedSubscription.planName ||
                                                 "—"
                                             }
                                         </strong>
-
                                     </div>
 
                                     <div>
-
                                         <label>
                                             Status
                                         </label>
@@ -1611,11 +1787,9 @@ const SubscriptionManagement: React.FC = () => {
                                                 )
                                             }
                                         </strong>
-
                                     </div>
 
                                     <div>
-
                                         <label>
                                             Billing Cycle
                                         </label>
@@ -1626,11 +1800,9 @@ const SubscriptionManagement: React.FC = () => {
                                                 "—"
                                             }
                                         </strong>
-
                                     </div>
 
                                     <div>
-
                                         <label>
                                             Amount
                                         </label>
@@ -1641,11 +1813,9 @@ const SubscriptionManagement: React.FC = () => {
                                                 selectedSubscription.currency
                                             )}
                                         </strong>
-
                                     </div>
 
                                     <div>
-
                                         <label>
                                             Start Date
                                         </label>
@@ -1655,11 +1825,9 @@ const SubscriptionManagement: React.FC = () => {
                                                 selectedSubscription.startDate
                                             )}
                                         </strong>
-
                                     </div>
 
                                     <div>
-
                                         <label>
                                             Trial Ends
                                         </label>
@@ -1669,11 +1837,9 @@ const SubscriptionManagement: React.FC = () => {
                                                 selectedSubscription.trialEndsAt
                                             )}
                                         </strong>
-
                                     </div>
 
                                     <div>
-
                                         <label>
                                             Next Billing
                                         </label>
@@ -1683,11 +1849,9 @@ const SubscriptionManagement: React.FC = () => {
                                                 selectedSubscription.nextBillingDate
                                             )}
                                         </strong>
-
                                     </div>
 
                                     <div>
-
                                         <label>
                                             Cancelled
                                         </label>
@@ -1697,11 +1861,9 @@ const SubscriptionManagement: React.FC = () => {
                                                 selectedSubscription.cancelledDate
                                             )}
                                         </strong>
-
                                     </div>
 
                                     <div>
-
                                         <label>
                                             End Date
                                         </label>
@@ -1711,7 +1873,6 @@ const SubscriptionManagement: React.FC = () => {
                                                 selectedSubscription.endDate
                                             )}
                                         </strong>
-
                                     </div>
 
                                 </div>
@@ -1757,8 +1918,7 @@ const SubscriptionManagement: React.FC = () => {
                                                     selectedPayments.length
                                                 } payment
                                                 {
-                                                    selectedPayments.length !==
-                                                    1
+                                                    selectedPayments.length !== 1
                                                         ? "s"
                                                         : ""
                                                 }
@@ -1767,6 +1927,14 @@ const SubscriptionManagement: React.FC = () => {
                                         </div>
 
                                     </div>
+
+                                    {detailsError && (
+
+                                        <div className="subscription-error">
+                                            {detailsError}
+                                        </div>
+
+                                    )}
 
                                     {detailsLoading ? (
 
@@ -1784,73 +1952,11 @@ const SubscriptionManagement: React.FC = () => {
 
                                         <div className="payment-list">
 
-                                            {selectedPayments.map(
-                                                payment => (
-
-                                                    <div
-                                                        className="payment-row"
-                                                        key={
-                                                            payment.paymentId
-                                                        }
-                                                    >
-
-                                                        <div>
-
-                                                            <strong>
-                                                                {formatCurrency(
-                                                                    payment.amount,
-                                                                    payment.currency
-                                                                )}
-                                                            </strong>
-
-                                                            <span>
-                                                                {
-                                                                    payment.paymentMethod ||
-                                                                    "Unknown method"
-                                                                }
-                                                            </span>
-
-                                                            {payment.referenceNumber && (
-
-                                                                <small>
-                                                                    Ref:{" "}
-                                                                    {
-                                                                        payment.referenceNumber
-                                                                    }
-                                                                </small>
-
-                                                            )}
-
-                                                        </div>
-
-                                                        <div>
-
-                                                            <span
-                                                                className={
-                                                                    `payment-status ${getStatusClass(
-                                                                        payment.status
-                                                                    )}`
-                                                                }
-                                                            >
-                                                                {
-                                                                    getStatusLabel(
-                                                                        payment.status
-                                                                    )
-                                                                }
-                                                            </span>
-
-                                                            <small>
-                                                                {formatDate(
-                                                                    payment.createdDate
-                                                                )}
-                                                            </small>
-
-                                                        </div>
-
-                                                    </div>
-
+                                            {
+                                                selectedPayments.map(
+                                                    renderPayment
                                                 )
-                                            )}
+                                            }
 
                                         </div>
 

@@ -1,0 +1,1514 @@
+﻿/* =========================================================
+   EPIC CLIENT LOGIN
+   Modern / Professional / Futuristic
+   ========================================================= */
+
+:root {
+    --epic-navy: #07111f;
+    --epic-navy-light: #0c1b2e;
+    --epic-blue: #1677ff;
+    --epic-blue-dark: #0b5ed7;
+    --epic-cyan: #29c7ff;
+
+    --epic-white: #ffffff;
+    --epic-text: #102033;
+    --epic-muted: #64748b;
+    --epic-border: #dbe4ef;
+
+    --epic-success: #159957;
+    --epic-danger: #dc3545;
+
+    --epic-shadow:
+        0 30px 80px rgba(3, 15, 30, 0.18);
+}
+
+/* =========================================================
+   PAGE
+   ========================================================= */
+
+.epic-client-login-page {
+    min-height: 100vh;
+    width: 100%;
+
+    position: relative;
+
+    display: flex;
+    flex-direction: column;
+
+    overflow: hidden;
+
+    background:
+        radial-gradient(
+            circle at 15% 20%,
+            rgba(22, 119, 255, 0.12),
+            transparent 35%
+        ),
+        radial-gradient(
+            circle at 85% 80%,
+            rgba(41, 199, 255, 0.10),
+            transparent 35%
+        ),
+        #f5f8fc;
+
+    color: var(--epic-text);
+
+    font-family:
+        Inter,
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+}
+
+/* =========================================================
+   BACKGROUND GRID
+   ========================================================= */
+
+.epic-client-bg-grid {
+    position: fixed;
+
+    inset: 0;
+
+    pointer-events: none;
+
+    opacity: 0.45;
+
+    background-image:
+        linear-gradient(
+            rgba(22, 119, 255, 0.035) 1px,
+            transparent 1px
+        ),
+        linear-gradient(
+            90deg,
+            rgba(22, 119, 255, 0.035) 1px,
+            transparent 1px
+        );
+
+    background-size:
+        50px 50px;
+
+    mask-image:
+        linear-gradient(
+            to bottom,
+            black,
+            transparent 90%
+        );
+}
+
+/* =========================================================
+   BACKGROUND GLOW
+   ========================================================= */
+
+.epic-client-bg-glow {
+    position: fixed;
+
+    width: 420px;
+    height: 420px;
+
+    border-radius: 50%;
+
+    filter: blur(100px);
+
+    opacity: 0.18;
+
+    pointer-events: none;
+}
+
+.epic-client-bg-glow-one {
+    top: -180px;
+    left: -120px;
+
+    background: #1677ff;
+}
+
+.epic-client-bg-glow-two {
+    right: -150px;
+    bottom: -180px;
+
+    background: #29c7ff;
+}
+
+/* =========================================================
+   TOP BAR
+   ========================================================= */
+
+.epic-client-topbar {
+    position: relative;
+    z-index: 10;
+
+    width: 100%;
+
+    min-height: 76px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding:
+        0 clamp(24px, 5vw, 80px);
+
+    background:
+        rgba(255, 255, 255, 0.90);
+
+    border-bottom:
+        1px solid rgba(219, 228, 239, 0.8);
+
+    backdrop-filter:
+        blur(18px);
+}
+
+/* =========================================================
+   BRAND
+   ========================================================= */
+
+.epic-client-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    border: 0;
+    background: transparent;
+
+    padding: 0;
+
+    cursor: pointer;
+
+    color: var(--epic-text);
+
+    text-align: left;
+}
+
+.epic-client-brand-mark {
+    width: 42px;
+    height: 42px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 11px;
+
+    background:
+        linear-gradient(
+            135deg,
+            var(--epic-blue),
+            var(--epic-cyan)
+        );
+
+    color: white;
+
+    font-size: 20px;
+    font-weight: 900;
+
+    box-shadow:
+        0 10px 25px rgba(22, 119, 255, 0.25);
+}
+
+.epic-client-brand-text {
+    display: flex;
+    flex-direction: column;
+
+    line-height: 1;
+}
+
+.epic-client-brand-text strong {
+    font-size: 16px;
+    font-weight: 900;
+
+    letter-spacing: 0.08em;
+}
+
+.epic-client-brand-text small {
+    margin-top: 5px;
+
+    color: var(--epic-muted);
+
+    font-size: 9px;
+    font-weight: 700;
+
+    letter-spacing: 0.12em;
+}
+
+/* =========================================================
+   BACK BUTTON
+   ========================================================= */
+
+.epic-client-back-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+
+    border: 1px solid var(--epic-border);
+
+    background: rgba(255, 255, 255, 0.85);
+
+    color: #34465a;
+
+    border-radius: 10px;
+
+    padding:
+        10px 16px;
+
+    font-size: 13px;
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition:
+        0.2s ease;
+}
+
+.epic-client-back-button span {
+    font-size: 17px;
+}
+
+.epic-client-back-button:hover {
+    color: var(--epic-blue);
+
+    border-color:
+        rgba(22, 119, 255, 0.35);
+
+    transform:
+        translateX(-2px);
+}
+
+/* =========================================================
+   MAIN
+   ========================================================= */
+
+.epic-client-main {
+    position: relative;
+    z-index: 2;
+
+    flex: 1;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding:
+        60px 24px;
+}
+
+.epic-client-layout {
+    width: min(
+        1180px,
+        100%
+    );
+
+    display: grid;
+
+    grid-template-columns:
+        minmax(0, 1fr)
+        minmax(420px, 500px);
+
+    gap:
+        clamp(50px, 7vw, 100px);
+
+    align-items: center;
+}
+
+/* =========================================================
+   LEFT INTRO
+   ========================================================= */
+
+.epic-client-intro {
+    max-width: 620px;
+}
+
+.epic-client-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+
+    margin-bottom: 24px;
+
+    color: var(--epic-blue);
+
+    font-size: 12px;
+    font-weight: 900;
+
+    letter-spacing: 0.16em;
+}
+
+.epic-status-dot {
+    width: 8px;
+    height: 8px;
+
+    border-radius: 50%;
+
+    background: #19b86b;
+
+    box-shadow:
+        0 0 0 5px rgba(25, 184, 107, 0.10),
+        0 0 15px rgba(25, 184, 107, 0.45);
+}
+
+/* =========================================================
+   LARGE LOGO
+   ========================================================= */
+
+.epic-client-large-logo {
+    width: 76px;
+    height: 76px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    margin-bottom: 20px;
+
+    border-radius: 22px;
+
+    background:
+        linear-gradient(
+            145deg,
+            #07111f,
+            #102d4d
+        );
+
+    box-shadow:
+        0 20px 50px rgba(7, 17, 31, 0.25);
+
+    position: relative;
+}
+
+.epic-client-large-logo::before {
+    content: "";
+
+    position: absolute;
+
+    inset: -1px;
+
+    border-radius: inherit;
+
+    padding: 1px;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(41, 199, 255, 0.8),
+            transparent,
+            rgba(22, 119, 255, 0.7)
+        );
+
+    mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+
+    mask-composite:
+        exclude;
+}
+
+.epic-client-large-logo span {
+    color: white;
+
+    font-size: 36px;
+    font-weight: 950;
+
+    letter-spacing: -0.05em;
+}
+
+/* =========================================================
+   HEADING
+   ========================================================= */
+
+.epic-client-heading {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+
+    margin-bottom: 22px;
+}
+
+.epic-client-epic-word {
+    color: var(--epic-blue);
+
+    font-size: 16px;
+    font-weight: 950;
+
+    letter-spacing: 0.14em;
+}
+
+.epic-client-heading h1 {
+    margin: 0;
+
+    color: var(--epic-navy);
+
+    font-size:
+        clamp(34px, 4vw, 52px);
+
+    line-height: 1;
+
+    font-weight: 900;
+
+    letter-spacing: -0.045em;
+}
+
+.epic-client-intro h2 {
+    margin: 0 0 20px;
+
+    color: var(--epic-navy);
+
+    font-size:
+        clamp(34px, 4vw, 54px);
+
+    line-height: 1.08;
+
+    letter-spacing: -0.045em;
+
+    font-weight: 850;
+}
+
+.epic-client-intro h2 span {
+    color: var(--epic-blue);
+}
+
+.epic-client-description {
+    max-width: 590px;
+
+    margin: 0 0 34px;
+
+    color: #506174;
+
+    font-size: 16px;
+
+    line-height: 1.75;
+}
+
+/* =========================================================
+   FEATURES
+   ========================================================= */
+
+.epic-client-features {
+    display: flex;
+    flex-direction: column;
+
+    gap: 15px;
+
+    margin-bottom: 30px;
+}
+
+.epic-client-feature {
+    display: flex;
+    align-items: center;
+
+    gap: 14px;
+}
+
+.epic-client-feature-icon {
+    flex: 0 0 auto;
+
+    width: 42px;
+    height: 42px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 12px;
+
+    background:
+        rgba(22, 119, 255, 0.09);
+
+    color: var(--epic-blue);
+
+    font-size: 17px;
+    font-weight: 900;
+
+    border:
+        1px solid rgba(22, 119, 255, 0.12);
+}
+
+.epic-client-feature div:last-child {
+    display: flex;
+    flex-direction: column;
+
+    gap: 3px;
+}
+
+.epic-client-feature strong {
+    color: #17283b;
+
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.epic-client-feature span {
+    color: #718096;
+
+    font-size: 12px;
+
+    line-height: 1.5;
+}
+
+/* =========================================================
+   SECURITY NOTE
+   ========================================================= */
+
+.epic-client-security-note {
+    display: flex;
+    align-items: flex-start;
+
+    gap: 12px;
+
+    max-width: 520px;
+
+    padding: 15px 17px;
+
+    border:
+        1px solid rgba(22, 119, 255, 0.12);
+
+    border-radius: 13px;
+
+    background:
+        rgba(255, 255, 255, 0.62);
+
+    backdrop-filter:
+        blur(12px);
+}
+
+.epic-client-security-note > span {
+    color: var(--epic-blue);
+
+    font-size: 15px;
+
+    margin-top: 1px;
+}
+
+.epic-client-security-note strong {
+    display: block;
+
+    color: #26384c;
+
+    font-size: 12px;
+
+    font-weight: 800;
+}
+
+.epic-client-security-note p {
+    margin: 4px 0 0;
+
+    color: #718096;
+
+    font-size: 11px;
+
+    line-height: 1.5;
+}
+
+/* =========================================================
+   LOGIN SECTION
+   ========================================================= */
+
+.epic-client-login-section {
+    width: 100%;
+}
+
+/* =========================================================
+   LOGIN CARD
+   ========================================================= */
+
+.epic-client-login-card {
+    position: relative;
+
+    width: 100%;
+
+    padding:
+        38px;
+
+    border:
+        1px solid rgba(219, 228, 239, 0.95);
+
+    border-radius: 24px;
+
+    background:
+        rgba(255, 255, 255, 0.96);
+
+    box-shadow:
+        var(--epic-shadow);
+
+    backdrop-filter:
+        blur(20px);
+}
+
+.epic-client-login-card::before {
+    content: "";
+
+    position: absolute;
+
+    top: 0;
+    left: 12%;
+    right: 12%;
+
+    height: 2px;
+
+    background:
+        linear-gradient(
+            90deg,
+            transparent,
+            var(--epic-blue),
+            var(--epic-cyan),
+            transparent
+        );
+
+    border-radius: 50%;
+}
+
+/* =========================================================
+   LOGIN CARD HEADER
+   ========================================================= */
+
+.epic-login-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    margin-bottom: 30px;
+}
+
+.epic-login-mini-brand {
+    display: flex;
+    flex-direction: column;
+
+    gap: 4px;
+}
+
+.epic-login-mini-brand span {
+    color: var(--epic-blue);
+
+    font-size: 13px;
+    font-weight: 950;
+
+    letter-spacing: 0.14em;
+}
+
+.epic-login-mini-brand small {
+    color: #8a98a9;
+
+    font-size: 9px;
+    font-weight: 800;
+
+    letter-spacing: 0.13em;
+}
+
+.epic-login-lock {
+    width: 40px;
+    height: 40px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 12px;
+
+    background:
+        rgba(22, 119, 255, 0.09);
+
+    color: var(--epic-blue);
+
+    font-weight: 900;
+}
+
+/* =========================================================
+   LOGIN HEADING
+   ========================================================= */
+
+.epic-login-heading {
+    margin-bottom: 28px;
+}
+
+.epic-login-heading h2 {
+    margin: 0 0 8px;
+
+    color: #102033;
+
+    font-size: 30px;
+
+    line-height: 1.15;
+
+    font-weight: 850;
+
+    letter-spacing: -0.035em;
+}
+
+.epic-login-heading p {
+    margin: 0;
+
+    color: #6b7b8d;
+
+    font-size: 14px;
+
+    line-height: 1.6;
+}
+
+/* =========================================================
+   ALERT
+   ========================================================= */
+
+.epic-login-alert {
+    display: flex;
+    align-items: flex-start;
+
+    gap: 10px;
+
+    margin-bottom: 20px;
+
+    padding: 12px 14px;
+
+    border-radius: 10px;
+
+    font-size: 12px;
+
+    line-height: 1.5;
+}
+
+.epic-login-alert > span {
+    flex: 0 0 auto;
+
+    width: 20px;
+    height: 20px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 50%;
+
+    font-weight: 900;
+}
+
+.epic-login-alert-error {
+    background: #fff2f3;
+
+    color: #9f2632;
+
+    border:
+        1px solid #ffd8dc;
+}
+
+.epic-login-alert-error > span {
+    background: #dc3545;
+    color: white;
+}
+
+.epic-login-alert-success {
+    background: #effbf5;
+
+    color: #147a49;
+
+    border:
+        1px solid #cceedd;
+}
+
+.epic-login-alert-success > span {
+    background: #159957;
+    color: white;
+}
+
+/* =========================================================
+   FORM
+   ========================================================= */
+
+.epic-login-form {
+    display: flex;
+    flex-direction: column;
+
+    gap: 20px;
+}
+
+/* =========================================================
+   FIELD
+   ========================================================= */
+
+.epic-login-field {
+    display: flex;
+    flex-direction: column;
+
+    gap: 8px;
+}
+
+.epic-login-field label {
+    color: #26384b;
+
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.epic-login-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.epic-forgot-button {
+    border: 0;
+
+    padding: 0;
+
+    background: transparent;
+
+    color: var(--epic-blue);
+
+    font-size: 11px;
+    font-weight: 750;
+
+    cursor: pointer;
+}
+
+.epic-forgot-button:hover {
+    text-decoration: underline;
+}
+
+/* =========================================================
+   INPUT
+   ========================================================= */
+
+.epic-login-input-wrapper {
+    position: relative;
+
+    display: flex;
+    align-items: center;
+}
+
+.epic-input-icon {
+    position: absolute;
+
+    left: 15px;
+
+    width: 22px;
+
+    color: #8392a4;
+
+    font-size: 15px;
+    font-weight: 800;
+
+    text-align: center;
+
+    pointer-events: none;
+}
+
+.epic-login-input-wrapper input {
+    width: 100%;
+
+    min-height: 50px;
+
+    padding:
+        0 48px 0 45px;
+
+    border:
+        1px solid #d8e1eb;
+
+    border-radius: 11px;
+
+    outline: none;
+
+    background: #fbfcfe;
+
+    color: #152638;
+
+    font-family: inherit;
+
+    font-size: 13px;
+
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease,
+        background 0.2s ease;
+}
+
+.epic-login-input-wrapper input::placeholder {
+    color: #a0adbb;
+}
+
+.epic-login-input-wrapper input:hover {
+    border-color: #bdcad8;
+}
+
+.epic-login-input-wrapper input:focus {
+    background: white;
+
+    border-color: var(--epic-blue);
+
+    box-shadow:
+        0 0 0 4px rgba(22, 119, 255, 0.09);
+}
+
+.epic-login-input-wrapper input:disabled {
+    cursor: not-allowed;
+
+    opacity: 0.65;
+}
+
+/* =========================================================
+   SHOW PASSWORD
+   ========================================================= */
+
+.epic-show-password {
+    position: absolute;
+
+    right: 13px;
+
+    border: 0;
+
+    padding: 5px;
+
+    background: transparent;
+
+    color: var(--epic-blue);
+
+    font-size: 11px;
+    font-weight: 800;
+
+    cursor: pointer;
+}
+
+.epic-show-password:hover {
+    color: var(--epic-blue-dark);
+}
+
+.epic-show-password:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+/* =========================================================
+   LOGIN OPTIONS
+   ========================================================= */
+
+.epic-login-options {
+    display: flex;
+    align-items: center;
+
+    margin-top: -2px;
+}
+
+.epic-remember {
+    display: inline-flex;
+    align-items: center;
+
+    gap: 9px;
+
+    color: #68788a;
+
+    font-size: 12px;
+
+    cursor: pointer;
+
+    user-select: none;
+}
+
+.epic-remember input {
+    position: absolute;
+
+    opacity: 0;
+
+    pointer-events: none;
+}
+
+.epic-custom-checkbox {
+    width: 17px;
+    height: 17px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border:
+        1px solid #c9d4df;
+
+    border-radius: 5px;
+
+    background: white;
+
+    color: transparent;
+
+    font-size: 10px;
+    font-weight: 900;
+}
+
+.epic-remember input:checked + .epic-custom-checkbox {
+    border-color: var(--epic-blue);
+
+    background: var(--epic-blue);
+
+    color: white;
+}
+
+/* =========================================================
+   SIGN IN BUTTON
+   ========================================================= */
+
+.epic-client-signin-button {
+    width: 100%;
+
+    min-height: 52px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: 10px;
+
+    margin-top: 2px;
+
+    border: 0;
+
+    border-radius: 11px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #0b63df,
+            #1677ff 55%,
+            #159fe9
+        );
+
+    color: white;
+
+    font-family: inherit;
+
+    font-size: 14px;
+    font-weight: 850;
+
+    cursor: pointer;
+
+    box-shadow:
+        0 12px 25px rgba(22, 119, 255, 0.24);
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        opacity 0.2s ease;
+}
+
+.epic-client-signin-button span {
+    font-size: 18px;
+}
+
+.epic-client-signin-button:hover:not(:disabled) {
+    transform:
+        translateY(-2px);
+
+    box-shadow:
+        0 16px 32px rgba(22, 119, 255, 0.30);
+}
+
+.epic-client-signin-button:active:not(:disabled) {
+    transform:
+        translateY(0);
+}
+
+.epic-client-signin-button:disabled {
+    cursor: not-allowed;
+
+    opacity: 0.7;
+}
+
+/* =========================================================
+   SPINNER
+   ========================================================= */
+
+.epic-login-spinner {
+    width: 17px;
+    height: 17px;
+
+    border:
+        2px solid rgba(255, 255, 255, 0.35);
+
+    border-top-color: white;
+
+    border-radius: 50%;
+
+    animation:
+        epicClientSpin 0.7s linear infinite;
+}
+
+@keyframes epicClientSpin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* =========================================================
+   DIVIDER
+   ========================================================= */
+
+.epic-login-divider {
+    display: flex;
+    align-items: center;
+
+    gap: 12px;
+
+    margin:
+        26px 0;
+}
+
+.epic-login-divider span {
+    flex: 1;
+
+    height: 1px;
+
+    background: #e4eaf1;
+}
+
+.epic-login-divider strong {
+    color: #9aa7b5;
+
+    font-size: 9px;
+
+    letter-spacing: 0.15em;
+}
+
+/* =========================================================
+   HELP
+   ========================================================= */
+
+.epic-login-help {
+    display: flex;
+    align-items: flex-start;
+
+    gap: 12px;
+
+    padding: 14px;
+
+    border:
+        1px solid #e3eaf2;
+
+    border-radius: 12px;
+
+    background: #f8fafc;
+}
+
+.epic-help-icon {
+    flex: 0 0 auto;
+
+    width: 27px;
+    height: 27px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 50%;
+
+    background:
+        #e8f2ff;
+
+    color: var(--epic-blue);
+
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.epic-login-help strong {
+    display: block;
+
+    margin-bottom: 3px;
+
+    color: #2c3e51;
+
+    font-size: 12px;
+    font-weight: 850;
+}
+
+.epic-login-help p {
+    margin: 0;
+
+    color: #778698;
+
+    font-size: 11px;
+
+    line-height: 1.55;
+}
+
+/* =========================================================
+   FOOTER
+   ========================================================= */
+
+.epic-client-footer {
+    position: relative;
+    z-index: 2;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: 10px;
+
+    min-height: 58px;
+
+    padding:
+        15px 24px;
+
+    color: #8391a1;
+
+    font-size: 10px;
+
+    text-align: center;
+
+    border-top:
+        1px solid rgba(219, 228, 239, 0.75);
+
+    background:
+        rgba(255, 255, 255, 0.55);
+}
+
+.epic-footer-separator {
+    color: #b5c0cb;
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 1000px) {
+
+    .epic-client-layout {
+        grid-template-columns: 1fr;
+
+        max-width: 680px;
+
+        gap: 50px;
+    }
+
+    .epic-client-intro {
+        max-width: none;
+
+        text-align: center;
+    }
+
+    .epic-client-eyebrow {
+        justify-content: center;
+    }
+
+    .epic-client-large-logo {
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .epic-client-heading {
+        justify-content: center;
+    }
+
+    .epic-client-intro h2 {
+        font-size: 42px;
+    }
+
+    .epic-client-description {
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .epic-client-features {
+        max-width: 500px;
+
+        margin-left: auto;
+        margin-right: auto;
+
+        text-align: left;
+    }
+
+    .epic-client-security-note {
+        margin-left: auto;
+        margin-right: auto;
+
+        text-align: left;
+    }
+}
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (max-width: 700px) {
+
+    .epic-client-topbar {
+        min-height: 68px;
+
+        padding:
+            0 18px;
+    }
+
+    .epic-client-brand-text small {
+        display: none;
+    }
+
+    .epic-client-back-button {
+        padding:
+            9px 12px;
+
+        font-size: 11px;
+    }
+
+    .epic-client-main {
+        padding:
+            42px 18px;
+    }
+
+    .epic-client-intro h2 {
+        font-size: 36px;
+    }
+
+    .epic-client-description {
+        font-size: 14px;
+    }
+
+    .epic-client-login-card {
+        padding:
+            28px 22px;
+
+        border-radius: 20px;
+    }
+
+    .epic-client-footer {
+        flex-direction: column;
+
+        gap: 4px;
+    }
+
+    .epic-footer-separator {
+        display: none;
+    }
+}
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 480px) {
+
+    .epic-client-topbar {
+        padding:
+            0 14px;
+    }
+
+    .epic-client-brand-mark {
+        width: 38px;
+        height: 38px;
+
+        border-radius: 10px;
+
+        font-size: 17px;
+    }
+
+    .epic-client-brand-text strong {
+        font-size: 14px;
+    }
+
+    .epic-client-back-button {
+        border: 0;
+
+        background: transparent;
+
+        padding:
+            8px 4px;
+    }
+
+    .epic-client-back-button span {
+        font-size: 15px;
+    }
+
+    .epic-client-main {
+        padding:
+            32px 14px;
+    }
+
+    .epic-client-eyebrow {
+        font-size: 10px;
+
+        letter-spacing: 0.12em;
+    }
+
+    .epic-client-large-logo {
+        width: 64px;
+        height: 64px;
+
+        border-radius: 18px;
+    }
+
+    .epic-client-large-logo span {
+        font-size: 30px;
+    }
+
+    .epic-client-heading {
+        gap: 8px;
+    }
+
+    .epic-client-epic-word {
+        font-size: 12px;
+    }
+
+    .epic-client-heading h1 {
+        font-size: 32px;
+    }
+
+    .epic-client-intro h2 {
+        font-size: 31px;
+    }
+
+    .epic-client-description {
+        font-size: 13px;
+
+        line-height: 1.65;
+    }
+
+    .epic-client-feature-icon {
+        width: 38px;
+        height: 38px;
+    }
+
+    .epic-client-feature strong {
+        font-size: 13px;
+    }
+
+    .epic-client-feature span {
+        font-size: 11px;
+    }
+
+    .epic-client-security-note {
+        padding: 13px;
+    }
+
+    .epic-client-login-card {
+        padding:
+            24px 18px;
+
+        border-radius: 18px;
+    }
+
+    .epic-login-heading h2 {
+        font-size: 27px;
+    }
+
+    .epic-login-heading p {
+        font-size: 13px;
+    }
+
+    .epic-login-input-wrapper input {
+        min-height: 48px;
+
+        font-size: 13px;
+    }
+
+    .epic-client-signin-button {
+        min-height: 50px;
+    }
+}
+
+/* =========================================================
+   REDUCED MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .epic-client-login-page *,
+    .epic-client-login-page *::before,
+    .epic-client-login-page *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}

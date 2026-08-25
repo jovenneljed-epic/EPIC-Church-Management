@@ -5,7 +5,6 @@ namespace EPIC.Api.Services
     public class ResendEmailService
     {
         private readonly IResend _resend;
-
         private readonly IConfiguration _configuration;
 
         public ResendEmailService(
@@ -17,7 +16,44 @@ namespace EPIC.Api.Services
         }
 
         // =====================================================
-        // SEND DEMO REQUEST CONFIRMATION
+        // COMMON EMAIL SENDER
+        // =====================================================
+
+        private async Task SendEmailAsync(
+            string recipientEmail,
+            string subject,
+            string htmlBody)
+        {
+            var fromEmail = _configuration["Resend:FromEmail"];
+
+            if (string.IsNullOrWhiteSpace(fromEmail))
+            {
+                throw new InvalidOperationException(
+                    "Resend FromEmail is not configured.");
+            }
+
+            if (string.IsNullOrWhiteSpace(recipientEmail))
+            {
+                throw new ArgumentException(
+                    "Recipient email is required.",
+                    nameof(recipientEmail));
+            }
+
+            var message = new EmailMessage
+            {
+                From = fromEmail,
+                Subject = subject,
+                HtmlBody = htmlBody
+            };
+
+            message.To.Add(recipientEmail);
+
+            await _resend.EmailSendAsync(message);
+        }
+
+
+        // =====================================================
+        // SEND DEMO REQUEST CONFIRMATION TO REQUESTER
         // =====================================================
 
         public async Task SendDemoRequestConfirmationAsync(
@@ -27,134 +63,639 @@ namespace EPIC.Api.Services
         {
             try
             {
-                var fromEmail =
-                    _configuration["Resend:FromEmail"];
+                var html = $@"
+<!DOCTYPE html>
+<html>
+<body style='
+    margin: 0;
+    padding: 30px;
+    background-color: #f5f7fb;
+    font-family: Arial, sans-serif;
+'>
 
-                if (string.IsNullOrWhiteSpace(fromEmail))
-                {
-                    throw new InvalidOperationException(
-                        "Resend FromEmail is not configured.");
-                }
+<div style='
+    max-width: 600px;
+    margin: auto;
+    background: white;
+    padding: 35px;
+    border-radius: 12px;
+'>
 
-                var message =
-                    new EmailMessage();
+    <h1 style='color: #1e3a8a;'>
+        EPIC
+    </h1>
 
-                message.From =
-                    fromEmail;
+    <h2>
+        Hello {fullName}!
+    </h2>
 
-                message.To.Add(
-                    email);
+    <p>
+        Thank you for your interest in
+        <strong>EPIC Church Management System</strong>.
+    </p>
 
-                message.Subject =
-                    "We received your EPIC Demo Request!";
+    <p>
+        We have successfully received your demo request for:
+    </p>
 
-                message.HtmlBody =
-                    $@"
-                    <!DOCTYPE html>
-                    <html>
-                    <body style=""
-                        font-family: Arial, sans-serif;
-                        background-color: #f5f7fb;
-                        padding: 30px;
-                    "">
+    <div style='
+        background: #f1f5f9;
+        padding: 15px;
+        border-radius: 8px;
+    '>
+        <strong>Church / Organization:</strong>
+        <br />
+        {churchName}
+    </div>
 
-                        <div style=""
-                            max-width: 600px;
-                            margin: auto;
-                            background: white;
-                            padding: 35px;
-                            border-radius: 12px;
-                        "">
+    <p>
+        Our EPIC team will review your request and contact you soon
+        to discuss your personalized system demonstration.
+    </p>
 
-                            <h1 style=""
-                                color: #1e3a8a;
-                            "">
-                                EPIC
-                            </h1>
+    <p>
+        We are excited to show you how EPIC can help your church
+        manage people, ministries, attendance, giving,
+        discipleship, learning, and more.
+    </p>
 
-                            <h2>
-                                Hello {fullName}!
-                            </h2>
+    <br />
 
-                            <p>
-                                Thank you for your interest in
-                                <strong>
-                                    EPIC Church Management System
-                                </strong>.
-                            </p>
+    <p>God bless,</p>
 
-                            <p>
-                                We have successfully received
-                                your demo request for:
-                            </p>
+    <p>
+        <strong>EPIC Team</strong>
+        <br />
+        Engaging People Into Christ
+    </p>
 
-                            <div style=""
-                                background: #f1f5f9;
-                                padding: 15px;
-                                border-radius: 8px;
-                            "">
+</div>
 
-                                <strong>
-                                    Church / Organization:
-                                </strong>
+</body>
+</html>";
 
-                                <br />
-
-                                {churchName}
-
-                            </div>
-
-                            <p>
-                                Our EPIC team will review your
-                                request and contact you soon to
-                                discuss your personalized system
-                                demonstration.
-                            </p>
-
-                            <p>
-                                We are excited to show you how
-                                EPIC can help your church manage
-                                people, ministries, attendance,
-                                giving, discipleship, learning,
-                                and more.
-                            </p>
-
-                            <br />
-
-                            <p>
-                                God bless,
-                            </p>
-
-                            <p>
-                                <strong>
-                                    EPIC Team
-                                </strong>
-
-                                <br />
-
-                                Engaging People Into Christ
-                            </p>
-
-                        </div>
-
-                    </body>
-                    </html>";
-
-                await _resend.EmailSendAsync(
-                    message);
+                await SendEmailAsync(
+                    email,
+                    "We received your EPIC Demo Request!",
+                    html);
             }
             catch (Exception ex)
             {
                 Console.WriteLine(
                     "Failed to send demo confirmation email:");
 
-                Console.WriteLine(
-                    ex.Message);
+                Console.WriteLine(ex.Message);
 
-                // Do not throw here.
-                // The demo request should still succeed
-                // even if email delivery temporarily fails.
+                // Email failure must not prevent
+                // the demo request from being saved.
             }
+        }
+
+
+        // =====================================================
+        // SEND NEW DEMO REQUEST NOTIFICATION TO ADMIN
+        // =====================================================
+
+        public async Task SendNewDemoRequestAdminNotificationAsync(
+            string fullName,
+            string email,
+            string churchName,
+            string? phone,
+            string? position,
+            string? messageText,
+            int demoRequestId)
+        {
+            try
+            {
+                var adminEmail =
+                    _configuration["Resend:AdminEmail"];
+
+                if (string.IsNullOrWhiteSpace(adminEmail))
+                {
+                    throw new InvalidOperationException(
+                        "Resend AdminEmail is not configured.");
+                }
+
+                var safePhone =
+                    string.IsNullOrWhiteSpace(phone)
+                        ? "Not provided"
+                        : phone;
+
+                var safePosition =
+                    string.IsNullOrWhiteSpace(position)
+                        ? "Not provided"
+                        : position;
+
+                var safeMessage =
+                    string.IsNullOrWhiteSpace(messageText)
+                        ? "No message provided."
+                        : messageText;
+
+                var html = $@"
+<!DOCTYPE html>
+<html>
+
+<body style='
+    margin: 0;
+    padding: 30px;
+    background-color: #f5f7fb;
+    font-family: Arial, sans-serif;
+'>
+
+<div style='
+    max-width: 650px;
+    margin: auto;
+    background: #ffffff;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+'>
+
+    <div style='
+        background-color: #1e3a8a;
+        color: white;
+        padding: 25px 30px;
+    '>
+
+        <h1 style='
+            margin: 0;
+            font-size: 26px;
+        '>
+            🔔 New Demo Request
+        </h1>
+
+        <p style='
+            margin: 8px 0 0 0;
+            opacity: 0.9;
+        '>
+            EPIC Church Management System
+        </p>
+
+    </div>
+
+    <div style='padding: 30px;'>
+
+        <h2 style='color: #1e3a8a;'>
+            A new demo request has been received.
+        </h2>
+
+        <table style='
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        '>
+
+            <tr>
+                <td style='
+                    padding: 10px;
+                    font-weight: bold;
+                    background: #f8fafc;
+                '>
+                    Request ID
+                </td>
+
+                <td style='padding: 10px;'>
+                    #{demoRequestId}
+                </td>
+            </tr>
+
+            <tr>
+                <td style='
+                    padding: 10px;
+                    font-weight: bold;
+                    background: #f8fafc;
+                '>
+                    Full Name
+                </td>
+
+                <td style='padding: 10px;'>
+                    {fullName}
+                </td>
+            </tr>
+
+            <tr>
+                <td style='
+                    padding: 10px;
+                    font-weight: bold;
+                    background: #f8fafc;
+                '>
+                    Church / Organization
+                </td>
+
+                <td style='padding: 10px;'>
+                    {churchName}
+                </td>
+            </tr>
+
+            <tr>
+                <td style='
+                    padding: 10px;
+                    font-weight: bold;
+                    background: #f8fafc;
+                '>
+                    Email
+                </td>
+
+                <td style='padding: 10px;'>
+                    {email}
+                </td>
+            </tr>
+
+            <tr>
+                <td style='
+                    padding: 10px;
+                    font-weight: bold;
+                    background: #f8fafc;
+                '>
+                    Phone
+                </td>
+
+                <td style='padding: 10px;'>
+                    {safePhone}
+                </td>
+            </tr>
+
+            <tr>
+                <td style='
+                    padding: 10px;
+                    font-weight: bold;
+                    background: #f8fafc;
+                '>
+                    Position
+                </td>
+
+                <td style='padding: 10px;'>
+                    {safePosition}
+                </td>
+            </tr>
+
+        </table>
+
+        <div style='
+            margin-top: 25px;
+            padding: 20px;
+            background: #f1f5f9;
+            border-radius: 10px;
+        '>
+
+            <strong>Message</strong>
+
+            <p style='
+                margin-bottom: 0;
+                white-space: pre-wrap;
+            '>
+                {safeMessage}
+            </p>
+
+        </div>
+
+        <div style='
+            margin-top: 30px;
+            padding: 15px;
+            background: #fef3c7;
+            border-radius: 8px;
+            color: #92400e;
+        '>
+
+            <strong>Status:</strong>
+            Pending
+
+        </div>
+
+        <p style='margin-top: 30px;'>
+            Please open the
+            <strong>EPIC Demo Requests</strong>
+            module to review and process this request.
+        </p>
+
+        <hr style='
+            border: 0;
+            border-top: 1px solid #e5e7eb;
+            margin: 30px 0;
+        '>
+
+        <p style='
+            color: #64748b;
+            font-size: 13px;
+        '>
+            This is an automatic notification generated by the
+            EPIC Church Management System.
+        </p>
+
+    </div>
+
+</div>
+
+</body>
+</html>";
+
+                await SendEmailAsync(
+                    adminEmail,
+                    $"🔔 New EPIC Demo Request #{demoRequestId}",
+                    html);
+
+                Console.WriteLine(
+                    $"New demo request notification sent to {adminEmail}.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    "Failed to send admin demo request notification:");
+
+                Console.WriteLine(ex.Message);
+
+                // Do not throw.
+                // Database request has already been saved.
+            }
+        }
+
+
+        // =====================================================
+        // DEMO REQUEST - CONTACTED
+        // =====================================================
+
+        public async Task SendDemoRequestContactedAsync(
+            string email,
+            string fullName,
+            string churchName)
+        {
+            try
+            {
+                var html = BuildStatusEmail(
+                    title: "We Have Contacted You",
+                    heading: "Your EPIC CMS Demo Request Has Been Updated",
+                    fullName: fullName,
+                    churchName: churchName,
+                    status: "Contacted",
+                    statusColor: "#2563eb",
+                    statusBackground: "#dbeafe",
+                    message:
+                        "Our EPIC team has contacted you regarding your demo request. " +
+                        "Thank you for your interest in EPIC Church Management System.");
+
+                await SendEmailAsync(
+                    email,
+                    "EPIC CMS Demo Request – Contacted",
+                    html);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    "Failed to send contacted demo request email:");
+
+                Console.WriteLine(ex.Message);
+            }
+        }
+
+
+        // =====================================================
+        // DEMO REQUEST - SCHEDULED
+        // =====================================================
+
+        public async Task SendDemoRequestScheduledAsync(
+      string email,
+      string fullName,
+      string churchName,
+      DateTime? scheduledDate)
+        {
+            try
+            {
+                var formattedDate =
+      scheduledDate.HasValue
+          ? scheduledDate.Value.ToString("MMMM dd, yyyy hh:mm tt")
+          : "To be determined";
+
+                var html = BuildStatusEmail(
+                    title: "Demo Scheduled",
+                    heading: "Your EPIC CMS Demo Has Been Scheduled",
+                    fullName: fullName,
+                    churchName: churchName,
+                    status: "Scheduled",
+                    statusColor: "#047857",
+                    statusBackground: "#d1fae5",
+                    message:
+                        $"Your EPIC CMS demo has been scheduled for " +
+                        $"<strong>{formattedDate}</strong>.<br /><br />" +
+                        "We look forward to demonstrating how EPIC CMS " +
+                        "can help your church manage its operations more efficiently.");
+
+                await SendEmailAsync(
+                    email,
+                    "EPIC CMS Demo Scheduled",
+                    html);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    "Failed to send scheduled demo request email:");
+
+                Console.WriteLine(ex.Message);
+            }
+        }
+
+
+        // =====================================================
+        // DEMO REQUEST - COMPLETED
+        // =====================================================
+
+        public async Task SendDemoRequestCompletedAsync(
+            string email,
+            string fullName,
+            string churchName)
+        {
+            try
+            {
+                var html = BuildStatusEmail(
+                    title: "Demo Completed",
+                    heading: "Thank You for Attending the EPIC CMS Demo",
+                    fullName: fullName,
+                    churchName: churchName,
+                    status: "Completed",
+                    statusColor: "#15803d",
+                    statusBackground: "#dcfce7",
+                    message:
+                        "Thank you for taking the time to attend the EPIC CMS demo. " +
+                        "We hope the demonstration helped you see how EPIC can " +
+                        "support your church's ministry and administrative needs.");
+
+                await SendEmailAsync(
+                    email,
+                    "EPIC CMS Demo Completed – Thank You",
+                    html);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    "Failed to send completed demo request email:");
+
+                Console.WriteLine(ex.Message);
+            }
+        }
+
+
+        // =====================================================
+        // DEMO REQUEST - CANCELLED
+        // =====================================================
+
+        public async Task SendDemoRequestCancelledAsync(
+            string email,
+            string fullName,
+            string churchName)
+        {
+            try
+            {
+                var html = BuildStatusEmail(
+                    title: "Demo Request Cancelled",
+                    heading: "Your EPIC CMS Demo Request Has Been Cancelled",
+                    fullName: fullName,
+                    churchName: churchName,
+                    status: "Cancelled",
+                    statusColor: "#b91c1c",
+                    statusBackground: "#fee2e2",
+                    message:
+                        "Your EPIC CMS demo request has been cancelled. " +
+                        "If you would like to schedule another demonstration " +
+                        "in the future, please submit a new demo request.");
+
+                await SendEmailAsync(
+                    email,
+                    "EPIC CMS Demo Request – Cancelled",
+                    html);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(
+                    "Failed to send cancelled demo request email:");
+
+                Console.WriteLine(ex.Message);
+            }
+        }
+
+
+        // =====================================================
+        // STATUS EMAIL TEMPLATE
+        // =====================================================
+
+        private static string BuildStatusEmail(
+            string title,
+            string heading,
+            string fullName,
+            string churchName,
+            string status,
+            string statusColor,
+            string statusBackground,
+            string message)
+        {
+            return $@"
+<!DOCTYPE html>
+<html>
+
+<body style='
+    margin: 0;
+    padding: 30px;
+    background-color: #f5f7fb;
+    font-family: Arial, sans-serif;
+'>
+
+<div style='
+    max-width: 600px;
+    margin: auto;
+    background: #ffffff;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+'>
+
+    <div style='
+        background-color: #1e3a8a;
+        color: white;
+        padding: 25px 30px;
+    '>
+
+        <h1 style='
+            margin: 0;
+            font-size: 26px;
+        '>
+            EPIC
+        </h1>
+
+        <p style='
+            margin: 8px 0 0 0;
+            opacity: 0.9;
+        '>
+            Engaging People Into Christ
+        </p>
+
+    </div>
+
+    <div style='padding: 30px;'>
+
+        <h2 style='color: #1e3a8a;'>
+            {heading}
+        </h2>
+
+        <p>
+            Hello <strong>{fullName}</strong>,
+        </p>
+
+        <p>
+            This is an update regarding your EPIC CMS demo request
+            for <strong>{churchName}</strong>.
+        </p>
+
+        <div style='
+            margin: 25px 0;
+            padding: 15px 20px;
+            background: {statusBackground};
+            border-radius: 8px;
+            color: {statusColor};
+        '>
+
+            <strong>
+                Status: {status}
+            </strong>
+
+        </div>
+
+        <p>
+            {message}
+        </p>
+
+        <p>
+            If you have any questions, please feel free to contact
+            the EPIC team.
+        </p>
+
+        <p>
+            God bless your ministry!
+        </p>
+
+        <p>
+            <strong>EPIC Team</strong>
+            <br />
+            Engaging People Into Christ
+        </p>
+
+        <hr style='
+            border: 0;
+            border-top: 1px solid #e5e7eb;
+            margin: 30px 0;
+        '>
+
+        <p style='
+            color: #64748b;
+            font-size: 13px;
+        '>
+            This is an automatic email from the
+            EPIC Church Management System.
+        </p>
+
+    </div>
+
+</div>
+
+</body>
+</html>";
         }
     }
 }

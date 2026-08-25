@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import "./Login.css";
 
@@ -16,7 +17,20 @@ interface Permission {
     export: boolean;
 }
 
+interface MemberInfo {
+    memberId?: number;
+    memberCode?: string;
+    firstName?: string;
+    middleName?: string;
+    lastName?: string;
+    fullName?: string;
+    status?: string;
+    photoPath?: string | null;
+}
+
 interface LoginResponse {
+    message?: string;
+
     token?: string;
     accessToken?: string;
     jwt?: string;
@@ -29,14 +43,44 @@ interface LoginResponse {
     roleId?: number;
     role?: string;
 
-    message?: string;
-    error?: string;
+    memberId?: number | null;
+    customerId?: number | null;
+
+    approvalStatus?: string;
+
+    member?: MemberInfo | null;
 
     permissions?: Permission[];
+
+    status?: string;
+    error?: string;
 }
 
 interface LoginProps {
     onLoginSuccess?: () => void;
+}
+
+// =========================================================
+// EPIC USER SESSION OBJECT
+// =========================================================
+
+interface EpicUserSession {
+    userId?: number;
+    username?: string;
+    fullName?: string;
+    role?: string;
+    roleId?: number;
+
+    memberId?: number | null;
+    customerId?: number | null;
+
+    approvalStatus?: string;
+
+    member?: MemberInfo | null;
+
+    permissions?: Permission[];
+
+    token?: string;
 }
 
 // =========================================================
@@ -54,23 +98,293 @@ const SESSION_KEYS = [
     "epicPermissions",
 
     "currentUser",
+    "username",
+
     "currentFullName",
+    "fullName",
+
     "currentRole",
+    "role",
+
     "currentRoleId",
     "roleId",
-    "userId"
+
+    "userId",
+
+    "memberId",
+    "customerId",
+
+    "approvalStatus",
+
+    "currentMember",
+    "member",
+
+    "memberCode",
+
+    "epicUser",
+
+    "subscriptionId",
+
+    "isAuthenticated"
 ];
 
 // =========================================================
 // CLEAR SESSION
 // =========================================================
 
-const clearSession = () => {
-
+const clearSession = (): void => {
     SESSION_KEYS.forEach((key) => {
         localStorage.removeItem(key);
     });
+};
 
+// =========================================================
+// SAVE VALUE
+// =========================================================
+
+const saveValue = (
+    key: string,
+    value: unknown
+): void => {
+
+    if (
+        value === undefined ||
+        value === null
+    ) {
+        return;
+    }
+
+    localStorage.setItem(
+        key,
+        String(value)
+    );
+};
+
+// =========================================================
+// NORMALIZE ROLE
+// =========================================================
+
+const normalizeRole = (
+    role?: string
+): string => {
+
+    return (
+        role
+            ?.trim()
+            .toUpperCase()
+            .replace(/\s+/g, " ")
+            .trim()
+        || ""
+    );
+};
+
+// =========================================================
+// NORMALIZE APPROVAL STATUS
+// =========================================================
+
+const normalizeApprovalStatus = (
+    status?: string
+): string => {
+
+    if (
+        !status ||
+        !status.trim()
+    ) {
+        return "APPROVED";
+    }
+
+    return status
+        .trim()
+        .toUpperCase();
+};
+
+// =========================================================
+// BOOLEAN NORMALIZER
+// =========================================================
+
+const toBoolean = (
+    value: unknown
+): boolean => {
+
+    if (
+        typeof value === "boolean"
+    ) {
+        return value;
+    }
+
+    if (
+        typeof value === "number"
+    ) {
+        return value === 1;
+    }
+
+    if (
+        typeof value === "string"
+    ) {
+
+        const normalized =
+            value
+                .trim()
+                .toLowerCase();
+
+        return [
+            "true",
+            "1",
+            "yes",
+            "y"
+        ].includes(
+            normalized
+        );
+    }
+
+    return false;
+};
+
+// =========================================================
+// NORMALIZE PERMISSION
+// =========================================================
+
+const normalizePermission = (
+    item: unknown
+): Permission | null => {
+
+    if (
+        typeof item === "string"
+    ) {
+
+        try {
+            item = JSON.parse(item);
+        } catch {
+            return null;
+        }
+    }
+
+    if (
+        !item ||
+        typeof item !== "object"
+    ) {
+        return null;
+    }
+
+    const source =
+        item as Record<string, unknown>;
+
+    const module =
+        source.module ??
+        source.Module ??
+        source.moduleName ??
+        source.ModuleName ??
+        source.name ??
+        source.Name;
+
+    if (
+        typeof module !== "string" ||
+        !module.trim()
+    ) {
+        return null;
+    }
+
+    return {
+
+        module:
+            module.trim(),
+
+        view:
+            toBoolean(
+                source.view ??
+                source.View ??
+                source.canView ??
+                source.CanView
+            ),
+
+        create:
+            toBoolean(
+                source.create ??
+                source.Create ??
+                source.canCreate ??
+                source.CanCreate
+            ),
+
+        edit:
+            toBoolean(
+                source.edit ??
+                source.Edit ??
+                source.update ??
+                source.Update ??
+                source.canEdit ??
+                source.CanEdit
+            ),
+
+        delete:
+            toBoolean(
+                source.delete ??
+                source.Delete ??
+                source.remove ??
+                source.Remove ??
+                source.canDelete ??
+                source.CanDelete
+            ),
+
+        export:
+            toBoolean(
+                source.export ??
+                source.Export ??
+                source.canExport ??
+                source.CanExport
+            )
+    };
+};
+
+// =========================================================
+// NORMALIZE PERMISSIONS
+// =========================================================
+
+const normalizePermissions = (
+    value: unknown
+): Permission[] => {
+
+    let source = value;
+
+    if (
+        typeof source === "string"
+    ) {
+
+        try {
+            source = JSON.parse(source);
+        } catch {
+            return [];
+        }
+    }
+
+    if (
+        source &&
+        typeof source === "object" &&
+        !Array.isArray(source)
+    ) {
+
+        const object =
+            source as Record<string, unknown>;
+
+        source =
+            object.permissions ??
+            object.Permissions ??
+            [];
+    }
+
+    if (
+        !Array.isArray(source)
+    ) {
+        return [];
+    }
+
+    return source
+        .map(normalizePermission)
+        .filter(
+            (
+                permission
+            ): permission is Permission =>
+                permission !== null
+        );
 };
 
 // =========================================================
@@ -81,28 +395,34 @@ const Login: React.FC<LoginProps> = ({
     onLoginSuccess
 }) => {
 
-    // =====================================================
-    // STATE
-    // =====================================================
+    const [
+        username,
+        setUsername
+    ] = useState("");
 
-    const [username, setUsername] =
-        useState("");
+    const [
+        password,
+        setPassword
+    ] = useState("");
 
-    const [password, setPassword] =
-        useState("");
+    const [
+        showPassword,
+        setShowPassword
+    ] = useState(false);
 
-    const [showPassword, setShowPassword] =
-        useState(false);
+    const [
+        loading,
+        setLoading
+    ] = useState(false);
 
-    const [loading, setLoading] =
-        useState(false);
+    const [
+        error,
+        setError
+    ] = useState("");
 
-    const [error, setError] =
-        useState("");
-
-    // =====================================================
+    // =========================================================
     // LOGIN
-    // =====================================================
+    // =========================================================
 
     const handleLogin = async (
         event: React.FormEvent
@@ -119,11 +439,14 @@ const Login: React.FC<LoginProps> = ({
         const cleanUsername =
             username.trim();
 
-        // =================================================
+        // =====================================================
         // VALIDATION
-        // =================================================
+        // =====================================================
 
-        if (!cleanUsername || !password) {
+        if (
+            !cleanUsername ||
+            !password
+        ) {
 
             setError(
                 "Please enter your username and password."
@@ -137,10 +460,10 @@ const Login: React.FC<LoginProps> = ({
             setLoading(true);
 
             // =================================================
-            // STEP 1 — LOGIN REQUEST
+            // LOGIN REQUEST
             // =================================================
 
-            const loginResponse =
+            const response =
                 await fetch(
                     `${API_BASE_URL}/Auth/login`,
                     {
@@ -154,12 +477,13 @@ const Login: React.FC<LoginProps> = ({
                                 "application/json"
                         },
 
-                        body: JSON.stringify({
-                            username:
-                                cleanUsername,
+                        body:
+                            JSON.stringify({
+                                username:
+                                    cleanUsername,
 
-                            password
-                        })
+                                password
+                            })
                     }
                 );
 
@@ -174,29 +498,67 @@ const Login: React.FC<LoginProps> = ({
             try {
 
                 data =
-                    await loginResponse.json();
+                    await response.json();
 
             } catch {
 
                 data = null;
-
             }
 
             // =================================================
-            // LOGIN FAILED
+            // LOGIN ERROR
             // =================================================
 
-            if (!loginResponse.ok) {
+            if (!response.ok) {
+
+                const status =
+                    normalizeApprovalStatus(
+                        data?.approvalStatus ||
+                        data?.status
+                    );
+
+                const message =
+                    data?.message ||
+                    data?.error;
+
+                if (
+                    status === "PENDING"
+                ) {
+
+                    throw new Error(
+                        message ||
+                        "Your account is pending admin approval."
+                    );
+                }
+
+                if (
+                    status === "REJECTED"
+                ) {
+
+                    throw new Error(
+                        message ||
+                        "Your account registration was rejected by the administrator."
+                    );
+                }
+
+                if (
+                    status === "SUSPENDED"
+                ) {
+
+                    throw new Error(
+                        message ||
+                        "Your account has been suspended."
+                    );
+                }
 
                 throw new Error(
-                    data?.message ||
-                    data?.error ||
+                    message ||
                     "Invalid username or password."
                 );
             }
 
             // =================================================
-            // STEP 2 — GET TOKEN
+            // TOKEN
             // =================================================
 
             const token =
@@ -212,80 +574,169 @@ const Login: React.FC<LoginProps> = ({
             }
 
             // =================================================
-            // STEP 3 — CLEAR PREVIOUS SESSION
+            // USER INFORMATION
+            // =================================================
+
+            const savedUsername =
+                (
+                    data?.username ||
+                    data?.userName ||
+                    cleanUsername
+                ).trim();
+
+            const savedFullName =
+                (
+                    data?.fullName ||
+                    data?.username ||
+                    data?.userName ||
+                    cleanUsername
+                ).trim();
+
+            const savedRole =
+                normalizeRole(
+                    data?.role
+                ) ||
+                "STAFF";
+
+            const savedApprovalStatus =
+                normalizeApprovalStatus(
+                    data?.approvalStatus
+                );
+
+            // =================================================
+            // APPROVAL VALIDATION
+            // =================================================
+
+            if (
+                savedApprovalStatus === "PENDING"
+            ) {
+
+                throw new Error(
+                    "Your account is pending admin approval."
+                );
+            }
+
+            if (
+                savedApprovalStatus === "REJECTED"
+            ) {
+
+                throw new Error(
+                    "Your account registration was rejected by the administrator."
+                );
+            }
+
+            if (
+                savedApprovalStatus === "SUSPENDED"
+            ) {
+
+                throw new Error(
+                    "Your account has been suspended."
+                );
+            }
+
+            // =================================================
+            // CLIENT VALIDATION
+            // =================================================
+
+            if (
+                savedRole === "CLIENT" &&
+                (
+                    data?.customerId ===
+                    undefined ||
+                    data?.customerId ===
+                    null
+                )
+            ) {
+
+                throw new Error(
+                    "Your CLIENT account is not linked to a customer account. Please contact the administrator."
+                );
+            }
+
+            // =================================================
+            // CLEAR OLD SESSION
             // =================================================
 
             clearSession();
 
             // =================================================
-            // STEP 4 — SAVE TOKEN
+            // SAVE TOKEN
             // =================================================
 
-            localStorage.setItem(
+            saveValue(
                 "token",
                 token
             );
 
-            // =================================================
-            // ALSO SAVE COMMON TOKEN ALIASES
-            // =================================================
-            //
-            // Your App.tsx checks multiple possible token names.
-            // Keeping "token" as the primary token is enough,
-            // but these aliases make the session compatible
-            // with older EPIC components.
-            //
-            // =================================================
-
-            localStorage.setItem(
+            saveValue(
                 "accessToken",
                 token
             );
 
+            saveValue(
+                "jwt",
+                token
+            );
+
+            saveValue(
+                "authToken",
+                token
+            );
+
+            saveValue(
+                "epicToken",
+                token
+            );
+
+            saveValue(
+                "isAuthenticated",
+                "true"
+            );
+
             // =================================================
-            // STEP 5 — USERNAME
+            // SAVE USERNAME
             // =================================================
 
-            const savedUsername =
-                data?.username ||
-                data?.userName ||
-                cleanUsername;
-
-            localStorage.setItem(
+            saveValue(
                 "currentUser",
                 savedUsername
             );
 
+            saveValue(
+                "username",
+                savedUsername
+            );
+
             // =================================================
-            // STEP 6 — FULL NAME
+            // SAVE FULL NAME
             // =================================================
 
-            const savedFullName =
-                data?.fullName ||
-                data?.username ||
-                data?.userName ||
-                cleanUsername;
-
-            localStorage.setItem(
+            saveValue(
                 "currentFullName",
                 savedFullName
             );
 
+            saveValue(
+                "fullName",
+                savedFullName
+            );
+
             // =================================================
-            // STEP 7 — ROLE
+            // SAVE ROLE
             // =================================================
 
-            const savedRole =
-                data?.role ||
-                "STAFF";
-
-            localStorage.setItem(
+            saveValue(
                 "currentRole",
                 savedRole
             );
 
+            saveValue(
+                "role",
+                savedRole
+            );
+
             // =================================================
-            // STEP 8 — USER ID
+            // SAVE USER ID
             // =================================================
 
             if (
@@ -293,14 +744,14 @@ const Login: React.FC<LoginProps> = ({
                 data?.userId !== null
             ) {
 
-                localStorage.setItem(
+                saveValue(
                     "userId",
-                    String(data.userId)
+                    data.userId
                 );
             }
 
             // =================================================
-            // STEP 9 — ROLE ID
+            // SAVE ROLE ID
             // =================================================
 
             if (
@@ -308,47 +759,97 @@ const Login: React.FC<LoginProps> = ({
                 data?.roleId !== null
             ) {
 
-                localStorage.setItem(
+                saveValue(
                     "roleId",
-                    String(data.roleId)
+                    data.roleId
                 );
 
-                localStorage.setItem(
+                saveValue(
                     "currentRoleId",
-                    String(data.roleId)
+                    data.roleId
                 );
             }
 
             // =================================================
-            // STEP 10 — LOAD PERMISSIONS
+            // SAVE MEMBER ID
+            // =================================================
+
+            if (
+                data?.memberId !== undefined &&
+                data?.memberId !== null
+            ) {
+
+                saveValue(
+                    "memberId",
+                    data.memberId
+                );
+            }
+
+            // =================================================
+            // SAVE CUSTOMER ID
+            // =================================================
+
+            if (
+                data?.customerId !== undefined &&
+                data?.customerId !== null
+            ) {
+
+                saveValue(
+                    "customerId",
+                    data.customerId
+                );
+            }
+
+            // =================================================
+            // SAVE APPROVAL STATUS
+            // =================================================
+
+            saveValue(
+                "approvalStatus",
+                savedApprovalStatus
+            );
+
+            // =================================================
+            // SAVE MEMBER
+            // =================================================
+
+            if (data?.member) {
+
+                const memberJson =
+                    JSON.stringify(
+                        data.member
+                    );
+
+                localStorage.setItem(
+                    "currentMember",
+                    memberJson
+                );
+
+                localStorage.setItem(
+                    "member",
+                    memberJson
+                );
+
+                if (
+                    data.member.memberCode
+                ) {
+
+                    saveValue(
+                        "memberCode",
+                        data.member.memberCode
+                    );
+                }
+            }
+
+            // =================================================
+            // LOAD PERMISSIONS
             // =================================================
 
             let permissions:
-                Permission[] = [];
-
-            // -------------------------------------------------
-            // FIRST: CHECK IF LOGIN RESPONSE ALREADY CONTAINS
-            // PERMISSIONS
-            // -------------------------------------------------
-
-            if (
-                Array.isArray(
+                Permission[] =
+                normalizePermissions(
                     data?.permissions
-                )
-            ) {
-
-                permissions =
-                    data.permissions;
-            }
-
-            // -------------------------------------------------
-            // SECOND: LOAD FROM PERMISSION ENDPOINT
-            // -------------------------------------------------
-            //
-            // Only do this if the login response did not
-            // already contain permissions.
-            //
-            // -------------------------------------------------
+                );
 
             if (
                 permissions.length === 0
@@ -379,44 +880,17 @@ const Login: React.FC<LoginProps> = ({
                         const permissionData =
                             await permissionResponse.json();
 
-                        // -----------------------------------------
-                        // POSSIBLE RESPONSE:
-                        //
-                        // {
-                        //     permissions: [...]
-                        // }
-                        //
-                        // OR:
-                        //
-                        // [...]
-                        // -----------------------------------------
-
-                        if (
-                            Array.isArray(
+                        permissions =
+                            normalizePermissions(
                                 permissionData
-                            )
-                        ) {
-
-                            permissions =
-                                permissionData;
-
-                        } else if (
-                            Array.isArray(
-                                permissionData?.permissions
-                            )
-                        ) {
-
-                            permissions =
-                                permissionData.permissions;
-                        }
+                            );
 
                     } else {
 
                         console.warn(
-                            "Permission endpoint returned HTTP",
+                            "EPIC permissions endpoint returned HTTP",
                             permissionResponse.status
                         );
-
                     }
 
                 } catch (
@@ -424,15 +898,14 @@ const Login: React.FC<LoginProps> = ({
                 ) {
 
                     console.warn(
-                        "Permission loading failed:",
+                        "EPIC permission loading failed:",
                         permissionError
                     );
-
                 }
             }
 
             // =================================================
-            // STEP 11 — SAVE PERMISSIONS
+            // SAVE PERMISSIONS
             // =================================================
 
             localStorage.setItem(
@@ -450,19 +923,81 @@ const Login: React.FC<LoginProps> = ({
             );
 
             // =================================================
-            // STEP 12 — DEBUG
+            // IMPORTANT:
+            // SAVE COMPLETE EPIC USER OBJECT
+            //
+            // ClientPortal.tsx depends on this.
             // =================================================
 
-            console.log(
-                "===================================="
+            const epicUser:
+                EpicUserSession = {
+
+                userId:
+                    data?.userId,
+
+                username:
+                    savedUsername,
+
+                fullName:
+                    savedFullName,
+
+                role:
+                    savedRole,
+
+                roleId:
+                    data?.roleId,
+
+                memberId:
+                    data?.memberId,
+
+                customerId:
+                    data?.customerId,
+
+                approvalStatus:
+                    savedApprovalStatus,
+
+                member:
+                    data?.member,
+
+                permissions:
+                    permissions,
+
+                token:
+                    token
+            };
+
+            localStorage.setItem(
+                "epicUser",
+                JSON.stringify(
+                    epicUser
+                )
+            );
+
+            // =================================================
+            // ADMIN DETECTION
+            // =================================================
+
+            const isAdmin =
+                [
+                    "ADMIN",
+                    "ADMINISTRATOR",
+                    "SYSTEM ADMINISTRATOR",
+                    "SUPER ADMIN",
+                    "SUPERADMIN"
+                ].includes(
+                    savedRole
+                );
+
+            // =================================================
+            // DEBUG
+            // =================================================
+
+            console.group(
+                "🔐 EPIC LOGIN SUCCESS"
             );
 
             console.log(
-                "EPIC LOGIN SUCCESS"
-            );
-
-            console.log(
-                "Username:",
+                "User:",
                 savedUsername
             );
 
@@ -477,22 +1012,33 @@ const Login: React.FC<LoginProps> = ({
             );
 
             console.log(
-                "User ID:",
-                data?.userId
-            );
-
-            console.log(
                 "Role ID:",
                 data?.roleId
             );
 
             console.log(
-                "Token exists:",
-                Boolean(
-                    localStorage.getItem(
-                        "token"
-                    )
-                )
+                "User ID:",
+                data?.userId
+            );
+
+            console.log(
+                "Member ID:",
+                data?.memberId
+            );
+
+            console.log(
+                "Customer ID:",
+                data?.customerId
+            );
+
+            console.log(
+                "Approval Status:",
+                savedApprovalStatus
+            );
+
+            console.log(
+                "Administrator:",
+                isAdmin
             );
 
             console.log(
@@ -501,26 +1047,63 @@ const Login: React.FC<LoginProps> = ({
             );
 
             console.log(
-                "===================================="
+                "EPIC User:",
+                epicUser
+            );
+
+            console.log(
+                "Token Exists:",
+                Boolean(
+                    localStorage.getItem(
+                        "token"
+                    )
+                )
+            );
+
+            console.groupEnd();
+
+            // =================================================
+            // NOTIFY APP
+            // =================================================
+
+            window.dispatchEvent(
+                new Event(
+                    "epic:permissions-changed"
+                )
+            );
+
+            window.dispatchEvent(
+                new Event(
+                    "epic:auth-changed"
+                )
             );
 
             // =================================================
-            // STEP 13 — NOTIFY APP
+            // CLIENT ROUTING
             // =================================================
             //
-            // IMPORTANT:
+            // CLIENTS must NOT be sent to the normal CMS
+            // dashboard.
             //
-            // Do NOT navigate here.
-            //
-            // App.tsx owns navigation.
-            //
-            // Login only tells App.tsx that authentication
-            // succeeded.
-            //
-            // App.tsx will then navigate to:
-            //
-            // /dashboard
-            //
+            // They go directly to Client Portal.
+            // =================================================
+
+            if (
+                savedRole === "CLIENT"
+            ) {
+
+                console.log(
+                    "EPIC CLIENT LOGIN — redirecting to Client Portal."
+                );
+
+                window.location.href =
+                    "/client-portal";
+
+                return;
+            }
+
+            // =================================================
+            // NORMAL ADMIN / STAFF / MEMBER LOGIN
             // =================================================
 
             onLoginSuccess?.();
@@ -532,15 +1115,7 @@ const Login: React.FC<LoginProps> = ({
                 err
             );
 
-            // =================================================
-            // REMOVE PARTIAL SESSION
-            // =================================================
-
             clearSession();
-
-            // =================================================
-            // DISPLAY ERROR
-            // =================================================
 
             setError(
                 err instanceof Error
@@ -551,9 +1126,7 @@ const Login: React.FC<LoginProps> = ({
         } finally {
 
             setLoading(false);
-
         }
-
     };
 
     // =========================================================
@@ -561,7 +1134,6 @@ const Login: React.FC<LoginProps> = ({
     // =========================================================
 
     return (
-
         <div className="epic-login-page">
 
             {/* =================================================
@@ -646,10 +1218,6 @@ const Login: React.FC<LoginProps> = ({
 
                 <div className="epic-login-card">
 
-                    {/* =================================================
-                        MOBILE LOGO
-                    ================================================= */}
-
                     <div className="epic-mobile-logo">
 
                         <div className="epic-mobile-logo-box">
@@ -657,10 +1225,6 @@ const Login: React.FC<LoginProps> = ({
                         </div>
 
                     </div>
-
-                    {/* =================================================
-                        LOGIN HEADING
-                    ================================================= */}
 
                     <div className="epic-login-heading">
 
@@ -678,10 +1242,6 @@ const Login: React.FC<LoginProps> = ({
                         </p>
 
                     </div>
-
-                    {/* =================================================
-                        ERROR
-                    ================================================= */}
 
                     {error && (
 
@@ -702,18 +1262,10 @@ const Login: React.FC<LoginProps> = ({
 
                     )}
 
-                    {/* =================================================
-                        FORM
-                    ================================================= */}
-
                     <form
                         onSubmit={handleLogin}
                         className="epic-login-form"
                     >
-
-                        {/* =================================================
-                            USERNAME
-                        ================================================= */}
 
                         <div className="epic-field">
 
@@ -735,7 +1287,7 @@ const Login: React.FC<LoginProps> = ({
                                     name="username"
                                     type="text"
                                     value={username}
-                                    onChange={(event) =>
+                                    onChange={event =>
                                         setUsername(
                                             event.target.value
                                         )
@@ -749,10 +1301,6 @@ const Login: React.FC<LoginProps> = ({
                             </div>
 
                         </div>
-
-                        {/* =================================================
-                            PASSWORD
-                        ================================================= */}
 
                         <div className="epic-field">
 
@@ -778,7 +1326,7 @@ const Login: React.FC<LoginProps> = ({
                                             : "password"
                                     }
                                     value={password}
-                                    onChange={(event) =>
+                                    onChange={event =>
                                         setPassword(
                                             event.target.value
                                         )
@@ -814,10 +1362,6 @@ const Login: React.FC<LoginProps> = ({
 
                         </div>
 
-                        {/* =================================================
-                            OPTIONS
-                        ================================================= */}
-
                         <div className="epic-login-options">
 
                             <label className="epic-remember">
@@ -839,10 +1383,6 @@ const Login: React.FC<LoginProps> = ({
 
                         </div>
 
-                        {/* =================================================
-                            LOGIN BUTTON
-                        ================================================= */}
-
                         <button
                             type="submit"
                             className="epic-login-button"
@@ -852,37 +1392,28 @@ const Login: React.FC<LoginProps> = ({
                             {loading ? (
 
                                 <>
-
                                     <span
                                         className="epic-spinner"
                                         aria-hidden="true"
                                     />
 
                                     Signing in...
-
                                 </>
 
                             ) : (
 
                                 <>
-
                                     Sign In
 
                                     <span className="login-arrow">
                                         →
                                     </span>
-
                                 </>
-
                             )}
 
                         </button>
 
                     </form>
-
-                    {/* =================================================
-                        DIVIDER
-                    ================================================= */}
 
                     <div className="epic-login-divider">
 
@@ -895,10 +1426,6 @@ const Login: React.FC<LoginProps> = ({
                         <span />
 
                     </div>
-
-                    {/* =================================================
-                        CHURCH FOOTER
-                    ================================================= */}
 
                     <div className="epic-login-bottom">
 
@@ -929,3 +1456,4 @@ const Login: React.FC<LoginProps> = ({
 };
 
 export default Login;
+

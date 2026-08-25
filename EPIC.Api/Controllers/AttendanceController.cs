@@ -1,9 +1,13 @@
 ﻿using EPIC.Api.Authorization;
 using EPIC.Api.Data;
 using EPIC.Api.Models;
+using EPIC.Core.Interfaces;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+
+using System.Security.Claims;
 
 namespace EPIC.Api.Controllers
 {
@@ -13,19 +17,24 @@ namespace EPIC.Api.Controllers
     public class AttendanceController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IPermissionService _permissionService;
 
-        private static readonly string[] AllowedStatuses =
-        {
-            "PRESENT",
-            "LATE",
-            "EARLY",
-            "ABSENT",
-            "EXCUSED"
-        };
+        private static readonly HashSet<string> AllowedStatuses =
+            new(StringComparer.OrdinalIgnoreCase)
+            {
+                "PRESENT",
+                "LATE",
+                "EARLY",
+                "ABSENT",
+                "EXCUSED"
+            };
 
-        public AttendanceController(ApplicationDbContext context)
+        public AttendanceController(
+            ApplicationDbContext context,
+            IPermissionService permissionService)
         {
             _context = context;
+            _permissionService = permissionService;
         }
 
         // =========================================================
@@ -38,11 +47,19 @@ namespace EPIC.Api.Controllers
         [Permission("Attendance", "view")]
         public async Task<IActionResult> GetAttendance()
         {
-            var records = await _context.Attendances
+            var query = GetTenantAttendanceQuery();
+
+            if (query == null)
+            {
+                return CustomerIdUnauthorized();
+            }
+
+            var records = await query
                 .AsNoTracking()
                 .Include(a => a.Member)
                 .Include(a => a.ChurchService)
                 .OrderByDescending(a => a.AttendanceDate)
+                .ThenByDescending(a => a.AttendanceId)
                 .ToListAsync();
 
             var result = records.Select(a => new
@@ -51,11 +68,11 @@ namespace EPIC.Api.Controllers
 
                 memberId = a.MemberId,
 
-                memberCode = a.Member?.MemberCode ?? "",
+                memberCode = a.Member?.MemberCode ?? string.Empty,
 
                 memberName = a.Member != null
                     ? BuildMemberName(a.Member)
-                    : "",
+                    : string.Empty,
 
                 churchServiceId = a.ChurchServiceId,
 
@@ -88,25 +105,24 @@ namespace EPIC.Api.Controllers
         public async Task<IActionResult> GetAttendanceForChurchService(
             int churchServiceId)
         {
-            var service = await _context.ChurchServices
-                .AsNoTracking()
-                .FirstOrDefaultAsync(
-                    s => s.ChurchServiceId == churchServiceId);
+            var service = await GetTenantChurchServiceAsync(
+                churchServiceId);
 
             if (service == null)
             {
                 return NotFound(new
                 {
-                    message = "The selected church service was not found."
+                    message =
+                        "The selected church service was not found."
                 });
             }
 
             var serviceStatus =
                 NormalizeServiceStatus(service.Status);
 
-            // =====================================================
-            // CANCELLED
-            // =====================================================
+            // -----------------------------------------------------
+            // SERVICE CANCELLED
+            // -----------------------------------------------------
 
             if (serviceStatus == "CANCELLED")
             {
@@ -119,9 +135,9 @@ namespace EPIC.Api.Controllers
                 );
             }
 
-            // =====================================================
-            // NOT COMPLETED
-            // =====================================================
+            // -----------------------------------------------------
+            // SERVICE NOT COMPLETED
+            // -----------------------------------------------------
 
             if (serviceStatus != "COMPLETED")
             {
@@ -134,13 +150,23 @@ namespace EPIC.Api.Controllers
                 );
             }
 
-            // =====================================================
-            // GET ACTIVE MEMBERS
-            // =====================================================
+            // -----------------------------------------------------
+            // GET MEMBERS FOR TENANT
+            // -----------------------------------------------------
 
-            var members = await _context.Members
+            var membersQuery =
+                GetTenantMembersQuery();
+
+            if (membersQuery == null)
+            {
+                return CustomerIdUnauthorized();
+            }
+
+            var members = await membersQuery
                 .AsNoTracking()
-                .Where(m => m.Status == "ACTIVE")
+                .Where(m =>
+                    m.Status != null &&
+                    m.Status.ToUpper() == "ACTIVE")
                 .OrderBy(m => m.LastName)
                 .ThenBy(m => m.FirstName)
                 .Select(m => new
@@ -153,58 +179,74 @@ namespace EPIC.Api.Controllers
                 })
                 .ToListAsync();
 
-            // =====================================================
-            // GET EXISTING ATTENDANCE
-            // =====================================================
+            // -----------------------------------------------------
+            // EXISTING ATTENDANCE
+            // -----------------------------------------------------
 
-            var attendanceRecords = await _context.Attendances
-                .AsNoTracking()
-                .Where(a =>
-                    a.ChurchServiceId == churchServiceId)
-                .ToListAsync();
+            var attendanceQuery =
+                GetTenantAttendanceQuery();
 
-            // =====================================================
+            if (attendanceQuery == null)
+            {
+                return CustomerIdUnauthorized();
+            }
+
+            var attendanceRecords =
+                await attendanceQuery
+                    .AsNoTracking()
+                    .Where(a =>
+                        a.ChurchServiceId ==
+                        churchServiceId)
+                    .ToListAsync();
+
+            // -----------------------------------------------------
             // COMBINE MEMBERS + ATTENDANCE
-            // =====================================================
+            // -----------------------------------------------------
 
             var attendance = members
                 .Select(member =>
                 {
-                    var record = attendanceRecords
-                        .FirstOrDefault(
-                            a => a.MemberId == member.memberId);
+                    var record =
+                        attendanceRecords
+                            .FirstOrDefault(
+                                a =>
+                                    a.MemberId ==
+                                    member.memberId);
 
-                    return new
+                    return new AttendanceListItem
                     {
-                        memberId = member.memberId,
+                        MemberId =
+                            member.memberId,
 
-                        memberCode = member.memberCode,
+                        MemberCode =
+                            member.memberCode,
 
-                        firstName = member.firstName,
+                        FirstName =
+                            member.firstName,
 
-                        middleName = member.middleName,
+                        MiddleName =
+                            member.middleName,
 
-                        lastName = member.lastName,
+                        LastName =
+                            member.lastName,
 
-                        status = NormalizeAttendanceStatus(
-                            record?.Status),
+                        Status =
+                            NormalizeAttendanceStatus(
+                                record?.Status),
 
-                        attendanceId =
+                        AttendanceId =
                             record?.AttendanceId,
 
-                        attendanceDate =
+                        AttendanceDate =
                             record?.AttendanceDate
                             ?? service.ServiceDate
                     };
                 })
                 .ToList();
 
-            // =====================================================
-            // SUMMARY
-            // =====================================================
-
             var summary =
-                BuildAttendanceSummary(attendance);
+                BuildAttendanceSummary(
+                    attendance.Select(x => x.Status));
 
             return Ok(new
             {
@@ -250,6 +292,7 @@ namespace EPIC.Api.Controllers
         // /api/Attendance/church-service/{churchServiceId}
         //
         // Permission: Attendance / create
+        // Existing records require Attendance / edit
         // =========================================================
 
         [HttpPost("church-service/{churchServiceId:int}")]
@@ -258,9 +301,9 @@ namespace EPIC.Api.Controllers
             int churchServiceId,
             [FromBody] AttendanceRequest request)
         {
-            // =====================================================
+            // -----------------------------------------------------
             // VALIDATE REQUEST
-            // =====================================================
+            // -----------------------------------------------------
 
             if (request == null ||
                 request.Attendance == null ||
@@ -273,13 +316,26 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            // =====================================================
-            // GET SERVICE
-            // =====================================================
+            // -----------------------------------------------------
+            // GET CURRENT TENANT
+            // -----------------------------------------------------
 
-            var service = await _context.ChurchServices
-                .FirstOrDefaultAsync(
-                    s => s.ChurchServiceId == churchServiceId);
+            var customerId =
+                GetCurrentCustomerId();
+
+            if (!IsCurrentUserAdmin() &&
+                !customerId.HasValue)
+            {
+                return CustomerIdUnauthorized();
+            }
+
+            // -----------------------------------------------------
+            // GET SERVICE
+            // -----------------------------------------------------
+
+            var service =
+                await GetTenantChurchServiceAsync(
+                    churchServiceId);
 
             if (service == null)
             {
@@ -290,12 +346,13 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            // =====================================================
-            // VALIDATE SERVICE
-            // =====================================================
+            // -----------------------------------------------------
+            // VALIDATE SERVICE STATUS
+            // -----------------------------------------------------
 
             var serviceStatus =
-                NormalizeServiceStatus(service.Status);
+                NormalizeServiceStatus(
+                    service.Status);
 
             if (serviceStatus == "CANCELLED")
             {
@@ -315,9 +372,9 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            // =====================================================
-            // VALIDATE DUPLICATE MEMBER IDS
-            // =====================================================
+            // -----------------------------------------------------
+            // VALIDATE MEMBER IDS
+            // -----------------------------------------------------
 
             var duplicateMemberIds =
                 request.Attendance
@@ -338,14 +395,30 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            // =====================================================
+            var memberIds =
+                request.Attendance
+                    .Select(x => x.MemberId)
+                    .Distinct()
+                    .ToList();
+
+            if (memberIds.Any(id => id <= 0))
+            {
+                return BadRequest(new
+                {
+                    message =
+                        "One or more member IDs are invalid."
+                });
+            }
+
+            // -----------------------------------------------------
             // VALIDATE STATUSES
-            // =====================================================
+            // -----------------------------------------------------
 
             foreach (var item in request.Attendance)
             {
                 var status =
-                    NormalizeAttendanceStatus(item.Status);
+                    NormalizeAttendanceStatus(
+                        item.Status);
 
                 if (!AllowedStatuses.Contains(status))
                 {
@@ -356,30 +429,31 @@ namespace EPIC.Api.Controllers
 
                         allowedStatuses =
                             AllowedStatuses
+                                .OrderBy(x => x)
+                                .ToArray()
                     });
                 }
             }
 
-            // =====================================================
-            // MEMBER IDS
-            // =====================================================
+            // -----------------------------------------------------
+            // VALIDATE MEMBERS
+            // -----------------------------------------------------
 
-            var memberIds =
-                request.Attendance
-                    .Select(x => x.MemberId)
-                    .Distinct()
-                    .ToList();
+            var membersQuery =
+                GetTenantMembersQuery();
 
-            // =====================================================
-            // VALID ACTIVE MEMBERS
-            // =====================================================
+            if (membersQuery == null)
+            {
+                return CustomerIdUnauthorized();
+            }
 
             var validMemberIds =
-                await _context.Members
+                await membersQuery
                     .AsNoTracking()
                     .Where(m =>
-                        m.Status == "ACTIVE" &&
-                        memberIds.Contains(m.MemberId))
+                        memberIds.Contains(m.MemberId) &&
+                        m.Status != null &&
+                        m.Status.ToUpper() == "ACTIVE")
                     .Select(m => m.MemberId)
                     .ToListAsync();
 
@@ -393,81 +467,99 @@ namespace EPIC.Api.Controllers
                 return BadRequest(new
                 {
                     message =
-                        "One or more members are invalid or inactive.",
+                        "One or more members are invalid, inactive, or do not belong to your customer.",
 
                     memberIds =
                         invalidMemberIds
                 });
             }
 
-            // =====================================================
+            // -----------------------------------------------------
             // EXISTING RECORDS
-            // =====================================================
+            // -----------------------------------------------------
+
+            var existingQuery =
+                GetTenantAttendanceQuery();
+
+            if (existingQuery == null)
+            {
+                return CustomerIdUnauthorized();
+            }
 
             var existingRecords =
-                await _context.Attendances
+                await existingQuery
                     .Where(a =>
                         a.ChurchServiceId ==
                             churchServiceId &&
-                        memberIds.Contains(a.MemberId))
+                        memberIds.Contains(
+                            a.MemberId))
                     .ToListAsync();
 
-            // =====================================================
+            // -----------------------------------------------------
             // CHECK EDIT PERMISSION
-            // =====================================================
+            // -----------------------------------------------------
 
-            var canEdit =
-                User.HasClaim(
-                    "permission",
-                    "Attendance:edit");
-
-            if (existingRecords.Count > 0 &&
-                !canEdit)
+            if (existingRecords.Count > 0)
             {
-                return StatusCode(
-                    StatusCodes.Status403Forbidden,
-                    new
-                    {
-                        message =
-                            "Some attendance records already exist. Editing attendance requires the Edit permission.",
-
-                        module =
+                var canEdit =
+                    await _permissionService
+                        .HasPermissionAsync(
+                            User,
                             "Attendance",
+                            "edit");
 
-                        action =
-                            "edit"
-                    });
+                if (!canEdit)
+                {
+                    return StatusCode(
+                        StatusCodes.Status403Forbidden,
+                        new
+                        {
+                            message =
+                                "Some attendance records already exist. Editing attendance requires the Edit permission.",
+
+                            module =
+                                "Attendance",
+
+                            action =
+                                "edit"
+                        });
+                }
             }
 
-            // =====================================================
-            // CURRENT USER
-            // =====================================================
+            // -----------------------------------------------------
+            // AUDIT INFORMATION
+            // -----------------------------------------------------
 
             var recordedBy =
                 GetCurrentUserName();
 
+            var recordedDate =
+                DateTime.Now;
+
             var existingLookup =
-                existingRecords.ToDictionary(
-                    x => x.MemberId);
+                existingRecords
+                    .GroupBy(x => x.MemberId)
+                    .ToDictionary(
+                        g => g.Key,
+                        g => g.First());
 
             var savedCount = 0;
             var updatedCount = 0;
 
-            // =====================================================
-            // PROCESS ATTENDANCE
-            // =====================================================
+            // -----------------------------------------------------
+            // SAVE / UPDATE
+            // -----------------------------------------------------
 
             foreach (var item in request.Attendance)
             {
                 var status =
-                    NormalizeAttendanceStatus(item.Status);
+                    NormalizeAttendanceStatus(
+                        item.Status);
 
                 if (existingLookup.TryGetValue(
                     item.MemberId,
                     out var existing))
                 {
-                    // UPDATE
-
                     existing.Status =
                         status;
 
@@ -480,8 +572,6 @@ namespace EPIC.Api.Controllers
                     existing.ChurchServiceId =
                         churchServiceId;
 
-                    // Church-service attendance
-                    // is not automatically an event attendance.
                     existing.EventId =
                         null;
 
@@ -489,14 +579,12 @@ namespace EPIC.Api.Controllers
                         recordedBy;
 
                     existing.RecordedDate =
-                        DateTime.Now;
+                        recordedDate;
 
                     updatedCount++;
                 }
                 else
                 {
-                    // CREATE
-
                     var attendance =
                         new Attendance
                         {
@@ -506,9 +594,6 @@ namespace EPIC.Api.Controllers
                             ChurchServiceId =
                                 churchServiceId,
 
-                            // No EventId because this
-                            // endpoint records attendance
-                            // specifically for a ChurchService.
                             EventId =
                                 null,
 
@@ -525,7 +610,7 @@ namespace EPIC.Api.Controllers
                                 recordedBy,
 
                             RecordedDate =
-                                DateTime.Now
+                                recordedDate
                         };
 
                     _context.Attendances.Add(
@@ -535,15 +620,7 @@ namespace EPIC.Api.Controllers
                 }
             }
 
-            // =====================================================
-            // SAVE
-            // =====================================================
-
             await _context.SaveChangesAsync();
-
-            // =====================================================
-            // RESPONSE
-            // =====================================================
 
             return Ok(new
             {
@@ -575,14 +652,10 @@ namespace EPIC.Api.Controllers
         [HttpGet("me")]
         public async Task<IActionResult> GetMyAttendance()
         {
-            var memberIdClaim =
-                User.FindFirst("memberId")?.Value
-                ?? User.FindFirst("MemberId")?.Value
-                ?? User.FindFirst("member_id")?.Value;
+            var memberId =
+                GetCurrentMemberId();
 
-            if (!int.TryParse(
-                memberIdClaim,
-                out int memberId))
+            if (!memberId.HasValue)
             {
                 return Unauthorized(new
                 {
@@ -591,19 +664,27 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            // =====================================================
-            // VERIFY MEMBER
-            // =====================================================
+            var memberQuery =
+                GetTenantMembersQuery();
+
+            if (memberQuery == null)
+            {
+                return CustomerIdUnauthorized();
+            }
 
             var member =
-                await _context.Members
+                await memberQuery
                     .AsNoTracking()
                     .Where(m =>
-                        m.MemberId == memberId)
+                        m.MemberId ==
+                        memberId.Value)
                     .Select(m => new
                     {
                         memberId =
                             m.MemberId,
+
+                        customerId =
+                            m.CustomerId,
 
                         memberCode =
                             m.MemberCode,
@@ -628,83 +709,89 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            // =====================================================
-            // GET ATTENDANCE
-            // =====================================================
+            // -----------------------------------------------------
+            // ATTENDANCE
+            // -----------------------------------------------------
+
+            var attendanceQuery =
+                GetTenantAttendanceQuery();
+
+            if (attendanceQuery == null)
+            {
+                return CustomerIdUnauthorized();
+            }
 
             var records =
-                await _context.Attendances
+                await attendanceQuery
                     .AsNoTracking()
                     .Include(a => a.ChurchService)
                     .Where(a =>
-                        a.MemberId == memberId)
+                        a.MemberId ==
+                        memberId.Value)
                     .OrderByDescending(
                         a => a.AttendanceDate)
+                    .ThenByDescending(
+                        a => a.AttendanceId)
                     .ToListAsync();
 
-            // =====================================================
-            // PROJECT AFTER DATABASE QUERY
-            // =====================================================
-
             var attendance =
-                records.Select(a => new
-                {
-                    attendanceId =
-                        a.AttendanceId,
+                records
+                    .Select(a => new
+                    {
+                        attendanceId =
+                            a.AttendanceId,
 
-                    memberId =
-                        a.MemberId,
+                        memberId =
+                            a.MemberId,
 
-                    churchServiceId =
-                        a.ChurchServiceId,
+                        churchServiceId =
+                            a.ChurchServiceId,
 
-                    eventId =
-                        a.EventId,
+                        eventId =
+                            a.EventId,
 
-                    attendanceDate =
-                        a.AttendanceDate,
+                        attendanceDate =
+                            a.AttendanceDate,
 
-                    service =
-                        a.Service,
+                        service =
+                            a.Service,
 
-                    status =
-                        NormalizeAttendanceStatus(
-                            a.Status),
+                        status =
+                            NormalizeAttendanceStatus(
+                                a.Status),
 
-                    recordedBy =
-                        a.RecordedBy,
+                        recordedBy =
+                            a.RecordedBy,
 
-                    recordedDate =
-                        a.RecordedDate,
+                        recordedDate =
+                            a.RecordedDate,
 
-                    serviceName =
-                        a.ChurchService != null
-                            ? a.ChurchService.ServiceName
-                            : a.Service,
+                        serviceName =
+                            a.ChurchService != null
+                                ? a.ChurchService.ServiceName
+                                : a.Service,
 
-                    location =
-                        a.ChurchService != null
-                            ? a.ChurchService.Location
-                            : null,
+                        location =
+                            a.ChurchService != null
+                                ? a.ChurchService.Location
+                                : null,
 
-                    startTime =
-                        a.ChurchService != null
-                            ? a.ChurchService.StartTime
-                            : null,
+                        startTime =
+                            a.ChurchService != null
+                                ? a.ChurchService.StartTime
+                                : null,
 
-                    endTime =
-                        a.ChurchService != null
-                            ? a.ChurchService.EndTime
-                            : null
-                })
-                .ToList();
-
-            // =====================================================
-            // SUMMARY
-            // =====================================================
+                        endTime =
+                            a.ChurchService != null
+                                ? a.ChurchService.EndTime
+                                : null
+                    })
+                    .ToList();
 
             var summary =
-                BuildAttendanceSummary(attendance);
+                BuildAttendanceSummary(
+                    attendance.Select(
+                        x => x.status));
 
             return Ok(new
             {
@@ -727,18 +814,30 @@ namespace EPIC.Api.Controllers
         public async Task<IActionResult> DeleteAttendance(
             int id)
         {
+            var query =
+                GetTenantAttendanceQuery();
+
+            if (query == null)
+            {
+                return CustomerIdUnauthorized();
+            }
+
             var attendance =
-                await _context.Attendances
+                await query
                     .FirstOrDefaultAsync(
                         a =>
-                            a.AttendanceId == id);
+                            a.AttendanceId ==
+                            id);
 
             if (attendance == null)
             {
                 return NotFound(new
                 {
                     message =
-                        "Attendance record not found."
+                        "Attendance record not found.",
+
+                    attendanceId =
+                        id
                 });
             }
 
@@ -758,38 +857,135 @@ namespace EPIC.Api.Controllers
         }
 
         // =========================================================
+        // TENANT-SCOPED ATTENDANCE QUERY
+        // =========================================================
+
+        private IQueryable<Attendance>?
+            GetTenantAttendanceQuery()
+        {
+            var query =
+                _context.Attendances
+                    .AsQueryable();
+
+            // -----------------------------------------------------
+            // ADMIN
+            // -----------------------------------------------------
+
+            if (IsCurrentUserAdmin())
+            {
+                return query;
+            }
+
+            // -----------------------------------------------------
+            // NON-ADMIN
+            // -----------------------------------------------------
+
+            var customerId =
+                GetCurrentCustomerId();
+
+            if (!customerId.HasValue)
+            {
+                return null;
+            }
+
+            return query.Where(a =>
+                a.Member != null &&
+                a.Member.CustomerId ==
+                customerId.Value);
+        }
+
+        // =========================================================
+        // TENANT-SCOPED MEMBERS
+        // =========================================================
+
+        private IQueryable<Member>?
+            GetTenantMembersQuery()
+        {
+            var query =
+                _context.Members
+                    .AsQueryable();
+
+            if (IsCurrentUserAdmin())
+            {
+                return query;
+            }
+
+            var customerId =
+                GetCurrentCustomerId();
+
+            if (!customerId.HasValue)
+            {
+                return null;
+            }
+
+            return query.Where(m =>
+                m.CustomerId ==
+                customerId.Value);
+        }
+
+        // =========================================================
+        // TENANT-SCOPED CHURCH SERVICE
+        // =========================================================
+
+        private async Task<ChurchService?>
+            GetTenantChurchServiceAsync(
+                int churchServiceId)
+        {
+            var query =
+                _context.ChurchServices
+                    .AsQueryable();
+
+            if (IsCurrentUserAdmin())
+            {
+                return await query
+                    .FirstOrDefaultAsync(
+                        s =>
+                            s.ChurchServiceId ==
+                            churchServiceId);
+            }
+
+            var customerId =
+                GetCurrentCustomerId();
+
+            if (!customerId.HasValue)
+            {
+                return null;
+            }
+
+            return await query
+                .Where(s =>
+                    s.ChurchServiceId ==
+                        churchServiceId &&
+                    s.CustomerId ==
+                        customerId.Value)
+                .FirstOrDefaultAsync();
+        }
+
+        // =========================================================
         // NORMALIZE ATTENDANCE STATUS
         // =========================================================
 
-        private static string NormalizeAttendanceStatus(
-            string? status)
+        private static string
+            NormalizeAttendanceStatus(
+                string? status)
         {
             if (string.IsNullOrWhiteSpace(status))
             {
                 return "PRESENT";
             }
 
-            var normalized =
-                status.Trim().ToUpperInvariant();
-
-            return normalized switch
-            {
-                "PRESENT" => "PRESENT",
-                "LATE" => "LATE",
-                "EARLY" => "EARLY",
-                "ABSENT" => "ABSENT",
-                "EXCUSED" => "EXCUSED",
-
-                _ => normalized
-            };
+            return status
+                .Trim()
+                .ToUpperInvariant();
         }
 
         // =========================================================
         // NORMALIZE SERVICE STATUS
         // =========================================================
 
-        private static string NormalizeServiceStatus(
-            string? status)
+        private static string
+            NormalizeServiceStatus(
+                string? status)
         {
             if (string.IsNullOrWhiteSpace(status))
             {
@@ -802,111 +998,228 @@ namespace EPIC.Api.Controllers
         }
 
         // =========================================================
-        // CURRENT USER
+        // CURRENT USER NAME
         // =========================================================
 
         private string GetCurrentUserName()
         {
             return
                 User.Identity?.Name
-                ?? User.FindFirst("name")?.Value
-                ?? User.FindFirst("userName")?.Value
-                ?? User.FindFirst("username")?.Value
-                ?? User.FindFirst("email")?.Value
-                ?? "SYSTEM";
+                ??
+                User.FindFirst(
+                    ClaimTypes.Name)?.Value
+                ??
+                User.FindFirst("name")?.Value
+                ??
+                User.FindFirst("userName")?.Value
+                ??
+                User.FindFirst("username")?.Value
+                ??
+                User.FindFirst(
+                    ClaimTypes.Email)?.Value
+                ??
+                User.FindFirst("email")?.Value
+                ??
+                "SYSTEM";
         }
 
         // =========================================================
-        // MEMBER NAME
+        // CURRENT CUSTOMER ID
         // =========================================================
 
-        private static string BuildMemberName(
-            Member member)
+        private int? GetCurrentCustomerId()
         {
-            var middleName =
-                string.IsNullOrWhiteSpace(
-                    member.MiddleName)
-                    ? ""
-                    : " " + member.MiddleName;
+            var claim =
+                User.FindFirst("CustomerId")?.Value
+                ??
+                User.FindFirst("customerId")?.Value
+                ??
+                User.FindFirst("customer_id")?.Value;
 
-            return
-                $"{member.LastName}, " +
-                $"{member.FirstName}" +
-                middleName;
+            if (!int.TryParse(
+                claim,
+                out var customerId))
+            {
+                return null;
+            }
+
+            return customerId > 0
+                ? customerId
+                : null;
+        }
+
+        // =========================================================
+        // CURRENT MEMBER ID
+        // =========================================================
+
+        private int? GetCurrentMemberId()
+        {
+            var claim =
+                User.FindFirst("MemberId")?.Value
+                ??
+                User.FindFirst("memberId")?.Value
+                ??
+                User.FindFirst("member_id")?.Value;
+
+            if (!int.TryParse(
+                claim,
+                out var memberId))
+            {
+                return null;
+            }
+
+            return memberId > 0
+                ? memberId
+                : null;
+        }
+
+        // =========================================================
+        // CURRENT ROLE
+        // =========================================================
+
+        private string GetCurrentRole()
+        {
+            var role =
+                User.FindFirst(
+                    ClaimTypes.Role)?.Value
+                ??
+                User.FindFirst("role")?.Value;
+
+            return role?
+                .Trim()
+                .ToUpperInvariant()
+                ??
+                string.Empty;
+        }
+
+        // =========================================================
+        // ADMIN CHECK
+        // =========================================================
+
+        private bool IsCurrentUserAdmin()
+        {
+            return string.Equals(
+                GetCurrentRole(),
+                "ADMIN",
+                StringComparison.OrdinalIgnoreCase);
+        }
+
+        // =========================================================
+        // CUSTOMER ID ERROR
+        // =========================================================
+
+        private IActionResult
+            CustomerIdUnauthorized()
+        {
+            return Unauthorized(new
+            {
+                message =
+                    "CUSTOMER ID CLAIM IS MISSING OR INVALID."
+            });
+        }
+
+        // =========================================================
+        // BUILD MEMBER NAME
+        // =========================================================
+
+        private static string
+            BuildMemberName(
+                Member member)
+        {
+            var firstName =
+                member.FirstName?
+                    .Trim()
+                    ?? string.Empty;
+
+            var middleName =
+                member.MiddleName?
+                    .Trim()
+                    ?? string.Empty;
+
+            var lastName =
+                member.LastName?
+                    .Trim()
+                    ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(
+                lastName))
+            {
+                return string.Join(
+                    " ",
+                    new[]
+                    {
+                        firstName,
+                        middleName
+                    }.Where(x =>
+                        !string.IsNullOrWhiteSpace(x)));
+            }
+
+            var givenName =
+                string.Join(
+                    " ",
+                    new[]
+                    {
+                        firstName,
+                        middleName
+                    }.Where(x =>
+                        !string.IsNullOrWhiteSpace(x)));
+
+            return string.IsNullOrWhiteSpace(
+                givenName)
+                ? lastName
+                : $"{lastName}, {givenName}";
         }
 
         // =========================================================
         // BUILD ATTENDANCE SUMMARY
         // =========================================================
 
-        private static object BuildAttendanceSummary<T>(
-            IEnumerable<T> records)
+        private static object
+            BuildAttendanceSummary(
+                IEnumerable<string?> statuses)
         {
-            var list =
-                records.ToList();
+            var normalizedStatuses =
+                statuses
+                    .Select(
+                        NormalizeAttendanceStatus)
+                    .ToList();
 
             return new
             {
                 total =
-                    list.Count,
+                    normalizedStatuses.Count,
 
                 present =
-                    list.Count(x =>
-                        GetStatus(x) ==
-                        "PRESENT"),
+                    normalizedStatuses.Count(
+                        x => x == "PRESENT"),
 
                 late =
-                    list.Count(x =>
-                        GetStatus(x) ==
-                        "LATE"),
+                    normalizedStatuses.Count(
+                        x => x == "LATE"),
 
                 early =
-                    list.Count(x =>
-                        GetStatus(x) ==
-                        "EARLY"),
+                    normalizedStatuses.Count(
+                        x => x == "EARLY"),
 
                 absent =
-                    list.Count(x =>
-                        GetStatus(x) ==
-                        "ABSENT"),
+                    normalizedStatuses.Count(
+                        x => x == "ABSENT"),
 
                 excused =
-                    list.Count(x =>
-                        GetStatus(x) ==
-                        "EXCUSED")
+                    normalizedStatuses.Count(
+                        x => x == "EXCUSED")
             };
-        }
-
-        // =========================================================
-        // GET STATUS FROM OBJECT
-        // =========================================================
-
-        private static string GetStatus<T>(
-            T record)
-        {
-            var property =
-                typeof(T).GetProperty("status");
-
-            if (property == null)
-            {
-                return "PRESENT";
-            }
-
-            var value =
-                property.GetValue(record)
-                ?.ToString();
-
-            return NormalizeAttendanceStatus(value);
         }
 
         // =========================================================
         // UNAVAILABLE SERVICE RESPONSE
         // =========================================================
 
-        private static object BuildUnavailableServiceResponse(
-            ChurchService service,
-            string status,
-            string message)
+        private static object
+            BuildUnavailableServiceResponse(
+                ChurchService service,
+                string status,
+                string message)
         {
             return new
             {
@@ -952,6 +1265,29 @@ namespace EPIC.Api.Controllers
                     new List<object>()
             };
         }
+    }
+
+    // =============================================================
+    // RESPONSE MODEL
+    // =============================================================
+
+    internal sealed class AttendanceListItem
+    {
+        public int MemberId { get; set; }
+
+        public string? MemberCode { get; set; }
+
+        public string? FirstName { get; set; }
+
+        public string? MiddleName { get; set; }
+
+        public string? LastName { get; set; }
+
+        public string Status { get; set; } = "PRESENT";
+
+        public int? AttendanceId { get; set; }
+
+        public DateTime AttendanceDate { get; set; }
     }
 
     // =============================================================

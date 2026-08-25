@@ -1,34 +1,39 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace EPIC.Api.Models
 {
     public class Giving
     {
+        // =========================================================
+        // PRIMARY KEY
+        // =========================================================
+
         [Key]
         public int GivingId { get; set; }
 
-        // =====================================================
+        // =========================================================
         // MEMBER
-        // =====================================================
+        // =========================================================
 
         public int? MemberId { get; set; }
 
-        [ForeignKey("MemberId")]
-        public Member? Member { get; set; }
+        [ForeignKey(nameof(MemberId))]
+        public virtual Member? Member { get; set; }
 
-        // =====================================================
+        // =========================================================
         // CHURCH SERVICE
-        // =====================================================
+        // =========================================================
 
         public int? ChurchServiceId { get; set; }
 
-        [ForeignKey("ChurchServiceId")]
-        public ChurchService? ChurchService { get; set; }
+        [ForeignKey(nameof(ChurchServiceId))]
+        public virtual ChurchService? ChurchService { get; set; }
 
-        // =====================================================
+        // =========================================================
         // GIVING INFORMATION
-        // =====================================================
+        // =========================================================
 
         [Required]
         [MaxLength(50)]
@@ -38,33 +43,34 @@ namespace EPIC.Api.Models
         public decimal Amount { get; set; }
 
         [Required]
-        public DateTime GivingDate { get; set; }
+        public DateTime GivingDate { get; set; } = DateTime.Now;
 
-        // =====================================================
+        // =========================================================
         // PAYMENT
-        // =====================================================
+        // =========================================================
 
         [Required]
         [MaxLength(50)]
         public string PaymentMethod { get; set; } = "CASH";
 
         [MaxLength(100)]
-        public string ReferenceNumber { get; set; } = "";
+        public string ReferenceNumber { get; set; } = string.Empty;
 
-        // =====================================================
+        // =========================================================
         // NOTES
-        // =====================================================
+        // =========================================================
 
         [MaxLength(500)]
-        public string Notes { get; set; } = "";
+        public string Notes { get; set; } = string.Empty;
 
-        // =====================================================
+        // =========================================================
         // RECORD INFORMATION
-        // =====================================================
+        // =========================================================
 
         [MaxLength(100)]
-        public string RecordedBy { get; set; } = "";
+        public string RecordedBy { get; set; } = string.Empty;
 
-        public DateTime RecordedDate { get; set; }
+        [Required]
+        public DateTime RecordedDate { get; set; } = DateTime.Now;
     }
 }

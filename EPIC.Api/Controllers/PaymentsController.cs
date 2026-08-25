@@ -1,9 +1,12 @@
 ﻿using EPIC.Api.Authorization;
 using EPIC.Api.Data;
 using EPIC.Api.Models;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+
+using System.ComponentModel.DataAnnotations;
 
 namespace EPIC.Api.Controllers
 {
@@ -13,6 +16,33 @@ namespace EPIC.Api.Controllers
     public class PaymentsController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+
+        // =========================================================
+        // CONSTANTS
+        // =========================================================
+
+        private static readonly string[] AllowedStatuses =
+        {
+            "PENDING",
+            "PAID",
+            "FAILED",
+            "REFUNDED",
+            "CANCELLED"
+        };
+
+        private static readonly string[] AllowedPaymentMethods =
+        {
+            "Manual",
+            "GCash",
+            "Maya",
+            "BankTransfer",
+            "Card",
+            "PayMongo"
+        };
+
+        // =========================================================
+        // CONSTRUCTOR
+        // =========================================================
 
         public PaymentsController(ApplicationDbContext context)
         {
@@ -26,12 +56,9 @@ namespace EPIC.Api.Controllers
 
         [HttpGet]
         [Permission("Payments", "view")]
-        public async Task<ActionResult<IEnumerable<Payment>>> GetPayments()
+        public async Task<IActionResult> GetPayments()
         {
-            var payments = await _context.Payments
-                .AsNoTracking()
-                .Include(p => p.Subscription)
-                    .ThenInclude(s => s!.SubscriptionPlan)
+            var payments = await BuildPaymentQuery()
                 .OrderByDescending(p => p.CreatedDate)
                 .ToListAsync();
 
@@ -40,12 +67,12 @@ namespace EPIC.Api.Controllers
 
         // =========================================================
         // GET PAYMENT BY ID
-        // GET: api/Payments/5
+        // GET: api/Payments/{id}
         // =========================================================
 
         [HttpGet("{id:int}")]
         [Permission("Payments", "view")]
-        public async Task<ActionResult<Payment>> GetPayment(int id)
+        public async Task<IActionResult> GetPayment(int id)
         {
             if (id <= 0)
             {
@@ -55,12 +82,9 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            var payment = await _context.Payments
-                .AsNoTracking()
-                .Include(p => p.Subscription)
-                    .ThenInclude(s => s!.SubscriptionPlan)
-                .FirstOrDefaultAsync(p =>
-                    p.PaymentId == id);
+            var payment = await BuildPaymentQuery()
+                .Where(p => p.PaymentId == id)
+                .FirstOrDefaultAsync();
 
             if (payment == null)
             {
@@ -75,13 +99,13 @@ namespace EPIC.Api.Controllers
 
         // =========================================================
         // GET PAYMENTS BY SUBSCRIPTION
-        // GET: api/Payments/subscription/5
+        // GET: api/Payments/subscription/{subscriptionId}
         // =========================================================
 
         [HttpGet("subscription/{subscriptionId:int}")]
         [Permission("Payments", "view")]
-        public async Task<ActionResult<IEnumerable<Payment>>>
-            GetPaymentsBySubscription(int subscriptionId)
+        public async Task<IActionResult> GetPaymentsBySubscription(
+            int subscriptionId)
         {
             if (subscriptionId <= 0)
             {
@@ -93,6 +117,7 @@ namespace EPIC.Api.Controllers
 
             var subscriptionExists =
                 await _context.Subscriptions
+                    .AsNoTracking()
                     .AnyAsync(s =>
                         s.SubscriptionId == subscriptionId);
 
@@ -104,8 +129,7 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            var payments = await _context.Payments
-                .AsNoTracking()
+            var payments = await BuildPaymentQuery()
                 .Where(p =>
                     p.SubscriptionId == subscriptionId)
                 .OrderByDescending(p =>
@@ -117,13 +141,13 @@ namespace EPIC.Api.Controllers
 
         // =========================================================
         // GET PAYMENTS BY STATUS
-        // GET: api/Payments/status/PAID
+        // GET: api/Payments/status/{status}
         // =========================================================
 
         [HttpGet("status/{status}")]
         [Permission("Payments", "view")]
-        public async Task<ActionResult<IEnumerable<Payment>>>
-            GetPaymentsByStatus(string status)
+        public async Task<IActionResult> GetPaymentsByStatus(
+            string status)
         {
             if (string.IsNullOrWhiteSpace(status))
             {
@@ -134,18 +158,9 @@ namespace EPIC.Api.Controllers
             }
 
             var normalizedStatus =
-                status.Trim().ToUpperInvariant();
+                NormalizeStatus(status);
 
-            var allowedStatuses = new[]
-            {
-                "PENDING",
-                "PAID",
-                "FAILED",
-                "REFUNDED",
-                "CANCELLED"
-            };
-
-            if (!allowedStatuses.Contains(normalizedStatus))
+            if (normalizedStatus == null)
             {
                 return BadRequest(new
                 {
@@ -153,10 +168,7 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            var payments = await _context.Payments
-                .AsNoTracking()
-                .Include(p => p.Subscription)
-                    .ThenInclude(s => s!.SubscriptionPlan)
+            var payments = await BuildPaymentQuery()
                 .Where(p =>
                     p.Status == normalizedStatus)
                 .OrderByDescending(p =>
@@ -167,220 +179,120 @@ namespace EPIC.Api.Controllers
         }
 
         // =========================================================
+        // PAYMENT SUMMARY
+        // GET: api/Payments/summary
+        // =========================================================
+
+        [HttpGet("summary")]
+        [Permission("Payments", "view")]
+        public async Task<IActionResult> GetPaymentSummary()
+        {
+            var now = DateTime.UtcNow;
+
+            var monthStart = new DateTime(
+                now.Year,
+                now.Month,
+                1,
+                0,
+                0,
+                0,
+                DateTimeKind.Utc);
+
+            var monthEnd =
+                monthStart.AddMonths(1);
+
+            var payments =
+                _context.Payments
+                    .AsNoTracking();
+
+            var total =
+                await payments.CountAsync();
+
+            var paid =
+                await payments.CountAsync(p =>
+                    p.Status == "PAID");
+
+            var pending =
+                await payments.CountAsync(p =>
+                    p.Status == "PENDING");
+
+            var failed =
+                await payments.CountAsync(p =>
+                    p.Status == "FAILED");
+
+            var refunded =
+                await payments.CountAsync(p =>
+                    p.Status == "REFUNDED");
+
+            var cancelled =
+                await payments.CountAsync(p =>
+                    p.Status == "CANCELLED");
+
+            var totalRevenue =
+                await payments
+                    .Where(p =>
+                        p.Status == "PAID")
+                    .Select(p =>
+                        (decimal?)p.Amount)
+                    .SumAsync() ?? 0m;
+
+            var currentMonthRevenue =
+                await payments
+                    .Where(p =>
+                        p.Status == "PAID" &&
+                        p.PaidDate.HasValue &&
+                        p.PaidDate.Value >= monthStart &&
+                        p.PaidDate.Value < monthEnd)
+                    .Select(p =>
+                        (decimal?)p.Amount)
+                    .SumAsync() ?? 0m;
+
+            return Ok(new
+            {
+                generatedAt = DateTime.UtcNow,
+
+                payments = new
+                {
+                    total,
+                    paid,
+                    pending,
+                    failed,
+                    refunded,
+                    cancelled
+                },
+
+                revenue = new
+                {
+                    total = totalRevenue,
+                    currentMonth = currentMonthRevenue
+                }
+            });
+        }
+
+        // =========================================================
         // CREATE PAYMENT
         // POST: api/Payments
         // =========================================================
 
         [HttpPost]
         [Permission("Payments", "create")]
-        public async Task<ActionResult<Payment>> CreatePayment(
-            [FromBody] Payment request)
+        public async Task<IActionResult> CreatePayment(
+            [FromBody] CreatePaymentDto request)
         {
-            if (!ModelState.IsValid)
+            if (request == null)
             {
-                return ValidationProblem(ModelState);
+                return BadRequest(new
+                {
+                    message = "Payment data is required."
+                });
             }
 
             if (request.SubscriptionId <= 0)
             {
                 return BadRequest(new
                 {
-                    message = "A valid subscription is required."
-                });
-            }
-
-            if (request.Amount <= 0)
-            {
-                return BadRequest(new
-                {
-                    message = "Payment amount must be greater than zero."
-                });
-            }
-
-            // -----------------------------------------------------
-            // Validate subscription
-            // -----------------------------------------------------
-
-            var subscription =
-                await _context.Subscriptions
-                    .Include(s => s.SubscriptionPlan)
-                    .FirstOrDefaultAsync(s =>
-                        s.SubscriptionId ==
-                        request.SubscriptionId);
-
-            if (subscription == null)
-            {
-                return BadRequest(new
-                {
-                    message = "Subscription not found."
-                });
-            }
-
-            // -----------------------------------------------------
-            // Validate payment method
-            // -----------------------------------------------------
-
-            var paymentMethod =
-                string.IsNullOrWhiteSpace(request.PaymentMethod)
-                    ? "Manual"
-                    : request.PaymentMethod.Trim();
-
-            // -----------------------------------------------------
-            // Validate status
-            // -----------------------------------------------------
-
-            var status =
-                string.IsNullOrWhiteSpace(request.Status)
-                    ? "PENDING"
-                    : request.Status.Trim().ToUpperInvariant();
-
-            var allowedStatuses = new[]
-            {
-                "PENDING",
-                "PAID",
-                "FAILED",
-                "REFUNDED",
-                "CANCELLED"
-            };
-
-            if (!allowedStatuses.Contains(status))
-            {
-                return BadRequest(new
-                {
-                    message = "Invalid payment status."
-                });
-            }
-
-            // -----------------------------------------------------
-            // Create payment
-            // -----------------------------------------------------
-
-            var now = DateTime.Now;
-
-            var payment = new Payment
-            {
-                SubscriptionId =
-                    subscription.SubscriptionId,
-
-                Amount =
-                    request.Amount,
-
-                Currency =
-                    string.IsNullOrWhiteSpace(request.Currency)
-                        ? "PHP"
-                        : request.Currency
-                            .Trim()
-                            .ToUpperInvariant(),
-
-                PaymentMethod =
-                    paymentMethod,
-
-                Status =
-                    status,
-
-                ReferenceNumber =
-                    request.ReferenceNumber?.Trim(),
-
-                GatewayPaymentId =
-                    request.GatewayPaymentId?.Trim(),
-
-                GatewayCheckoutId =
-                    request.GatewayCheckoutId?.Trim(),
-
-                GatewayCustomerId =
-                    request.GatewayCustomerId?.Trim(),
-
-                InvoiceNumber =
-                    request.InvoiceNumber?.Trim(),
-
-                ReceiptNumber =
-                    request.ReceiptNumber?.Trim(),
-
-                FailureReason =
-                    request.FailureReason?.Trim(),
-
-                Notes =
-                    request.Notes?.Trim(),
-
-                CreatedDate =
-                    now
-            };
-
-            _context.Payments.Add(payment);
-
-            // -----------------------------------------------------
-            // If payment is already PAID, update subscription
-            // -----------------------------------------------------
-
-            if (status == "PAID")
-            {
-                subscription.Status = "ACTIVE";
-                subscription.UpdatedDate = now;
-
-                subscription.CancelledDate = null;
-                subscription.EndDate = null;
-
-                subscription.NextBillingDate =
-                    subscription.BillingCycle.Equals(
-                        "Annual",
-                        StringComparison.OrdinalIgnoreCase)
-                        ? now.AddYears(1)
-                        : now.AddMonths(1);
-            }
-
-            await _context.SaveChangesAsync();
-
-            // -----------------------------------------------------
-            // Reload navigation
-            // -----------------------------------------------------
-
-            await _context.Entry(payment)
-                .Reference(p => p.Subscription)
-                .LoadAsync();
-
-            return CreatedAtAction(
-                nameof(GetPayment),
-                new
-                {
-                    id = payment.PaymentId
-                },
-                payment);
-        }
-
-        // =========================================================
-        // UPDATE PAYMENT
-        // PUT: api/Payments/5
-        // =========================================================
-
-        [HttpPut("{id:int}")]
-        [Permission("Payments", "edit")]
-        public async Task<IActionResult> UpdatePayment(
-            int id,
-            [FromBody] Payment request)
-        {
-            if (id <= 0)
-            {
-                return BadRequest(new
-                {
-                    message = "Invalid payment ID."
-                });
-            }
-
-            if (!ModelState.IsValid)
-            {
-                return ValidationProblem(ModelState);
-            }
-
-            var payment =
-                await _context.Payments
-                    .FirstOrDefaultAsync(p =>
-                        p.PaymentId == id);
-
-            if (payment == null)
-            {
-                return NotFound(new
-                {
-                    message = "Payment not found."
+                    message =
+                        "A valid subscription is required."
                 });
             }
 
@@ -393,10 +305,6 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            // -----------------------------------------------------
-            // Validate subscription
-            // -----------------------------------------------------
-
             var subscription =
                 await _context.Subscriptions
                     .FirstOrDefaultAsync(s =>
@@ -405,272 +313,385 @@ namespace EPIC.Api.Controllers
 
             if (subscription == null)
             {
-                return BadRequest(new
+                return NotFound(new
                 {
                     message = "Subscription not found."
                 });
             }
 
-            // -----------------------------------------------------
-            // Validate status
-            // -----------------------------------------------------
+            var paymentMethod =
+                NormalizePaymentMethod(
+                    request.PaymentMethod);
 
-            var status =
-                string.IsNullOrWhiteSpace(request.Status)
-                    ? payment.Status
-                    : request.Status
-                        .Trim()
-                        .ToUpperInvariant();
-
-            var allowedStatuses = new[]
-            {
-                "PENDING",
-                "PAID",
-                "FAILED",
-                "REFUNDED",
-                "CANCELLED"
-            };
-
-            if (!allowedStatuses.Contains(status))
+            if (paymentMethod == null)
             {
                 return BadRequest(new
                 {
-                    message = "Invalid payment status."
+                    message =
+                        "Invalid payment method."
                 });
             }
 
-            // -----------------------------------------------------
-            // Update payment
-            // -----------------------------------------------------
+            var status =
+                NormalizeStatus(
+                    request.Status);
 
-            payment.SubscriptionId =
-                subscription.SubscriptionId;
-
-            payment.Amount =
-                request.Amount;
-
-            payment.Currency =
-                string.IsNullOrWhiteSpace(request.Currency)
-                    ? "PHP"
-                    : request.Currency
-                        .Trim()
-                        .ToUpperInvariant();
-
-            payment.PaymentMethod =
-                string.IsNullOrWhiteSpace(request.PaymentMethod)
-                    ? payment.PaymentMethod
-                    : request.PaymentMethod.Trim();
-
-            payment.Status =
-                status;
-
-            payment.ReferenceNumber =
-                request.ReferenceNumber?.Trim();
-
-            payment.GatewayPaymentId =
-                request.GatewayPaymentId?.Trim();
-
-            payment.GatewayCheckoutId =
-                request.GatewayCheckoutId?.Trim();
-
-            payment.GatewayCustomerId =
-                request.GatewayCustomerId?.Trim();
-
-            payment.InvoiceNumber =
-                request.InvoiceNumber?.Trim();
-
-            payment.ReceiptNumber =
-                request.ReceiptNumber?.Trim();
-
-            payment.FailureReason =
-                request.FailureReason?.Trim();
-
-            payment.Notes =
-                request.Notes?.Trim();
-
-            // -----------------------------------------------------
-            // Synchronize subscription
-            // -----------------------------------------------------
-
-            var now = DateTime.Now;
-
-            if (status == "PAID")
+            if (status == null)
             {
-                subscription.Status = "ACTIVE";
-                subscription.CancelledDate = null;
-                subscription.EndDate = null;
-                subscription.UpdatedDate = now;
-
-                subscription.NextBillingDate =
-                    subscription.BillingCycle.Equals(
-                        "Annual",
-                        StringComparison.OrdinalIgnoreCase)
-                        ? now.AddYears(1)
-                        : now.AddMonths(1);
+                return BadRequest(new
+                {
+                    message =
+                        "Invalid payment status."
+                });
             }
 
-            if (status == "FAILED")
-            {
-                subscription.Status = "PAST_DUE";
-                subscription.UpdatedDate = now;
-            }
+            var now =
+                DateTime.UtcNow;
 
-            if (status == "CANCELLED")
+            var payment = new Payment
             {
-                subscription.Status = "CANCELLED";
-                subscription.CancelledDate = now;
-                subscription.EndDate = now;
-                subscription.UpdatedDate = now;
-            }
+                SubscriptionId =
+                    subscription.SubscriptionId,
+
+                Amount =
+                    request.Amount,
+
+                Currency =
+                    NormalizeCurrency(
+                        request.Currency),
+
+                PaymentMethod =
+                    paymentMethod,
+
+                Status =
+                    status,
+
+                ReferenceNumber =
+                    Clean(request.ReferenceNumber),
+
+                GatewayPaymentId =
+                    Clean(request.GatewayPaymentId),
+
+                GatewayCheckoutId =
+                    Clean(request.GatewayCheckoutId),
+
+                GatewayCustomerId =
+                    Clean(request.GatewayCustomerId),
+
+                BillingPeriodStart =
+                    request.BillingPeriodStart,
+
+                BillingPeriodEnd =
+                    request.BillingPeriodEnd,
+
+                InvoiceNumber =
+                    Clean(request.InvoiceNumber),
+
+                ReceiptNumber =
+                    Clean(request.ReceiptNumber),
+
+                FailureReason =
+                    Clean(request.FailureReason),
+
+                Notes =
+                    Clean(request.Notes),
+
+                CreatedDate =
+                    now,
+
+                UpdatedDate =
+                    now
+            };
+
+            ApplyPaymentStatus(
+                payment,
+                subscription,
+                status,
+                now);
+
+            _context.Payments.Add(payment);
 
             await _context.SaveChangesAsync();
 
-            await _context.Entry(payment)
-                .Reference(p => p.Subscription)
-                .LoadAsync();
-
-            return Ok(payment);
+            return CreatedAtAction(
+                nameof(GetPayment),
+                new
+                {
+                    id = payment.PaymentId
+                },
+                new
+                {
+                    success = true,
+                    message =
+                        "Payment created successfully.",
+                    paymentId =
+                        payment.PaymentId,
+                    subscriptionId =
+                        payment.SubscriptionId,
+                    amount =
+                        payment.Amount,
+                    currency =
+                        payment.Currency,
+                    paymentMethod =
+                        payment.PaymentMethod,
+                    status =
+                        payment.Status,
+                    paidDate =
+                        payment.PaidDate,
+                    failedDate =
+                        payment.FailedDate,
+                    createdDate =
+                        payment.CreatedDate
+                });
         }
 
         // =========================================================
-        // MARK PAYMENT AS PAID
-        // POST: api/Payments/5/mark-paid
+        // UPDATE PAYMENT
+        // PUT: api/Payments/{id}
+        // =========================================================
+
+        [HttpPut("{id:int}")]
+        [Permission("Payments", "edit")]
+        public async Task<IActionResult> UpdatePayment(
+            int id,
+            [FromBody] UpdatePaymentDto request)
+        {
+            if (id <= 0)
+            {
+                return BadRequest(new
+                {
+                    message = "Invalid payment ID."
+                });
+            }
+
+            if (request == null)
+            {
+                return BadRequest(new
+                {
+                    message = "Payment data is required."
+                });
+            }
+
+            var payment =
+                await _context.Payments
+                    .FirstOrDefaultAsync(p =>
+                        p.PaymentId == id);
+
+            if (payment == null)
+            {
+                return NotFound(new
+                {
+                    message = "Payment not found."
+                });
+            }
+
+            if (request.Amount.HasValue &&
+                request.Amount.Value <= 0)
+            {
+                return BadRequest(new
+                {
+                    message =
+                        "Payment amount must be greater than zero."
+                });
+            }
+
+            if (request.Amount.HasValue)
+            {
+                payment.Amount =
+                    request.Amount.Value;
+            }
+
+            if (!string.IsNullOrWhiteSpace(
+                request.Currency))
+            {
+                payment.Currency =
+                    NormalizeCurrency(
+                        request.Currency);
+            }
+
+            if (!string.IsNullOrWhiteSpace(
+                request.PaymentMethod))
+            {
+                var method =
+                    NormalizePaymentMethod(
+                        request.PaymentMethod);
+
+                if (method == null)
+                {
+                    return BadRequest(new
+                    {
+                        message =
+                            "Invalid payment method."
+                    });
+                }
+
+                payment.PaymentMethod =
+                    method;
+            }
+
+            if (request.ReferenceNumber != null)
+            {
+                payment.ReferenceNumber =
+                    Clean(request.ReferenceNumber);
+            }
+
+            if (request.GatewayPaymentId != null)
+            {
+                payment.GatewayPaymentId =
+                    Clean(request.GatewayPaymentId);
+            }
+
+            if (request.GatewayCheckoutId != null)
+            {
+                payment.GatewayCheckoutId =
+                    Clean(request.GatewayCheckoutId);
+            }
+
+            if (request.GatewayCustomerId != null)
+            {
+                payment.GatewayCustomerId =
+                    Clean(request.GatewayCustomerId);
+            }
+
+            if (request.BillingPeriodStart.HasValue)
+            {
+                payment.BillingPeriodStart =
+                    request.BillingPeriodStart;
+            }
+
+            if (request.BillingPeriodEnd.HasValue)
+            {
+                payment.BillingPeriodEnd =
+                    request.BillingPeriodEnd;
+            }
+
+            if (request.InvoiceNumber != null)
+            {
+                payment.InvoiceNumber =
+                    Clean(request.InvoiceNumber);
+            }
+
+            if (request.ReceiptNumber != null)
+            {
+                payment.ReceiptNumber =
+                    Clean(request.ReceiptNumber);
+            }
+
+            if (request.FailureReason != null)
+            {
+                payment.FailureReason =
+                    Clean(request.FailureReason);
+            }
+
+            if (request.Notes != null)
+            {
+                payment.Notes =
+                    Clean(request.Notes);
+            }
+
+            var subscription =
+                await _context.Subscriptions
+                    .FirstOrDefaultAsync(s =>
+                        s.SubscriptionId ==
+                        payment.SubscriptionId);
+
+            if (subscription == null)
+            {
+                return BadRequest(new
+                {
+                    message =
+                        "The payment subscription could not be found."
+                });
+            }
+
+            if (!string.IsNullOrWhiteSpace(
+                request.Status))
+            {
+                var status =
+                    NormalizeStatus(
+                        request.Status);
+
+                if (status == null)
+                {
+                    return BadRequest(new
+                    {
+                        message =
+                            "Invalid payment status."
+                    });
+                }
+
+                ApplyPaymentStatus(
+                    payment,
+                    subscription,
+                    status,
+                    DateTime.UtcNow);
+            }
+
+            payment.UpdatedDate =
+                DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                success = true,
+                message =
+                    "Payment updated successfully.",
+                payment = await BuildPaymentQuery()
+                    .Where(p =>
+                        p.PaymentId == id)
+                    .FirstOrDefaultAsync()
+            });
+        }
+
+        // =========================================================
+        // MARK AS PAID
+        // POST: api/Payments/{id}/mark-paid
         // =========================================================
 
         [HttpPost("{id:int}/mark-paid")]
         [Permission("Payments", "edit")]
-        public async Task<IActionResult> MarkAsPaid(int id)
+        public async Task<IActionResult> MarkAsPaid(
+            int id)
         {
-            var payment =
-                await _context.Payments
-                    .FirstOrDefaultAsync(p =>
-                        p.PaymentId == id);
-
-            if (payment == null)
-            {
-                return NotFound(new
-                {
-                    message = "Payment not found."
-                });
-            }
-
-            if (payment.Status == "PAID")
-            {
-                return BadRequest(new
-                {
-                    message = "Payment is already marked as paid."
-                });
-            }
-
-            var subscription =
-                await _context.Subscriptions
-                    .FirstOrDefaultAsync(s =>
-                        s.SubscriptionId ==
-                        payment.SubscriptionId);
-
-            if (subscription == null)
-            {
-                return BadRequest(new
-                {
-                    message =
-                        "The payment subscription could not be found."
-                });
-            }
-
-            var now = DateTime.Now;
-
-            payment.Status = "PAID";
-
-            subscription.Status = "ACTIVE";
-            subscription.CancelledDate = null;
-            subscription.EndDate = null;
-            subscription.UpdatedDate = now;
-
-            subscription.NextBillingDate =
-                subscription.BillingCycle.Equals(
-                    "Annual",
-                    StringComparison.OrdinalIgnoreCase)
-                    ? now.AddYears(1)
-                    : now.AddMonths(1);
-
-            await _context.SaveChangesAsync();
-
-            return Ok(new
-            {
-                message = "Payment marked as paid successfully.",
-                paymentId = payment.PaymentId,
-                status = payment.Status,
-                subscriptionId = subscription.SubscriptionId,
-                subscriptionStatus = subscription.Status,
-                nextBillingDate = subscription.NextBillingDate
-            });
+            return await ChangePaymentStatus(
+                id,
+                "PAID");
         }
 
         // =========================================================
-        // MARK PAYMENT AS FAILED
-        // POST: api/Payments/5/mark-failed
+        // MARK AS FAILED
+        // POST: api/Payments/{id}/mark-failed
         // =========================================================
 
         [HttpPost("{id:int}/mark-failed")]
         [Permission("Payments", "edit")]
-        public async Task<IActionResult> MarkAsFailed(int id)
+        public async Task<IActionResult> MarkAsFailed(
+            int id)
         {
-            var payment =
-                await _context.Payments
-                    .FirstOrDefaultAsync(p =>
-                        p.PaymentId == id);
-
-            if (payment == null)
-            {
-                return NotFound(new
-                {
-                    message = "Payment not found."
-                });
-            }
-
-            var subscription =
-                await _context.Subscriptions
-                    .FirstOrDefaultAsync(s =>
-                        s.SubscriptionId ==
-                        payment.SubscriptionId);
-
-            if (subscription == null)
-            {
-                return BadRequest(new
-                {
-                    message =
-                        "The payment subscription could not be found."
-                });
-            }
-
-            var now = DateTime.Now;
-
-            payment.Status = "FAILED";
-
-            subscription.Status = "PAST_DUE";
-            subscription.UpdatedDate = now;
-
-            await _context.SaveChangesAsync();
-
-            return Ok(new
-            {
-                message = "Payment marked as failed.",
-                paymentId = payment.PaymentId,
-                status = payment.Status,
-                subscriptionId = subscription.SubscriptionId,
-                subscriptionStatus = subscription.Status
-            });
+            return await ChangePaymentStatus(
+                id,
+                "FAILED");
         }
 
         // =========================================================
-        // REFUND PAYMENT
-        // POST: api/Payments/5/refund
+        // REFUND
+        // POST: api/Payments/{id}/refund
         // =========================================================
 
         [HttpPost("{id:int}/refund")]
         [Permission("Payments", "edit")]
-        public async Task<IActionResult> RefundPayment(int id)
+        public async Task<IActionResult> RefundPayment(
+            int id)
         {
+            if (id <= 0)
+            {
+                return BadRequest(new
+                {
+                    message = "Invalid payment ID."
+                });
+            }
+
             var payment =
                 await _context.Payments
                     .FirstOrDefaultAsync(p =>
@@ -708,33 +729,42 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            var now = DateTime.Now;
+            var now =
+                DateTime.UtcNow;
 
-            payment.Status = "REFUNDED";
-
-            subscription.Status = "PAST_DUE";
-            subscription.UpdatedDate = now;
+            ApplyPaymentStatus(
+                payment,
+                subscription,
+                "REFUNDED",
+                now);
 
             await _context.SaveChangesAsync();
 
             return Ok(new
             {
-                message = "Payment refunded successfully.",
-                paymentId = payment.PaymentId,
-                status = payment.Status,
-                subscriptionId = subscription.SubscriptionId,
-                subscriptionStatus = subscription.Status
+                success = true,
+                message =
+                    "Payment refunded successfully.",
+                paymentId =
+                    payment.PaymentId,
+                status =
+                    payment.Status,
+                subscriptionId =
+                    subscription.SubscriptionId,
+                subscriptionStatus =
+                    subscription.Status
             });
         }
 
         // =========================================================
         // DELETE PAYMENT
-        // DELETE: api/Payments/5
+        // DELETE: api/Payments/{id}
         // =========================================================
 
         [HttpDelete("{id:int}")]
         [Permission("Payments", "delete")]
-        public async Task<IActionResult> DeletePayment(int id)
+        public async Task<IActionResult> DeletePayment(
+            int id)
         {
             if (id <= 0)
             {
@@ -757,16 +787,13 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            // -----------------------------------------------------
-            // Do not delete completed payments
-            // -----------------------------------------------------
-
-            if (payment.Status == "PAID")
+            if (payment.Status == "PAID" ||
+                payment.Status == "REFUNDED")
             {
                 return BadRequest(new
                 {
                     message =
-                        "Completed payments cannot be deleted."
+                        "Completed or refunded payments cannot be deleted."
                 });
             }
 
@@ -776,5 +803,519 @@ namespace EPIC.Api.Controllers
 
             return NoContent();
         }
+
+        // =========================================================
+        // INTERNAL STATUS HANDLER
+        // =========================================================
+
+        private async Task<IActionResult> ChangePaymentStatus(
+            int id,
+            string status)
+        {
+            if (id <= 0)
+            {
+                return BadRequest(new
+                {
+                    message = "Invalid payment ID."
+                });
+            }
+
+            var normalizedStatus =
+                NormalizeStatus(status);
+
+            if (normalizedStatus == null)
+            {
+                return BadRequest(new
+                {
+                    message = "Invalid payment status."
+                });
+            }
+
+            var payment =
+                await _context.Payments
+                    .FirstOrDefaultAsync(p =>
+                        p.PaymentId == id);
+
+            if (payment == null)
+            {
+                return NotFound(new
+                {
+                    message = "Payment not found."
+                });
+            }
+
+            if (payment.Status ==
+                normalizedStatus)
+            {
+                return BadRequest(new
+                {
+                    message =
+                        $"Payment is already {normalizedStatus}."
+                });
+            }
+
+            var subscription =
+                await _context.Subscriptions
+                    .FirstOrDefaultAsync(s =>
+                        s.SubscriptionId ==
+                        payment.SubscriptionId);
+
+            if (subscription == null)
+            {
+                return BadRequest(new
+                {
+                    message =
+                        "The payment subscription could not be found."
+                });
+            }
+
+            var now =
+                DateTime.UtcNow;
+
+            ApplyPaymentStatus(
+                payment,
+                subscription,
+                normalizedStatus,
+                now);
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                success = true,
+                message =
+                    $"Payment marked as {normalizedStatus.ToLowerInvariant()}.",
+                paymentId =
+                    payment.PaymentId,
+                status =
+                    payment.Status,
+                paidDate =
+                    payment.PaidDate,
+                failedDate =
+                    payment.FailedDate,
+                subscriptionId =
+                    subscription.SubscriptionId,
+                subscriptionStatus =
+                    subscription.Status,
+                nextBillingDate =
+                    subscription.NextBillingDate
+            });
+        }
+
+        // =========================================================
+        // PAYMENT STATUS SYNCHRONIZATION
+        // =========================================================
+
+        private static void ApplyPaymentStatus(
+            Payment payment,
+            Subscription subscription,
+            string status,
+            DateTime now)
+        {
+            payment.Status =
+                status;
+
+            payment.UpdatedDate =
+                now;
+
+            switch (status)
+            {
+                case "PAID":
+
+                    payment.PaidDate ??= now;
+                    payment.FailedDate = null;
+
+                    subscription.Status =
+                        "ACTIVE";
+
+                    subscription.CancelledDate =
+                        null;
+
+                    subscription.EndDate =
+                        null;
+
+                    subscription.NextBillingDate =
+                        string.Equals(
+                            subscription.BillingCycle,
+                            "Annual",
+                            StringComparison.OrdinalIgnoreCase)
+                            ? now.AddYears(1)
+                            : now.AddMonths(1);
+
+                    subscription.UpdatedDate =
+                        now;
+
+                    break;
+
+                case "FAILED":
+
+                    payment.FailedDate =
+                        now;
+
+                    payment.PaidDate =
+                        null;
+
+                    subscription.Status =
+                        "PAST_DUE";
+
+                    subscription.UpdatedDate =
+                        now;
+
+                    break;
+
+                case "CANCELLED":
+
+                    payment.PaidDate =
+                        null;
+
+                    payment.FailedDate =
+                        null;
+
+                    subscription.Status =
+                        "CANCELLED";
+
+                    subscription.CancelledDate =
+                        now;
+
+                    subscription.EndDate =
+                        now;
+
+                    subscription.UpdatedDate =
+                        now;
+
+                    break;
+
+                case "REFUNDED":
+
+                    subscription.Status =
+                        "PAST_DUE";
+
+                    subscription.UpdatedDate =
+                        now;
+
+                    break;
+
+                case "PENDING":
+
+                    payment.PaidDate =
+                        null;
+
+                    payment.FailedDate =
+                        null;
+
+                    break;
+            }
+        }
+
+        // =========================================================
+        // PAYMENT QUERY
+        // =========================================================
+        //
+        // IMPORTANT:
+        // Never return Payment entities directly.
+        // This prevents:
+        //
+        // Payment
+        //   -> Subscription
+        //      -> SubscriptionPlan
+        //         -> Subscriptions
+        //            -> SubscriptionPlan
+        //               -> ...
+        //
+        // =========================================================
+
+        private IQueryable<PaymentResponseDto>
+            BuildPaymentQuery()
+        {
+            return _context.Payments
+                .AsNoTracking()
+                .Select(p => new PaymentResponseDto
+                {
+                    PaymentId =
+                        p.PaymentId,
+
+                    SubscriptionId =
+                        p.SubscriptionId,
+
+                    ChurchName =
+                        p.Subscription != null
+                            ? p.Subscription.ChurchName
+                            : null,
+
+                    ContactName =
+                        p.Subscription != null
+                            ? p.Subscription.ContactName
+                            : null,
+
+                    ContactEmail =
+                        p.Subscription != null
+                            ? p.Subscription.ContactEmail
+                            : null,
+
+                    ContactPhone =
+                        p.Subscription != null
+                            ? p.Subscription.ContactPhone
+                            : null,
+
+                    PlanName =
+                        p.Subscription != null &&
+                        p.Subscription.SubscriptionPlan != null
+                            ? p.Subscription.SubscriptionPlan.PlanName
+                            : null,
+
+                    BillingCycle =
+                        p.Subscription != null
+                            ? p.Subscription.BillingCycle
+                            : null,
+
+                    Amount =
+                        p.Amount,
+
+                    Currency =
+                        p.Currency,
+
+                    PaymentMethod =
+                        p.PaymentMethod,
+
+                    Status =
+                        p.Status,
+
+                    ReferenceNumber =
+                        p.ReferenceNumber,
+
+                    GatewayPaymentId =
+                        p.GatewayPaymentId,
+
+                    GatewayCheckoutId =
+                        p.GatewayCheckoutId,
+
+                    GatewayCustomerId =
+                        p.GatewayCustomerId,
+
+                    BillingPeriodStart =
+                        p.BillingPeriodStart,
+
+                    BillingPeriodEnd =
+                        p.BillingPeriodEnd,
+
+                    InvoiceNumber =
+                        p.InvoiceNumber,
+
+                    ReceiptNumber =
+                        p.ReceiptNumber,
+
+                    PaidDate =
+                        p.PaidDate,
+
+                    FailedDate =
+                        p.FailedDate,
+
+                    FailureReason =
+                        p.FailureReason,
+
+                    Notes =
+                        p.Notes,
+
+                    CreatedDate =
+                        p.CreatedDate,
+
+                    UpdatedDate =
+                        p.UpdatedDate
+                });
+        }
+
+        // =========================================================
+        // VALIDATION HELPERS
+        // =========================================================
+
+        private static string? NormalizeStatus(
+            string? status)
+        {
+            if (string.IsNullOrWhiteSpace(status))
+            {
+                return "PENDING";
+            }
+
+            var normalized =
+                status.Trim()
+                    .ToUpperInvariant();
+
+            return AllowedStatuses.Contains(
+                normalized)
+                ? normalized
+                : null;
+        }
+
+        private static string? NormalizePaymentMethod(
+            string? method)
+        {
+            if (string.IsNullOrWhiteSpace(method))
+            {
+                return "Manual";
+            }
+
+            var value =
+                method.Trim();
+
+            return AllowedPaymentMethods
+                .FirstOrDefault(x =>
+                    x.Equals(
+                        value,
+                        StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static string NormalizeCurrency(
+            string? currency)
+        {
+            if (string.IsNullOrWhiteSpace(currency))
+            {
+                return "PHP";
+            }
+
+            return currency
+                .Trim()
+                .ToUpperInvariant();
+        }
+
+        private static string? Clean(
+            string? value)
+        {
+            return string.IsNullOrWhiteSpace(value)
+                ? null
+                : value.Trim();
+        }
+    }
+
+    // =============================================================
+    // PAYMENT RESPONSE DTO
+    // =============================================================
+
+    public class PaymentResponseDto
+    {
+        public int PaymentId { get; set; }
+
+        public int SubscriptionId { get; set; }
+
+        public string? ChurchName { get; set; }
+
+        public string? ContactName { get; set; }
+
+        public string? ContactEmail { get; set; }
+
+        public string? ContactPhone { get; set; }
+
+        public string? PlanName { get; set; }
+
+        public string? BillingCycle { get; set; }
+
+        public decimal Amount { get; set; }
+
+        public string Currency { get; set; } = "PHP";
+
+        public string PaymentMethod { get; set; } = "Manual";
+
+        public string Status { get; set; } = "PENDING";
+
+        public string? ReferenceNumber { get; set; }
+
+        public string? GatewayPaymentId { get; set; }
+
+        public string? GatewayCheckoutId { get; set; }
+
+        public string? GatewayCustomerId { get; set; }
+
+        public DateTime? BillingPeriodStart { get; set; }
+
+        public DateTime? BillingPeriodEnd { get; set; }
+
+        public string? InvoiceNumber { get; set; }
+
+        public string? ReceiptNumber { get; set; }
+
+        public DateTime? PaidDate { get; set; }
+
+        public DateTime? FailedDate { get; set; }
+
+        public string? FailureReason { get; set; }
+
+        public string? Notes { get; set; }
+
+        public DateTime CreatedDate { get; set; }
+
+        public DateTime? UpdatedDate { get; set; }
+    }
+
+    // =============================================================
+    // CREATE PAYMENT DTO
+    // =============================================================
+
+    public class CreatePaymentDto
+    {
+        [Required]
+        public int SubscriptionId { get; set; }
+
+        [Required]
+        public decimal Amount { get; set; }
+
+        public string Currency { get; set; } = "PHP";
+
+        public string PaymentMethod { get; set; } = "Manual";
+
+        public string Status { get; set; } = "PENDING";
+
+        public string? ReferenceNumber { get; set; }
+
+        public string? GatewayPaymentId { get; set; }
+
+        public string? GatewayCheckoutId { get; set; }
+
+        public string? GatewayCustomerId { get; set; }
+
+        public DateTime? BillingPeriodStart { get; set; }
+
+        public DateTime? BillingPeriodEnd { get; set; }
+
+        public string? InvoiceNumber { get; set; }
+
+        public string? ReceiptNumber { get; set; }
+
+        public string? FailureReason { get; set; }
+
+        public string? Notes { get; set; }
+    }
+
+    // =============================================================
+    // UPDATE PAYMENT DTO
+    // =============================================================
+
+    public class UpdatePaymentDto
+    {
+        public decimal? Amount { get; set; }
+
+        public string? Currency { get; set; }
+
+        public string? PaymentMethod { get; set; }
+
+        public string? Status { get; set; }
+
+        public string? ReferenceNumber { get; set; }
+
+        public string? GatewayPaymentId { get; set; }
+
+        public string? GatewayCheckoutId { get; set; }
+
+        public string? GatewayCustomerId { get; set; }
+
+        public DateTime? BillingPeriodStart { get; set; }
+
+        public DateTime? BillingPeriodEnd { get; set; }
+
+        public string? InvoiceNumber { get; set; }
+
+        public string? ReceiptNumber { get; set; }
+
+        public string? FailureReason { get; set; }
+
+        public string? Notes { get; set; }
     }
 }

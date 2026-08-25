@@ -1,0 +1,548 @@
+﻿/* =========================================================
+   EPIC CLIENT SIDEBAR
+   Modern SaaS / Futuristic
+   ========================================================= */
+
+.epic-client-sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+
+    width: 270px;
+
+    display: flex;
+    flex-direction: column;
+
+    background:
+        linear-gradient(
+            180deg,
+            #07111f 0%,
+            #091522 55%,
+            #06101c 100%
+        );
+
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+
+    color: #ffffff;
+
+    z-index: 1000;
+
+    overflow: hidden;
+}
+
+/* =========================================================
+   SUBTLE BACKGROUND
+   ========================================================= */
+
+.epic-client-sidebar::before {
+    content: "";
+
+    position: absolute;
+
+    width: 300px;
+    height: 300px;
+
+    top: -160px;
+    right: -160px;
+
+    border-radius: 50%;
+
+    background: rgba(41, 196, 255, 0.12);
+
+    filter: blur(70px);
+
+    pointer-events: none;
+}
+
+.epic-client-sidebar::after {
+    content: "";
+
+    position: absolute;
+
+    width: 250px;
+    height: 250px;
+
+    bottom: -130px;
+    left: -130px;
+
+    border-radius: 50%;
+
+    background: rgba(89, 80, 255, 0.08);
+
+    filter: blur(70px);
+
+    pointer-events: none;
+}
+
+/* =========================================================
+   BRAND
+   ========================================================= */
+
+.epic-sidebar-brand {
+    position: relative;
+
+    display: flex;
+    align-items: center;
+
+    gap: 12px;
+
+    padding: 25px 22px;
+
+    border-bottom:
+        1px solid rgba(255, 255, 255, 0.07);
+}
+
+.epic-sidebar-logo {
+    width: 42px;
+    height: 42px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 12px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #ffffff,
+            #c8e9ff
+        );
+
+    color: #07111f;
+
+    font-size: 20px;
+    font-weight: 900;
+
+    box-shadow:
+        0 8px 25px rgba(0, 190, 255, 0.18);
+}
+
+.epic-sidebar-brand-text {
+    display: flex;
+    flex-direction: column;
+
+    line-height: 1;
+}
+
+.epic-sidebar-brand-text strong {
+    font-size: 21px;
+    font-weight: 900;
+
+    letter-spacing: 0.12em;
+}
+
+.epic-sidebar-brand-text span {
+    margin-top: 6px;
+
+    color: rgba(255, 255, 255, 0.48);
+
+    font-size: 8px;
+    font-weight: 700;
+
+    letter-spacing: 0.14em;
+}
+
+/* =========================================================
+   SECTION
+   ========================================================= */
+
+.epic-sidebar-section {
+    position: relative;
+
+    flex: 1;
+
+    padding: 28px 14px 15px;
+
+    overflow-y: auto;
+}
+
+.epic-sidebar-section-title {
+    display: block;
+
+    padding:
+        0 12px 10px;
+
+    color: rgba(255, 255, 255, 0.35);
+
+    font-size: 9px;
+    font-weight: 800;
+
+    letter-spacing: 0.16em;
+}
+
+/* =========================================================
+   NAV
+   ========================================================= */
+
+.epic-sidebar-nav {
+    display: flex;
+    flex-direction: column;
+
+    gap: 5px;
+}
+
+.epic-sidebar-nav-item {
+    position: relative;
+
+    width: 100%;
+
+    min-height: 48px;
+
+    display: flex;
+    align-items: center;
+
+    gap: 12px;
+
+    padding: 0 13px;
+
+    border: 0;
+    border-radius: 11px;
+
+    background: transparent;
+
+    color: rgba(255, 255, 255, 0.58);
+
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+
+    text-align: left;
+
+    cursor: pointer;
+
+    transition:
+        background 0.2s ease,
+        color 0.2s ease,
+        transform 0.2s ease;
+}
+
+.epic-sidebar-nav-item:hover {
+    background:
+        rgba(255, 255, 255, 0.06);
+
+    color: #ffffff;
+
+    transform: translateX(2px);
+}
+
+.epic-sidebar-nav-item.active {
+    background:
+        linear-gradient(
+            90deg,
+            rgba(255, 255, 255, 0.12),
+            rgba(255, 255, 255, 0.055)
+        );
+
+    color: #ffffff;
+
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.epic-sidebar-nav-icon {
+    width: 22px;
+    height: 22px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    color: rgba(255, 255, 255, 0.48);
+
+    font-size: 17px;
+
+    transition: color 0.2s ease;
+}
+
+.epic-sidebar-nav-item.active
+.epic-sidebar-nav-icon {
+    color: #ffffff;
+}
+
+.epic-sidebar-nav-label {
+    flex: 1;
+}
+
+.epic-sidebar-active-indicator {
+    width: 3px;
+    height: 24px;
+
+    position: absolute;
+    right: 0;
+
+    border-radius: 4px 0 0 4px;
+
+    background: #ffffff;
+
+    box-shadow:
+        0 0 12px rgba(255, 255, 255, 0.55);
+}
+
+.epic-sidebar-badge {
+    min-width: 22px;
+
+    padding: 3px 7px;
+
+    border-radius: 20px;
+
+    background:
+        rgba(255, 255, 255, 0.1);
+
+    color: rgba(255, 255, 255, 0.75);
+
+    font-size: 9px;
+    font-weight: 800;
+
+    text-align: center;
+}
+
+/* =========================================================
+   SECURITY
+   ========================================================= */
+
+.epic-sidebar-security {
+    position: relative;
+
+    display: flex;
+    align-items: center;
+
+    gap: 10px;
+
+    margin: 0 14px 15px;
+
+    padding: 12px;
+
+    border:
+        1px solid rgba(255, 255, 255, 0.07);
+
+    border-radius: 12px;
+
+    background:
+        rgba(255, 255, 255, 0.035);
+}
+
+.epic-sidebar-security-icon {
+    width: 28px;
+    height: 28px;
+
+    flex-shrink: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 50%;
+
+    background:
+        rgba(78, 220, 155, 0.12);
+
+    color: #7df0bd;
+
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.epic-sidebar-security div:last-child {
+    display: flex;
+    flex-direction: column;
+
+    gap: 3px;
+}
+
+.epic-sidebar-security strong {
+    color: rgba(255, 255, 255, 0.85);
+
+    font-size: 10px;
+}
+
+.epic-sidebar-security span {
+    color: rgba(255, 255, 255, 0.35);
+
+    font-size: 8px;
+}
+
+/* =========================================================
+   BOTTOM
+   ========================================================= */
+
+.epic-sidebar-bottom {
+    position: relative;
+
+    padding: 15px;
+
+    border-top:
+        1px solid rgba(255, 255, 255, 0.07);
+}
+
+/* =========================================================
+   USER
+   ========================================================= */
+
+.epic-sidebar-user {
+    display: flex;
+    align-items: center;
+
+    gap: 10px;
+
+    padding: 7px 5px 14px;
+}
+
+.epic-sidebar-avatar {
+    width: 38px;
+    height: 38px;
+
+    flex-shrink: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 11px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #ffffff,
+            #d6eaff
+        );
+
+    color: #07111f;
+
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.epic-sidebar-user-info {
+    min-width: 0;
+
+    display: flex;
+    flex-direction: column;
+
+    gap: 4px;
+}
+
+.epic-sidebar-user-info strong {
+    overflow: hidden;
+
+    color: rgba(255, 255, 255, 0.9);
+
+    font-size: 11px;
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.epic-sidebar-user-info span {
+    color: rgba(255, 255, 255, 0.35);
+
+    font-size: 8px;
+    font-weight: 700;
+
+    letter-spacing: 0.08em;
+}
+
+/* =========================================================
+   LOGOUT
+   ========================================================= */
+
+.epic-sidebar-logout {
+    width: 100%;
+    height: 42px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: 8px;
+
+    border:
+        1px solid rgba(255, 255, 255, 0.08);
+
+    border-radius: 10px;
+
+    background:
+        rgba(255, 255, 255, 0.035);
+
+    color: rgba(255, 255, 255, 0.52);
+
+    font-family: inherit;
+
+    font-size: 11px;
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition:
+        background 0.2s ease,
+        color 0.2s ease,
+        border-color 0.2s ease;
+}
+
+.epic-sidebar-logout:hover {
+    background:
+        rgba(255, 255, 255, 0.08);
+
+    border-color:
+        rgba(255, 255, 255, 0.14);
+
+    color: #ffffff;
+}
+
+/* =========================================================
+   SCROLLBAR
+   ========================================================= */
+
+.epic-sidebar-section::-webkit-scrollbar {
+    width: 4px;
+}
+
+.epic-sidebar-section::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.epic-sidebar-section::-webkit-scrollbar-thumb {
+    background:
+        rgba(255, 255, 255, 0.12);
+
+    border-radius: 10px;
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 900px) {
+
+    .epic-client-sidebar {
+        width: 235px;
+    }
+
+}
+
+@media (max-width: 700px) {
+
+    .epic-client-sidebar {
+        position: relative;
+
+        width: 100%;
+        height: auto;
+
+        min-height: auto;
+    }
+
+    .epic-sidebar-section {
+        flex: none;
+    }
+
+    .epic-sidebar-nav {
+        display: grid;
+
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+
+    .epic-sidebar-security {
+        display: none;
+    }
+
+}

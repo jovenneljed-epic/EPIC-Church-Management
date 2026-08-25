@@ -1,7 +1,9 @@
 ﻿using EPIC.Api.Data;
 using EPIC.Api.Models;
 using EPIC.Core.Interfaces;
+
 using Microsoft.EntityFrameworkCore;
+
 using System.Security.Claims;
 
 namespace EPIC.Api.Services
@@ -61,15 +63,6 @@ namespace EPIC.Api.Services
             }
 
             // -----------------------------------------------------
-            // ADMIN
-            // -----------------------------------------------------
-
-            if (await IsAdminAsync(user))
-            {
-                return true;
-            }
-
-            // -----------------------------------------------------
             // GET USER ID
             // -----------------------------------------------------
 
@@ -82,11 +75,62 @@ namespace EPIC.Api.Services
             }
 
             // -----------------------------------------------------
-            // DATABASE PERMISSION
+            // CHECK DATABASE ACCOUNT
+            //
+            // IMPORTANT:
+            // Do not trust only the JWT.
+            // The database is the current source of truth.
             // -----------------------------------------------------
 
-            return await HasPermissionAsync(
-                userId.Value,
+            var account =
+                await GetAccountAsync(
+                    userId.Value);
+
+            if (account == null)
+            {
+                return false;
+            }
+
+            // -----------------------------------------------------
+            // ACCOUNT ACTIVE
+            // -----------------------------------------------------
+
+            if (!account.IsActive)
+            {
+                return false;
+            }
+
+            // -----------------------------------------------------
+            // APPROVAL STATUS
+            //
+            // Existing ADMIN/STAFF accounts with NULL approval
+            // status are treated as APPROVED.
+            // -----------------------------------------------------
+
+            var approvalStatus =
+                NormalizeApprovalStatus(
+                    account.ApprovalStatus);
+
+            if (approvalStatus != "APPROVED")
+            {
+                return false;
+            }
+
+            // -----------------------------------------------------
+            // ADMIN BYPASS
+            // -----------------------------------------------------
+
+            if (IsAdminRole(account.RoleName))
+            {
+                return true;
+            }
+
+            // -----------------------------------------------------
+            // ROLE PERMISSION
+            // -----------------------------------------------------
+
+            return await HasRolePermissionAsync(
+                account.RoleId,
                 normalizedModule,
                 normalizedAction);
         }
@@ -105,6 +149,10 @@ namespace EPIC.Api.Services
                 return false;
             }
 
+            // -----------------------------------------------------
+            // NORMALIZE INPUT
+            // -----------------------------------------------------
+
             var normalizedModule =
                 NormalizeModule(module);
 
@@ -118,28 +166,35 @@ namespace EPIC.Api.Services
             }
 
             // -----------------------------------------------------
-            // GET USER ROLE
+            // GET ACCOUNT
             // -----------------------------------------------------
 
-            var user =
-                await _context.Users
-                    .AsNoTracking()
-                    .Where(u =>
-                        u.UserId == userId &&
-                        u.IsActive)
-                    .Select(u => new
-                    {
-                        u.UserId,
-                        u.RoleId,
+            var account =
+                await GetAccountAsync(userId);
 
-                        RoleName =
-                            u.Role != null
-                                ? u.Role.RoleName
-                                : null
-                    })
-                    .FirstOrDefaultAsync();
+            if (account == null)
+            {
+                return false;
+            }
 
-            if (user == null)
+            // -----------------------------------------------------
+            // ACTIVE CHECK
+            // -----------------------------------------------------
+
+            if (!account.IsActive)
+            {
+                return false;
+            }
+
+            // -----------------------------------------------------
+            // APPROVAL CHECK
+            // -----------------------------------------------------
+
+            var approvalStatus =
+                NormalizeApprovalStatus(
+                    account.ApprovalStatus);
+
+            if (approvalStatus != "APPROVED")
             {
                 return false;
             }
@@ -148,45 +203,18 @@ namespace EPIC.Api.Services
             // ADMIN BYPASS
             // -----------------------------------------------------
 
-            if (IsAdminRole(user.RoleName))
+            if (IsAdminRole(account.RoleName))
             {
                 return true;
             }
 
             // -----------------------------------------------------
-            // GET ROLE PERMISSION
-            //
-            // Module comparison is performed using a normalized
-            // database value after retrieving the role permissions.
-            // This avoids repeatedly calling ToLower/Trim inside
-            // the database predicate.
+            // ROLE PERMISSION
             // -----------------------------------------------------
 
-            var permissions =
-                await _context.Permissions
-                    .AsNoTracking()
-                    .Where(p =>
-                        p.RoleId == user.RoleId)
-                    .ToListAsync();
-
-            var permission =
-                permissions.FirstOrDefault(p =>
-                    string.Equals(
-                        p.Module?.Trim(),
-                        normalizedModule,
-                        StringComparison.OrdinalIgnoreCase));
-
-            if (permission == null)
-            {
-                return false;
-            }
-
-            // -----------------------------------------------------
-            // CHECK ACTION
-            // -----------------------------------------------------
-
-            return HasPermissionAction(
-                permission,
+            return await HasRolePermissionAsync(
+                account.RoleId,
+                normalizedModule,
                 normalizedAction);
         }
 
@@ -203,15 +231,6 @@ namespace EPIC.Api.Services
             }
 
             // -----------------------------------------------------
-            // FIRST CHECK JWT ROLE
-            // -----------------------------------------------------
-
-            if (IsAdminFromClaims(user))
-            {
-                return true;
-            }
-
-            // -----------------------------------------------------
             // GET USER ID
             // -----------------------------------------------------
 
@@ -224,22 +243,140 @@ namespace EPIC.Api.Services
             }
 
             // -----------------------------------------------------
-            // CHECK DATABASE ROLE
+            // DATABASE IS SOURCE OF TRUTH
+            //
+            // Do not grant ADMIN based only on the JWT role claim.
             // -----------------------------------------------------
 
-            var roleName =
-                await _context.Users
-                    .AsNoTracking()
-                    .Where(u =>
-                        u.UserId == userId.Value &&
-                        u.IsActive)
-                    .Select(u =>
+            var account =
+                await GetAccountAsync(
+                    userId.Value);
+
+            if (account == null)
+            {
+                return false;
+            }
+
+            // -----------------------------------------------------
+            // ACTIVE
+            // -----------------------------------------------------
+
+            if (!account.IsActive)
+            {
+                return false;
+            }
+
+            // -----------------------------------------------------
+            // APPROVED
+            // -----------------------------------------------------
+
+            var approvalStatus =
+                NormalizeApprovalStatus(
+                    account.ApprovalStatus);
+
+            if (approvalStatus != "APPROVED")
+            {
+                return false;
+            }
+
+            // -----------------------------------------------------
+            // ADMIN ROLE
+            // -----------------------------------------------------
+
+            return IsAdminRole(
+                account.RoleName);
+        }
+
+        // =========================================================
+        // GET ACCOUNT
+        // =========================================================
+
+        private async Task<UserAccountInfo?> GetAccountAsync(
+            int userId)
+        {
+            if (userId <= 0)
+            {
+                return null;
+            }
+
+            return await _context.Users
+                .AsNoTracking()
+                .Where(u =>
+                    u.UserId == userId)
+                .Select(u => new UserAccountInfo
+                {
+                    UserId =
+                        u.UserId,
+
+                    RoleId =
+                        u.RoleId,
+
+                    RoleName =
                         u.Role != null
                             ? u.Role.RoleName
-                            : null)
-                    .FirstOrDefaultAsync();
+                            : null,
 
-            return IsAdminRole(roleName);
+                    IsActive =
+                        u.IsActive,
+
+                    ApprovalStatus =
+                        u.ApprovalStatus
+                })
+                .FirstOrDefaultAsync();
+        }
+
+        // =========================================================
+        // CHECK ROLE PERMISSION
+        // =========================================================
+
+        private async Task<bool> HasRolePermissionAsync(
+            int roleId,
+            string module,
+            string action)
+        {
+            if (roleId <= 0)
+            {
+                return false;
+            }
+
+            // -----------------------------------------------------
+            // LOAD ROLE PERMISSIONS
+            // -----------------------------------------------------
+
+            var permissions =
+                await _context.Permissions
+                    .AsNoTracking()
+                    .Where(p =>
+                        p.RoleId == roleId)
+                    .ToListAsync();
+
+            // -----------------------------------------------------
+            // FIND MODULE
+            //
+            // Comparison is performed in memory so that Trim()
+            // and case-insensitive comparison do not interfere
+            // with SQL translation/index usage.
+            // -----------------------------------------------------
+
+            var permission =
+                permissions.FirstOrDefault(p =>
+                    string.Equals(
+                        p.Module?.Trim(),
+                        module,
+                        StringComparison.OrdinalIgnoreCase));
+
+            if (permission == null)
+            {
+                return false;
+            }
+
+            // -----------------------------------------------------
+            // CHECK ACTION
+            // -----------------------------------------------------
+
+            return HasPermissionAction(
+                permission,
+                action);
         }
 
         // =========================================================
@@ -286,19 +423,6 @@ namespace EPIC.Api.Services
                 roleName?.Trim(),
                 "ADMIN",
                 StringComparison.OrdinalIgnoreCase);
-        }
-
-        // =========================================================
-        // ADMIN CLAIM CHECK
-        // =========================================================
-
-        private static bool IsAdminFromClaims(
-            ClaimsPrincipal user)
-        {
-            return
-                user.IsInRole("ADMIN") ||
-                user.IsInRole("Admin") ||
-                user.IsInRole("admin");
         }
 
         // =========================================================
@@ -364,6 +488,44 @@ namespace EPIC.Api.Services
             return AllowedActions.Contains(normalized)
                 ? normalized
                 : null;
+        }
+
+        // =========================================================
+        // NORMALIZE APPROVAL STATUS
+        // =========================================================
+
+        private static string NormalizeApprovalStatus(
+            string? status)
+        {
+            // Existing accounts such as ADMIN/STAFF that were
+            // created before ApprovalStatus was introduced may
+            // have NULL. Treat those as APPROVED.
+
+            if (string.IsNullOrWhiteSpace(status))
+            {
+                return "APPROVED";
+            }
+
+            return status
+                .Trim()
+                .ToUpperInvariant();
+        }
+
+        // =========================================================
+        // ACCOUNT INFORMATION
+        // =========================================================
+
+        private sealed class UserAccountInfo
+        {
+            public int UserId { get; set; }
+
+            public int RoleId { get; set; }
+
+            public string? RoleName { get; set; }
+
+            public bool IsActive { get; set; }
+
+            public string? ApprovalStatus { get; set; }
         }
     }
 }

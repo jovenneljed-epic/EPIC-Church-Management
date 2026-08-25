@@ -1,9 +1,15 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
 
 namespace EPIC.Api.Models
 {
     public class DemoRequest
     {
+        // =========================================================
+        // PRIMARY KEY
+        // =========================================================
+
+        [Key]
         public int DemoRequestId { get; set; }
 
         // =========================================================
@@ -44,6 +50,14 @@ namespace EPIC.Api.Models
         [MaxLength(50)]
         public string Status { get; set; } = "Pending";
 
+        // Possible values:
+        // Pending
+        // Contacted
+        // Scheduled
+        // Completed
+        // Cancelled
+        // Converted
+
         // =========================================================
         // ADMIN NOTES
         // =========================================================
@@ -55,10 +69,21 @@ namespace EPIC.Api.Models
         // DATES
         // =========================================================
 
-        public DateTime CreatedDate { get; set; }
+        [Required]
+        public DateTime CreatedDate { get; set; } = DateTime.Now;
 
         public DateTime? ContactedDate { get; set; }
 
         public DateTime? DemoDate { get; set; }
+
+        // =========================================================
+        // CUSTOMER CONVERSION
+        // =========================================================
+
+        public bool IsConverted { get; set; } = false;
+
+        public int? CustomerId { get; set; }
+
+        public DateTime? ConvertedDate { get; set; }
     }
 }

@@ -1710,44 +1710,61 @@ const Attendance: React.FC = () => {
     // FILTER
     // =========================================================
 
-    const filteredAttendance =
-        useMemo(() => {
+   // =============================================================
+// FILTER + ALPHABETICAL SORT
+// =============================================================
 
-            const keyword =
-                search
-                    .trim()
-                    .toLowerCase();
+const filteredAttendance =
+    useMemo(() => {
 
-            if (!keyword) {
-                return attendance;
-            }
-
-            return attendance.filter(
-                row =>
-                    row.fullName
-                        .toLowerCase()
-                        .includes(
-                            keyword
-                        ) ||
-
-                    row.memberCode
-                        .toLowerCase()
-                        .includes(
-                            keyword
-                        ) ||
-
-                    row.ministry
-                        .toLowerCase()
-                        .includes(
-                            keyword
-                        )
-            );
-
-        }, [
-            attendance,
+        const keyword =
             search
-        ]);
+                .trim()
+                .toLowerCase();
 
+        const filtered =
+            !keyword
+                ? [...attendance]
+                : attendance.filter(
+                    row =>
+                        row.fullName
+                            .toLowerCase()
+                            .includes(
+                                keyword
+                            ) ||
+
+                        row.memberCode
+                            .toLowerCase()
+                            .includes(
+                                keyword
+                            ) ||
+
+                        row.ministry
+                            .toLowerCase()
+                            .includes(
+                                keyword
+                            )
+                );
+
+        // ---------------------------------------------------------
+        // SORT MEMBERS ALPHABETICALLY BY FULL NAME (A-Z)
+        // ---------------------------------------------------------
+
+        return filtered.sort(
+            (a, b) =>
+                a.fullName.localeCompare(
+                    b.fullName,
+                    undefined,
+                    {
+                        sensitivity: "base"
+                    }
+                )
+        );
+
+    }, [
+        attendance,
+        search
+    ]);
     // =========================================================
     // RENDER
     // =========================================================

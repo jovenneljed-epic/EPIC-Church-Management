@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace EPIC.Api.Models
@@ -12,7 +13,6 @@ namespace EPIC.Api.Models
         [Key]
         public int EventAssignmentId { get; set; }
 
-
         // =========================================================
         // EVENT
         // =========================================================
@@ -23,7 +23,6 @@ namespace EPIC.Api.Models
         [ForeignKey(nameof(EventId))]
         public Event? Event { get; set; }
 
-
         // =========================================================
         // EVENT DEPARTMENT
         // =========================================================
@@ -32,7 +31,6 @@ namespace EPIC.Api.Models
 
         [ForeignKey(nameof(EventDepartmentId))]
         public EventDepartment? EventDepartment { get; set; }
-
 
         // =========================================================
         // EVENT ROLE
@@ -43,7 +41,6 @@ namespace EPIC.Api.Models
         [ForeignKey(nameof(EventRoleId))]
         public EventRole? EventRole { get; set; }
 
-
         // =========================================================
         // MEMBER
         // =========================================================
@@ -52,7 +49,6 @@ namespace EPIC.Api.Models
 
         [ForeignKey(nameof(MemberId))]
         public Member? Member { get; set; }
-
 
         // =========================================================
         // ASSIGNMENT INFORMATION
@@ -67,18 +63,13 @@ namespace EPIC.Api.Models
         [MaxLength(150)]
         public string? RoleName { get; set; }
 
-
         // =========================================================
-        // STATUS
-        // IMPORTANT:
-        // The database column is AssignmentStatus.
-        // There is NO Status property here.
+        // ASSIGNMENT STATUS
         // =========================================================
 
         [Required]
         [MaxLength(50)]
         public string AssignmentStatus { get; set; } = "PENDING";
-
 
         // =========================================================
         // PRIORITY
@@ -88,20 +79,18 @@ namespace EPIC.Api.Models
         [MaxLength(50)]
         public string Priority { get; set; } = "NORMAL";
 
-
         // =========================================================
         // NOTES
         // =========================================================
 
         public string? Notes { get; set; }
 
-
         // =========================================================
         // AUDIT
         // =========================================================
 
         [Required]
-        public DateTime CreatedAt { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
 
         public DateTime? UpdatedAt { get; set; }
     }

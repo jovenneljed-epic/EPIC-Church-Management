@@ -1,4 +1,4 @@
-﻿
+﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -6,6 +6,10 @@ namespace EPIC.Api.Models
 {
     public class Payment
     {
+        // =========================================================
+        // PRIMARY KEY
+        // =========================================================
+
         [Key]
         public int PaymentId { get; set; }
 
@@ -17,13 +21,14 @@ namespace EPIC.Api.Models
         public int SubscriptionId { get; set; }
 
         [ForeignKey(nameof(SubscriptionId))]
-        public Subscription? Subscription { get; set; }
+        public virtual Subscription? Subscription { get; set; }
 
         // =========================================================
         // PAYMENT INFORMATION
         // =========================================================
 
         [Required]
+        [Column(TypeName = "decimal(18,2)")]
         public decimal Amount { get; set; }
 
         [Required]
@@ -34,16 +39,13 @@ namespace EPIC.Api.Models
         [MaxLength(50)]
         public string PaymentMethod { get; set; } = "Manual";
 
-        /*
-         * Possible values:
-         *
-         * Manual
-         * GCash
-         * Maya
-         * BankTransfer
-         * Card
-         * PayMongo
-         */
+        // Possible values:
+        // Manual
+        // GCash
+        // Maya
+        // BankTransfer
+        // Card
+        // PayMongo
 
         // =========================================================
         // PAYMENT STATUS
@@ -53,18 +55,15 @@ namespace EPIC.Api.Models
         [MaxLength(30)]
         public string Status { get; set; } = "PENDING";
 
-        /*
-         * Possible values:
-         *
-         * PENDING
-         * PAID
-         * FAILED
-         * CANCELLED
-         * REFUNDED
-         */
+        // Possible values:
+        // PENDING
+        // PAID
+        // FAILED
+        // CANCELLED
+        // REFUNDED
 
         // =========================================================
-        // REFERENCES
+        // PAYMENT REFERENCES
         // =========================================================
 
         [MaxLength(200)]
@@ -80,7 +79,7 @@ namespace EPIC.Api.Models
         public string? GatewayCustomerId { get; set; }
 
         // =========================================================
-        // PAYMENT DATE
+        // PAYMENT DATES
         // =========================================================
 
         public DateTime? PaidDate { get; set; }
@@ -96,7 +95,7 @@ namespace EPIC.Api.Models
         public DateTime? BillingPeriodEnd { get; set; }
 
         // =========================================================
-        // RECEIPT / INVOICE
+        // INVOICE / RECEIPT
         // =========================================================
 
         [MaxLength(100)]
@@ -123,9 +122,9 @@ namespace EPIC.Api.Models
         // AUDIT
         // =========================================================
 
+        [Required]
         public DateTime CreatedDate { get; set; } = DateTime.Now;
 
         public DateTime? UpdatedDate { get; set; }
     }
 }
-

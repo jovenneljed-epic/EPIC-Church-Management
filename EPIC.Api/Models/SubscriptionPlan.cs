@@ -1,11 +1,22 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace EPIC.Api.Models
 {
     public class SubscriptionPlan
     {
+        // =========================================================
+        // PRIMARY KEY
+        // =========================================================
+
         [Key]
         public int SubscriptionPlanId { get; set; }
+
+        // =========================================================
+        // PLAN INFORMATION
+        // =========================================================
 
         [Required]
         [MaxLength(100)]
@@ -14,15 +25,29 @@ namespace EPIC.Api.Models
         [MaxLength(500)]
         public string Description { get; set; } = string.Empty;
 
+        // =========================================================
+        // PRICING
+        // =========================================================
+
+        [Column(TypeName = "decimal(18,2)")]
         public decimal MonthlyPrice { get; set; }
 
+        [Column(TypeName = "decimal(18,2)")]
         public decimal AnnualPrice { get; set; }
 
-        public int TrialDays { get; set; } = 0;
+        // =========================================================
+        // TRIAL & LIMITS
+        // =========================================================
+
+        public int TrialDays { get; set; }
 
         public int MaxUsers { get; set; } = 5;
 
         public int MaxMembers { get; set; } = 500;
+
+        // =========================================================
+        // FEATURES
+        // =========================================================
 
         public bool IncludesChurchManagement { get; set; } = true;
 
@@ -34,19 +59,32 @@ namespace EPIC.Api.Models
 
         public bool IncludesMinistries { get; set; } = true;
 
-        public bool IncludesEPICLearning { get; set; } = false;
+        public bool IncludesEPICLearning { get; set; }
 
         public bool IncludesReports { get; set; } = true;
 
+        // =========================================================
+        // STATUS & DISPLAY
+        // =========================================================
+
         public bool IsActive { get; set; } = true;
 
-        public int SortOrder { get; set; } = 0;
+        public int SortOrder { get; set; }
 
+        // =========================================================
+        // AUDIT
+        // =========================================================
+
+        [Required]
         public DateTime CreatedDate { get; set; } = DateTime.Now;
 
         public DateTime? UpdatedDate { get; set; }
 
-        public ICollection<Subscription> Subscriptions { get; set; }
+        // =========================================================
+        // NAVIGATION
+        // =========================================================
+
+        public virtual ICollection<Subscription> Subscriptions { get; set; }
             = new List<Subscription>();
     }
 }

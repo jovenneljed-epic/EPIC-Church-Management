@@ -1,0 +1,108 @@
+﻿/* =========================================================
+   EPIC CLIENT PORTAL LAYOUT
+   ========================================================= */
+
+.epic-client-portal {
+    min-height: 100vh;
+    display: flex;
+    background: #f4f7fb;
+}
+
+/* =========================================================
+   SIDEBAR
+   ========================================================= */
+
+.epic-client-sidebar {
+    width: 260px;
+    min-width: 260px;
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+}
+
+/* =========================================================
+   MAIN AREA
+   ========================================================= */
+
+.epic-client-main {
+    flex: 1;
+    min-width: 0;
+    min-height: 100vh;
+    margin-left: 260px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.epic-client-header {
+    width: 100%;
+    min-height: 78px;
+    box-sizing: border-box;
+}
+
+/* =========================================================
+   CONTENT
+   ========================================================= */
+
+.epic-client-content {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 30px;
+    flex: 1;
+}
+
+/* =========================================================
+   FOOTER
+   ========================================================= */
+
+.epic-client-footer {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 900px) {
+
+    .epic-client-sidebar {
+        width: 220px;
+        min-width: 220px;
+    }
+
+    .epic-client-main {
+        margin-left: 220px;
+    }
+
+}
+
+@media (max-width: 700px) {
+
+    .epic-client-sidebar {
+        position: relative;
+        width: 100%;
+        min-width: 100%;
+        height: auto;
+    }
+
+    .epic-client-main {
+        margin-left: 0;
+        width: 100%;
+    }
+
+    .epic-client-portal {
+        flex-direction: column;
+    }
+
+    .epic-client-content {
+        padding: 20px;
+    }
+
+}

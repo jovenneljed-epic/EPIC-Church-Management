@@ -1,12 +1,27 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace EPIC.Api.Models
 {
     public class Subscription
     {
+        // =========================================================
+        // PRIMARY KEY
+        // =========================================================
+
         [Key]
         public int SubscriptionId { get; set; }
+
+        // =========================================================
+        // CUSTOMER
+        // =========================================================
+
+        [Required]
+        public int CustomerId { get; set; }
+
+        public virtual Customer? Customer { get; set; }
 
         // =========================================================
         // SUBSCRIBER / CHURCH INFORMATION
@@ -34,7 +49,7 @@ namespace EPIC.Api.Models
         [Required]
         public int SubscriptionPlanId { get; set; }
 
-        public SubscriptionPlan? SubscriptionPlan { get; set; }
+        public virtual SubscriptionPlan? SubscriptionPlan { get; set; }
 
         // =========================================================
         // BILLING
@@ -101,6 +116,7 @@ namespace EPIC.Api.Models
         // AUDIT
         // =========================================================
 
+        [Required]
         public DateTime CreatedDate { get; set; } = DateTime.Now;
 
         public DateTime? UpdatedDate { get; set; }
@@ -109,7 +125,7 @@ namespace EPIC.Api.Models
         // NAVIGATION
         // =========================================================
 
-        public ICollection<Payment> Payments { get; set; }
+        public virtual ICollection<Payment> Payments { get; set; }
             = new List<Payment>();
     }
 }

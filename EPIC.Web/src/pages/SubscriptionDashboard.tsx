@@ -1,9 +1,20 @@
+import React, {
+    useCallback,
+    useEffect,
+    useState
+} from "react";
 
-import React, { useEffect, useState } from "react";
-import axios from "axios";
-import "./SubscriptionDashboard.css";
+import axios, {
+    AxiosError
+} from "axios";
 
 import { API_BASE_URL } from "../config";
+
+import "./SubscriptionDashboard.css";
+
+// =========================================================
+// TYPES
+// =========================================================
 
 interface DashboardData {
     generatedAt: string;
@@ -39,195 +50,405 @@ interface DashboardData {
 interface RecentPayment {
     paymentId: number;
     subscriptionId: number;
+
     churchName: string | null;
     planName: string | null;
+
     amount: number;
     currency: string;
+
     status: string;
     paymentMethod: string;
+
     referenceNumber: string | null;
+
     createdDate: string;
 }
 
 interface ExpiringTrial {
     subscriptionId: number;
+
     churchName: string;
+
     contactName: string | null;
     contactEmail: string | null;
+
     planName: string | null;
+
     trialEndsAt: string;
+
     daysRemaining: number;
 }
 
 interface PastDueSubscription {
     subscriptionId: number;
+
     churchName: string;
+
     contactName: string | null;
     contactEmail: string | null;
+
     planName: string | null;
+
     amount: number;
     currency: string;
+
     nextBillingDate: string | null;
+
     status: string;
 }
 
+// =========================================================
+// CONSTANTS
+// =========================================================
+
+const DASHBOARD_ENDPOINT =
+    `${API_BASE_URL}/SubscriptionDashboard`;
+
+// =========================================================
+// COMPONENT
+// =========================================================
+
 const SubscriptionDashboard: React.FC = () => {
 
-    const [dashboard, setDashboard] =
-        useState<DashboardData | null>(null);
+    // =====================================================
+    // STATE
+    // =====================================================
 
-    const [recentPayments, setRecentPayments] =
-        useState<RecentPayment[]>([]);
+    const [
+        dashboard,
+        setDashboard
+    ] = useState<DashboardData | null>(
+        null
+    );
 
-    const [expiringTrials, setExpiringTrials] =
-        useState<ExpiringTrial[]>([]);
+    const [
+        recentPayments,
+        setRecentPayments
+    ] = useState<RecentPayment[]>(
+        []
+    );
 
-    const [pastDue, setPastDue] =
-        useState<PastDueSubscription[]>([]);
+    const [
+        expiringTrials,
+        setExpiringTrials
+    ] = useState<ExpiringTrial[]>(
+        []
+    );
 
-    const [loading, setLoading] =
-        useState(true);
+    const [
+        pastDue,
+        setPastDue
+    ] = useState<PastDueSubscription[]>(
+        []
+    );
 
-    const [error, setError] =
-        useState("");
+    const [
+        loading,
+        setLoading
+    ] = useState<boolean>(
+        true
+    );
 
-    // =========================================================
-    // LOAD DASHBOARD
-    // =========================================================
+    const [
+        refreshing,
+        setRefreshing
+    ] = useState<boolean>(
+        false
+    );
 
-    const loadDashboard = async () => {
+    const [
+        error,
+        setError
+    ] = useState<string>(
+        ""
+    );
 
-        try {
+    // =====================================================
+    // AUTH CONFIG
+    // =====================================================
 
-            setLoading(true);
-            setError("");
+    const getAuthConfig =
+        useCallback(() => {
 
             const token =
-                localStorage.getItem("token");
+                localStorage.getItem("token") ||
+                localStorage.getItem("accessToken") ||
+                localStorage.getItem("jwt") ||
+                localStorage.getItem("authToken") ||
+                localStorage.getItem("epicToken");
 
-            const headers = {
-                Authorization: `Bearer ${token}`
-            };
+            if (!token) {
 
-            const [
-                dashboardResponse,
-                paymentsResponse,
-                trialsResponse,
-                pastDueResponse
-            ] = await Promise.all([
-
-                axios.get(
-                    `${API_BASE_URL}/SubscriptionDashboard`,
-                    { headers }
-                ),
-
-                axios.get(
-                    `${API_BASE_URL}/SubscriptionDashboard/recent-payments`,
-                    { headers }
-                ),
-
-                axios.get(
-                    `${API_BASE_URL}/SubscriptionDashboard/expiring-trials`,
-                    { headers }
-                ),
-
-                axios.get(
-                    `${API_BASE_URL}/SubscriptionDashboard/past-due`,
-                    { headers }
-                )
-            ]);
-
-            setDashboard(
-                dashboardResponse.data
-            );
-
-            setRecentPayments(
-                paymentsResponse.data
-            );
-
-            setExpiringTrials(
-                trialsResponse.data
-            );
-
-            setPastDue(
-                pastDueResponse.data
-            );
-
-        } catch (err: any) {
-
-            console.error(
-                "Subscription dashboard error:",
-                err
-            );
-
-            if (err.response?.status === 401) {
-
-                setError(
-                    "Your session has expired. Please login again."
+                throw new Error(
+                    "Authentication token not found."
                 );
 
-            } else if (err.response?.status === 403) {
-
-                setError(
-                    "You do not have permission to view the subscription dashboard."
-                );
-
-            } else {
-
-                setError(
-                    err.response?.data?.message ||
-                    "Unable to load subscription dashboard."
-                );
             }
 
-        } finally {
+            return {
+                headers: {
+                    Authorization:
+                        `Bearer ${token}`
+                }
+            };
 
-            setLoading(false);
+        }, []);
+
+    // =====================================================
+    // ERROR MESSAGE HELPER
+    // =====================================================
+
+    const getErrorMessage = (
+        error: unknown,
+        fallback: string
+    ): string => {
+
+        if (
+            axios.isAxiosError(error)
+        ) {
+
+            const axiosError =
+                error as AxiosError<{
+                    message?: string;
+                    title?: string;
+                }>;
+
+            const status =
+                axiosError.response?.status;
+
+            if (status === 401) {
+
+                return (
+                    "Your session has expired. " +
+                    "Please login again."
+                );
+
+            }
+
+            if (status === 403) {
+
+                return (
+                    "You do not have permission " +
+                    "to view the subscription dashboard."
+                );
+
+            }
+
+            return (
+                axiosError.response?.data?.message ||
+                axiosError.response?.data?.title ||
+                axiosError.message ||
+                fallback
+            );
+
         }
+
+        if (
+            error instanceof Error
+        ) {
+
+            return error.message;
+
+        }
+
+        return fallback;
+
     };
 
-    // =========================================================
+    // =====================================================
+    // LOAD DASHBOARD
+    // =====================================================
+
+    const loadDashboard =
+        useCallback(
+            async (
+                isRefresh = false
+            ) => {
+
+                try {
+
+                    if (isRefresh) {
+
+                        setRefreshing(true);
+
+                    }
+                    else {
+
+                        setLoading(true);
+
+                    }
+
+                    setError("");
+
+                    const [
+                        dashboardResponse,
+                        paymentsResponse,
+                        trialsResponse,
+                        pastDueResponse
+                    ] = await Promise.all([
+
+                        axios.get<DashboardData>(
+                            DASHBOARD_ENDPOINT,
+                            getAuthConfig()
+                        ),
+
+                        axios.get<RecentPayment[]>(
+                            `${DASHBOARD_ENDPOINT}/recent-payments`,
+                            getAuthConfig()
+                        ),
+
+                        axios.get<ExpiringTrial[]>(
+                            `${DASHBOARD_ENDPOINT}/expiring-trials`,
+                            getAuthConfig()
+                        ),
+
+                        axios.get<PastDueSubscription[]>(
+                            `${DASHBOARD_ENDPOINT}/past-due`,
+                            getAuthConfig()
+                        )
+
+                    ]);
+
+                    setDashboard(
+                        dashboardResponse.data
+                    );
+
+                    setRecentPayments(
+                        Array.isArray(
+                            paymentsResponse.data
+                        )
+                            ? paymentsResponse.data
+                            : []
+                    );
+
+                    setExpiringTrials(
+                        Array.isArray(
+                            trialsResponse.data
+                        )
+                            ? trialsResponse.data
+                            : []
+                    );
+
+                    setPastDue(
+                        Array.isArray(
+                            pastDueResponse.data
+                        )
+                            ? pastDueResponse.data
+                            : []
+                    );
+
+                }
+                catch (error) {
+
+                    console.error(
+                        "Subscription dashboard error:",
+                        error
+                    );
+
+                    setError(
+                        getErrorMessage(
+                            error,
+                            "Unable to load subscription dashboard."
+                        )
+                    );
+
+                }
+                finally {
+
+                    setLoading(false);
+
+                    setRefreshing(false);
+
+                }
+
+            },
+            [
+                getAuthConfig
+            ]
+        );
+
+    // =====================================================
     // INITIAL LOAD
-    // =========================================================
+    // =====================================================
 
     useEffect(() => {
 
         loadDashboard();
 
-    }, []);
+    }, [
+        loadDashboard
+    ]);
 
-    // =========================================================
+    // =====================================================
     // FORMAT MONEY
-    // =========================================================
+    // =====================================================
 
     const formatMoney = (
-        amount: number,
+        amount: number | null | undefined,
         currency = "PHP"
-    ) => {
+    ): string => {
 
-        return new Intl.NumberFormat(
-            "en-PH",
-            {
-                style: "currency",
-                currency,
-                minimumFractionDigits: 2
-            }
-        ).format(amount);
-    };
+        const numericAmount =
+            Number(amount || 0);
 
-    // =========================================================
-    // FORMAT DATE
-    // =========================================================
+        try {
 
-    const formatDate = (
-        value: string | null
-    ) => {
+            return new Intl.NumberFormat(
+                "en-PH",
+                {
+                    style: "currency",
+                    currency,
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                }
+            ).format(
+                numericAmount
+            );
 
-        if (!value) {
-            return "—";
+        }
+        catch {
+
+            return `₱${numericAmount.toLocaleString(
+                "en-PH",
+                {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                }
+            )}`;
+
         }
 
-        return new Date(value).toLocaleDateString(
+    };
+
+    // =====================================================
+    // FORMAT DATE
+    // =====================================================
+
+    const formatDate = (
+        value?: string | null
+    ): string => {
+
+        if (!value) {
+
+            return "—";
+
+        }
+
+        const date =
+            new Date(value);
+
+        if (
+            Number.isNaN(
+                date.getTime()
+            )
+        ) {
+
+            return "—";
+
+        }
+
+        return date.toLocaleDateString(
             "en-PH",
             {
                 year: "numeric",
@@ -235,19 +456,23 @@ const SubscriptionDashboard: React.FC = () => {
                 day: "numeric"
             }
         );
+
     };
 
-    // =========================================================
+    // =====================================================
     // STATUS CLASS
-    // =========================================================
+    // =====================================================
 
     const statusClass = (
-        status: string
-    ) => {
+        status?: string | null
+    ): string => {
 
-        switch (
-            status.toUpperCase()
-        ) {
+        const normalized =
+            (status || "")
+                .trim()
+                .toUpperCase();
+
+        switch (normalized) {
 
             case "PAID":
                 return "status-paid";
@@ -261,18 +486,71 @@ const SubscriptionDashboard: React.FC = () => {
             case "REFUNDED":
                 return "status-refunded";
 
+            case "PAST_DUE":
+                return "status-past-due";
+
             default:
                 return "status-default";
+
         }
+
     };
 
-    // =========================================================
+    // =====================================================
+    // STATUS LABEL
+    // =====================================================
+
+    const getStatusLabel = (
+        status?: string | null
+    ): string => {
+
+        const normalized =
+            (status || "UNKNOWN")
+                .trim()
+                .toUpperCase();
+
+        switch (normalized) {
+
+            case "PAST_DUE":
+                return "Past Due";
+
+            case "PAID":
+                return "Paid";
+
+            case "PENDING":
+                return "Pending";
+
+            case "FAILED":
+                return "Failed";
+
+            case "REFUNDED":
+                return "Refunded";
+
+            default:
+                return normalized;
+
+        }
+
+    };
+
+    // =====================================================
+    // REFRESH
+    // =====================================================
+
+    const handleRefresh = () => {
+
+        loadDashboard(true);
+
+    };
+
+    // =====================================================
     // LOADING
-    // =========================================================
+    // =====================================================
 
     if (loading) {
 
         return (
+
             <div className="subscription-dashboard">
 
                 <div className="dashboard-loading">
@@ -286,16 +564,19 @@ const SubscriptionDashboard: React.FC = () => {
                 </div>
 
             </div>
+
         );
+
     }
 
-    // =========================================================
+    // =====================================================
     // ERROR
-    // =========================================================
+    // =====================================================
 
     if (error) {
 
         return (
+
             <div className="subscription-dashboard">
 
                 <div className="dashboard-error">
@@ -313,7 +594,10 @@ const SubscriptionDashboard: React.FC = () => {
                     </p>
 
                     <button
-                        onClick={loadDashboard}
+                        type="button"
+                        onClick={() =>
+                            loadDashboard()
+                        }
                         className="retry-button"
                     >
                         Try Again
@@ -322,23 +606,32 @@ const SubscriptionDashboard: React.FC = () => {
                 </div>
 
             </div>
+
         );
+
     }
+
+    // =====================================================
+    // SAFETY CHECK
+    // =====================================================
 
     if (!dashboard) {
+
         return null;
+
     }
 
-    // =========================================================
-    // RENDER
-    // =========================================================
+    // =====================================================
+    // PAGE
+    // =====================================================
 
     return (
+
         <div className="subscription-dashboard">
 
-            {/* =================================================
+            {/* =============================================
                 HEADER
-            ================================================= */}
+            ============================================= */}
 
             <div className="subscription-header">
 
@@ -360,17 +653,21 @@ const SubscriptionDashboard: React.FC = () => {
                 </div>
 
                 <button
+                    type="button"
                     className="refresh-button"
-                    onClick={loadDashboard}
+                    onClick={handleRefresh}
+                    disabled={refreshing}
                 >
-                    ↻ Refresh
+                    {refreshing
+                        ? "Refreshing..."
+                        : "↻ Refresh"}
                 </button>
 
             </div>
 
-            {/* =================================================
-                SUBSCRIPTION CARDS
-            ================================================= */}
+            {/* =============================================
+                SUBSCRIPTION OVERVIEW
+            ============================================= */}
 
             <section>
 
@@ -387,6 +684,7 @@ const SubscriptionDashboard: React.FC = () => {
                         </div>
 
                         <div>
+
                             <span>
                                 Total Subscriptions
                             </span>
@@ -394,6 +692,7 @@ const SubscriptionDashboard: React.FC = () => {
                             <strong>
                                 {dashboard.subscriptions.total}
                             </strong>
+
                         </div>
 
                     </div>
@@ -405,6 +704,7 @@ const SubscriptionDashboard: React.FC = () => {
                         </div>
 
                         <div>
+
                             <span>
                                 Active
                             </span>
@@ -412,6 +712,7 @@ const SubscriptionDashboard: React.FC = () => {
                             <strong>
                                 {dashboard.subscriptions.active}
                             </strong>
+
                         </div>
 
                     </div>
@@ -423,6 +724,7 @@ const SubscriptionDashboard: React.FC = () => {
                         </div>
 
                         <div>
+
                             <span>
                                 Trial
                             </span>
@@ -430,6 +732,7 @@ const SubscriptionDashboard: React.FC = () => {
                             <strong>
                                 {dashboard.subscriptions.trial}
                             </strong>
+
                         </div>
 
                     </div>
@@ -441,6 +744,7 @@ const SubscriptionDashboard: React.FC = () => {
                         </div>
 
                         <div>
+
                             <span>
                                 Past Due
                             </span>
@@ -448,6 +752,7 @@ const SubscriptionDashboard: React.FC = () => {
                             <strong>
                                 {dashboard.subscriptions.pastDue}
                             </strong>
+
                         </div>
 
                     </div>
@@ -459,6 +764,7 @@ const SubscriptionDashboard: React.FC = () => {
                         </div>
 
                         <div>
+
                             <span>
                                 Expired
                             </span>
@@ -466,6 +772,7 @@ const SubscriptionDashboard: React.FC = () => {
                             <strong>
                                 {dashboard.subscriptions.expired}
                             </strong>
+
                         </div>
 
                     </div>
@@ -477,6 +784,7 @@ const SubscriptionDashboard: React.FC = () => {
                         </div>
 
                         <div>
+
                             <span>
                                 Cancelled
                             </span>
@@ -484,6 +792,7 @@ const SubscriptionDashboard: React.FC = () => {
                             <strong>
                                 {dashboard.subscriptions.cancelled}
                             </strong>
+
                         </div>
 
                     </div>
@@ -492,9 +801,9 @@ const SubscriptionDashboard: React.FC = () => {
 
             </section>
 
-            {/* =================================================
+            {/* =============================================
                 REVENUE
-            ================================================= */}
+            ============================================= */}
 
             <section>
 
@@ -511,9 +820,11 @@ const SubscriptionDashboard: React.FC = () => {
                         </div>
 
                         <div className="revenue-value">
+
                             {formatMoney(
                                 dashboard.revenue.total
                             )}
+
                         </div>
 
                         <div className="revenue-description">
@@ -529,9 +840,11 @@ const SubscriptionDashboard: React.FC = () => {
                         </div>
 
                         <div className="revenue-value">
+
                             {formatMoney(
                                 dashboard.revenue.currentMonth
                             )}
+
                         </div>
 
                         <div className="revenue-description">
@@ -547,7 +860,12 @@ const SubscriptionDashboard: React.FC = () => {
                         </div>
 
                         <div className="revenue-value">
-                            {dashboard.upcoming.billingNext30Days}
+
+                            {
+                                dashboard.upcoming
+                                    .billingNext30Days
+                            }
+
                         </div>
 
                         <div className="revenue-description">
@@ -563,7 +881,12 @@ const SubscriptionDashboard: React.FC = () => {
                         </div>
 
                         <div className="revenue-value">
-                            {dashboard.upcoming.trialsExpiringNext7Days}
+
+                            {
+                                dashboard.upcoming
+                                    .trialsExpiringNext7Days
+                            }
+
                         </div>
 
                         <div className="revenue-description">
@@ -576,9 +899,9 @@ const SubscriptionDashboard: React.FC = () => {
 
             </section>
 
-            {/* =================================================
+            {/* =============================================
                 PAYMENT OVERVIEW
-            ================================================= */}
+            ============================================= */}
 
             <section>
 
@@ -589,6 +912,7 @@ const SubscriptionDashboard: React.FC = () => {
                 <div className="payment-grid">
 
                     <div>
+
                         <span>
                             Total
                         </span>
@@ -596,9 +920,11 @@ const SubscriptionDashboard: React.FC = () => {
                         <strong>
                             {dashboard.payments.total}
                         </strong>
+
                     </div>
 
                     <div className="payment-paid">
+
                         <span>
                             Paid
                         </span>
@@ -606,9 +932,11 @@ const SubscriptionDashboard: React.FC = () => {
                         <strong>
                             {dashboard.payments.paid}
                         </strong>
+
                     </div>
 
                     <div className="payment-pending">
+
                         <span>
                             Pending
                         </span>
@@ -616,9 +944,11 @@ const SubscriptionDashboard: React.FC = () => {
                         <strong>
                             {dashboard.payments.pending}
                         </strong>
+
                     </div>
 
                     <div className="payment-failed">
+
                         <span>
                             Failed
                         </span>
@@ -626,9 +956,11 @@ const SubscriptionDashboard: React.FC = () => {
                         <strong>
                             {dashboard.payments.failed}
                         </strong>
+
                     </div>
 
                     <div className="payment-refunded">
+
                         <span>
                             Refunded
                         </span>
@@ -636,27 +968,27 @@ const SubscriptionDashboard: React.FC = () => {
                         <strong>
                             {dashboard.payments.refunded}
                         </strong>
+
                     </div>
 
                 </div>
 
             </section>
 
-            {/* =================================================
-                TWO COLUMN AREA
-            ================================================= */}
+            {/* =============================================
+                RECENT PAYMENTS + EXPIRING TRIALS
+            ============================================= */}
 
             <div className="dashboard-columns">
 
-                {/* =================================================
-                    RECENT PAYMENTS
-                ================================================= */}
+                {/* RECENT PAYMENTS */}
 
                 <section className="dashboard-panel">
 
                     <div className="panel-header">
 
                         <div>
+
                             <h2>
                                 Recent Payments
                             </h2>
@@ -664,6 +996,7 @@ const SubscriptionDashboard: React.FC = () => {
                             <p>
                                 Latest payment activity
                             </p>
+
                         </div>
 
                     </div>
@@ -683,19 +1016,29 @@ const SubscriptionDashboard: React.FC = () => {
 
                                     <div
                                         className="payment-row"
-                                        key={payment.paymentId}
+                                        key={
+                                            payment.paymentId
+                                        }
                                     >
 
                                         <div className="payment-main">
 
                                             <strong>
-                                                {payment.churchName ||
-                                                    "Unknown Church"}
+
+                                                {
+                                                    payment.churchName ||
+                                                    "Unknown Church"
+                                                }
+
                                             </strong>
 
                                             <span>
-                                                {payment.planName ||
-                                                    "Subscription"}
+
+                                                {
+                                                    payment.planName ||
+                                                    "Subscription"
+                                                }
+
                                             </span>
 
                                         </div>
@@ -703,26 +1046,36 @@ const SubscriptionDashboard: React.FC = () => {
                                         <div className="payment-amount">
 
                                             <strong>
+
                                                 {formatMoney(
                                                     payment.amount,
                                                     payment.currency
                                                 )}
+
                                             </strong>
 
                                             <span>
+
                                                 {formatDate(
                                                     payment.createdDate
                                                 )}
+
                                             </span>
 
                                         </div>
 
                                         <span
-                                            className={`payment-status ${statusClass(
-                                                payment.status
-                                            )}`}
+                                            className={
+                                                `payment-status ${statusClass(
+                                                    payment.status
+                                                )}`
+                                            }
                                         >
-                                            {payment.status}
+
+                                            {getStatusLabel(
+                                                payment.status
+                                            )}
+
                                         </span>
 
                                     </div>
@@ -736,15 +1089,14 @@ const SubscriptionDashboard: React.FC = () => {
 
                 </section>
 
-                {/* =================================================
-                    EXPIRING TRIALS
-                ================================================= */}
+                {/* EXPIRING TRIALS */}
 
                 <section className="dashboard-panel">
 
                     <div className="panel-header">
 
                         <div>
+
                             <h2>
                                 Expiring Trials
                             </h2>
@@ -752,6 +1104,7 @@ const SubscriptionDashboard: React.FC = () => {
                             <p>
                                 Trials ending within 7 days
                             </p>
+
                         </div>
 
                     </div>
@@ -771,7 +1124,9 @@ const SubscriptionDashboard: React.FC = () => {
 
                                     <div
                                         className="trial-row"
-                                        key={trial.subscriptionId}
+                                        key={
+                                            trial.subscriptionId
+                                        }
                                     >
 
                                         <div>
@@ -781,8 +1136,12 @@ const SubscriptionDashboard: React.FC = () => {
                                             </strong>
 
                                             <span>
-                                                {trial.planName ||
-                                                    "Subscription"}
+
+                                                {
+                                                    trial.planName ||
+                                                    "Subscription"
+                                                }
+
                                             </span>
 
                                         </div>
@@ -812,15 +1171,16 @@ const SubscriptionDashboard: React.FC = () => {
 
             </div>
 
-            {/* =================================================
-                PAST DUE
-            ================================================= */}
+            {/* =============================================
+                PAST DUE SUBSCRIPTIONS
+            ============================================= */}
 
             <section className="dashboard-panel">
 
                 <div className="panel-header">
 
                     <div>
+
                         <h2>
                             Past Due Subscriptions
                         </h2>
@@ -828,6 +1188,7 @@ const SubscriptionDashboard: React.FC = () => {
                         <p>
                             Churches requiring payment attention
                         </p>
+
                     </div>
 
                 </div>
@@ -881,25 +1242,33 @@ const SubscriptionDashboard: React.FC = () => {
                                     </strong>
 
                                     <span>
-                                        {subscription.planName ||
-                                            "—"}
+
+                                        {
+                                            subscription.planName ||
+                                            "—"
+                                        }
+
                                     </span>
 
                                     <span>
+
                                         {formatMoney(
                                             subscription.amount,
                                             subscription.currency
                                         )}
+
                                     </span>
 
                                     <span>
+
                                         {formatDate(
                                             subscription.nextBillingDate
                                         )}
+
                                     </span>
 
                                     <span className="status-past-due">
-                                        PAST DUE
+                                        Past Due
                                     </span>
 
                                 </div>
@@ -913,14 +1282,14 @@ const SubscriptionDashboard: React.FC = () => {
 
             </section>
 
-            {/* =================================================
+            {/* =============================================
                 FOOTER
-            ================================================= */}
+            ============================================= */}
 
             <div className="dashboard-footer">
 
-                Last updated:
-                {" "}
+                Last updated:{" "}
+
                 {formatDate(
                     dashboard.generatedAt
                 )}
@@ -928,8 +1297,9 @@ const SubscriptionDashboard: React.FC = () => {
             </div>
 
         </div>
+
     );
+
 };
 
 export default SubscriptionDashboard;
-

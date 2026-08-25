@@ -1,6 +1,18 @@
-import React, { useEffect, useMemo, useState } from "react";
+
+import React, {
+    useCallback,
+    useEffect,
+    useMemo,
+    useState,
+} from "react";
+
+import axios from "axios";
 import { API_BASE_URL } from "../config";
 import "./MemberAttendanceReport.css";
+
+// ============================================================
+// TYPES
+// ============================================================
 
 type AttendanceStatus =
     | "PRESENT"
@@ -13,20 +25,20 @@ interface AttendanceRecord {
     attendanceId: number;
     memberId: number;
 
-    memberCode?: string;
-    memberName?: string;
+    memberCode?: string | null;
+    memberName?: string | null;
 
-    churchServiceId?: number;
-    eventId?: number;
+    churchServiceId?: number | null;
+    eventId?: number | null;
 
-    serviceName?: string;
-    service?: string;
+    serviceName?: string | null;
+    service?: string | null;
 
     attendanceDate: string;
     status: AttendanceStatus;
 
-    recordedBy?: string;
-    recordedDate?: string;
+    recordedBy?: string | null;
+    recordedDate?: string | null;
 }
 
 interface MemberSummary {
@@ -45,27 +57,45 @@ interface MemberSummary {
     classification: string;
 }
 
+interface MemberAttendanceReportProps {
+    onBack?: () => void;
+}
+
 // ============================================================
 // AUTH
 // ============================================================
 
-const getToken = (): string | null =>
-    localStorage.getItem("token") ||
-    localStorage.getItem("accessToken") ||
-    localStorage.getItem("jwt") ||
-    localStorage.getItem("authToken") ||
-    localStorage.getItem("epicToken");
+const getToken = (): string | null => {
+    const keys = [
+        "token",
+        "accessToken",
+        "jwt",
+        "authToken",
+        "epicToken",
+    ];
 
-const getHeaders = (): HeadersInit => {
+    for (const key of keys) {
+        const token = localStorage.getItem(key);
+
+        if (token?.trim()) {
+            return token;
+        }
+    }
+
+    return null;
+};
+
+const getAuthConfig = () => {
     const token = getToken();
 
+    if (!token) {
+        return {};
+    }
+
     return {
-        Accept: "application/json",
-        ...(token
-            ? {
-                Authorization: `Bearer ${token}`,
-            }
-            : {}),
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
     };
 };
 
@@ -99,6 +129,43 @@ const getServiceName = (
         record.service?.trim() ||
         "Church Service"
     );
+};
+
+const normalizeStatus = (
+    value: unknown
+): AttendanceStatus => {
+    switch (
+        String(value ?? "")
+            .trim()
+            .toUpperCase()
+    ) {
+        case "PRESENT":
+            return "PRESENT";
+
+        case "LATE":
+            return "LATE";
+
+        case "EARLY":
+            return "EARLY";
+
+        case "EXCUSED":
+            return "EXCUSED";
+
+        case "ABSENT":
+        default:
+            return "ABSENT";
+    }
+};
+
+const normalizeAttendanceRecord = (
+    record: AttendanceRecord
+): AttendanceRecord => {
+    return {
+        ...record,
+        attendanceId: Number(record.attendanceId),
+        memberId: Number(record.memberId),
+        status: normalizeStatus(record.status),
+    };
 };
 
 const getClassification = (
@@ -138,10 +205,10 @@ const getClassificationClass = (
 };
 
 const formatDate = (
-    value: string
+    value?: string | null
 ): string => {
     if (!value) {
-        return "-";
+        return "—";
     }
 
     const date = new Date(value);
@@ -153,18 +220,60 @@ const formatDate = (
     return date.toLocaleDateString(
         "en-US",
         {
-            month: "short",
-            day: "numeric",
             year: "numeric",
+            month: "long",
+            day: "numeric",
         }
     );
+};
+
+const escapeHtml = (
+    value: unknown
+): string => {
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+};
+
+const getStatusLabel = (
+    status: AttendanceStatus
+): string => {
+    switch (status) {
+        case "PRESENT":
+            return "Present";
+
+        case "LATE":
+            return "Late";
+
+        case "EARLY":
+            return "Early";
+
+        case "ABSENT":
+            return "Absent";
+
+        case "EXCUSED":
+            return "Excused";
+
+        default:
+            return status;
+    }
 };
 
 // ============================================================
 // COMPONENT
 // ============================================================
 
-const MemberAttendanceReport: React.FC = () => {
+const MemberAttendanceReport: React.FC<
+    MemberAttendanceReportProps
+> = ({ onBack }) => {
+
+    // ========================================================
+    // STATE
+    // ========================================================
+
     const [records, setRecords] =
         useState<AttendanceRecord[]>([]);
 
@@ -186,6 +295,10 @@ const MemberAttendanceReport: React.FC = () => {
     const [dateTo, setDateTo] =
         useState("");
 
+    // ========================================================
+    // VIEW-ONLY MEMBER STATE
+    // ========================================================
+
     const [selectedMemberId, setSelectedMemberId] =
         useState<number | null>(null);
 
@@ -193,155 +306,197 @@ const MemberAttendanceReport: React.FC = () => {
     // LOAD ATTENDANCE
     // ========================================================
 
-    const loadAttendance = async () => {
-        try {
-            setLoading(true);
-            setError("");
+    const loadAttendance =
+        useCallback(async () => {
 
-            const token = getToken();
+            try {
 
-            if (!token) {
-                throw new Error(
-                    "You are not logged in. Please login again."
-                );
-            }
+                setLoading(true);
 
-            const response = await fetch(
-                `${API_BASE_URL}/Attendance`,
-                {
-                    method: "GET",
-                    headers: getHeaders(),
+                setError("");
+
+                if (!getToken()) {
+                    throw new Error(
+                        "You are not logged in. Please login again."
+                    );
                 }
-            );
 
-            if (response.status === 401) {
-                throw new Error(
-                    "Your session has expired. Please login again."
+                const response =
+                    await axios.get(
+                        `${API_BASE_URL}/Attendance`,
+                        getAuthConfig()
+                    );
+
+                const data =
+                    Array.isArray(response.data)
+                        ? response.data
+                        : Array.isArray(
+                            response.data?.data
+                        )
+                            ? response.data.data
+                            : [];
+
+                const normalized =
+                    data.map(
+                        (
+                            item: AttendanceRecord
+                        ) =>
+                            normalizeAttendanceRecord(
+                                item
+                            )
+                    );
+
+                setRecords(normalized);
+
+            } catch (err: any) {
+
+                console.error(
+                    "Member attendance error:",
+                    err
                 );
+
+                if (
+                    err?.response?.status === 401
+                ) {
+
+                    setError(
+                        "Your session has expired. Please login again."
+                    );
+
+                } else if (
+                    err?.response?.status === 403
+                ) {
+
+                    setError(
+                        "You do not have permission to view attendance reports."
+                    );
+
+                } else {
+
+                    setError(
+                        err?.response?.data?.message ||
+                        err?.message ||
+                        "Unable to load attendance records."
+                    );
+                }
+
+            } finally {
+
+                setLoading(false);
+
             }
 
-            if (!response.ok) {
-                const text =
-                    await response.text();
-
-                throw new Error(
-                    text ||
-                    `Failed to load attendance. HTTP ${response.status}`
-                );
-            }
-
-            const data =
-                await response.json();
-
-            if (!Array.isArray(data)) {
-                throw new Error(
-                    "The attendance API returned an unexpected response."
-                );
-            }
-
-            setRecords(data);
-        } catch (err) {
-            console.error(
-                "MEMBER ATTENDANCE ERROR:",
-                err
-            );
-
-            setError(
-                err instanceof Error
-                    ? err.message
-                    : "Unable to load attendance."
-            );
-        } finally {
-            setLoading(false);
-        }
-    };
+        }, []);
 
     // ========================================================
     // INITIAL LOAD
     // ========================================================
 
     useEffect(() => {
-        loadAttendance();
-    }, []);
+        void loadAttendance();
+    }, [loadAttendance]);
 
     // ========================================================
     // SERVICES
     // ========================================================
 
-    const services = useMemo(() => {
-        return Array.from(
-            new Set(
-                records.map(
-                    getServiceName
-                )
-            )
-        ).sort((a, b) =>
-            a.localeCompare(b)
-        );
-    }, [records]);
+    const services =
+        useMemo(() => {
+
+            const set =
+                new Set<string>();
+
+            records.forEach(record => {
+
+                set.add(
+                    getServiceName(record)
+                );
+
+            });
+
+            return Array.from(set).sort(
+                (a, b) =>
+                    a.localeCompare(b)
+            );
+
+        }, [records]);
 
     // ========================================================
     // FILTER RECORDS
     // ========================================================
 
-    const filteredRecords = useMemo(() => {
-        const keyword =
-            search.trim().toLowerCase();
+    const filteredRecords =
+        useMemo(() => {
 
-        return records.filter(
-            (record) => {
-                const memberName =
-                    getMemberName(record)
-                        .toLowerCase();
+            const keyword =
+                search
+                    .trim()
+                    .toLowerCase();
 
-                const memberCode =
-                    getMemberCode(record)
-                        .toLowerCase();
+            return records.filter(
+                record => {
 
-                const serviceName =
-                    getServiceName(record);
+                    const memberName =
+                        getMemberName(
+                            record
+                        ).toLowerCase();
 
-                const recordDate =
-                    record.attendanceDate
-                        ?.substring(0, 10) || "";
+                    const memberCode =
+                        getMemberCode(
+                            record
+                        ).toLowerCase();
 
-                const matchesSearch =
-                    !keyword ||
-                    memberName.includes(
-                        keyword
-                    ) ||
-                    memberCode.includes(
-                        keyword
+                    const service =
+                        getServiceName(
+                            record
+                        );
+
+                    const recordDate =
+                        record.attendanceDate
+                            ?.substring(0, 10) ||
+                        "";
+
+                    const matchesSearch =
+                        !keyword ||
+                        memberName.includes(
+                            keyword
+                        ) ||
+                        memberCode.includes(
+                            keyword
+                        );
+
+                    const matchesService =
+                        serviceFilter ===
+                            "ALL" ||
+                        service ===
+                            serviceFilter;
+
+                    const matchesFrom =
+                        !dateFrom ||
+                        recordDate >=
+                            dateFrom;
+
+                    const matchesTo =
+                        !dateTo ||
+                        recordDate <=
+                            dateTo;
+
+                    return (
+                        matchesSearch &&
+                        matchesService &&
+                        matchesFrom &&
+                        matchesTo
                     );
+                }
+            );
 
-                const matchesService =
-                    serviceFilter === "ALL" ||
-                    serviceName ===
-                    serviceFilter;
-
-                const matchesFrom =
-                    !dateFrom ||
-                    recordDate >= dateFrom;
-
-                const matchesTo =
-                    !dateTo ||
-                    recordDate <= dateTo;
-
-                return (
-                    matchesSearch &&
-                    matchesService &&
-                    matchesFrom &&
-                    matchesTo
-                );
-            }
-        );
-    }, [
-        records,
-        search,
-        serviceFilter,
-        dateFrom,
-        dateTo,
-    ]);
+        }, [
+            records,
+            search,
+            serviceFilter,
+            dateFrom,
+            dateTo,
+        ]);
 
     // ========================================================
     // MEMBER SUMMARIES
@@ -349,6 +504,7 @@ const MemberAttendanceReport: React.FC = () => {
 
     const memberSummaries =
         useMemo(() => {
+
             const map =
                 new Map<
                     number,
@@ -356,15 +512,19 @@ const MemberAttendanceReport: React.FC = () => {
                 >();
 
             filteredRecords.forEach(
-                (record) => {
-                    const memberId =
-                        record.memberId;
+                record => {
 
-                    if (!map.has(memberId)) {
+                    if (
+                        !map.has(
+                            record.memberId
+                        )
+                    ) {
+
                         map.set(
-                            memberId,
+                            record.memberId,
                             {
-                                memberId,
+                                memberId:
+                                    record.memberId,
 
                                 memberCode:
                                     getMemberCode(
@@ -377,10 +537,15 @@ const MemberAttendanceReport: React.FC = () => {
                                     ),
 
                                 total: 0,
+
                                 present: 0,
+
                                 late: 0,
+
                                 early: 0,
+
                                 absent: 0,
+
                                 excused: 0,
 
                                 percentage: 0,
@@ -393,14 +558,19 @@ const MemberAttendanceReport: React.FC = () => {
 
                     const member =
                         map.get(
-                            memberId
-                        )!;
+                            record.memberId
+                        );
+
+                    if (!member) {
+                        return;
+                    }
 
                     member.total++;
 
                     switch (
                         record.status
                     ) {
+
                         case "PRESENT":
                             member.present++;
                             break;
@@ -427,7 +597,8 @@ const MemberAttendanceReport: React.FC = () => {
             return Array.from(
                 map.values()
             )
-                .map((member) => {
+                .map(member => {
+
                     const attended =
                         member.present +
                         member.late +
@@ -436,9 +607,10 @@ const MemberAttendanceReport: React.FC = () => {
                     const percentage =
                         member.total > 0
                             ? Math.round(
-                                (attended /
-                                    member.total) *
-                                100
+                                (
+                                    attended /
+                                    member.total
+                                ) * 100
                             )
                             : 0;
 
@@ -452,107 +624,53 @@ const MemberAttendanceReport: React.FC = () => {
                                 percentage
                             ),
                     };
+
                 })
-                .sort((a, b) =>
-                    a.name.localeCompare(
-                        b.name
-                    )
+                .sort(
+                    (a, b) =>
+                        a.name.localeCompare(
+                            b.name
+                        )
                 );
+
         }, [filteredRecords]);
-
-    // ========================================================
-    // STATISTICS
-    // ========================================================
-
-    const statistics = useMemo(() => {
-        const total =
-            filteredRecords.length;
-
-        const present =
-            filteredRecords.filter(
-                (r) =>
-                    r.status === "PRESENT"
-            ).length;
-
-        const late =
-            filteredRecords.filter(
-                (r) =>
-                    r.status === "LATE"
-            ).length;
-
-        const early =
-            filteredRecords.filter(
-                (r) =>
-                    r.status === "EARLY"
-            ).length;
-
-        const absent =
-            filteredRecords.filter(
-                (r) =>
-                    r.status === "ABSENT"
-            ).length;
-
-        const excused =
-            filteredRecords.filter(
-                (r) =>
-                    r.status === "EXCUSED"
-            ).length;
-
-        const attended =
-            present +
-            late +
-            early;
-
-        const percentage =
-            total > 0
-                ? Math.round(
-                    (attended /
-                        total) *
-                    100
-                )
-                : 0;
-
-        return {
-            total,
-            present,
-            late,
-            early,
-            absent,
-            excused,
-            attended,
-            percentage,
-        };
-    }, [filteredRecords]);
 
     // ========================================================
     // SELECTED MEMBER
     // ========================================================
 
     const selectedMember =
-        selectedMemberId === null
-            ? null
-            : memberSummaries.find(
-                (member) =>
-                    member.memberId ===
-                    selectedMemberId
-            ) || null;
+        useMemo(
+            () =>
+                selectedMemberId === null
+                    ? null
+                    : memberSummaries.find(
+                        member =>
+                            member.memberId ===
+                            selectedMemberId
+                    ) ?? null,
+            [
+                memberSummaries,
+                selectedMemberId,
+            ]
+        );
 
     // ========================================================
-    // MEMBER HISTORY
+    // SELECTED MEMBER RECORDS
     // ========================================================
 
-    const selectedMemberHistory =
+    const selectedMemberRecords =
         useMemo(() => {
+
             if (
-                selectedMemberId ===
-                null
+                selectedMemberId === null
             ) {
                 return [];
             }
 
             return filteredRecords
                 .filter(
-                    (record) =>
+                    record =>
                         record.memberId ===
                         selectedMemberId
                 )
@@ -565,28 +683,1213 @@ const MemberAttendanceReport: React.FC = () => {
                             a.attendanceDate
                         ).getTime()
                 );
+
         }, [
             filteredRecords,
             selectedMemberId,
         ]);
 
     // ========================================================
-    // CLEAR FILTERS
+    // STATISTICS
     // ========================================================
 
-    const clearFilters = () => {
+    const statistics =
+        useMemo(() => {
+
+            const result = {
+                total: 0,
+                present: 0,
+                late: 0,
+                early: 0,
+                absent: 0,
+                excused: 0,
+                attended: 0,
+                percentage: 0,
+            };
+
+            filteredRecords.forEach(
+                record => {
+
+                    result.total++;
+
+                    switch (
+                        record.status
+                    ) {
+
+                        case "PRESENT":
+                            result.present++;
+                            break;
+
+                        case "LATE":
+                            result.late++;
+                            break;
+
+                        case "EARLY":
+                            result.early++;
+                            break;
+
+                        case "ABSENT":
+                            result.absent++;
+                            break;
+
+                        case "EXCUSED":
+                            result.excused++;
+                            break;
+                    }
+                }
+            );
+
+            result.attended =
+                result.present +
+                result.late +
+                result.early;
+
+            result.percentage =
+                result.total > 0
+                    ? Math.round(
+                        (
+                            result.attended /
+                            result.total
+                        ) * 100
+                    )
+                    : 0;
+
+            return result;
+
+        }, [filteredRecords]);
+
+    // ========================================================
+    // ATTENDANCE DISTRIBUTION
+    // ========================================================
+
+    const attendanceDistribution =
+        useMemo(() => {
+
+            const total =
+                statistics.total;
+
+            const getPercentage =
+                (value: number) =>
+                    total > 0
+                        ? Math.round(
+                            (
+                                value /
+                                total
+                            ) * 100
+                        )
+                        : 0;
+
+            return {
+                present:
+                    getPercentage(
+                        statistics.present
+                    ),
+
+                late:
+                    getPercentage(
+                        statistics.late
+                    ),
+
+                early:
+                    getPercentage(
+                        statistics.early
+                    ),
+
+                absent:
+                    getPercentage(
+                        statistics.absent
+                    ),
+
+                excused:
+                    getPercentage(
+                        statistics.excused
+                    ),
+            };
+
+        }, [statistics]);
+
+    // ========================================================
+    // PASTORAL FOLLOW-UP
+    // ========================================================
+
+    const pastoralAttentionCount =
+        useMemo(
+            () =>
+                memberSummaries.filter(
+                    member =>
+                        member.percentage <
+                        60
+                ).length,
+            [memberSummaries]
+        );
+
+    // ========================================================
+    // HIGH PERFORMANCE MEMBERS
+    // ========================================================
+
+    const excellentMembers =
+        useMemo(
+            () =>
+                memberSummaries.filter(
+                    member =>
+                        member.percentage >=
+                        90
+                ).length,
+            [memberSummaries]
+        );
+
+  
+ 
+    // ========================================================
+    // PRINT PERIOD
+    // ========================================================
+
+    const printPeriod =
+        useMemo(() => {
+
+            if (
+                dateFrom &&
+                dateTo
+            ) {
+
+                return `${formatDate(
+                    dateFrom
+                )} — ${formatDate(
+                    dateTo
+                )}`;
+
+            }
+
+            if (dateFrom) {
+
+                return `${formatDate(
+                    dateFrom
+                )} — Present`;
+
+            }
+
+            if (dateTo) {
+
+                return `Beginning — ${formatDate(
+                    dateTo
+                )}`;
+
+            }
+
+            return "All Dates";
+
+        }, [
+            dateFrom,
+            dateTo,
+        ]);
+
+    // ========================================================
+    // RESET FILTERS
+    // ========================================================
+
+    const resetFilters = () => {
+
         setSearch("");
+
         setServiceFilter("ALL");
+
         setDateFrom("");
+
         setDateTo("");
+
     };
 
     // ========================================================
-    // PRINT
+    // PRINT REPORT
     // ========================================================
 
-    const printReport = () => {
-        window.print();
+    const handlePrint = () => {
+
+        if (
+            memberSummaries.length === 0
+        ) {
+
+            alert(
+                "There are no member attendance records to print."
+            );
+
+            return;
+        }
+
+        const printWindow =
+            window.open(
+                "",
+                "_blank",
+                "width=1200,height=900"
+            );
+
+        if (!printWindow) {
+
+            alert(
+                "Unable to open the print document. Please allow pop-ups for EPIC Church Management System."
+            );
+
+            return;
+        }
+
+        const generated =
+            new Date().toLocaleString(
+                "en-US",
+                {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit",
+                }
+            );
+
+        const serviceLabel =
+            serviceFilter === "ALL"
+                ? "All Church Services"
+                : serviceFilter;
+
+        const rows =
+            memberSummaries
+                .map(
+                    (
+                        member,
+                        index
+                    ) => {
+
+                        const classificationClass =
+                            getClassificationClass(
+                                member.percentage
+                            );
+
+                        return `
+                            <tr>
+                                <td class="number">
+                                    ${index + 1}
+                                </td>
+
+                                <td>
+                                    <strong>
+                                        ${escapeHtml(
+                                            member.memberCode
+                                        )}
+                                    </strong>
+                                </td>
+
+                                <td>
+                                    <strong class="member-name">
+                                        ${escapeHtml(
+                                            member.name
+                                        )}
+                                    </strong>
+                                </td>
+
+                                <td class="center percentage">
+                                    ${member.percentage}%
+                                </td>
+
+                                <td class="center present">
+                                    ${member.present}
+                                </td>
+
+                                <td class="center late">
+                                    ${member.late}
+                                </td>
+
+                                <td class="center early">
+                                    ${member.early}
+                                </td>
+
+                                <td class="center absent">
+                                    ${member.absent}
+                                </td>
+
+                                <td class="center excused">
+                                    ${member.excused}
+                                </td>
+
+                                <td>
+                                    <span class="classification ${classificationClass}">
+                                        ${escapeHtml(
+                                            member.classification
+                                        )}
+                                    </span>
+                                </td>
+                            </tr>
+                        `;
+                    }
+                )
+                .join("");
+
+        printWindow.document.write(`
+            <!DOCTYPE html>
+
+            <html lang="en">
+
+            <head>
+
+                <meta charset="UTF-8" />
+
+                <meta
+                    name="viewport"
+                    content="width=device-width, initial-scale=1.0"
+                />
+
+                <title>
+                    EPIC Member Attendance Report
+                </title>
+
+                <style>
+
+                    * {
+                        box-sizing: border-box;
+                    }
+
+                    html,
+                    body {
+                        margin: 0;
+                        padding: 0;
+                    }
+
+                    body {
+                        font-family:
+                            "Segoe UI",
+                            Arial,
+                            Helvetica,
+                            sans-serif;
+
+                        color: #172033;
+                        background: #ffffff;
+                        font-size: 11px;
+                        line-height: 1.45;
+                    }
+
+                    @page {
+                        size: A4 portrait;
+                        margin: 14mm 12mm 16mm 12mm;
+                    }
+
+                    .document {
+                        width: 100%;
+                        max-width: 100%;
+                        margin: 0 auto;
+                    }
+
+                    .header {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: flex-start;
+                        padding-bottom: 18px;
+                        border-bottom: 2px solid #172033;
+                        margin-bottom: 22px;
+                    }
+
+                    .brand-area {
+                        display: flex;
+                        align-items: center;
+                        gap: 12px;
+                    }
+
+                    .brand-mark {
+                        width: 42px;
+                        height: 42px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        border-radius: 9px;
+                        background: #172033;
+                        color: white;
+                        font-size: 13px;
+                        font-weight: 900;
+                        letter-spacing: 1px;
+                    }
+
+                    .brand-name {
+                        font-size: 10px;
+                        font-weight: 900;
+                        letter-spacing: 1.8px;
+                        color: #172033;
+                    }
+
+                    .brand-subtitle {
+                        margin-top: 3px;
+                        font-size: 8px;
+                        letter-spacing: 1.3px;
+                        color: #788396;
+                    }
+
+                    .document-type {
+                        text-align: right;
+                        font-size: 8px;
+                        font-weight: 900;
+                        letter-spacing: 1.8px;
+                        color: #788396;
+                    }
+
+                    .document-type strong {
+                        display: block;
+                        margin-top: 4px;
+                        color: #172033;
+                        font-size: 11px;
+                        letter-spacing: 0.5px;
+                    }
+
+                    .title-area {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: flex-end;
+                        margin-bottom: 20px;
+                    }
+
+                    .eyebrow {
+                        font-size: 8px;
+                        font-weight: 900;
+                        letter-spacing: 2px;
+                        color: #64748b;
+                        margin-bottom: 5px;
+                    }
+
+                    h1 {
+                        margin: 0;
+                        font-size: 25px;
+                        line-height: 1.15;
+                        letter-spacing: -0.6px;
+                        color: #111827;
+                    }
+
+                    .description {
+                        margin: 6px 0 0;
+                        max-width: 600px;
+                        color: #64748b;
+                        font-size: 10px;
+                    }
+
+                    .generated {
+                        text-align: right;
+                        min-width: 150px;
+                    }
+
+                    .generated span {
+                        display: block;
+                        font-size: 7px;
+                        font-weight: 900;
+                        letter-spacing: 1.5px;
+                        color: #94a3b8;
+                    }
+
+                    .generated strong {
+                        display: block;
+                        margin-top: 3px;
+                        font-size: 9px;
+                        color: #334155;
+                    }
+
+                    .meta {
+                        display: grid;
+                        grid-template-columns: 1fr 1fr 1fr;
+                        gap: 10px;
+                        margin-bottom: 22px;
+                    }
+
+                    .meta-card {
+                        border: 1px solid #dfe5ec;
+                        border-radius: 7px;
+                        padding: 10px 12px;
+                        background: #f8fafc;
+                    }
+
+                    .meta-card span {
+                        display: block;
+                        font-size: 7px;
+                        font-weight: 900;
+                        letter-spacing: 1.3px;
+                        color: #8490a3;
+                        margin-bottom: 4px;
+                    }
+
+                    .meta-card strong {
+                        display: block;
+                        font-size: 10px;
+                        color: #172033;
+                    }
+
+                    .section {
+                        margin-top: 23px;
+                        page-break-inside: auto;
+                    }
+
+                    .section-title {
+                        display: flex;
+                        align-items: center;
+                        gap: 9px;
+                        margin-bottom: 11px;
+                        padding-bottom: 7px;
+                        border-bottom: 1px solid #dfe5ec;
+                    }
+
+                    .section-number {
+                        width: 24px;
+                        height: 24px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        border-radius: 6px;
+                        background: #172033;
+                        color: white;
+                        font-size: 8px;
+                        font-weight: 900;
+                    }
+
+                    .section-title h2 {
+                        margin: 0;
+                        font-size: 13px;
+                        color: #172033;
+                    }
+
+                    .section-title p {
+                        margin: 2px 0 0;
+                        color: #7a8698;
+                        font-size: 8px;
+                    }
+
+                    .summary {
+                        display: grid;
+                        grid-template-columns: repeat(4, 1fr);
+                        gap: 9px;
+                    }
+
+                    .summary-card {
+                        border: 1px solid #dfe5ec;
+                        border-radius: 7px;
+                        padding: 12px;
+                        min-height: 78px;
+                        background: white;
+                    }
+
+                    .summary-card span {
+                        display: block;
+                        font-size: 7px;
+                        font-weight: 900;
+                        letter-spacing: 1.2px;
+                        color: #7c8798;
+                    }
+
+                    .summary-card strong {
+                        display: block;
+                        margin-top: 5px;
+                        font-size: 22px;
+                        line-height: 1;
+                        color: #172033;
+                    }
+
+                    .summary-card small {
+                        display: block;
+                        margin-top: 5px;
+                        color: #8a94a4;
+                        font-size: 7px;
+                    }
+
+                    .breakdown {
+                        display: grid;
+                        grid-template-columns: repeat(5, 1fr);
+                        gap: 8px;
+                    }
+
+                    .breakdown-card {
+                        padding: 10px;
+                        border: 1px solid #dfe5ec;
+                        border-radius: 7px;
+                        text-align: center;
+                    }
+
+                    .breakdown-card span {
+                        display: block;
+                        font-size: 7px;
+                        font-weight: 900;
+                        letter-spacing: 1px;
+                        color: #7b8797;
+                    }
+
+                    .breakdown-card strong {
+                        display: block;
+                        margin-top: 4px;
+                        font-size: 17px;
+                        color: #172033;
+                    }
+
+                    table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        table-layout: fixed;
+                        font-size: 8px;
+                    }
+
+                    thead {
+                        display: table-header-group;
+                    }
+
+                    th {
+                        background: #172033;
+                        color: white;
+                        padding: 8px 6px;
+                        text-align: left;
+                        font-size: 7px;
+                        font-weight: 900;
+                        letter-spacing: 0.7px;
+                        border: 1px solid #172033;
+                    }
+
+                    td {
+                        padding: 7px 6px;
+                        border-bottom: 1px solid #e5e9ef;
+                        color: #344054;
+                        vertical-align: middle;
+                        word-wrap: break-word;
+                    }
+
+                    tbody tr:nth-child(even) {
+                        background: #f8fafc;
+                    }
+
+                    tr {
+                        page-break-inside: avoid;
+                    }
+
+                    th:nth-child(1) {
+                        width: 4%;
+                    }
+
+                    th:nth-child(2) {
+                        width: 11%;
+                    }
+
+                    th:nth-child(3) {
+                        width: 20%;
+                    }
+
+                    th:nth-child(4) {
+                        width: 9%;
+                    }
+
+                    th:nth-child(5),
+                    th:nth-child(6),
+                    th:nth-child(7),
+                    th:nth-child(8),
+                    th:nth-child(9) {
+                        width: 6.5%;
+                    }
+
+                    th:nth-child(10) {
+                        width: 15%;
+                    }
+
+                    .number {
+                        color: #94a3b8;
+                        text-align: center;
+                    }
+
+                    .member-name {
+                        color: #172033;
+                    }
+
+                    .center {
+                        text-align: center;
+                    }
+
+                    .percentage {
+                        font-weight: 900;
+                        color: #172033;
+                    }
+
+                    .classification {
+                        display: inline-block;
+                        padding: 3px 6px;
+                        border-radius: 4px;
+                        font-size: 6.5px;
+                        font-weight: 900;
+                        letter-spacing: 0.5px;
+                        white-space: nowrap;
+                    }
+
+                    .classification.excellent {
+                        background: #ecfdf5;
+                        color: #047857;
+                    }
+
+                    .classification.good {
+                        background: #eff6ff;
+                        color: #1d4ed8;
+                    }
+
+                    .classification.needs-follow-up {
+                        background: #fffbeb;
+                        color: #b45309;
+                    }
+
+                    .classification.pastoral-follow-up {
+                        background: #fef2f2;
+                        color: #b91c1c;
+                    }
+
+                    .legend {
+                        display: grid;
+                        grid-template-columns: repeat(4, 1fr);
+                        gap: 8px;
+                    }
+
+                    .legend-item {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        padding: 9px 10px;
+                        border: 1px solid #dfe5ec;
+                        border-radius: 6px;
+                    }
+
+                    .legend-item strong {
+                        font-size: 7px;
+                        letter-spacing: 0.6px;
+                    }
+
+                    .legend-item span {
+                        font-size: 8px;
+                        color: #64748b;
+                    }
+
+                    .footer {
+                        margin-top: 28px;
+                        padding-top: 12px;
+                        border-top: 1px solid #cfd6df;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: flex-start;
+                        color: #7b8797;
+                        font-size: 7.5px;
+                        page-break-inside: avoid;
+                    }
+
+                    .footer strong {
+                        display: block;
+                        color: #344054;
+                        font-size: 8px;
+                    }
+
+                    .footer span {
+                        display: block;
+                        margin-top: 2px;
+                    }
+
+                    .footer-right {
+                        text-align: right;
+                    }
+
+                    @media print {
+                        body {
+                            -webkit-print-color-adjust: exact;
+                            print-color-adjust: exact;
+                        }
+
+                        .document {
+                            width: 100%;
+                        }
+                    }
+
+                </style>
+
+            </head>
+
+            <body>
+
+                <main class="document">
+
+                    <header class="header">
+
+                        <div class="brand-area">
+
+                            <div class="brand-mark">
+                                EPIC
+                            </div>
+
+                            <div>
+
+                                <div class="brand-name">
+                                    LUKE 4:18 MINISTRIES
+                                </div>
+
+                                <div class="brand-subtitle">
+                                    EPIC CHURCH MANAGEMENT SYSTEM
+                                    • ENGAGING PEOPLE INTO CHRIST
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <div class="document-type">
+
+                            MEMBER ANALYTICS
+
+                            <strong>
+                                ATTENDANCE REPORT
+                            </strong>
+
+                        </div>
+
+                    </header>
+
+                    <section class="title-area">
+
+                        <div>
+
+                            <div class="eyebrow">
+                                EPIC REPORTING CENTER
+                            </div>
+
+                            <h1>
+                                Member Attendance Report
+                            </h1>
+
+                            <p class="description">
+                                Attendance participation,
+                                member engagement, and
+                                pastoral monitoring report.
+                            </p>
+
+                        </div>
+
+                        <div class="generated">
+
+                            <span>
+                                GENERATED
+                            </span>
+
+                            <strong>
+                                ${escapeHtml(generated)}
+                            </strong>
+
+                        </div>
+
+                    </section>
+
+                    <section class="meta">
+
+                        <div class="meta-card">
+                            <span>REPORT PERIOD</span>
+                            <strong>
+                                ${escapeHtml(printPeriod)}
+                            </strong>
+                        </div>
+
+                        <div class="meta-card">
+                            <span>SERVICE</span>
+                            <strong>
+                                ${escapeHtml(serviceLabel)}
+                            </strong>
+                        </div>
+
+                        <div class="meta-card">
+                            <span>MEMBER FILTER</span>
+                            <strong>
+                                ${
+                                    search.trim()
+                                        ? escapeHtml(search)
+                                        : "All Members"
+                                }
+                            </strong>
+                        </div>
+
+                    </section>
+
+                    <section class="section">
+
+                        <div class="section-title">
+
+                            <div class="section-number">
+                                01
+                            </div>
+
+                            <div>
+
+                                <h2>
+                                    Attendance Overview
+                                </h2>
+
+                                <p>
+                                    Executive summary of the
+                                    selected attendance records.
+                                </p>
+
+                            </div>
+
+                        </div>
+
+                        <div class="summary">
+
+                            <div class="summary-card">
+                                <span>MEMBERS</span>
+                                <strong>
+                                    ${memberSummaries.length}
+                                </strong>
+                                <small>
+                                    Members tracked
+                                </small>
+                            </div>
+
+                            <div class="summary-card">
+                                <span>RECORDS</span>
+                                <strong>
+                                    ${statistics.total}
+                                </strong>
+                                <small>
+                                    Attendance records
+                                </small>
+                            </div>
+
+                            <div class="summary-card">
+                                <span>ATTENDANCE RATE</span>
+                                <strong>
+                                    ${statistics.percentage}%
+                                </strong>
+                                <small>
+                                    Present + Late + Early
+                                </small>
+                            </div>
+
+                            <div class="summary-card">
+                                <span>PASTORAL FOLLOW-UP</span>
+                                <strong>
+                                    ${pastoralAttentionCount}
+                                </strong>
+                                <small>
+                                    Below 60% attendance
+                                </small>
+                            </div>
+
+                        </div>
+
+                    </section>
+
+                    <section class="section">
+
+                        <div class="section-title">
+
+                            <div class="section-number">
+                                02
+                            </div>
+
+                            <div>
+
+                                <h2>
+                                    Attendance Breakdown
+                                </h2>
+
+                                <p>
+                                    Distribution by attendance status.
+                                </p>
+
+                            </div>
+
+                        </div>
+
+                        <div class="breakdown">
+
+                            <div class="breakdown-card">
+                                <span>PRESENT</span>
+                                <strong>
+                                    ${statistics.present}
+                                </strong>
+                            </div>
+
+                            <div class="breakdown-card">
+                                <span>LATE</span>
+                                <strong>
+                                    ${statistics.late}
+                                </strong>
+                            </div>
+
+                            <div class="breakdown-card">
+                                <span>EARLY</span>
+                                <strong>
+                                    ${statistics.early}
+                                </strong>
+                            </div>
+
+                            <div class="breakdown-card">
+                                <span>ABSENT</span>
+                                <strong>
+                                    ${statistics.absent}
+                                </strong>
+                            </div>
+
+                            <div class="breakdown-card">
+                                <span>EXCUSED</span>
+                                <strong>
+                                    ${statistics.excused}
+                                </strong>
+                            </div>
+
+                        </div>
+
+                    </section>
+
+                    <section class="section">
+
+                        <div class="section-title">
+
+                            <div class="section-number">
+                                03
+                            </div>
+
+                            <div>
+
+                                <h2>
+                                    Member Attendance Performance
+                                </h2>
+
+                                <p>
+                                    Individual attendance records
+                                    and classification.
+                                </p>
+
+                            </div>
+
+                        </div>
+
+                        <div class="table-wrapper">
+
+                            <table>
+
+                                <thead>
+
+                                    <tr>
+                                        <th>#</th>
+                                        <th>MEMBER CODE</th>
+                                        <th>MEMBER NAME</th>
+                                        <th>RATE</th>
+                                        <th>PRESENT</th>
+                                        <th>LATE</th>
+                                        <th>EARLY</th>
+                                        <th>ABSENT</th>
+                                        <th>EXCUSED</th>
+                                        <th>CLASSIFICATION</th>
+                                    </tr>
+
+                                </thead>
+
+                                <tbody>
+
+                                    ${rows}
+
+                                </tbody>
+
+                            </table>
+
+                        </div>
+
+                    </section>
+
+                    <section class="section">
+
+                        <div class="section-title">
+
+                            <div class="section-number">
+                                04
+                            </div>
+
+                            <div>
+
+                                <h2>
+                                    Attendance Classification
+                                </h2>
+
+                                <p>
+                                    Standard used for attendance
+                                    and pastoral monitoring.
+                                </p>
+
+                            </div>
+
+                        </div>
+
+                        <div class="legend">
+
+                            <div class="legend-item">
+                                <strong>EXCELLENT</strong>
+                                <span>90–100%</span>
+                            </div>
+
+                            <div class="legend-item">
+                                <strong>GOOD</strong>
+                                <span>75–89%</span>
+                            </div>
+
+                            <div class="legend-item">
+                                <strong>NEEDS FOLLOW-UP</strong>
+                                <span>60–74%</span>
+                            </div>
+
+                            <div class="legend-item">
+                                <strong>PASTORAL FOLLOW-UP</strong>
+                                <span>Below 60%</span>
+                            </div>
+
+                        </div>
+
+                    </section>
+
+                    <footer class="footer">
+
+                        <div>
+                            <strong>
+                                EPIC CHURCH MANAGEMENT SYSTEM
+                            </strong>
+
+                            <span>
+                                Engaging People Into Christ
+                            </span>
+                        </div>
+
+                        <div class="footer-right">
+
+                            <strong>
+                                MEMBER ATTENDANCE REPORT
+                            </strong>
+
+                            <span>
+                                Records displayed:
+                                ${memberSummaries.length}
+                            </span>
+
+                        </div>
+
+                    </footer>
+
+                </main>
+
+            </body>
+
+            </html>
+        `);
+
+        printWindow.document.close();
+
+        setTimeout(() => {
+
+            printWindow.focus();
+
+            printWindow.print();
+
+        }, 500);
+
+        printWindow.onafterprint = () => {
+
+            setTimeout(() => {
+
+                printWindow.close();
+
+            }, 300);
+
+        };
     };
 
     // ========================================================
@@ -594,8 +1897,10 @@ const MemberAttendanceReport: React.FC = () => {
     // ========================================================
 
     if (loading) {
+
         return (
             <div className="mar-loading-page">
+
                 <div className="mar-loading-spinner" />
 
                 <h2>
@@ -603,9 +1908,10 @@ const MemberAttendanceReport: React.FC = () => {
                 </h2>
 
                 <p>
-                    Retrieving real attendance
-                    records from EPIC database...
+                    Retrieving attendance records
+                    from EPIC CMS...
                 </p>
+
             </div>
         );
     }
@@ -615,8 +1921,10 @@ const MemberAttendanceReport: React.FC = () => {
     // ========================================================
 
     if (error) {
+
         return (
             <div className="mar-error-page">
+
                 <div className="mar-error-icon">
                     !
                 </div>
@@ -625,14 +1933,34 @@ const MemberAttendanceReport: React.FC = () => {
                     Unable to Load Attendance
                 </h2>
 
-                <p>{error}</p>
+                <p>
+                    {error}
+                </p>
 
-                <button
-                    className="mar-primary-button"
-                    onClick={loadAttendance}
-                >
-                    ↻ Try Again
-                </button>
+                <div className="mar-error-actions">
+
+                    {onBack && (
+                        <button
+                            type="button"
+                            className="mar-button secondary"
+                            onClick={onBack}
+                        >
+                            ← Back to Reports
+                        </button>
+                    )}
+
+                    <button
+                        type="button"
+                        className="mar-button primary"
+                        onClick={() => {
+                            void loadAttendance();
+                        }}
+                    >
+                        ↻ Try Again
+                    </button>
+
+                </div>
+
             </div>
         );
     }
@@ -645,95 +1973,828 @@ const MemberAttendanceReport: React.FC = () => {
         <div className="member-attendance-report">
 
             {/* ==================================================
-                HEADER
+                SCREEN HEADER
             ================================================== */}
 
-            <div className="mar-page-header">
+            <header className="mar-header">
+
                 <div>
-                    <div className="mar-eyebrow">
-                        EPIC PASTORAL ANALYTICS
-                    </div>
+
+                    <span className="mar-eyebrow">
+                        EPIC REPORTS CENTER
+                    </span>
 
                     <h1>
-                        Member Attendance
+                        Member Attendance Report
                     </h1>
 
                     <p>
                         Monitor member participation,
-                        identify attendance trends,
-                        and provide pastoral follow-up.
+                        attendance performance, and
+                        pastoral follow-up.
                     </p>
+
                 </div>
 
                 <div className="mar-header-actions">
+
+                    {onBack && (
+                        <button
+                            type="button"
+                            className="mar-button secondary"
+                            onClick={onBack}
+                        >
+                            ← Back to Reports
+                        </button>
+                    )}
+
                     <button
-                        className="mar-secondary-button"
-                        onClick={loadAttendance}
+                        type="button"
+                        className="mar-button secondary"
+                        onClick={resetFilters}
                     >
-                        ↻ Refresh
+                        Reset Filters
                     </button>
 
                     <button
-                        className="mar-primary-button"
-                        onClick={printReport}
+                        type="button"
+                        className="mar-button primary"
+                        onClick={handlePrint}
                     >
-                        🖨 Print Report
+                        🖨 Print / Save PDF
                     </button>
+
                 </div>
-            </div>
+
+            </header>
+
+            {/* ==================================================
+                TOP SUMMARY
+            ================================================== */}
+
+            <section className="mar-summary-grid">
+
+                <div className="mar-summary-card">
+                    <span>MEMBERS</span>
+
+                    <strong>
+                        {memberSummaries.length}
+                    </strong>
+
+                    <small>
+                        Members tracked
+                    </small>
+                </div>
+
+                <div className="mar-summary-card">
+                    <span>RECORDS</span>
+
+                    <strong>
+                        {statistics.total}
+                    </strong>
+
+                    <small>
+                        Attendance records
+                    </small>
+                </div>
+
+                <div className="mar-summary-card">
+                    <span>ATTENDANCE</span>
+
+                    <strong>
+                        {statistics.percentage}%
+                    </strong>
+
+                    <small>
+                        Overall attendance
+                    </small>
+                </div>
+
+                <div className="mar-summary-card">
+                    <span>FOLLOW-UP</span>
+
+                    <strong>
+                        {pastoralAttentionCount}
+                    </strong>
+
+                    <small>
+                        Below 60%
+                    </small>
+                </div>
+
+            </section>
+
+            {/* ==================================================
+                DETAILED ATTENDANCE OVERVIEW
+            ================================================== */}
+
+            <section className="mar-card">
+
+                <div className="mar-card-header">
+
+                    <div>
+
+                        <span>
+                            ATTENDANCE ANALYTICS
+                        </span>
+
+                        <h2>
+                            Attendance Overview
+                        </h2>
+
+                        <p>
+                            Detailed breakdown of member
+                            attendance performance for the
+                            selected report period.
+                        </p>
+
+                    </div>
+
+                </div>
+
+                <div
+                    style={{
+                        display: "grid",
+                        gridTemplateColumns:
+                            "repeat(5, minmax(0, 1fr))",
+                        gap: "12px",
+                        padding:
+                            "20px 25px 10px",
+                    }}
+                >
+
+                    {/* PRESENT */}
+
+                    <div
+                        style={{
+                            padding: "18px",
+                            border:
+                                "1px solid #a7f3d0",
+                            borderRadius: "14px",
+                            background:
+                                "linear-gradient(135deg, #ffffff, #ecfdf5)",
+                            boxShadow:
+                                "0 5px 15px rgba(16,185,129,.06)",
+                        }}
+                    >
+
+                        <div
+                            style={{
+                                fontSize: "10px",
+                                fontWeight: 800,
+                                letterSpacing: "1px",
+                                color: "#047857",
+                            }}
+                        >
+                            PRESENT
+                        </div>
+
+                        <div
+                            style={{
+                                marginTop: "8px",
+                                fontSize: "30px",
+                                fontWeight: 850,
+                                color: "#10b981",
+                                lineHeight: 1,
+                            }}
+                        >
+                            {statistics.present}
+                        </div>
+
+                        <div
+                            style={{
+                                marginTop: "7px",
+                                fontSize: "11px",
+                                color: "#64748b",
+                            }}
+                        >
+                            {attendanceDistribution.present}%
+                            of records
+                        </div>
+
+                    </div>
+
+                    {/* LATE */}
+
+                    <div
+                        style={{
+                            padding: "18px",
+                            border:
+                                "1px solid #fde68a",
+                            borderRadius: "14px",
+                            background:
+                                "linear-gradient(135deg, #ffffff, #fffbeb)",
+                            boxShadow:
+                                "0 5px 15px rgba(245,158,11,.06)",
+                        }}
+                    >
+
+                        <div
+                            style={{
+                                fontSize: "10px",
+                                fontWeight: 800,
+                                letterSpacing: "1px",
+                                color: "#b45309",
+                            }}
+                        >
+                            LATE
+                        </div>
+
+                        <div
+                            style={{
+                                marginTop: "8px",
+                                fontSize: "30px",
+                                fontWeight: 850,
+                                color: "#f59e0b",
+                                lineHeight: 1,
+                            }}
+                        >
+                            {statistics.late}
+                        </div>
+
+                        <div
+                            style={{
+                                marginTop: "7px",
+                                fontSize: "11px",
+                                color: "#64748b",
+                            }}
+                        >
+                            {attendanceDistribution.late}%
+                            of records
+                        </div>
+
+                    </div>
+
+                    {/* EARLY */}
+
+                    <div
+                        style={{
+                            padding: "18px",
+                            border:
+                                "1px solid #a5f3fc",
+                            borderRadius: "14px",
+                            background:
+                                "linear-gradient(135deg, #ffffff, #ecfeff)",
+                            boxShadow:
+                                "0 5px 15px rgba(6,182,212,.06)",
+                        }}
+                    >
+
+                        <div
+                            style={{
+                                fontSize: "10px",
+                                fontWeight: 800,
+                                letterSpacing: "1px",
+                                color: "#0e7490",
+                            }}
+                        >
+                            EARLY
+                        </div>
+
+                        <div
+                            style={{
+                                marginTop: "8px",
+                                fontSize: "30px",
+                                fontWeight: 850,
+                                color: "#06b6d4",
+                                lineHeight: 1,
+                            }}
+                        >
+                            {statistics.early}
+                        </div>
+
+                        <div
+                            style={{
+                                marginTop: "7px",
+                                fontSize: "11px",
+                                color: "#64748b",
+                            }}
+                        >
+                            {attendanceDistribution.early}%
+                            of records
+                        </div>
+
+                    </div>
+
+                    {/* ABSENT */}
+
+                    <div
+                        style={{
+                            padding: "18px",
+                            border:
+                                "1px solid #fecaca",
+                            borderRadius: "14px",
+                            background:
+                                "linear-gradient(135deg, #ffffff, #fef2f2)",
+                            boxShadow:
+                                "0 5px 15px rgba(239,68,68,.06)",
+                        }}
+                    >
+
+                        <div
+                            style={{
+                                fontSize: "10px",
+                                fontWeight: 800,
+                                letterSpacing: "1px",
+                                color: "#b91c1c",
+                            }}
+                        >
+                            ABSENT
+                        </div>
+
+                        <div
+                            style={{
+                                marginTop: "8px",
+                                fontSize: "30px",
+                                fontWeight: 850,
+                                color: "#ef4444",
+                                lineHeight: 1,
+                            }}
+                        >
+                            {statistics.absent}
+                        </div>
+
+                        <div
+                            style={{
+                                marginTop: "7px",
+                                fontSize: "11px",
+                                color: "#64748b",
+                            }}
+                        >
+                            {attendanceDistribution.absent}%
+                            of records
+                        </div>
+
+                    </div>
+
+                    {/* EXCUSED */}
+
+                    <div
+                        style={{
+                            padding: "18px",
+                            border:
+                                "1px solid #ddd6fe",
+                            borderRadius: "14px",
+                            background:
+                                "linear-gradient(135deg, #ffffff, #f5f3ff)",
+                            boxShadow:
+                                "0 5px 15px rgba(139,92,246,.06)",
+                        }}
+                    >
+
+                        <div
+                            style={{
+                                fontSize: "10px",
+                                fontWeight: 800,
+                                letterSpacing: "1px",
+                                color: "#6d28d9",
+                            }}
+                        >
+                            EXCUSED
+                        </div>
+
+                        <div
+                            style={{
+                                marginTop: "8px",
+                                fontSize: "30px",
+                                fontWeight: 850,
+                                color: "#8b5cf6",
+                                lineHeight: 1,
+                            }}
+                        >
+                            {statistics.excused}
+                        </div>
+
+                        <div
+                            style={{
+                                marginTop: "7px",
+                                fontSize: "11px",
+                                color: "#64748b",
+                            }}
+                        >
+                            {attendanceDistribution.excused}%
+                            of records
+                        </div>
+
+                    </div>
+
+                </div>
+
+                {/* OVERVIEW METRICS */}
+
+                <div
+                    style={{
+                        display: "grid",
+                        gridTemplateColumns:
+                            "repeat(3, minmax(0, 1fr))",
+                        gap: "14px",
+                        padding:
+                            "10px 25px 20px",
+                    }}
+                >
+
+                    <div
+                        style={{
+                            padding: "18px",
+                            border:
+                                "1px solid #dbeafe",
+                            borderRadius: "14px",
+                            background:
+                                "#f8fbff",
+                        }}
+                    >
+
+                        <div
+                            style={{
+                                display: "flex",
+                                justifyContent:
+                                    "space-between",
+                                alignItems: "center",
+                            }}
+                        >
+
+                            <span
+                                style={{
+                                    color: "#64748b",
+                                    fontSize: "10px",
+                                    fontWeight: 800,
+                                    letterSpacing: "1px",
+                                }}
+                            >
+                                OVERALL ATTENDANCE
+                            </span>
+
+                            <strong
+                                style={{
+                                    color: "#2563eb",
+                                    fontSize: "22px",
+                                }}
+                            >
+                                {statistics.percentage}%
+                            </strong>
+
+                        </div>
+
+                        <div
+                            style={{
+                                marginTop: "12px",
+                                height: "8px",
+                                overflow: "hidden",
+                                borderRadius: "99px",
+                                background:
+                                    "#e2e8f0",
+                            }}
+                        >
+
+                            <div
+                                style={{
+                                    width:
+                                        `${statistics.percentage}%`,
+                                    height: "100%",
+                                    borderRadius:
+                                        "99px",
+                                    background:
+                                        "linear-gradient(90deg, #3b82f6, #10b981)",
+                                    transition:
+                                        "width .4s ease",
+                                }}
+                            />
+
+                        </div>
+
+                        <p
+                            style={{
+                                margin:
+                                    "9px 0 0",
+                                color:
+                                    "#64748b",
+                                fontSize:
+                                    "11px",
+                            }}
+                        >
+                            {statistics.attended}
+                            {" "}
+                            attended records out of{" "}
+                            {statistics.total}
+                        </p>
+
+                    </div>
+
+                    <div
+                        style={{
+                            padding: "18px",
+                            border:
+                                "1px solid #a7f3d0",
+                            borderRadius: "14px",
+                            background:
+                                "#f7fffb",
+                        }}
+                    >
+
+                        <div
+                            style={{
+                                color: "#64748b",
+                                fontSize: "10px",
+                                fontWeight: 800,
+                                letterSpacing: "1px",
+                            }}
+                        >
+                            EXCELLENT MEMBERS
+                        </div>
+
+                        <strong
+                            style={{
+                                display: "block",
+                                marginTop: "9px",
+                                color: "#10b981",
+                                fontSize: "27px",
+                                fontWeight: 850,
+                            }}
+                        >
+                            {excellentMembers}
+                        </strong>
+
+                        <p
+                            style={{
+                                margin: "5px 0 0",
+                                color: "#64748b",
+                                fontSize: "11px",
+                            }}
+                        >
+                            Members with 90%+
+                            attendance
+                        </p>
+
+                    </div>
+
+                    <div
+                        style={{
+                            padding: "18px",
+                            border:
+                                "1px solid #fecaca",
+                            borderRadius: "14px",
+                            background:
+                                "#fffafa",
+                        }}
+                    >
+
+                        <div
+                            style={{
+                                color: "#64748b",
+                                fontSize: "10px",
+                                fontWeight: 800,
+                                letterSpacing: "1px",
+                            }}
+                        >
+                            PASTORAL ATTENTION
+                        </div>
+
+                        <strong
+                            style={{
+                                display: "block",
+                                marginTop: "9px",
+                                color: "#ef4444",
+                                fontSize: "27px",
+                                fontWeight: 850,
+                            }}
+                        >
+                            {pastoralAttentionCount}
+                        </strong>
+
+                        <p
+                            style={{
+                                margin: "5px 0 0",
+                                color: "#64748b",
+                                fontSize: "11px",
+                            }}
+                        >
+                            Members below 60%
+                            attendance
+                        </p>
+
+                    </div>
+
+                </div>
+
+                {/* STATUS DISTRIBUTION */}
+
+                <div
+                    style={{
+                        padding:
+                            "4px 25px 25px",
+                    }}
+                >
+
+                    <div
+                        style={{
+                            marginBottom:
+                                "12px",
+                            color:
+                                "#475569",
+                            fontSize:
+                                "11px",
+                            fontWeight:
+                                800,
+                            letterSpacing:
+                                "0.6px",
+                        }}
+                    >
+                        ATTENDANCE DISTRIBUTION
+                    </div>
+
+                    {[
+                        {
+                            label: "Present",
+                            percentage:
+                                attendanceDistribution.present,
+                            text: "#047857",
+                            background: "#ecfdf5",
+                            bar: "#10b981",
+                        },
+                        {
+                            label: "Late",
+                            percentage:
+                                attendanceDistribution.late,
+                            text: "#b45309",
+                            background: "#fffbeb",
+                            bar: "#f59e0b",
+                        },
+                        {
+                            label: "Early",
+                            percentage:
+                                attendanceDistribution.early,
+                            text: "#0e7490",
+                            background: "#ecfeff",
+                            bar: "#06b6d4",
+                        },
+                        {
+                            label: "Absent",
+                            percentage:
+                                attendanceDistribution.absent,
+                            text: "#b91c1c",
+                            background: "#fef2f2",
+                            bar: "#ef4444",
+                        },
+                        {
+                            label: "Excused",
+                            percentage:
+                                attendanceDistribution.excused,
+                            text: "#6d28d9",
+                            background: "#f5f3ff",
+                            bar: "#8b5cf6",
+                        },
+                    ].map(item => (
+
+                        <div
+                            key={item.label}
+                            style={{
+                                marginBottom:
+                                    "10px",
+                            }}
+                        >
+
+                            <div
+                                style={{
+                                    display:
+                                        "flex",
+                                    justifyContent:
+                                        "space-between",
+                                    marginBottom:
+                                        "5px",
+                                }}
+                            >
+
+                                <span
+                                    style={{
+                                        color:
+                                            item.text,
+                                        fontSize:
+                                            "11px",
+                                        fontWeight:
+                                            700,
+                                    }}
+                                >
+                                    {item.label}
+                                </span>
+
+                                <span
+                                    style={{
+                                        color:
+                                            "#64748b",
+                                        fontSize:
+                                            "11px",
+                                    }}
+                                >
+                                    {item.percentage}%
+                                </span>
+
+                            </div>
+
+                            <div
+                                style={{
+                                    height:
+                                        "7px",
+                                    borderRadius:
+                                        "99px",
+                                    background:
+                                        item.background,
+                                    overflow:
+                                        "hidden",
+                                }}
+                            >
+
+                                <div
+                                    style={{
+                                        width:
+                                            `${item.percentage}%`,
+                                        height:
+                                            "100%",
+                                        background:
+                                            item.bar,
+                                        borderRadius:
+                                            "99px",
+                                    }}
+                                />
+
+                            </div>
+
+                        </div>
+
+                    ))}
+
+                </div>
+
+            </section>
 
             {/* ==================================================
                 FILTERS
             ================================================== */}
 
-            <div className="mar-filter-panel">
-                <div className="mar-filter-title">
-                    <span>⌕</span>
-                    Attendance Filters
+            <section className="mar-card">
+
+                <div className="mar-card-header">
+
+                    <div>
+
+                        <span>
+                            REPORT BUILDER
+                        </span>
+
+                        <h2>
+                            Attendance Filters
+                        </h2>
+
+                        <p>
+                            Adjust the report before
+                            printing.
+                        </p>
+
+                    </div>
+
                 </div>
 
-                <div className="mar-filter-grid">
+                <div className="mar-filters">
 
-                    <div className="mar-field">
+                    <div className="mar-field search">
+
                         <label>
                             Search Member
                         </label>
 
-                        <div className="mar-input-icon">
-                            <span>🔎</span>
+                        <input
+                            type="text"
+                            value={search}
+                            onChange={event =>
+                                setSearch(
+                                    event.target.value
+                                )
+                            }
+                            placeholder="Search member name or code..."
+                        />
 
-                            <input
-                                type="text"
-                                value={search}
-                                onChange={(e) =>
-                                    setSearch(
-                                        e.target.value
-                                    )
-                                }
-                                placeholder="Search member name or code..."
-                            />
-                        </div>
                     </div>
 
                     <div className="mar-field">
+
                         <label>
-                            Service
+                            Church Service
                         </label>
 
                         <select
                             value={serviceFilter}
-                            onChange={(e) =>
+                            onChange={event =>
                                 setServiceFilter(
-                                    e.target.value
+                                    event.target.value
                                 )
                             }
                         >
+
                             <option value="ALL">
                                 All Services
                             </option>
 
                             {services.map(
-                                (service) => (
+                                service => (
                                     <option
                                         key={service}
                                         value={service}
@@ -742,310 +2803,175 @@ const MemberAttendanceReport: React.FC = () => {
                                     </option>
                                 )
                             )}
+
                         </select>
+
                     </div>
 
                     <div className="mar-field">
+
                         <label>
-                            From Date
+                            Date From
                         </label>
 
                         <input
                             type="date"
                             value={dateFrom}
-                            onChange={(e) =>
+                            onChange={event =>
                                 setDateFrom(
-                                    e.target.value
+                                    event.target.value
                                 )
                             }
                         />
+
                     </div>
 
                     <div className="mar-field">
+
                         <label>
-                            To Date
+                            Date To
                         </label>
 
                         <input
                             type="date"
                             value={dateTo}
-                            onChange={(e) =>
+                            onChange={event =>
                                 setDateTo(
-                                    e.target.value
+                                    event.target.value
                                 )
                             }
                         />
+
                     </div>
 
-                    <div className="mar-filter-button">
-                        <button
-                            type="button"
-                            onClick={
-                                clearFilters
-                            }
-                        >
-                            Clear
-                        </button>
-                    </div>
                 </div>
-            </div>
+
+            </section>
 
             {/* ==================================================
-                STATISTICS
+                MEMBER REPORT
             ================================================== */}
 
-            <div className="mar-stat-grid">
+            <section className="mar-card">
 
-                <div className="mar-stat-card total">
-                    <div className="mar-stat-icon">
-                        👥
-                    </div>
+                <div className="mar-report-toolbar">
 
                     <div>
+
                         <span>
-                            Attendance Records
+                            REPORT PREVIEW
                         </span>
 
-                        <strong>
-                            {statistics.total}
-                        </strong>
-                    </div>
-                </div>
-
-                <div className="mar-stat-card present">
-                    <div className="mar-stat-icon">
-                        ✓
-                    </div>
-
-                    <div>
-                        <span>
-                            Present
-                        </span>
-
-                        <strong>
-                            {statistics.present}
-                        </strong>
-                    </div>
-                </div>
-
-                <div className="mar-stat-card late">
-                    <div className="mar-stat-icon">
-                        ⏱
-                    </div>
-
-                    <div>
-                        <span>
-                            Late
-                        </span>
-
-                        <strong>
-                            {statistics.late}
-                        </strong>
-                    </div>
-                </div>
-
-                <div className="mar-stat-card early">
-                    <div className="mar-stat-icon">
-                        ↗
-                    </div>
-
-                    <div>
-                        <span>
-                            Early
-                        </span>
-
-                        <strong>
-                            {statistics.early}
-                        </strong>
-                    </div>
-                </div>
-
-                <div className="mar-stat-card absent">
-                    <div className="mar-stat-icon">
-                        !
-                    </div>
-
-                    <div>
-                        <span>
-                            Absent
-                        </span>
-
-                        <strong>
-                            {statistics.absent}
-                        </strong>
-                    </div>
-                </div>
-
-                <div className="mar-stat-card excused">
-                    <div className="mar-stat-icon">
-                        ✓
-                    </div>
-
-                    <div>
-                        <span>
-                            Excused
-                        </span>
-
-                        <strong>
-                            {statistics.excused}
-                        </strong>
-                    </div>
-                </div>
-
-            </div>
-
-            {/* ==================================================
-                OVERVIEW
-            ================================================== */}
-
-            <div className="mar-overview-grid">
-
-                <div className="mar-overview-card">
-                    <div className="mar-overview-label">
-                        Overall Attendance
-                    </div>
-
-                    <div className="mar-overview-value">
-                        {statistics.percentage}%
-                    </div>
-
-                    <div className="mar-progress">
-                        <div
-                            style={{
-                                width: `${statistics.percentage}%`,
-                            }}
-                        />
-                    </div>
-
-                    <div className="mar-overview-note">
-                        {statistics.attended} attended
-                        records out of{" "}
-                        {statistics.total}
-                    </div>
-                </div>
-
-                <div className="mar-overview-card">
-                    <div className="mar-overview-label">
-                        Members Tracked
-                    </div>
-
-                    <div className="mar-overview-value">
-                        {memberSummaries.length}
-                    </div>
-
-                    <div className="mar-overview-note">
-                        Members with attendance
-                        records in the selected period.
-                    </div>
-                </div>
-
-                <div className="mar-overview-card">
-                    <div className="mar-overview-label">
-                        Pastoral Attention
-                    </div>
-
-                    <div className="mar-overview-value pastoral">
-                        {
-                            memberSummaries.filter(
-                                (member) =>
-                                    member.percentage <
-                                    60
-                            ).length
-                        }
-                    </div>
-
-                    <div className="mar-overview-note">
-                        Members below 60%
-                        attendance.
-                    </div>
-                </div>
-
-            </div>
-
-            {/* ==================================================
-                MEMBER TABLE
-            ================================================== */}
-
-            <div className="mar-panel">
-
-                <div className="mar-panel-header">
-                    <div>
                         <h2>
-                            Member Attendance Overview
+                            Member Attendance
                         </h2>
 
                         <p>
-                            Real attendance records
-                            retrieved from EPIC.
+                            Showing{" "}
+                            <strong>
+                                {memberSummaries.length}
+                            </strong>{" "}
+                            members from{" "}
+                            <strong>
+                                {filteredRecords.length}
+                            </strong>{" "}
+                            attendance records.
                         </p>
+
                     </div>
 
-                    <div className="mar-record-count">
-                        {memberSummaries.length} members
-                    </div>
+                    <button
+                        type="button"
+                        className="mar-button primary"
+                        onClick={handlePrint}
+                    >
+                        🖨 Print Report
+                    </button>
+
                 </div>
 
                 <div className="mar-table-wrapper">
-                    <table className="mar-table">
+
+                    <table className="mar-screen-table">
 
                         <thead>
+
                             <tr>
+
                                 <th>
-                                    Member
+                                    #
                                 </th>
 
                                 <th>
-                                    Attendance %
+                                    MEMBER
                                 </th>
 
                                 <th>
-                                    Present
+                                    CODE
                                 </th>
 
                                 <th>
-                                    Late
+                                    RATE
                                 </th>
 
                                 <th>
-                                    Early
+                                    PRESENT
                                 </th>
 
                                 <th>
-                                    Absent
+                                    LATE
                                 </th>
 
                                 <th>
-                                    Excused
+                                    EARLY
                                 </th>
 
                                 <th>
-                                    Pastoral Status
+                                    ABSENT
                                 </th>
 
                                 <th>
-                                    Action
+                                    EXCUSED
                                 </th>
+
+                                <th>
+                                    CLASSIFICATION
+                                </th>
+
+                                {/* NEW */}
+
+                                <th>
+                                    ACTION
+                                </th>
+
                             </tr>
+
                         </thead>
 
                         <tbody>
 
-                            {memberSummaries.length ===
-                            0 ? (
+                            {memberSummaries.length === 0 ? (
+
                                 <tr>
+
                                     <td
-                                        colSpan={9}
+                                        colSpan={11}
                                         className="mar-empty"
                                     >
                                         No attendance
-                                        records found
-                                        for the selected
-                                        filters.
+                                        records found.
                                     </td>
+
                                 </tr>
+
                             ) : (
+
                                 memberSummaries.map(
-                                    (member) => (
+                                    (
+                                        member,
+                                        index
+                                    ) => (
+
                                         <tr
                                             key={
                                                 member.memberId
@@ -1053,99 +2979,67 @@ const MemberAttendanceReport: React.FC = () => {
                                         >
 
                                             <td>
-                                                <div className="mar-member">
-
-                                                    <div className="mar-avatar">
-                                                        {member.name
-                                                            .charAt(
-                                                                0
-                                                            )
-                                                            .toUpperCase()}
-                                                    </div>
-
-                                                    <div>
-                                                        <strong>
-                                                            {
-                                                                member.name
-                                                            }
-                                                        </strong>
-
-                                                        <span>
-                                                            {
-                                                                member.memberCode
-                                                            }
-                                                        </span>
-                                                    </div>
-
-                                                </div>
+                                                {index + 1}
                                             </td>
 
                                             <td>
-                                                <div className="mar-percentage">
-
-                                                    <strong>
-                                                        {
-                                                            member.percentage
-                                                        }%
-                                                    </strong>
-
-                                                    <div className="mar-mini-progress">
-                                                        <div
-                                                            className={getClassificationClass(
-                                                                member.percentage
-                                                            )}
-                                                            style={{
-                                                                width: `${member.percentage}%`,
-                                                            }}
-                                                        />
-                                                    </div>
-
-                                                </div>
-                                            </td>
-
-                                            <td>
-                                                <span className="mar-number present">
+                                                <strong>
                                                     {
-                                                        member.present
+                                                        member.name
                                                     }
-                                                </span>
+                                                </strong>
                                             </td>
 
                                             <td>
-                                                <span className="mar-number late">
+                                                {
+                                                    member.memberCode
+                                                }
+                                            </td>
+
+                                            <td>
+
+                                                <strong className="mar-percentage">
                                                     {
-                                                        member.late
-                                                    }
-                                                </span>
+                                                        member.percentage
+                                                    }%
+                                                </strong>
+
                                             </td>
 
                                             <td>
-                                                <span className="mar-number early">
-                                                    {
-                                                        member.early
-                                                    }
-                                                </span>
+                                                {
+                                                    member.present
+                                                }
                                             </td>
 
                                             <td>
-                                                <span className="mar-number absent">
-                                                    {
-                                                        member.absent
-                                                    }
-                                                </span>
+                                                {
+                                                    member.late
+                                                }
                                             </td>
 
                                             <td>
-                                                <span className="mar-number excused">
-                                                    {
-                                                        member.excused
-                                                    }
-                                                </span>
+                                                {
+                                                    member.early
+                                                }
                                             </td>
 
                                             <td>
+                                                {
+                                                    member.absent
+                                                }
+                                            </td>
+
+                                            <td>
+                                                {
+                                                    member.excused
+                                                }
+                                            </td>
+
+                                            <td>
+
                                                 <span
-                                                    className={`mar-status ${getClassificationClass(
+                                                    className={`mar-classification ${getClassificationClass(
                                                         member.percentage
                                                     )}`}
                                                 >
@@ -1153,329 +3047,895 @@ const MemberAttendanceReport: React.FC = () => {
                                                         member.classification
                                                     }
                                                 </span>
+
                                             </td>
 
+                                            {/* ==================================================
+                                                VIEW ONLY BUTTON
+                                            ================================================== */}
+
                                             <td>
+
                                                 <button
                                                     type="button"
-                                                    className="mar-view-button"
+                                                    className="mar-button secondary"
+                                                    style={{
+                                                        padding:
+                                                            "7px 13px",
+                                                        minWidth:
+                                                            "70px",
+                                                        fontSize:
+                                                            "11px",
+                                                        fontWeight:
+                                                            800,
+                                                    }}
                                                     onClick={() =>
                                                         setSelectedMemberId(
                                                             member.memberId
                                                         )
                                                     }
                                                 >
-                                                    View
+                                                    👁 View
                                                 </button>
+
                                             </td>
 
                                         </tr>
+
                                     )
                                 )
+
                             )}
 
                         </tbody>
 
                     </table>
+
                 </div>
-            </div>
+
+            </section>
 
             {/* ==================================================
-                MEMBER HISTORY
+                SCREEN FOOTER
+            ================================================== */}
+
+            <footer className="mar-screen-footer">
+
+                <div>
+
+                    <strong>
+                        EPIC Church Management System
+                    </strong>
+
+                    <span>
+                        Engaging People Into Christ
+                    </span>
+
+                </div>
+
+                <div>
+
+                    <span>
+                        Report Period:
+                    </span>
+
+                    <strong>
+                        {printPeriod}
+                    </strong>
+
+                </div>
+
+            </footer>
+
+            {/* ==================================================
+                VIEW MEMBER ATTENDANCE MODAL
+                READ ONLY — NO EDITING
             ================================================== */}
 
             {selectedMember && (
-                <div className="mar-panel mar-history-panel">
 
-                    <div className="mar-panel-header">
+                <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="member-attendance-view-title"
+                    onClick={() =>
+                        setSelectedMemberId(null)
+                    }
+                    style={{
+                        position: "fixed",
+                        inset: 0,
+                        zIndex: 9999,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        padding: "24px",
+                        background:
+                            "rgba(15, 23, 42, 0.58)",
+                        backdropFilter:
+                            "blur(5px)",
+                    }}
+                >
 
-                        <div>
-                            <h2>
-                                {selectedMember.name}
-                            </h2>
+                    <div
+                        onClick={event =>
+                            event.stopPropagation()
+                        }
+                        style={{
+                            width:
+                                "min(920px, 100%)",
+                            maxHeight:
+                                "calc(100vh - 48px)",
+                            overflow:
+                                "hidden",
+                            display:
+                                "flex",
+                            flexDirection:
+                                "column",
+                            background:
+                                "#ffffff",
+                            borderRadius:
+                                "20px",
+                            boxShadow:
+                                "0 25px 70px rgba(15,23,42,.25)",
+                        }}
+                    >
 
-                            <p>
-                                Individual attendance
-                                history
-                            </p>
-                        </div>
+                        {/* MODAL HEADER */}
 
-                        <button
-                            type="button"
-                            className="mar-close-button"
-                            onClick={() =>
-                                setSelectedMemberId(
-                                    null
-                                )
-                            }
+                        <div
+                            style={{
+                                padding:
+                                    "22px 25px",
+                                borderBottom:
+                                    "1px solid #e2e8f0",
+                                display:
+                                    "flex",
+                                alignItems:
+                                    "center",
+                                justifyContent:
+                                    "space-between",
+                                gap: "20px",
+                            }}
                         >
-                            ×
-                        </button>
 
-                    </div>
+                            <div>
 
-                    <div className="mar-member-summary">
+                                <span
+                                    style={{
+                                        display:
+                                            "block",
+                                        marginBottom:
+                                            "5px",
+                                        fontSize:
+                                            "10px",
+                                        fontWeight:
+                                            850,
+                                        letterSpacing:
+                                            "1.2px",
+                                        color:
+                                            "#64748b",
+                                    }}
+                                >
+                                    MEMBER ATTENDANCE
+                                </span>
 
-                        <div>
-                            <span>
-                                Attendance
-                            </span>
+                                <h2
+                                    id="member-attendance-view-title"
+                                    style={{
+                                        margin:
+                                            0,
+                                        fontSize:
+                                            "22px",
+                                        fontWeight:
+                                            800,
+                                        color:
+                                            "#172033",
+                                    }}
+                                >
+                                    {selectedMember.name}
+                                </h2>
 
-                            <strong>
-                                {
-                                    selectedMember.percentage
-                                }%
-                            </strong>
-                        </div>
+                                <p
+                                    style={{
+                                        margin:
+                                            "5px 0 0",
+                                        fontSize:
+                                            "12px",
+                                        color:
+                                            "#64748b",
+                                    }}
+                                >
+                                    {selectedMember.memberCode}
+                                    {" • "}
+                                    Read-only attendance history
+                                </p>
 
-                        <div>
-                            <span>
-                                Present
-                            </span>
+                            </div>
 
-                            <strong>
-                                {
-                                    selectedMember.present
+                            <button
+                                type="button"
+                                aria-label="Close member attendance"
+                                onClick={() =>
+                                    setSelectedMemberId(
+                                        null
+                                    )
                                 }
-                            </strong>
+                                style={{
+                                    width:
+                                        "38px",
+                                    height:
+                                        "38px",
+                                    border:
+                                        "1px solid #e2e8f0",
+                                    borderRadius:
+                                        "10px",
+                                    background:
+                                        "#f8fafc",
+                                    color:
+                                        "#475569",
+                                    fontSize:
+                                        "20px",
+                                    cursor:
+                                        "pointer",
+                                }}
+                            >
+                                ×
+                            </button>
+
                         </div>
 
-                        <div>
-                            <span>
-                                Late
-                            </span>
+                        {/* MEMBER SUMMARY */}
 
-                            <strong>
-                                {
-                                    selectedMember.late
-                                }
-                            </strong>
+                        <div
+                            style={{
+                                display:
+                                    "grid",
+                                gridTemplateColumns:
+                                    "repeat(5, minmax(0, 1fr))",
+                                gap: "10px",
+                                padding:
+                                    "18px 25px",
+                                background:
+                                    "#f8fafc",
+                                borderBottom:
+                                    "1px solid #e2e8f0",
+                            }}
+                        >
+
+                            <div
+                                style={{
+                                    padding:
+                                        "12px",
+                                    border:
+                                        "1px solid #e2e8f0",
+                                    borderRadius:
+                                        "12px",
+                                    background:
+                                        "#ffffff",
+                                }}
+                            >
+
+                                <span
+                                    style={{
+                                        display:
+                                            "block",
+                                        fontSize:
+                                            "9px",
+                                        fontWeight:
+                                            800,
+                                        color:
+                                            "#64748b",
+                                    }}
+                                >
+                                    ATTENDANCE RATE
+                                </span>
+
+                                <strong
+                                    style={{
+                                        display:
+                                            "block",
+                                        marginTop:
+                                            "5px",
+                                        fontSize:
+                                            "20px",
+                                        color:
+                                            "#2563eb",
+                                    }}
+                                >
+                                    {selectedMember.percentage}%
+                                </strong>
+
+                            </div>
+
+                            <div
+                                style={{
+                                    padding:
+                                        "12px",
+                                    border:
+                                        "1px solid #d1fae5",
+                                    borderRadius:
+                                        "12px",
+                                    background:
+                                        "#ecfdf5",
+                                }}
+                            >
+
+                                <span
+                                    style={{
+                                        display:
+                                            "block",
+                                        fontSize:
+                                            "9px",
+                                        fontWeight:
+                                            800,
+                                        color:
+                                            "#047857",
+                                    }}
+                                >
+                                    PRESENT
+                                </span>
+
+                                <strong
+                                    style={{
+                                        display:
+                                            "block",
+                                        marginTop:
+                                            "5px",
+                                        fontSize:
+                                            "20px",
+                                        color:
+                                            "#10b981",
+                                    }}
+                                >
+                                    {selectedMember.present}
+                                </strong>
+
+                            </div>
+
+                            <div
+                                style={{
+                                    padding:
+                                        "12px",
+                                    border:
+                                        "1px solid #fde68a",
+                                    borderRadius:
+                                        "12px",
+                                    background:
+                                        "#fffbeb",
+                                }}
+                            >
+
+                                <span
+                                    style={{
+                                        display:
+                                            "block",
+                                        fontSize:
+                                            "9px",
+                                        fontWeight:
+                                            800,
+                                        color:
+                                            "#b45309",
+                                    }}
+                                >
+                                    LATE
+                                </span>
+
+                                <strong
+                                    style={{
+                                        display:
+                                            "block",
+                                        marginTop:
+                                            "5px",
+                                        fontSize:
+                                            "20px",
+                                        color:
+                                            "#f59e0b",
+                                    }}
+                                >
+                                    {selectedMember.late}
+                                </strong>
+
+                            </div>
+
+                            <div
+                                style={{
+                                    padding:
+                                        "12px",
+                                    border:
+                                        "1px solid #fecaca",
+                                    borderRadius:
+                                        "12px",
+                                    background:
+                                        "#fef2f2",
+                                }}
+                            >
+
+                                <span
+                                    style={{
+                                        display:
+                                            "block",
+                                        fontSize:
+                                            "9px",
+                                        fontWeight:
+                                            800,
+                                        color:
+                                            "#b91c1c",
+                                    }}
+                                >
+                                    ABSENT
+                                </span>
+
+                                <strong
+                                    style={{
+                                        display:
+                                            "block",
+                                        marginTop:
+                                            "5px",
+                                        fontSize:
+                                            "20px",
+                                        color:
+                                            "#ef4444",
+                                    }}
+                                >
+                                    {selectedMember.absent}
+                                </strong>
+
+                            </div>
+
+                            <div
+                                style={{
+                                    padding:
+                                        "12px",
+                                    border:
+                                        "1px solid #ddd6fe",
+                                    borderRadius:
+                                        "12px",
+                                    background:
+                                        "#f5f3ff",
+                                }}
+                            >
+
+                                <span
+                                    style={{
+                                        display:
+                                            "block",
+                                        fontSize:
+                                            "9px",
+                                        fontWeight:
+                                            800,
+                                        color:
+                                            "#6d28d9",
+                                    }}
+                                >
+                                    STATUS
+                                </span>
+
+                                <strong
+                                    style={{
+                                        display:
+                                            "block",
+                                        marginTop:
+                                            "5px",
+                                        fontSize:
+                                            "11px",
+                                        color:
+                                            "#6d28d9",
+                                    }}
+                                >
+                                    {selectedMember.classification}
+                                </strong>
+
+                            </div>
+
                         </div>
 
-                        <div>
-                            <span>
-                                Early
-                            </span>
+                        {/* ATTENDANCE HISTORY */}
 
-                            <strong>
-                                {
-                                    selectedMember.early
-                                }
-                            </strong>
-                        </div>
+                        <div
+                            style={{
+                                overflowY:
+                                    "auto",
+                                padding:
+                                    "20px 25px",
+                            }}
+                        >
 
-                        <div>
-                            <span>
-                                Absent
-                            </span>
+                            <div
+                                style={{
+                                    display:
+                                        "flex",
+                                    alignItems:
+                                        "center",
+                                    justifyContent:
+                                        "space-between",
+                                    marginBottom:
+                                        "12px",
+                                }}
+                            >
 
-                            <strong>
-                                {
-                                    selectedMember.absent
-                                }
-                            </strong>
-                        </div>
+                                <div>
 
-                        <div>
-                            <span>
-                                Excused
-                            </span>
+                                    <h3
+                                        style={{
+                                            margin:
+                                                0,
+                                            fontSize:
+                                                "15px",
+                                            color:
+                                                "#172033",
+                                        }}
+                                    >
+                                        Attendance History
+                                    </h3>
 
-                            <strong>
-                                {
-                                    selectedMember.excused
-                                }
-                            </strong>
-                        </div>
+                                    <p
+                                        style={{
+                                            margin:
+                                                "4px 0 0",
+                                            fontSize:
+                                                "11px",
+                                            color:
+                                                "#64748b",
+                                        }}
+                                    >
+                                        {selectedMemberRecords.length}
+                                        {" "}
+                                        attendance records
+                                    </p>
 
-                    </div>
+                                </div>
 
-                    <div className="mar-table-wrapper">
+                                <span
+                                    style={{
+                                        padding:
+                                            "6px 10px",
+                                        borderRadius:
+                                            "999px",
+                                        background:
+                                            "#eff6ff",
+                                        color:
+                                            "#1d4ed8",
+                                        fontSize:
+                                            "10px",
+                                        fontWeight:
+                                            800,
+                                    }}
+                                >
+                                    VIEW ONLY
+                                </span>
 
-                        <table className="mar-table history">
+                            </div>
 
-                            <thead>
-                                <tr>
-                                    <th>
-                                        Date
-                                    </th>
+                            {selectedMemberRecords.length === 0 ? (
 
-                                    <th>
-                                        Church Service
-                                    </th>
+                                <div
+                                    style={{
+                                        padding:
+                                            "35px",
+                                        textAlign:
+                                            "center",
+                                        border:
+                                            "1px dashed #cbd5e1",
+                                        borderRadius:
+                                            "14px",
+                                        color:
+                                            "#64748b",
+                                        fontSize:
+                                            "13px",
+                                    }}
+                                >
+                                    No attendance records found
+                                    for this member.
+                                </div>
 
-                                    <th>
-                                        Status
-                                    </th>
-                                </tr>
-                            </thead>
+                            ) : (
 
-                            <tbody>
+                                <div
+                                    style={{
+                                        border:
+                                            "1px solid #e2e8f0",
+                                        borderRadius:
+                                            "14px",
+                                        overflow:
+                                            "hidden",
+                                    }}
+                                >
 
-                                {selectedMemberHistory.length ===
-                                0 ? (
-                                    <tr>
-                                        <td
-                                            colSpan={3}
-                                            className="mar-empty"
-                                        >
-                                            No attendance
-                                            history found.
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    selectedMemberHistory.map(
-                                        (record) => (
+                                    <table
+                                        style={{
+                                            width:
+                                                "100%",
+                                            borderCollapse:
+                                                "collapse",
+                                        }}
+                                    >
+
+                                        <thead>
+
                                             <tr
-                                                key={
-                                                    record.attendanceId
-                                                }
+                                                style={{
+                                                    background:
+                                                        "#f8fafc",
+                                                }}
                                             >
 
-                                                <td>
-                                                    {formatDate(
-                                                        record.attendanceDate
-                                                    )}
-                                                </td>
+                                                <th
+                                                    style={{
+                                                        padding:
+                                                            "12px 14px",
+                                                        textAlign:
+                                                            "left",
+                                                        fontSize:
+                                                            "10px",
+                                                        fontWeight:
+                                                            800,
+                                                        color:
+                                                            "#64748b",
+                                                        borderBottom:
+                                                            "1px solid #e2e8f0",
+                                                    }}
+                                                >
+                                                    DATE
+                                                </th>
 
-                                                <td>
-                                                    {getServiceName(
-                                                        record
-                                                    )}
-                                                </td>
+                                                <th
+                                                    style={{
+                                                        padding:
+                                                            "12px 14px",
+                                                        textAlign:
+                                                            "left",
+                                                        fontSize:
+                                                            "10px",
+                                                        fontWeight:
+                                                            800,
+                                                        color:
+                                                            "#64748b",
+                                                        borderBottom:
+                                                            "1px solid #e2e8f0",
+                                                    }}
+                                                >
+                                                    CHURCH SERVICE
+                                                </th>
 
-                                                <td>
-                                                    <span
-                                                        className={`mar-status status-${record.status.toLowerCase()}`}
-                                                    >
-                                                        {
-                                                            record.status
-                                                        }
-                                                    </span>
-                                                </td>
+                                                <th
+                                                    style={{
+                                                        padding:
+                                                            "12px 14px",
+                                                        textAlign:
+                                                            "center",
+                                                        fontSize:
+                                                            "10px",
+                                                        fontWeight:
+                                                            800,
+                                                        color:
+                                                            "#64748b",
+                                                        borderBottom:
+                                                            "1px solid #e2e8f0",
+                                                    }}
+                                                >
+                                                    STATUS
+                                                </th>
+
+                                                <th
+                                                    style={{
+                                                        padding:
+                                                            "12px 14px",
+                                                        textAlign:
+                                                            "left",
+                                                        fontSize:
+                                                            "10px",
+                                                        fontWeight:
+                                                            800,
+                                                        color:
+                                                            "#64748b",
+                                                        borderBottom:
+                                                            "1px solid #e2e8f0",
+                                                    }}
+                                                >
+                                                    RECORDED BY
+                                                </th>
 
                                             </tr>
-                                        )
+
+                                        </thead>
+
+                                        <tbody>
+
+                                            {selectedMemberRecords.map(
+                                                record => {
+
+                                                    const status =
+                                                        record.status;
+
+                                                    const statusStyles =
+                                                        status ===
+                                                        "PRESENT"
+                                                            ? {
+                                                                background:
+                                                                    "#ecfdf5",
+                                                                color:
+                                                                    "#047857",
+                                                            }
+                                                            : status ===
+                                                                "LATE"
+                                                                ? {
+                                                                    background:
+                                                                        "#fffbeb",
+                                                                    color:
+                                                                        "#b45309",
+                                                                }
+                                                                : status ===
+                                                                    "EARLY"
+                                                                    ? {
+                                                                        background:
+                                                                            "#ecfeff",
+                                                                        color:
+                                                                            "#0e7490",
+                                                                    }
+                                                                    : status ===
+                                                                        "ABSENT"
+                                                                        ? {
+                                                                            background:
+                                                                                "#fef2f2",
+                                                                            color:
+                                                                                "#b91c1c",
+                                                                        }
+                                                                        : {
+                                                                            background:
+                                                                                "#f5f3ff",
+                                                                            color:
+                                                                                "#6d28d9",
+                                                                        };
+
+                                                    return (
+                                                        <tr
+                                                            key={
+                                                                record.attendanceId
+                                                            }
+                                                        >
+
+                                                            <td
+                                                                style={{
+                                                                    padding:
+                                                                        "13px 14px",
+                                                                    borderBottom:
+                                                                        "1px solid #f1f5f9",
+                                                                    fontSize:
+                                                                        "12px",
+                                                                    color:
+                                                                        "#334155",
+                                                                }}
+                                                            >
+                                                                {formatDate(
+                                                                    record.attendanceDate
+                                                                )}
+                                                            </td>
+
+                                                            <td
+                                                                style={{
+                                                                    padding:
+                                                                        "13px 14px",
+                                                                    borderBottom:
+                                                                        "1px solid #f1f5f9",
+                                                                    fontSize:
+                                                                        "12px",
+                                                                    color:
+                                                                        "#172033",
+                                                                    fontWeight:
+                                                                        600,
+                                                                }}
+                                                            >
+                                                                {getServiceName(
+                                                                    record
+                                                                )}
+                                                            </td>
+
+                                                            <td
+                                                                style={{
+                                                                    padding:
+                                                                        "13px 14px",
+                                                                    textAlign:
+                                                                        "center",
+                                                                    borderBottom:
+                                                                        "1px solid #f1f5f9",
+                                                                }}
+                                                            >
+
+                                                                <span
+                                                                    style={{
+                                                                        display:
+                                                                            "inline-block",
+                                                                        padding:
+                                                                            "5px 10px",
+                                                                        borderRadius:
+                                                                            "999px",
+                                                                        fontSize:
+                                                                            "10px",
+                                                                        fontWeight:
+                                                                            800,
+                                                                        ...statusStyles,
+                                                                    }}
+                                                                >
+                                                                    {getStatusLabel(
+                                                                        status
+                                                                    )}
+                                                                </span>
+
+                                                            </td>
+
+                                                            <td
+                                                                style={{
+                                                                    padding:
+                                                                        "13px 14px",
+                                                                    borderBottom:
+                                                                        "1px solid #f1f5f9",
+                                                                    fontSize:
+                                                                        "12px",
+                                                                    color:
+                                                                        "#64748b",
+                                                                }}
+                                                            >
+                                                                {
+                                                                    record.recordedBy?.trim() ||
+                                                                    "—"
+                                                                }
+                                                            </td>
+
+                                                        </tr>
+                                                    );
+                                                }
+                                            )}
+
+                                        </tbody>
+
+                                    </table>
+
+                                </div>
+
+                            )}
+
+                        </div>
+
+                        {/* MODAL FOOTER */}
+
+                        <div
+                            style={{
+                                padding:
+                                    "15px 25px",
+                                borderTop:
+                                    "1px solid #e2e8f0",
+                                display:
+                                    "flex",
+                                justifyContent:
+                                    "flex-end",
+                                background:
+                                    "#f8fafc",
+                            }}
+                        >
+
+                            <button
+                                type="button"
+                                className="mar-button secondary"
+                                onClick={() =>
+                                    setSelectedMemberId(
+                                        null
                                     )
-                                )}
+                                }
+                            >
+                                Close
+                            </button>
 
-                            </tbody>
-
-                        </table>
+                        </div>
 
                     </div>
 
                 </div>
+
             )}
-
-            {/* ==================================================
-                CLASSIFICATION
-            ================================================== */}
-
-            <div className="mar-panel">
-
-                <div className="mar-panel-header">
-
-                    <div>
-                        <h2>
-                            Pastoral Attendance
-                            Classification
-                        </h2>
-
-                        <p>
-                            Use attendance trends as a
-                            guide for pastoral care and
-                            member follow-up.
-                        </p>
-                    </div>
-
-                </div>
-
-                <div className="mar-classification-grid">
-
-                    <div className="mar-classification excellent">
-                        <div className="mar-classification-icon">
-                            🟢
-                        </div>
-
-                        <div>
-                            <strong>
-                                EXCELLENT
-                            </strong>
-
-                            <span>
-                                90–100%
-                            </span>
-                        </div>
-                    </div>
-
-                    <div className="mar-classification good">
-                        <div className="mar-classification-icon">
-                            🔵
-                        </div>
-
-                        <div>
-                            <strong>
-                                GOOD
-                            </strong>
-
-                            <span>
-                                75–89%
-                            </span>
-                        </div>
-                    </div>
-
-                    <div className="mar-classification needs-follow-up">
-                        <div className="mar-classification-icon">
-                            🟡
-                        </div>
-
-                        <div>
-                            <strong>
-                                NEEDS FOLLOW-UP
-                            </strong>
-
-                            <span>
-                                60–74%
-                            </span>
-                        </div>
-                    </div>
-
-                    <div className="mar-classification pastoral-follow-up">
-                        <div className="mar-classification-icon">
-                            🔴
-                        </div>
-
-                        <div>
-                            <strong>
-                                PASTORAL FOLLOW-UP
-                            </strong>
-
-                            <span>
-                                Below 60%
-                            </span>
-                        </div>
-                    </div>
-
-                </div>
-            </div>
-
-            {/* ==================================================
-                FOOTER
-            ================================================== */}
-
-            <div className="mar-footer-note">
-                <span>
-                    EPIC Church Management System
-                </span>
-
-                <span>
-                    Engaging People Into Christ
-                </span>
-            </div>
 
         </div>
     );
 };
 
 export default MemberAttendanceReport;
+

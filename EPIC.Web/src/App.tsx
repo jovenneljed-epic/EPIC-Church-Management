@@ -8,7 +8,7 @@ import React, {
 import "./App.css";
 
 // =========================================================
-// PUBLIC PAGES
+// PUBLIC
 // =========================================================
 
 import LandingPage from "./pages/LandingPage";
@@ -16,10 +16,23 @@ import AboutPage from "./pages/public/AboutPage";
 import ContactPage from "./pages/public/ContactPage";
 
 // =========================================================
-// MAIN CMS PAGES
+// ADMIN AUTH
 // =========================================================
 
 import Login from "./Login";
+
+// =========================================================
+// CLIENT AUTH / PORTAL
+// =========================================================
+
+import ClientLogin from "./pages/ClientLogin";
+import ClientPortal from "./pages/ClientPortal";
+import ClientPayment from "./pages/ClientPayment";
+
+// =========================================================
+// CMS
+// =========================================================
+
 import Dashboard from "./Dashboard";
 import Members from "./Members";
 import Attendance from "./Attendance";
@@ -27,6 +40,7 @@ import Attendance from "./Attendance";
 import ChurchServicesPage from "./pages/ChurchServicesPage";
 import EventManagementPage from "./pages/EventManagementPage";
 import MemberAttendanceReport from "./pages/MemberAttendanceReport";
+
 import Visitors from "./pages/Visitors";
 import Giving from "./pages/Giving";
 import Income from "./pages/Income";
@@ -35,7 +49,7 @@ import Expenses from "./pages/Expenses";
 import Settings from "./pages/Settings";
 
 // =========================================================
-// BUSINESS / SALES
+// BUSINESS
 // =========================================================
 
 import SubscriptionDashboard from "./pages/SubscriptionDashboard";
@@ -45,14 +59,14 @@ import Reports from "./pages/Reports";
 import WebsiteAnalyticsDashboard from "./pages/WebsiteAnalyticsDashboard";
 
 // =========================================================
-// REPORT BUILDERS
+// REPORTS
 // =========================================================
 
 import AttendanceReportBuilder from "./pages/reports/AttendanceReportBuilder";
 import AttendanceByDateReport from "./pages/reports/AttendanceByDateReport";
 
 // =========================================================
-// EPIC LEARNING
+// LEARNING
 // =========================================================
 
 import LearningPage from "./pages/learning/LearningPage";
@@ -78,6 +92,7 @@ type Page =
     | "demo-requests"
     | "subscription-dashboard"
     | "subscriptions"
+    | "client-payment"
     | "website-analytics"
     | "learning"
     | "view-course"
@@ -111,10 +126,9 @@ const PAGE_ROUTES: Record<Page, string> = {
     "attendance-by-date-report": "/reports/attendance-date",
 
     "demo-requests": "/demo-requests",
-
     "subscription-dashboard": "/subscription-dashboard",
     subscriptions: "/subscriptions",
-
+    "client-payment": "/client-payment",
     "website-analytics": "/website-analytics",
 
     learning: "/learning",
@@ -132,7 +146,6 @@ const PAGE_ROUTES: Record<Page, string> = {
     giving: "/giving",
     income: "/income",
     expenses: "/expenses",
-
     settings: "/settings",
 };
 
@@ -142,51 +155,40 @@ const PUBLIC_ROUTES: Record<PublicPage, string> = {
     contact: "/contact",
 };
 
+const ADMIN_LOGIN_ROUTE = "/login";
+const CLIENT_LOGIN_ROUTE = "/client-login";
+const CLIENT_PORTAL_ROUTE = "/client-portal";
+
 // =========================================================
 // PAGE TITLES
 // =========================================================
 
 const PAGE_TITLES: Record<Page, string> = {
     dashboard: "Dashboard",
-
     reports: "Reports & Documents",
-
     "attendance-report": "Attendance Summary Report",
-
     "attendance-by-date-report": "Attendance by Date",
 
     "demo-requests": "Demo Requests",
-
     "subscription-dashboard": "Subscription Dashboard",
-
     subscriptions: "Subscription Management",
-
+    "client-payment": "EPIC CMS Payment",
     "website-analytics": "Website Analytics",
 
     services: "Church Services",
-
     events: "Event Management",
-
     "member-attendance-report": "Member Attendance Report",
 
     members: "Members Management",
-
     attendance: "Attendance Management",
-
     ministries: "Ministries Management",
-
     visitors: "Visitors Management",
-
     giving: "Giving Management",
-
     income: "Income Management",
-
     expenses: "Expenses Management",
 
     learning: "EPIC Learning",
-
     "view-course": "Course Details",
-
     lesson: "Lesson",
 
     settings: "System Settings",
@@ -197,8 +199,7 @@ const PAGE_TITLES: Record<Page, string> = {
 // =========================================================
 
 const PAGE_SUBTITLES: Record<Page, string> = {
-    dashboard:
-        "Church management overview",
+    dashboard: "Church management overview",
 
     reports:
         "Generate reports, forms and printable church documents",
@@ -217,6 +218,9 @@ const PAGE_SUBTITLES: Record<Page, string> = {
 
     subscriptions:
         "Manage EPIC plans, subscriptions and billing",
+
+    "client-payment":
+        "Securely complete your EPIC CMS subscription payment",
 
     "website-analytics":
         "Monitor website visitors, traffic sources and engagement",
@@ -265,10 +269,10 @@ const PAGE_SUBTITLES: Record<Page, string> = {
 };
 
 // =========================================================
-// AUTHENTICATION KEYS
+// AUTH STORAGE
 // =========================================================
 
-const AUTH_KEYS = [
+const ADMIN_AUTH_KEYS = [
     "token",
     "accessToken",
     "jwt",
@@ -276,7 +280,7 @@ const AUTH_KEYS = [
     "epicToken",
 ] as const;
 
-const USER_KEYS = [
+const ADMIN_USER_KEYS = [
     "currentUser",
     "currentFullName",
     "currentRole",
@@ -287,30 +291,64 @@ const USER_KEYS = [
     "epicPermissions",
 ] as const;
 
+const CLIENT_AUTH_KEYS = [
+    "clientToken",
+    "clientAccessToken",
+    "clientAuthToken",
+    "epicClientToken",
+] as const;
+
+const CLIENT_USER_KEYS = [
+    "clientUser",
+    "clientId",
+    "clientName",
+    "clientEmail",
+    "clientChurchName",
+] as const;
+
 // =========================================================
-// AUTHENTICATION HELPERS
+// AUTH HELPERS
 // =========================================================
 
-const getAuthToken = (): string | null => {
-    for (const key of AUTH_KEYS) {
+const getStoredValue = (
+    keys: readonly string[]
+): string | null => {
+    for (const key of keys) {
         const value = localStorage.getItem(key);
 
-        if (value) {
-            return value;
+        if (value && value.trim()) {
+            return value.trim();
         }
     }
 
     return null;
 };
 
-const isLoggedIn = (): boolean => {
-    return Boolean(getAuthToken());
-};
+const getAuthToken = (): string | null =>
+    getStoredValue(ADMIN_AUTH_KEYS);
+
+const getClientAuthToken = (): string | null =>
+    getStoredValue(CLIENT_AUTH_KEYS);
+
+const isLoggedIn = (): boolean =>
+    Boolean(getAuthToken());
+
+const isClientLoggedIn = (): boolean =>
+    Boolean(getClientAuthToken());
 
 const clearAuthentication = (): void => {
     [
-        ...AUTH_KEYS,
-        ...USER_KEYS,
+        ...ADMIN_AUTH_KEYS,
+        ...ADMIN_USER_KEYS,
+    ].forEach((key) => {
+        localStorage.removeItem(key);
+    });
+};
+
+const clearClientAuthentication = (): void => {
+    [
+        ...CLIENT_AUTH_KEYS,
+        ...CLIENT_USER_KEYS,
     ].forEach((key) => {
         localStorage.removeItem(key);
     });
@@ -320,53 +358,182 @@ const clearAuthentication = (): void => {
 // PATH HELPERS
 // =========================================================
 
-const normalizePath = (path: string): string => {
+const normalizePath = (
+    path: string
+): string => {
     if (!path) {
         return "/";
     }
 
-    const normalized = path.replace(/\/+$/, "");
+    const pathname = path
+        .split("?")[0]
+        .split("#")[0];
 
-    return normalized || "/";
+    return pathname.replace(/\/+$/, "") || "/";
+};
+
+const getCurrentPath = (): string =>
+    normalizePath(window.location.pathname);
+
+// =========================================================
+// NUMBER
+// =========================================================
+
+const parsePositiveInteger = (
+    value: string | null
+): number | null => {
+    if (!value?.trim()) {
+        return null;
+    }
+
+    const number = Number(value);
+
+    return Number.isInteger(number) && number > 0
+        ? number
+        : null;
 };
 
 // =========================================================
-// ROUTE LOOKUP
+// LMS ROUTING
 // =========================================================
 
-const PAGE_BY_ROUTE: Record<string, Page> = Object.entries(
-    PAGE_ROUTES
-).reduce(
-    (result, [page, route]) => {
-        result[normalizePath(route)] = page as Page;
+interface LMSRouteState {
+    page: Page;
+    courseId: number | null;
+    lessonId: number | null;
+}
 
-        return result;
-    },
-    {} as Record<string, Page>
-);
+const EMPTY_LMS_ROUTE: LMSRouteState = {
+    page: "learning",
+    courseId: null,
+    lessonId: null,
+};
 
-const getPageFromPath = (path: string): Page => {
+const getLMSRouteState = (
+    pathname: string
+): LMSRouteState => {
+    const path = normalizePath(pathname);
+
+    const lessonMatch = path.match(
+        /^\/learning\/course\/(\d+)\/lesson\/(\d+)$/
+    );
+
+    if (lessonMatch) {
+        return {
+            page: "lesson",
+            courseId: parsePositiveInteger(
+                lessonMatch[1]
+            ),
+            lessonId: parsePositiveInteger(
+                lessonMatch[2]
+            ),
+        };
+    }
+
+    const courseMatch = path.match(
+        /^\/learning\/course\/(\d+)$/
+    );
+
+    if (courseMatch) {
+        return {
+            page: "view-course",
+            courseId: parsePositiveInteger(
+                courseMatch[1]
+            ),
+            lessonId: null,
+        };
+    }
+
+    if (path === "/learning/course") {
+        return {
+            page: "view-course",
+            courseId: null,
+            lessonId: null,
+        };
+    }
+
+    if (path === "/learning/lesson") {
+        return {
+            page: "lesson",
+            courseId: null,
+            lessonId: null,
+        };
+    }
+
+    return EMPTY_LMS_ROUTE;
+};
+
+// =========================================================
+// PAGE LOOKUP
+// =========================================================
+
+const PAGE_BY_ROUTE: Record<string, Page> =
+    Object.entries(PAGE_ROUTES).reduce(
+        (result, [page, route]) => {
+            result[normalizePath(route)] =
+                page as Page;
+
+            return result;
+        },
+        {} as Record<string, Page>
+    );
+
+const getPageFromPath = (
+    path: string
+): Page => {
     const normalized = normalizePath(path);
 
-    return PAGE_BY_ROUTE[normalized] ?? "dashboard";
+    if (normalized.startsWith("/learning")) {
+        return getLMSRouteState(normalized).page;
+    }
+
+    return (
+        PAGE_BY_ROUTE[normalized] ??
+        "dashboard"
+    );
 };
 
 // =========================================================
-// PUBLIC ROUTE CHECK
+// PUBLIC ROUTES
 // =========================================================
 
-const isPublicPath = (path: string): boolean => {
+const isPublicPath = (
+    path: string
+): boolean => {
     const normalized = normalizePath(path);
 
     return (
         normalized === PUBLIC_ROUTES.landing ||
         normalized === PUBLIC_ROUTES.about ||
-        normalized === PUBLIC_ROUTES.contact
+        normalized === PUBLIC_ROUTES.contact ||
+        normalized === PAGE_ROUTES["client-payment"]
     );
 };
 
 // =========================================================
-// SIDEBAR NAVIGATION
+// PAYMENT
+// =========================================================
+
+const getPaymentSubscriptionId = (): number | null => {
+    const params = new URLSearchParams(
+        window.location.search
+    );
+
+    const queryId = parsePositiveInteger(
+        params.get("subscriptionId")
+    );
+
+    if (queryId) {
+        return queryId;
+    }
+
+    return parsePositiveInteger(
+        localStorage.getItem("subscriptionId")
+    );
+};
+
+// =========================================================
+// NAVIGATION TYPES
 // =========================================================
 
 interface NavigationItem {
@@ -381,10 +548,13 @@ interface NavigationSection {
     items: NavigationItem[];
 }
 
+// =========================================================
+// NAVIGATION
+// =========================================================
+
 const NAVIGATION_SECTIONS: NavigationSection[] = [
     {
         title: "MAIN MENU",
-
         items: [
             {
                 page: "dashboard",
@@ -392,42 +562,36 @@ const NAVIGATION_SECTIONS: NavigationSection[] = [
                 icon: "▦",
                 permission: "Dashboard",
             },
-
             {
                 page: "services",
                 label: "Church Services",
                 icon: "⛪",
                 permission: "Church Services",
             },
-
             {
                 page: "events",
                 label: "Event Management",
                 icon: "🎯",
                 permission: "Event Management",
             },
-
             {
                 page: "reports",
                 label: "Reports & Documents",
                 icon: "📊",
                 permission: "Reports",
             },
-
             {
                 page: "member-attendance-report",
                 label: "Member Attendance Report",
                 icon: "📊",
                 permission: "Attendance",
             },
-
             {
                 page: "members",
                 label: "Members",
                 icon: "♟",
                 permission: "Members",
             },
-
             {
                 page: "attendance",
                 label: "Attendance",
@@ -436,10 +600,8 @@ const NAVIGATION_SECTIONS: NavigationSection[] = [
             },
         ],
     },
-
     {
         title: "MANAGEMENT",
-
         items: [
             {
                 page: "ministries",
@@ -447,28 +609,24 @@ const NAVIGATION_SECTIONS: NavigationSection[] = [
                 icon: "♫",
                 permission: "Ministries",
             },
-
             {
                 page: "visitors",
                 label: "Visitors",
                 icon: "👤",
                 permission: "Visitors",
             },
-
             {
                 page: "giving",
                 label: "Giving",
                 icon: "₱",
                 permission: "Giving",
             },
-
             {
                 page: "income",
                 label: "Income",
                 icon: "↗",
                 permission: "Income",
             },
-
             {
                 page: "expenses",
                 label: "Expenses",
@@ -477,10 +635,8 @@ const NAVIGATION_SECTIONS: NavigationSection[] = [
             },
         ],
     },
-
     {
         title: "EPIC LEARNING",
-
         items: [
             {
                 page: "learning",
@@ -490,10 +646,8 @@ const NAVIGATION_SECTIONS: NavigationSection[] = [
             },
         ],
     },
-
     {
         title: "BUSINESS / SALES",
-
         items: [
             {
                 page: "subscription-dashboard",
@@ -501,21 +655,18 @@ const NAVIGATION_SECTIONS: NavigationSection[] = [
                 icon: "📈",
                 permission: "Subscriptions",
             },
-
             {
                 page: "subscriptions",
                 label: "Subscriptions",
                 icon: "💳",
                 permission: "Subscriptions",
             },
-
             {
                 page: "demo-requests",
                 label: "Demo Requests",
                 icon: "🎯",
                 permission: "Demo Requests",
             },
-
             {
                 page: "website-analytics",
                 label: "Website Analytics",
@@ -524,10 +675,8 @@ const NAVIGATION_SECTIONS: NavigationSection[] = [
             },
         ],
     },
-
     {
         title: "SYSTEM",
-
         items: [
             {
                 page: "settings",
@@ -548,26 +697,24 @@ const isNavigationItemActive = (
     activePage: Page
 ): boolean => {
     if (itemPage === "learning") {
-        return (
-            activePage === "learning" ||
-            activePage === "view-course" ||
-            activePage === "lesson"
-        );
+        return [
+            "learning",
+            "view-course",
+            "lesson",
+        ].includes(activePage);
     }
 
     return itemPage === activePage;
 };
 
 // =========================================================
-// USER INFORMATION
+// USER
 // =========================================================
 
 interface UserInfo {
     fullName: string;
     role: string;
-    normalizedRole: string;
     avatarLetter: string;
-    isMember: boolean;
 }
 
 // =========================================================
@@ -576,60 +723,71 @@ interface UserInfo {
 
 const App: React.FC = () => {
     // =====================================================
-    // AUTHENTICATION
+    // AUTH
     // =====================================================
 
-    const [
-        isAuthenticated,
-        setIsAuthenticated,
-    ] = useState<boolean>(() =>
-        isLoggedIn()
-    );
+    const [authInitialized, setAuthInitialized] =
+        useState(false);
+
+    const [isAuthenticated, setIsAuthenticated] =
+        useState(false);
+
+    const [clientAuthenticated, setClientAuthenticated] =
+        useState(false);
 
     // =====================================================
     // ROUTING
     // =====================================================
 
-    const [
-        currentPath,
-        setCurrentPath,
-    ] = useState<string>(() =>
-        normalizePath(
-            window.location.pathname
-        )
-    );
+    const [currentPath, setCurrentPath] =
+        useState(getCurrentPath);
 
-    const [
-        activePage,
-        setActivePage,
-    ] = useState<Page>(() =>
-        getPageFromPath(
-            window.location.pathname
-        )
-    );
+    const [activePage, setActivePage] =
+        useState<Page>(() =>
+            getPageFromPath(
+                window.location.pathname
+            )
+        );
 
     // =====================================================
     // SIDEBAR
     // =====================================================
 
-    const [
-        sidebarOpen,
-        setSidebarOpen,
-    ] = useState<boolean>(true);
+    const [sidebarOpen, setSidebarOpen] =
+        useState(true);
 
     // =====================================================
     // LMS
     // =====================================================
 
-    const [
-        selectedCourseId,
-        setSelectedCourseId,
-    ] = useState<number | null>(null);
+    const initialLMSState = useMemo(
+        () =>
+            getLMSRouteState(
+                window.location.pathname
+            ),
+        []
+    );
+
+    const [selectedCourseId, setSelectedCourseId] =
+        useState<number | null>(
+            initialLMSState.courseId
+        );
+
+    const [selectedLessonId, setSelectedLessonId] =
+        useState<number | null>(
+            initialLMSState.lessonId
+        );
+
+    // =====================================================
+    // PAYMENT
+    // =====================================================
 
     const [
-        selectedLessonId,
-        setSelectedLessonId,
-    ] = useState<number | null>(null);
+        paymentSubscriptionId,
+        setPaymentSubscriptionId,
+    ] = useState<number | null>(
+        getPaymentSubscriptionId()
+    );
 
     // =====================================================
     // USER
@@ -651,24 +809,14 @@ const App: React.FC = () => {
             ) ||
             "Church Admin";
 
-        const normalizedRole =
-            role.trim().toLowerCase();
-
-        const avatarLetter =
-            fullName
-                .trim()
-                .charAt(0)
-                .toUpperCase() ||
-            "A";
-
         return {
             fullName,
             role,
-            normalizedRole,
-            avatarLetter,
-            isMember:
-                normalizedRole ===
-                "member",
+            avatarLetter:
+                fullName
+                    .trim()
+                    .charAt(0)
+                    .toUpperCase() || "A",
         };
     }, [isAuthenticated]);
 
@@ -679,13 +827,11 @@ const App: React.FC = () => {
     } = userInfo;
 
     // =====================================================
-    // CURRENT ROUTE FLAGS
+    // PATH FLAGS
     // =====================================================
 
     const normalizedPath =
-        normalizePath(
-            currentPath
-        );
+        normalizePath(currentPath);
 
     const isLandingPage =
         normalizedPath ===
@@ -699,71 +845,136 @@ const App: React.FC = () => {
         normalizedPath ===
         PUBLIC_ROUTES.contact;
 
+    const isClientPaymentPage =
+        normalizedPath ===
+        PAGE_ROUTES["client-payment"];
+
     const isLoginPage =
-        normalizedPath === "/login";
+        normalizedPath ===
+        ADMIN_LOGIN_ROUTE;
+
+    const isClientLoginPage =
+        normalizedPath ===
+        CLIENT_LOGIN_ROUTE;
+
+    const isClientPortalPage =
+        normalizedPath ===
+        CLIENT_PORTAL_ROUTE;
 
     // =====================================================
-    // NAVIGATE TO URL
+    // ROUTE SYNC
     // =====================================================
 
-    const navigateToUrl = useCallback(
-        (path: string): void => {
+    const syncRouteState = useCallback(
+        (pathname: string) => {
             const normalized =
-                normalizePath(path);
+                normalizePath(pathname);
 
-            const current =
-                normalizePath(
-                    window.location.pathname
-                );
+            setCurrentPath(normalized);
+            setActivePage(
+                getPageFromPath(normalized)
+            );
 
-            if (current !== normalized) {
-                window.history.pushState(
-                    {},
-                    "",
-                    normalized
+            const lms =
+                getLMSRouteState(normalized);
+
+            setSelectedCourseId(
+                lms.courseId
+            );
+
+            setSelectedLessonId(
+                lms.lessonId
+            );
+
+            if (
+                normalized ===
+                PAGE_ROUTES["client-payment"]
+            ) {
+                setPaymentSubscriptionId(
+                    getPaymentSubscriptionId()
                 );
             }
-
-            setCurrentPath(
-                normalized
-            );
-
-            setActivePage(
-                getPageFromPath(
-                    normalized
-                )
-            );
         },
         []
     );
 
     // =====================================================
-    // NAVIGATE CMS PAGE
+    // NAVIGATION
     // =====================================================
 
+    const navigateToUrl = useCallback(
+        (url: string) => {
+            if (!url) {
+                return;
+            }
+
+            const target = new URL(
+                url,
+                window.location.origin
+            );
+
+            const pathname =
+                normalizePath(
+                    target.pathname
+                );
+
+            const finalUrl =
+                `${pathname}${target.search}${target.hash}`;
+
+            const currentUrl =
+                `${window.location.pathname}${window.location.search}${window.location.hash}`;
+
+            if (currentUrl !== finalUrl) {
+                window.history.pushState(
+                    {},
+                    "",
+                    finalUrl
+                );
+            }
+
+            syncRouteState(pathname);
+
+            if (
+                pathname ===
+                PAGE_ROUTES["client-payment"]
+            ) {
+                const id =
+                    parsePositiveInteger(
+                        new URLSearchParams(
+                            target.search
+                        ).get(
+                            "subscriptionId"
+                        )
+                    );
+
+                if (id) {
+                    setPaymentSubscriptionId(id);
+
+                    localStorage.setItem(
+                        "subscriptionId",
+                        String(id)
+                    );
+                }
+            }
+        },
+        [syncRouteState]
+    );
+
     const navigate = useCallback(
-        (page: Page): void => {
+        (page: Page) => {
             navigateToUrl(
                 PAGE_ROUTES[page]
             );
 
-            if (
-                window.innerWidth <= 900
-            ) {
+            if (window.innerWidth <= 900) {
                 setSidebarOpen(false);
             }
         },
         [navigateToUrl]
     );
 
-    // =====================================================
-    // NAVIGATE PUBLIC PAGE
-    // =====================================================
-
     const navigatePublic = useCallback(
-        (
-            page: PublicPage
-        ): void => {
+        (page: PublicPage) => {
             navigateToUrl(
                 PUBLIC_ROUTES[page]
             );
@@ -772,23 +983,50 @@ const App: React.FC = () => {
     );
 
     // =====================================================
-    // BROWSER BACK / FORWARD
+    // INITIAL AUTH CHECK
     // =====================================================
 
     useEffect(() => {
-        const handlePopState =
-            (): void => {
-                const path =
-                    normalizePath(
-                        window.location.pathname
-                    );
+        const adminAuthenticated =
+            isLoggedIn();
 
-                setCurrentPath(path);
+        const clientIsAuthenticated =
+            isClientLoggedIn();
 
-                setActivePage(
-                    getPageFromPath(path)
-                );
-            };
+        setIsAuthenticated(
+            adminAuthenticated
+        );
+
+        setClientAuthenticated(
+            clientIsAuthenticated
+        );
+
+        if (adminAuthenticated) {
+            PermissionService.debugPermissions();
+        }
+
+        /*
+         * IMPORTANT:
+         * Authentication is now considered initialized
+         * only after localStorage has been checked.
+         *
+         * This prevents App from temporarily rendering
+         * Login and then rendering Login again after
+         * authentication state changes.
+         */
+        setAuthInitialized(true);
+    }, []);
+
+    // =====================================================
+    // BROWSER HISTORY
+    // =====================================================
+
+    useEffect(() => {
+        const handlePopState = () => {
+            syncRouteState(
+                window.location.pathname
+            );
+        };
 
         window.addEventListener(
             "popstate",
@@ -801,31 +1039,76 @@ const App: React.FC = () => {
                 handlePopState
             );
         };
-    }, []);
+    }, [syncRouteState]);
 
     // =====================================================
-    // AUTH INITIALIZATION
+    // ADMIN AUTH EVENTS
     // =====================================================
 
     useEffect(() => {
-        const authenticated =
-            isLoggedIn();
+        const handleAuthChanged = () => {
+            const authenticated =
+                isLoggedIn();
 
-        setIsAuthenticated(
-            authenticated
+            setIsAuthenticated(
+                authenticated
+            );
+
+            if (authenticated) {
+                PermissionService.debugPermissions();
+            }
+        };
+
+        window.addEventListener(
+            "epic:auth-changed",
+            handleAuthChanged
         );
 
-        if (authenticated) {
-            PermissionService.debugPermissions();
-        }
+        return () => {
+            window.removeEventListener(
+                "epic:auth-changed",
+                handleAuthChanged
+            );
+        };
     }, []);
 
     // =====================================================
-    // AUTH ROUTE GUARD
+    // CLIENT AUTH EVENTS
     // =====================================================
 
     useEffect(() => {
-        // Public pages are accessible without login.
+        const handleClientAuthChanged =
+            () => {
+                setClientAuthenticated(
+                    isClientLoggedIn()
+                );
+            };
+
+        window.addEventListener(
+            "epic:client-auth-changed",
+            handleClientAuthChanged
+        );
+
+        return () => {
+            window.removeEventListener(
+                "epic:client-auth-changed",
+                handleClientAuthChanged
+            );
+        };
+    }, []);
+
+    // =====================================================
+    // ADMIN ROUTE GUARD
+    // =====================================================
+
+    useEffect(() => {
+        if (!authInitialized) {
+            return;
+        }
+
+        /*
+         * Public pages never require admin authentication.
+         */
         if (
             isPublicPath(
                 normalizedPath
@@ -834,62 +1117,115 @@ const App: React.FC = () => {
             return;
         }
 
-        // Authenticated users should not stay on login.
+        /*
+         * Client routes use their own authentication.
+         */
+        if (
+            isClientLoginPage ||
+            isClientPortalPage
+        ) {
+            return;
+        }
+
+        /*
+         * Already authenticated:
+         * /login -> /dashboard
+         */
         if (
             isLoginPage &&
             isAuthenticated
         ) {
             navigateToUrl(
-                "/dashboard"
+                PAGE_ROUTES.dashboard
             );
 
             return;
         }
 
-        // Guests must login for protected routes.
+        /*
+         * Not authenticated:
+         * any CMS route -> /login
+         */
         if (
             !isAuthenticated &&
             !isLoginPage
         ) {
             navigateToUrl(
-                "/login"
+                ADMIN_LOGIN_ROUTE
             );
         }
     }, [
+        authInitialized,
+        normalizedPath,
         isAuthenticated,
         isLoginPage,
-        normalizedPath,
+        isClientLoginPage,
+        isClientPortalPage,
         navigateToUrl,
     ]);
 
     // =====================================================
-    // LANDING → LOGIN
+    // CLIENT GUARDS
+    // =====================================================
+
+    useEffect(() => {
+        if (!authInitialized) {
+            return;
+        }
+
+        if (
+            isClientLoginPage &&
+            clientAuthenticated
+        ) {
+            navigateToUrl(
+                CLIENT_PORTAL_ROUTE
+            );
+        }
+    }, [
+        authInitialized,
+        isClientLoginPage,
+        clientAuthenticated,
+        navigateToUrl,
+    ]);
+
+    useEffect(() => {
+        if (!authInitialized) {
+            return;
+        }
+
+        if (
+            isClientPortalPage &&
+            !clientAuthenticated
+        ) {
+            navigateToUrl(
+                CLIENT_LOGIN_ROUTE
+            );
+        }
+    }, [
+        authInitialized,
+        isClientPortalPage,
+        clientAuthenticated,
+        navigateToUrl,
+    ]);
+
+    // =====================================================
+    // LANDING LOGIN
     // =====================================================
 
     const handleLandingLogin =
-        useCallback((): void => {
+        useCallback(() => {
             navigateToUrl(
-                "/login"
+                ADMIN_LOGIN_ROUTE
             );
-        }, [
-            navigateToUrl,
-        ]);
+        }, [navigateToUrl]);
 
     // =====================================================
-    // LANDING → ABOUT
-    // =====================================================
-
- 
-
-    // =====================================================
-    // PUBLIC PAGE NAVIGATION
+    // PUBLIC NAVIGATION
     // =====================================================
 
     const handlePublicNavigate =
         useCallback(
-            (
-                page: string
-            ): void => {
+            (page: string) => {
                 switch (page) {
                     case "landing":
                     case "home":
@@ -911,26 +1247,37 @@ const App: React.FC = () => {
                         break;
 
                     case "login":
+                    case "admin-login":
                         navigateToUrl(
-                            "/login"
+                            ADMIN_LOGIN_ROUTE
                         );
                         break;
 
-                    case "ministries":
-                    case "events":
-                    case "system":
-                    case "learning":
-                    case "pricing":
-                        navigatePublic(
-                            "landing"
+                    case "client-login":
+                        navigateToUrl(
+                            CLIENT_LOGIN_ROUTE
                         );
                         break;
+
+                    case "payment": {
+                        const subscriptionId =
+                            getPaymentSubscriptionId();
+
+                        const url =
+                            subscriptionId
+                                ? `${PAGE_ROUTES["client-payment"]}?subscriptionId=${subscriptionId}`
+                                : PAGE_ROUTES[
+                                      "client-payment"
+                                  ];
+
+                        navigateToUrl(url);
+                        break;
+                    }
 
                     default:
                         navigatePublic(
                             "landing"
                         );
-                        break;
                 }
             },
             [
@@ -940,33 +1287,29 @@ const App: React.FC = () => {
         );
 
     // =====================================================
-    // LOGIN SUCCESS
+    // ADMIN LOGIN SUCCESS
     // =====================================================
 
     const handleLoginSuccess =
-        useCallback((): void => {
+        useCallback(() => {
             const token =
                 getAuthToken();
 
             if (!token) {
                 console.warn(
-                    "APP: Login reported success, but no authentication token was found."
+                    "APP: Login succeeded but no admin token was found."
                 );
 
+                setIsAuthenticated(false);
                 return;
             }
 
-            setIsAuthenticated(
-                true
-            );
+            setIsAuthenticated(true);
 
-            setSelectedCourseId(
-                null
-            );
+            setSelectedCourseId(null);
+            setSelectedLessonId(null);
 
-            setSelectedLessonId(
-                null
-            );
+            PermissionService.debugPermissions();
 
             window.dispatchEvent(
                 new Event(
@@ -975,33 +1318,49 @@ const App: React.FC = () => {
             );
 
             navigateToUrl(
-                "/dashboard"
+                PAGE_ROUTES.dashboard
             );
-
-            PermissionService.debugPermissions();
-        }, [
-            navigateToUrl,
-        ]);
+        }, [navigateToUrl]);
 
     // =====================================================
-    // LOGOUT
+    // CLIENT LOGIN SUCCESS
+    // =====================================================
+
+    const handleClientLoginSuccess =
+        useCallback(() => {
+            const token =
+                getClientAuthToken();
+
+            if (!token) {
+                setClientAuthenticated(false);
+                return;
+            }
+
+            setClientAuthenticated(true);
+
+            window.dispatchEvent(
+                new Event(
+                    "epic:client-auth-changed"
+                )
+            );
+
+            navigateToUrl(
+                CLIENT_PORTAL_ROUTE
+            );
+        }, [navigateToUrl]);
+
+    // =====================================================
+    // ADMIN LOGOUT
     // =====================================================
 
     const handleLogout =
-        useCallback((): void => {
+        useCallback(() => {
             clearAuthentication();
 
-            setSelectedCourseId(
-                null
-            );
-
-            setSelectedLessonId(
-                null
-            );
-
-            setIsAuthenticated(
-                false
-            );
+            setIsAuthenticated(false);
+            setSelectedCourseId(null);
+            setSelectedLessonId(null);
+            setPaymentSubscriptionId(null);
 
             window.dispatchEvent(
                 new Event(
@@ -1010,230 +1369,159 @@ const App: React.FC = () => {
             );
 
             navigateToUrl(
-                "/"
+                PUBLIC_ROUTES.landing
             );
-        }, [
-            navigateToUrl,
-        ]);
+        }, [navigateToUrl]);
 
     // =====================================================
-    // OPEN COURSE
+    // CLIENT LOGOUT
+    // =====================================================
+
+    const handleClientLogout =
+        useCallback(() => {
+            clearClientAuthentication();
+
+            setClientAuthenticated(false);
+
+            window.dispatchEvent(
+                new Event(
+                    "epic:client-auth-changed"
+                )
+            );
+
+            navigateToUrl(
+                PUBLIC_ROUTES.landing
+            );
+        }, [navigateToUrl]);
+
+    // =====================================================
+    // LMS NAVIGATION
     // =====================================================
 
     const handleViewCourse =
         useCallback(
-            (
-                courseId: number
-            ): void => {
-                if (!courseId) {
-                    console.warn(
-                        "APP: Course ID missing."
-                    );
-
+            (courseId: number) => {
+                if (
+                    !courseId ||
+                    !PermissionService.canView(
+                        "EPIC Learning"
+                    )
+                ) {
                     return;
                 }
 
-                setSelectedCourseId(
-                    courseId
-                );
-
-                setSelectedLessonId(
-                    null
-                );
-
                 navigateToUrl(
-                    PAGE_ROUTES[
-                        "view-course"
-                    ]
+                    `/learning/course/${courseId}`
                 );
             },
-            [
-                navigateToUrl,
-            ]
+            [navigateToUrl]
         );
-
-    // =====================================================
-    // OPEN LESSON
-    // =====================================================
 
     const handleViewLesson =
         useCallback(
             (
                 courseId: number,
                 lessonId: number
-            ): void => {
-                if (!courseId) {
-                    console.warn(
-                        "APP: Course ID missing."
-                    );
-
+            ) => {
+                if (
+                    !courseId ||
+                    !lessonId ||
+                    !PermissionService.canView(
+                        "EPIC Learning"
+                    )
+                ) {
                     return;
                 }
-
-                if (!lessonId) {
-                    console.warn(
-                        "APP: Lesson ID missing."
-                    );
-
-                    return;
-                }
-
-                setSelectedCourseId(
-                    courseId
-                );
-
-                setSelectedLessonId(
-                    lessonId
-                );
 
                 navigateToUrl(
-                    PAGE_ROUTES.lesson
+                    `/learning/course/${courseId}/lesson/${lessonId}`
                 );
             },
-            [
-                navigateToUrl,
-            ]
+            [navigateToUrl]
         );
 
-    // =====================================================
-    // OPEN LEARNING
-    // =====================================================
-
     const handleOpenLearning =
-        useCallback((): void => {
+        useCallback(() => {
             if (
-                !PermissionService.canView(
+                PermissionService.canView(
                     "EPIC Learning"
                 )
             ) {
-                return;
+                navigate("learning");
             }
-
-            setSelectedCourseId(
-                null
-            );
-
-            setSelectedLessonId(
-                null
-            );
-
-            navigate(
-                "learning"
-            );
-        }, [
-            navigate,
-        ]);
-
-    // =====================================================
-    // BACK TO COURSE
-    // =====================================================
+        }, [navigate]);
 
     const handleBackToCourse =
-        useCallback((): void => {
-            setSelectedLessonId(
-                null
-            );
-
-            navigateToUrl(
-                PAGE_ROUTES[
-                    "view-course"
-                ]
-            );
+        useCallback(() => {
+            if (selectedCourseId) {
+                navigateToUrl(
+                    `/learning/course/${selectedCourseId}`
+                );
+            } else {
+                navigateToUrl(
+                    PAGE_ROUTES.learning
+                );
+            }
         }, [
+            selectedCourseId,
             navigateToUrl,
         ]);
 
-    // =====================================================
-    // BACK TO LEARNING
-    // =====================================================
-
     const handleBackToLearning =
-        useCallback((): void => {
-            setSelectedCourseId(
-                null
-            );
-
-            setSelectedLessonId(
-                null
-            );
-
+        useCallback(() => {
             navigateToUrl(
                 PAGE_ROUTES.learning
             );
-        }, [
-            navigateToUrl,
-        ]);
+        }, [navigateToUrl]);
 
     // =====================================================
-    // LMS CUSTOM EVENTS
+    // LMS EVENTS
     // =====================================================
 
     useEffect(() => {
-        const handleOpenCourse =
-            (
-                event: Event
-            ): void => {
-                const customEvent =
-                    event as CustomEvent<{
-                        courseId?: number;
-                    }>;
+        const handleOpenCourse = (
+            event: Event
+        ) => {
+            const customEvent =
+                event as CustomEvent<{
+                    courseId?: number;
+                }>;
 
-                const courseId =
-                    customEvent.detail
-                        ?.courseId;
+            const courseId =
+                customEvent.detail?.courseId;
 
-                if (!courseId) {
-                    console.warn(
-                        "APP: Course ID missing."
-                    );
-
-                    return;
-                }
-
+            if (courseId) {
                 handleViewCourse(
                     courseId
                 );
-            };
+            }
+        };
 
-        const handleOpenLesson =
-            (
-                event: Event
-            ): void => {
-                const customEvent =
-                    event as CustomEvent<{
-                        courseId?: number;
-                        lessonId?: number;
-                    }>;
+        const handleOpenLesson = (
+            event: Event
+        ) => {
+            const customEvent =
+                event as CustomEvent<{
+                    courseId?: number;
+                    lessonId?: number;
+                }>;
 
-                const courseId =
-                    customEvent.detail
-                        ?.courseId;
+            const {
+                courseId,
+                lessonId,
+            } =
+                customEvent.detail ?? {};
 
-                const lessonId =
-                    customEvent.detail
-                        ?.lessonId;
-
-                if (!courseId) {
-                    console.warn(
-                        "APP: Course ID missing for lesson."
-                    );
-
-                    return;
-                }
-
-                if (!lessonId) {
-                    console.warn(
-                        "APP: Lesson ID missing."
-                    );
-
-                    return;
-                }
-
+            if (
+                courseId &&
+                lessonId
+            ) {
                 handleViewLesson(
                     courseId,
                     lessonId
                 );
-            };
+            }
+        };
 
         window.addEventListener(
             "epic-open-course",
@@ -1262,23 +1550,55 @@ const App: React.FC = () => {
     ]);
 
     // =====================================================
-    // PERMISSION HELPER
+    // PERMISSIONS
     // =====================================================
 
-    const canView =
+    const canView = useCallback(
+        (module: string): boolean =>
+            PermissionService.canView(
+                module
+            ),
+        []
+    );
+
+    // =====================================================
+    // ACCESS DENIED
+    // =====================================================
+
+    const renderAccessDenied =
         useCallback(
-            (
-                module: string
-            ): boolean => {
-                return PermissionService.canView(
-                    module
-                );
-            },
-            []
+            (module: string) => (
+                <div className="epic-empty-state">
+                    <h2>
+                        Access Denied
+                    </h2>
+
+                    <p>
+                        You do not have
+                        permission to view{" "}
+                        <strong>
+                            {module}
+                        </strong>
+                        .
+                    </p>
+
+                    <button
+                        type="button"
+                        onClick={() =>
+                            navigate(
+                                "dashboard"
+                            )
+                        }
+                    >
+                        Back to Dashboard
+                    </button>
+                </div>
+            ),
+            [navigate]
         );
 
     // =====================================================
-    // PROTECTED PAGE WRAPPER
+    // PROTECTED PAGE
     // =====================================================
 
     const renderProtectedPage =
@@ -1286,14 +1606,12 @@ const App: React.FC = () => {
             (
                 permission: string,
                 component: React.ReactNode
-            ): React.ReactNode => {
+            ) => {
                 if (
-                    !canView(
-                        permission
-                    )
+                    !canView(permission)
                 ) {
-                    return (
-                        <Dashboard />
+                    return renderAccessDenied(
+                        permission
                     );
                 }
 
@@ -1301,6 +1619,7 @@ const App: React.FC = () => {
             },
             [
                 canView,
+                renderAccessDenied,
             ]
         );
 
@@ -1313,31 +1632,23 @@ const App: React.FC = () => {
             (
                 title: string,
                 message: string
-            ): React.ReactNode => {
-                return (
-                    <div className="epic-empty-state">
-                        <h2>
-                            {title}
-                        </h2>
+            ) => (
+                <div className="epic-empty-state">
+                    <h2>{title}</h2>
 
-                        <p>
-                            {message}
-                        </p>
+                    <p>{message}</p>
 
-                        <button
-                            type="button"
-                            onClick={
-                                handleBackToLearning
-                            }
-                        >
-                            Back to EPIC Learning
-                        </button>
-                    </div>
-                );
-            },
-            [
-                handleBackToLearning,
-            ]
+                    <button
+                        type="button"
+                        onClick={
+                            handleBackToLearning
+                        }
+                    >
+                        Back to EPIC Learning
+                    </button>
+                </div>
+            ),
+            [handleBackToLearning]
         );
 
     // =====================================================
@@ -1345,334 +1656,259 @@ const App: React.FC = () => {
     // =====================================================
 
     const renderPage =
-        useCallback(
-            (): React.ReactNode => {
-                switch (activePage) {
-                    // =========================================
-                    // DASHBOARD
-                    // =========================================
+        useCallback(() => {
+            switch (activePage) {
+                case "dashboard":
+                    return renderProtectedPage(
+                        "Dashboard",
+                        <Dashboard />
+                    );
 
-                    case "dashboard":
-                        return (
-                            <Dashboard />
+                case "reports":
+                    return renderProtectedPage(
+                        "Reports",
+                        <Reports
+                            onOpenAttendanceReport={() =>
+                                navigate(
+                                    "attendance-report"
+                                )
+                            }
+                            onOpenAttendanceByDate={() =>
+                                navigate(
+                                    "attendance-by-date-report"
+                                )
+                            }
+                        />
+                    );
+
+                case "attendance-report":
+                    return renderProtectedPage(
+                        "Attendance",
+                        <AttendanceReportBuilder />
+                    );
+
+                case "attendance-by-date-report":
+                    return renderProtectedPage(
+                        "Attendance",
+                        <AttendanceByDateReport />
+                    );
+
+                case "demo-requests":
+                    return renderProtectedPage(
+                        "Demo Requests",
+                        <DemoRequests />
+                    );
+
+                case "subscription-dashboard":
+                    return renderProtectedPage(
+                        "Subscriptions",
+                        <SubscriptionDashboard />
+                    );
+
+                case "subscriptions":
+                    return renderProtectedPage(
+                        "Subscriptions",
+                        <SubscriptionManagement />
+                    );
+
+                case "website-analytics":
+                    return renderProtectedPage(
+                        "Website Analytics",
+                        <WebsiteAnalyticsDashboard />
+                    );
+
+                case "client-payment":
+                    return (
+                        <ClientPayment
+                            subscriptionId={
+                                paymentSubscriptionId ??
+                                undefined
+                            }
+                        />
+                    );
+
+                case "services":
+                    return renderProtectedPage(
+                        "Church Services",
+                        <ChurchServicesPage />
+                    );
+
+                case "events":
+                    return renderProtectedPage(
+                        "Event Management",
+                        <EventManagementPage />
+                    );
+
+                case "members":
+                    return renderProtectedPage(
+                        "Members",
+                        <Members />
+                    );
+
+                case "attendance":
+                    return renderProtectedPage(
+                        "Attendance",
+                        <Attendance />
+                    );
+
+                case "member-attendance-report":
+                    return renderProtectedPage(
+                        "Attendance",
+                        <MemberAttendanceReport />
+                    );
+
+                case "ministries":
+                    return renderProtectedPage(
+                        "Ministries",
+                        <Ministries />
+                    );
+
+                case "visitors":
+                    return renderProtectedPage(
+                        "Visitors",
+                        <Visitors />
+                    );
+
+                case "giving":
+                    return renderProtectedPage(
+                        "Giving",
+                        <Giving />
+                    );
+
+                case "income":
+                    return renderProtectedPage(
+                        "Income",
+                        <Income />
+                    );
+
+                case "expenses":
+                    return renderProtectedPage(
+                        "Expenses",
+                        <Expenses />
+                    );
+
+                case "learning":
+                    return renderProtectedPage(
+                        "EPIC Learning",
+                        <LearningPage
+                            onViewCourse={
+                                handleViewCourse
+                            }
+                        />
+                    );
+
+                case "view-course":
+                    if (
+                        !canView(
+                            "EPIC Learning"
+                        )
+                    ) {
+                        return renderAccessDenied(
+                            "EPIC Learning"
                         );
+                    }
 
-                    // =========================================
-                    // REPORTS
-                    // =========================================
-
-                    case "reports":
-                        return renderProtectedPage(
-                            "Reports",
-                            <Reports
-                                onOpenAttendanceReport={() =>
-                                    navigate(
-                                        "attendance-report"
-                                    )
-                                }
-                                onOpenAttendanceByDate={() =>
-                                    navigate(
-                                        "attendance-by-date-report"
-                                    )
-                                }
-                            />
+                    if (
+                        !selectedCourseId
+                    ) {
+                        return renderLearningEmptyState(
+                            "Course Not Selected",
+                            "Please select a course from EPIC Learning."
                         );
+                    }
 
-                    // =========================================
-                    // ATTENDANCE REPORT
-                    // =========================================
+                    return (
+                        <ViewCourse
+                            courseId={
+                                selectedCourseId
+                            }
+                            onBack={
+                                handleBackToLearning
+                            }
+                            onLessonSelect={(
+                                lessonId
+                            ) =>
+                                handleViewLesson(
+                                    selectedCourseId,
+                                    lessonId
+                                )
+                            }
+                        />
+                    );
 
-                    case "attendance-report":
-                        return renderProtectedPage(
-                            "Attendance",
-                            <AttendanceReportBuilder />
+                case "lesson":
+                    if (
+                        !canView(
+                            "EPIC Learning"
+                        )
+                    ) {
+                        return renderAccessDenied(
+                            "EPIC Learning"
                         );
+                    }
 
-                    // =========================================
-                    // ATTENDANCE BY DATE
-                    // =========================================
-
-                    case "attendance-by-date-report":
-                        return renderProtectedPage(
-                            "Attendance",
-                            <AttendanceByDateReport />
+                    if (
+                        !selectedCourseId ||
+                        !selectedLessonId
+                    ) {
+                        return renderLearningEmptyState(
+                            "Lesson Not Selected",
+                            "Please select a lesson from the course."
                         );
+                    }
 
-                    // =========================================
-                    // DEMO REQUESTS
-                    // =========================================
+                    return (
+                        <LessonPage
+                            courseId={
+                                selectedCourseId
+                            }
+                            lessonId={
+                                selectedLessonId
+                            }
+                            onBack={
+                                handleBackToCourse
+                            }
+                        />
+                    );
 
-                    case "demo-requests":
-                        return renderProtectedPage(
-                            "Demo Requests",
-                            <DemoRequests />
-                        );
+                case "settings":
+                    return renderProtectedPage(
+                        "Settings",
+                        <Settings />
+                    );
 
-                    // =========================================
-                    // SUBSCRIPTION DASHBOARD
-                    // =========================================
-
-                    case "subscription-dashboard":
-                        return renderProtectedPage(
-                            "Subscriptions",
-                            <SubscriptionDashboard />
-                        );
-
-                    // =========================================
-                    // SUBSCRIPTIONS
-                    // =========================================
-
-                    case "subscriptions":
-                        return renderProtectedPage(
-                            "Subscriptions",
-                            <SubscriptionManagement />
-                        );
-
-                    // =========================================
-                    // WEBSITE ANALYTICS
-                    // =========================================
-
-                    case "website-analytics":
-                        return renderProtectedPage(
-                            "Website Analytics",
-                            <WebsiteAnalyticsDashboard />
-                        );
-
-                    // =========================================
-                    // CHURCH SERVICES
-                    // =========================================
-
-                    case "services":
-                        return renderProtectedPage(
-                            "Church Services",
-                            <ChurchServicesPage />
-                        );
-
-                    // =========================================
-                    // EVENTS
-                    // =========================================
-
-                    case "events":
-                        return renderProtectedPage(
-                            "Event Management",
-                            <EventManagementPage />
-                        );
-
-                    // =========================================
-                    // MEMBER ATTENDANCE REPORT
-                    // =========================================
-
-                    case "member-attendance-report":
-                        return renderProtectedPage(
-                            "Attendance",
-                            <MemberAttendanceReport />
-                        );
-
-                    // =========================================
-                    // MEMBERS
-                    // =========================================
-
-                    case "members":
-                        return renderProtectedPage(
-                            "Members",
-                            <Members />
-                        );
-
-                    // =========================================
-                    // ATTENDANCE
-                    // =========================================
-
-                    case "attendance":
-                        return renderProtectedPage(
-                            "Attendance",
-                            <Attendance />
-                        );
-
-                    // =========================================
-                    // MINISTRIES
-                    // =========================================
-
-                    case "ministries":
-                        return renderProtectedPage(
-                            "Ministries",
-                            <Ministries />
-                        );
-
-                    // =========================================
-                    // VISITORS
-                    // =========================================
-
-                    case "visitors":
-                        return renderProtectedPage(
-                            "Visitors",
-                            <Visitors />
-                        );
-
-                    // =========================================
-                    // GIVING
-                    // =========================================
-
-                    case "giving":
-                        return renderProtectedPage(
-                            "Giving",
-                            <Giving />
-                        );
-
-                    // =========================================
-                    // INCOME
-                    // =========================================
-
-                    case "income":
-                        return renderProtectedPage(
-                            "Income",
-                            <Income />
-                        );
-
-                    // =========================================
-                    // EXPENSES
-                    // =========================================
-
-                    case "expenses":
-                        return renderProtectedPage(
-                            "Expenses",
-                            <Expenses />
-                        );
-
-                    // =========================================
-                    // EPIC LEARNING
-                    // =========================================
-
-                    case "learning":
-                        return renderProtectedPage(
-                            "EPIC Learning",
-                            <LearningPage
-                                onViewCourse={
-                                    handleViewCourse
-                                }
-                            />
-                        );
-
-                    // =========================================
-                    // COURSE
-                    // =========================================
-
-                    case "view-course":
-
-                        if (
-                            !canView(
-                                "EPIC Learning"
-                            )
-                        ) {
-                            return (
-                                <Dashboard />
-                            );
-                        }
-
-                        if (
-                            !selectedCourseId
-                        ) {
-                            return renderLearningEmptyState(
-                                "Course Not Selected",
-                                "Please select a course from EPIC Learning."
-                            );
-                        }
-
-                        return (
-                            <ViewCourse
-                                courseId={
-                                    selectedCourseId
-                                }
-                                onBack={
-                                    handleBackToLearning
-                                }
-                                onLessonSelect={(
-                                    lessonId: number
-                                ) =>
-                                    handleViewLesson(
-                                        selectedCourseId,
-                                        lessonId
-                                    )
-                                }
-                            />
-                        );
-
-                    // =========================================
-                    // LESSON
-                    // =========================================
-
-                    case "lesson":
-
-                        if (
-                            !canView(
-                                "EPIC Learning"
-                            )
-                        ) {
-                            return (
-                                <Dashboard />
-                            );
-                        }
-
-                        if (
-                            !selectedCourseId ||
-                            !selectedLessonId
-                        ) {
-                            return renderLearningEmptyState(
-                                "Lesson Not Selected",
-                                "Please select a lesson from the course."
-                            );
-                        }
-
-                        return (
-                            <LessonPage
-                                courseId={
-                                    selectedCourseId
-                                }
-                                lessonId={
-                                    selectedLessonId
-                                }
-                                onBack={
-                                    handleBackToCourse
-                                }
-                            />
-                        );
-
-                    // =========================================
-                    // SETTINGS
-                    // =========================================
-
-                    case "settings":
-                        return renderProtectedPage(
-                            "Settings",
-                            <Settings />
-                        );
-
-                    // =========================================
-                    // FALLBACK
-                    // =========================================
-
-                    default:
-                        return (
-                            <Dashboard />
-                        );
-                }
-            },
-            [
-                activePage,
-                navigate,
-                renderProtectedPage,
-                selectedCourseId,
-                selectedLessonId,
-                handleViewCourse,
-                handleViewLesson,
-                handleBackToCourse,
-                handleBackToLearning,
-                canView,
-                renderLearningEmptyState,
-            ]
-        );
+                default:
+                    return renderProtectedPage(
+                        "Dashboard",
+                        <Dashboard />
+                    );
+            }
+        }, [
+            activePage,
+            navigate,
+            renderProtectedPage,
+            paymentSubscriptionId,
+            selectedCourseId,
+            selectedLessonId,
+            handleViewCourse,
+            handleViewLesson,
+            handleBackToCourse,
+            handleBackToLearning,
+            canView,
+            renderAccessDenied,
+            renderLearningEmptyState,
+        ]);
 
     // =====================================================
-    // PUBLIC LANDING PAGE
+    // AUTH INITIALIZATION SCREEN
+    // =====================================================
+
+    if (!authInitialized) {
+        return null;
+    }
+
+    // =====================================================
+    // PUBLIC LANDING
     // =====================================================
 
     if (isLandingPage) {
@@ -1689,7 +1925,7 @@ const App: React.FC = () => {
     }
 
     // =====================================================
-    // PUBLIC ABOUT PAGE
+    // PUBLIC ABOUT
     // =====================================================
 
     if (isAboutPage) {
@@ -1703,7 +1939,7 @@ const App: React.FC = () => {
     }
 
     // =====================================================
-    // PUBLIC CONTACT PAGE
+    // PUBLIC CONTACT
     // =====================================================
 
     if (isContactPage) {
@@ -1717,15 +1953,66 @@ const App: React.FC = () => {
     }
 
     // =====================================================
-    // LOGIN PAGE
+    // CLIENT LOGIN
+    // =====================================================
+
+    if (isClientLoginPage) {
+        return (
+            <ClientLogin
+                onLoginSuccess={
+                    handleClientLoginSuccess
+                }
+                onBackToLanding={() =>
+                    navigateToUrl(
+                        PUBLIC_ROUTES.landing
+                    )
+                }
+            />
+        );
+    }
+
+    // =====================================================
+    // CLIENT PORTAL
+    // =====================================================
+
+    if (isClientPortalPage) {
+        return clientAuthenticated ? (
+            <ClientPortal
+                onLogout={
+                    handleClientLogout
+                }
+                onBackToLanding={() =>
+                    navigateToUrl(
+                        PUBLIC_ROUTES.landing
+                    )
+                }
+            />
+        ) : null;
+    }
+
+    // =====================================================
+    // PUBLIC PAYMENT
+    // =====================================================
+
+    if (isClientPaymentPage) {
+        return (
+            <ClientPayment
+                subscriptionId={
+                    paymentSubscriptionId ??
+                    undefined
+                }
+            />
+        );
+    }
+
+    // =====================================================
+    // =====================================================
+    // SINGLE ADMIN LOGIN RENDER
+    // =====================================================
     // =====================================================
 
     if (isLoginPage) {
-        if (isAuthenticated) {
-            return null;
-        }
-
-        return (
+        return isAuthenticated ? null : (
             <div className="epic-login-container">
                 <Login
                     onLoginSuccess={
@@ -1737,19 +2024,11 @@ const App: React.FC = () => {
     }
 
     // =====================================================
-    // UNAUTHENTICATED FALLBACK
+    // ADMIN PROTECTION
     // =====================================================
 
     if (!isAuthenticated) {
-        return (
-            <div className="epic-login-container">
-                <Login
-                    onLoginSuccess={
-                        handleLoginSuccess
-                    }
-                />
-            </div>
-        );
+        return null;
     }
 
     // =====================================================
@@ -1764,29 +2043,20 @@ const App: React.FC = () => {
                     : "sidebar-closed"
             }`}
         >
-            {/* =================================================
-                MOBILE OVERLAY
-            ================================================= */}
+            {/* MOBILE OVERLAY */}
 
             {sidebarOpen && (
                 <div
                     className="epic-mobile-overlay"
                     onClick={() =>
-                        setSidebarOpen(
-                            false
-                        )
+                        setSidebarOpen(false)
                     }
                 />
             )}
 
-            {/* =================================================
-                SIDEBAR
-            ================================================= */}
+            {/* SIDEBAR */}
 
             <aside className="epic-sidebar">
-
-                {/* BRAND */}
-
                 <div className="epic-brand">
                     <div className="epic-logo">
                         EPIC
@@ -1803,8 +2073,6 @@ const App: React.FC = () => {
                     </div>
                 </div>
 
-                {/* CHURCH */}
-
                 <div className="epic-church-name">
                     <div className="epic-church-icon">
                         ✦
@@ -1820,8 +2088,6 @@ const App: React.FC = () => {
                         </span>
                     </div>
                 </div>
-
-                {/* NAVIGATION */}
 
                 <nav className="epic-navigation">
                     {NAVIGATION_SECTIONS.map(
@@ -1851,8 +2117,10 @@ const App: React.FC = () => {
                                 )}
 
                                 {section.items.map(
-                                    (item) => {
-                                        const isActive =
+                                    (
+                                        item
+                                    ) => {
+                                        const active =
                                             isNavigationItemActive(
                                                 item.page,
                                                 activePage
@@ -1871,7 +2139,7 @@ const App: React.FC = () => {
                                                 <button
                                                     type="button"
                                                     className={`epic-nav-item ${
-                                                        isActive
+                                                        active
                                                             ? "active"
                                                             : ""
                                                     }`}
@@ -1909,12 +2177,8 @@ const App: React.FC = () => {
                     )}
                 </nav>
 
-                {/* SIDEBAR FOOTER */}
-
                 <div className="epic-sidebar-footer">
-
                     <div className="epic-user-card">
-
                         <div className="epic-user-avatar">
                             {
                                 avatarLetter
@@ -1922,7 +2186,6 @@ const App: React.FC = () => {
                         </div>
 
                         <div className="epic-user-info">
-
                             <strong>
                                 {
                                     fullName
@@ -1934,9 +2197,7 @@ const App: React.FC = () => {
                                     role
                                 }
                             </span>
-
                         </div>
-
                     </div>
 
                     <button
@@ -1946,36 +2207,23 @@ const App: React.FC = () => {
                             handleLogout
                         }
                     >
-                        <span>
-                            ⇥
-                        </span>
-
+                        <span>⇥</span>
                         Logout
                     </button>
-
                 </div>
             </aside>
 
-            {/* =================================================
-                MAIN
-            ================================================= */}
+            {/* MAIN */}
 
             <main className="epic-main">
-
-                {/* TOPBAR */}
-
                 <header className="epic-topbar">
-
                     <div className="epic-topbar-left">
-
                         <button
                             type="button"
                             className="epic-menu-button"
                             onClick={() =>
                                 setSidebarOpen(
-                                    (
-                                        previous
-                                    ) =>
+                                    previous =>
                                         !previous
                                 )
                             }
@@ -1985,7 +2233,6 @@ const App: React.FC = () => {
                         </button>
 
                         <div className="epic-topbar-title">
-
                             <strong>
                                 {
                                     PAGE_TITLES[
@@ -2001,13 +2248,10 @@ const App: React.FC = () => {
                                     ]
                                 }
                             </span>
-
                         </div>
-
                     </div>
 
                     <div className="epic-topbar-right">
-
                         <div className="epic-date">
                             {new Date().toLocaleDateString(
                                 "en-US",
@@ -2025,7 +2269,6 @@ const App: React.FC = () => {
                         </div>
 
                         <div className="epic-top-user">
-
                             <div className="epic-top-avatar">
                                 {
                                     avatarLetter
@@ -2033,7 +2276,6 @@ const App: React.FC = () => {
                             </div>
 
                             <div className="epic-top-user-info">
-
                                 <strong>
                                     {
                                         fullName
@@ -2045,41 +2287,28 @@ const App: React.FC = () => {
                                         role
                                     }
                                 </span>
-
                             </div>
-
                         </div>
-
                     </div>
-
                 </header>
 
-                {/* CONTENT */}
-
                 <section className="epic-content">
-                    {
-                        renderPage()
-                    }
+                    {renderPage()}
                 </section>
 
-                {/* FOOTER */}
-
                 <footer className="epic-footer">
-
                     <span>
                         ©{" "}
-                        {
-                            new Date().getFullYear()
-                        }{" "}
-                        EPIC Church Management System
+                        {new Date().getFullYear()}{" "}
+                        EPIC Church Management
+                        System
                     </span>
 
                     <span>
-                        Engaging People Into Christ
+                        Engaging People Into
+                        Christ
                     </span>
-
                 </footer>
-
             </main>
         </div>
     );

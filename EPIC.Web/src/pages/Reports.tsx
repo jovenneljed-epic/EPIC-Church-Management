@@ -5,6 +5,7 @@ import "./Reports.css";
 import MembershipDirectoryReport from "./reports/MembershipDirectoryReport";
 import VisitorReportBuilder from "./reports/VisitorReportBuilder";
 import FinancialReportBuilder from "./reports/FinancialReportBuilder";
+import MemberAttendanceReport from "./MemberAttendanceReport";
 
 // =========================================================
 // TYPES
@@ -373,6 +374,11 @@ const [
     showFinancialReport,
     setShowFinancialReport
 ] = useState(false);
+ 
+const [
+    showMemberAttendanceReport,
+    setShowMemberAttendanceReport
+] = useState(false);
 
     const [
         activeCategory,
@@ -503,13 +509,9 @@ const [
 
             case "member-attendance":
 
-                alert(
-                    "Member Attendance History\n\n" +
-                    "This report is available through the Member Attendance Report."
-                );
+    setShowMemberAttendanceReport(true);
 
-                return;
-
+    return;
             // =================================================
             // FUTURE REPORTS
             // =================================================
@@ -582,6 +584,21 @@ if (showFinancialReport) {
 
     return (
         <FinancialReportBuilder />
+    );
+}
+
+// =====================================================
+// MEMBER ATTENDANCE REPORT VIEW
+// =====================================================
+
+if (showMemberAttendanceReport) {
+
+    return (
+        <MemberAttendanceReport
+            onBack={() =>
+                setShowMemberAttendanceReport(false)
+            }
+        />
     );
 }
     // =====================================================
