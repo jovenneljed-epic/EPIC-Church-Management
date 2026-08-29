@@ -1,3 +1,4 @@
+
 import React from "react";
 
 import "./ClientSidebar.css";
@@ -6,17 +7,29 @@ import "./ClientSidebar.css";
 // TYPES
 // =========================================================
 
+export interface ClientPermission {
+    clientPermissionId?: number;
+    moduleName: string;
+    canView: boolean;
+    canCreate: boolean;
+    canEdit: boolean;
+    canDelete: boolean;
+    canManage: boolean;
+}
+
 interface ClientSidebarProps {
     activePage: string;
     onNavigate: (page: string) => void;
     onLogout: () => void;
     clientName?: string;
+    permissions?: ClientPermission[];
 }
 
 interface NavigationItem {
     id: string;
     label: string;
     icon: string;
+    moduleName: string;
 }
 
 // =========================================================
@@ -28,41 +41,55 @@ const navigationItems: NavigationItem[] = [
         id: "dashboard",
         label: "Dashboard",
         icon: "⌂",
+        moduleName: "Dashboard",
     },
     {
         id: "church-profile",
         label: "Church Profile",
         icon: "◈",
+        moduleName: "ChurchProfile",
     },
     {
         id: "members",
         label: "Members",
         icon: "♙",
+        moduleName: "Members",
     },
+  {
+    id: "services",
+    label: "Church Services",
+    icon: "✦",
+    moduleName: "Services",
+},
     {
         id: "attendance",
         label: "Attendance",
         icon: "◷",
+        moduleName: "Attendance",
     },
     {
         id: "giving",
         label: "Giving",
         icon: "◇",
+        moduleName: "Giving",
     },
     {
         id: "reports",
         label: "Reports",
         icon: "▥",
+        moduleName: "Reports",
     },
     {
         id: "subscription",
         label: "Subscription",
         icon: "◆",
+        moduleName: "Subscriptions",
     },
     {
         id: "settings",
         label: "Account Settings",
         icon: "⚙",
+        moduleName: "Settings",
     },
 ];
 
@@ -75,25 +102,22 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
     onNavigate,
     onLogout,
     clientName,
+    permissions = [],
 }) => {
-
+console.log("CLIENT PERMISSIONS:", permissions);
     // =====================================================
     // INITIALS
     // =====================================================
 
-    const getInitials = (
-        value?: string
-    ): string => {
-
+    const getInitials = (value?: string): string => {
         if (!value?.trim()) {
             return "C";
         }
 
-        const words =
-            value
-                .trim()
-                .split(/\s+/)
-                .filter(Boolean);
+        const words = value
+            .trim()
+            .split(/\s+/)
+            .filter(Boolean);
 
         if (words.length === 1) {
             return words[0]
@@ -107,18 +131,56 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
         ).toUpperCase();
     };
 
-    const initials =
-        getInitials(clientName);
+    const initials = getInitials(clientName);
+
+    // =====================================================
+    // PERMISSION CHECK
+    // =====================================================
+
+    const canViewModule = (moduleName: string): boolean => {
+        const permission = permissions.find(
+            (item) =>
+                item.moduleName?.trim().toLowerCase() ===
+                moduleName.trim().toLowerCase()
+        );
+
+        if (!permission) {
+            return false;
+        }
+
+        return permission.canView === true;
+    };
+
+    // =====================================================
+    // FILTER NAVIGATION
+    // =====================================================
+
+    const visibleNavigationItems = navigationItems.filter(
+        (item) => canViewModule(item.moduleName)
+    );
 
     // =====================================================
     // NAVIGATION HANDLER
     // =====================================================
 
-    const handleNavigation = (
-        page: string
-    ): void => {
-
+    const handleNavigation = (page: string): void => {
         if (activePage === page) {
+            return;
+        }
+
+        const item = navigationItems.find(
+            (navigationItem) => navigationItem.id === page
+        );
+
+        if (!item) {
+            return;
+        }
+
+        if (!canViewModule(item.moduleName)) {
+            console.warn(
+                `CLIENT PERMISSION DENIED: ${item.moduleName}`
+            );
+
             return;
         }
 
@@ -132,9 +194,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
     return (
         <aside className="epic-client-sidebar">
 
-            {/* =================================================
-                BRAND
-            ================================================= */}
+            {/* BRAND */}
 
             <div className="epic-sidebar-brand">
 
@@ -156,9 +216,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
 
             </div>
 
-            {/* =================================================
-                NAVIGATION
-            ================================================= */}
+            {/* NAVIGATION */}
 
             <div className="epic-sidebar-section">
 
@@ -171,71 +229,64 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
                     aria-label="Client portal navigation"
                 >
 
-                    {navigationItems.map(
-                        (item) => {
+                    {visibleNavigationItems.map((item) => {
 
-                            const isActive =
-                                activePage ===
-                                item.id;
+                        const isActive =
+                            activePage === item.id;
 
-                            return (
-                                <button
-                                    key={item.id}
-                                    type="button"
-                                    className={
-                                        `epic-sidebar-nav-item ${
-                                            isActive
-                                                ? "active"
-                                                : ""
-                                        }`
-                                    }
-                                    onClick={() =>
-                                        handleNavigation(
-                                            item.id
-                                        )
-                                    }
-                                    aria-current={
-                                        isActive
-                                            ? "page"
-                                            : undefined
-                                    }
+                        return (
+                            <button
+                                key={item.id}
+                                type="button"
+                                className={`epic-sidebar-nav-item ${
+                                    isActive ? "active" : ""
+                                }`}
+                                onClick={() =>
+                                    handleNavigation(item.id)
+                                }
+                                aria-current={
+                                    isActive
+                                        ? "page"
+                                        : undefined
+                                }
+                            >
+
+                                <span
+                                    className="epic-sidebar-nav-icon"
+                                    aria-hidden="true"
                                 >
+                                    {item.icon}
+                                </span>
 
-                                    {/* ICON */}
+                                <span className="epic-sidebar-nav-label">
+                                    {item.label}
+                                </span>
 
-                                    <span
-                                        className="epic-sidebar-nav-icon"
-                                        aria-hidden="true"
-                                    >
-                                        {item.icon}
-                                    </span>
+                                {isActive && (
+                                    <span className="epic-sidebar-active-indicator" />
+                                )}
 
-                                    {/* LABEL */}
+                            </button>
+                        );
+                    })}
 
-                                    <span className="epic-sidebar-nav-label">
-                                        {item.label}
-                                    </span>
+                    {visibleNavigationItems.length === 0 && (
 
-                                    {/* ACTIVE INDICATOR */}
+                        <div className="epic-sidebar-no-access">
 
-                                    {isActive && (
-                                        <span
-                                            className="epic-sidebar-active-indicator"
-                                        />
-                                    )}
+                            <span>
+                                No modules available
+                            </span>
 
-                                </button>
-                            );
-                        }
+                        </div>
+
                     )}
 
                 </nav>
 
             </div>
 
-            {/* =================================================
-                SECURITY
-            ================================================= */}
+            {/* SECURITY */}
 
             <div className="epic-sidebar-security">
 
@@ -257,13 +308,9 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
 
             </div>
 
-            {/* =================================================
-                BOTTOM
-            ================================================= */}
+            {/* BOTTOM */}
 
             <div className="epic-sidebar-bottom">
-
-                {/* USER */}
 
                 <div className="epic-sidebar-user">
 
@@ -274,8 +321,7 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
                     <div className="epic-sidebar-user-info">
 
                         <strong>
-                            {clientName ||
-                                "Client"}
+                            {clientName || "Client"}
                         </strong>
 
                         <span>
@@ -285,8 +331,6 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
                     </div>
 
                 </div>
-
-                {/* LOGOUT */}
 
                 <button
                     type="button"
@@ -311,3 +355,4 @@ const ClientSidebar: React.FC<ClientSidebarProps> = ({
 };
 
 export default ClientSidebar;
+

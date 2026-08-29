@@ -1,0 +1,804 @@
+﻿
+/* =========================================================
+   EPIC GIVING MANAGEMENT
+========================================================= */
+
+.giving-management-page {
+    width: 100%;
+    min-width: 0;
+    padding: 28px;
+    box-sizing: border-box;
+}
+
+/* =========================================================
+   HERO
+========================================================= */
+
+.giving-management-hero {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 30px;
+    margin-bottom: 24px;
+    border-radius: 22px;
+    background:
+        linear-gradient(
+            135deg,
+            #0f1f3d,
+            #17386b
+        );
+    color: #ffffff;
+    box-shadow:
+        0 16px 40px rgba(15, 31, 61, 0.18);
+}
+
+.giving-management-eyebrow {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    opacity: 0.7;
+}
+
+.giving-management-hero h1 {
+    margin: 0 0 8px;
+    font-size: 30px;
+    font-weight: 800;
+}
+
+.giving-management-hero p {
+    margin: 0;
+    max-width: 700px;
+    line-height: 1.6;
+    color: rgba(255,255,255,.76);
+}
+
+.giving-management-hero-icon {
+    width: 74px;
+    height: 74px;
+    flex: 0 0 74px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 20px;
+    background: rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.16);
+    font-size: 34px;
+    font-weight: 800;
+}
+
+/* =========================================================
+   ALERTS
+========================================================= */
+
+.giving-management-alert {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 15px 18px;
+    margin-bottom: 20px;
+    border-radius: 14px;
+    border: 1px solid;
+}
+
+.giving-management-alert strong {
+    white-space: nowrap;
+}
+
+.giving-management-alert span {
+    flex: 1;
+}
+
+.giving-management-alert button {
+    border: 0;
+    background: transparent;
+    font-size: 22px;
+    cursor: pointer;
+}
+
+.giving-management-alert.error {
+    color: #8a1c1c;
+    background: #fff5f5;
+    border-color: #f3c2c2;
+}
+
+.giving-management-alert.success {
+    color: #176534;
+    background: #f2fff7;
+    border-color: #bde7ca;
+}
+
+/* =========================================================
+   STATS
+========================================================= */
+
+.giving-management-stats {
+    display: grid;
+    grid-template-columns:
+        repeat(4, minmax(0, 1fr));
+    gap: 18px;
+    margin-bottom: 24px;
+}
+
+.giving-management-stat {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 22px;
+    min-width: 0;
+    border-radius: 18px;
+    background: #ffffff;
+    border: 1px solid #e6eaf0;
+    box-shadow:
+        0 8px 24px rgba(15, 31, 61, 0.06);
+}
+
+.giving-management-stat.primary {
+    border-color: #cfe0ff;
+    background: #f8fbff;
+}
+
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    flex: 0 0 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 14px;
+    background: #edf4ff;
+    color: #175dcc;
+    font-size: 22px;
+    font-weight: 800;
+}
+
+.giving-management-stat div {
+    min-width: 0;
+}
+
+.giving-management-stat small {
+    display: block;
+    margin-bottom: 5px;
+    color: #788397;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .1em;
+}
+
+.giving-management-stat strong {
+    display: block;
+    color: #182235;
+    font-size: 22px;
+}
+
+.giving-management-stat span:last-child {
+    display: block;
+    margin-top: 5px;
+    color: #8a94a6;
+    font-size: 12px;
+}
+
+/* =========================================================
+   PANEL
+========================================================= */
+
+.giving-management-panel {
+    overflow: hidden;
+    border-radius: 20px;
+    background: #ffffff;
+    border: 1px solid #e6eaf0;
+    box-shadow:
+        0 10px 30px rgba(15, 31, 61, 0.06);
+}
+
+.giving-management-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    padding: 26px;
+    border-bottom: 1px solid #edf0f4;
+}
+
+.giving-management-panel-header span {
+    display: block;
+    margin-bottom: 6px;
+    color: #7d8797;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .12em;
+}
+
+.giving-management-panel-header h2 {
+    margin: 0;
+    color: #182235;
+    font-size: 23px;
+}
+
+.giving-management-panel-header p {
+    margin: 6px 0 0;
+    color: #7d8797;
+    font-size: 13px;
+}
+
+.giving-management-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.giving-refresh-button,
+.giving-record-button {
+    border: 0;
+    border-radius: 11px;
+    padding: 11px 16px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.giving-refresh-button {
+    background: #f1f4f8;
+    color: #435066;
+}
+
+.giving-record-button {
+    background: #175dcc;
+    color: #ffffff;
+    box-shadow:
+        0 7px 18px rgba(23, 93, 204, .22);
+}
+
+.giving-record-button:hover {
+    transform: translateY(-1px);
+}
+
+/* =========================================================
+   FILTERS
+========================================================= */
+
+.giving-management-filters {
+    display: flex;
+    gap: 12px;
+    padding: 18px 26px;
+    background: #fafbfd;
+    border-bottom: 1px solid #edf0f4;
+}
+
+.giving-search {
+    position: relative;
+    flex: 1;
+}
+
+.giving-search span {
+    position: absolute;
+    left: 13px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #8c96a7;
+}
+
+.giving-search input,
+.giving-management-filters select {
+    width: 100%;
+    height: 42px;
+    box-sizing: border-box;
+    border: 1px solid #dce1e8;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #263247;
+    outline: none;
+}
+
+.giving-search input {
+    padding: 0 14px 0 38px;
+}
+
+.giving-management-filters select {
+    width: 210px;
+    padding: 0 12px;
+}
+
+.giving-search input:focus,
+.giving-management-filters select:focus,
+.giving-form-grid input:focus,
+.giving-form-grid select:focus,
+.giving-form-grid textarea:focus {
+    border-color: #5d91e8;
+    box-shadow:
+        0 0 0 3px rgba(93,145,232,.12);
+}
+
+/* =========================================================
+   TABLE
+========================================================= */
+
+.giving-management-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.giving-management-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 1050px;
+}
+
+.giving-management-table th {
+    padding: 14px 18px;
+    text-align: left;
+    background: #f8f9fb;
+    color: #7d8797;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    white-space: nowrap;
+}
+
+.giving-management-table td {
+    padding: 16px 18px;
+    border-top: 1px solid #edf0f4;
+    color: #354157;
+    font-size: 13px;
+    vertical-align: middle;
+}
+
+.giving-management-table tbody tr:hover {
+    background: #fafcff;
+}
+
+.giving-member-cell strong {
+    display: block;
+    color: #202b3d;
+}
+
+.giving-member-cell small {
+    display: block;
+    margin-top: 4px;
+    color: #8993a3;
+}
+
+.giving-type-badge {
+    display: inline-flex;
+    padding: 6px 9px;
+    border-radius: 8px;
+    background: #edf4ff;
+    color: #175dcc;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.giving-amount {
+    color: #132f63 !important;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.giving-row-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.giving-row-actions button {
+    padding: 7px 10px;
+    border: 1px solid #dce2ea;
+    border-radius: 8px;
+    background: #ffffff;
+    color: #40506a;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.giving-row-actions button:hover {
+    background: #f5f8fc;
+}
+
+.giving-row-actions button.danger {
+    color: #a52a2a;
+    border-color: #f0cccc;
+}
+
+/* =========================================================
+   EMPTY
+========================================================= */
+
+.giving-management-empty {
+    padding: 70px 30px;
+    text-align: center;
+}
+
+.giving-management-empty-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 18px;
+    background: #edf4ff;
+    color: #175dcc;
+    font-size: 27px;
+    font-weight: 800;
+}
+
+.giving-management-empty h3 {
+    margin: 0 0 7px;
+    color: #253148;
+}
+
+.giving-management-empty p {
+    margin: 0 auto 20px;
+    max-width: 500px;
+    color: #8993a3;
+}
+
+.giving-management-empty button {
+    padding: 11px 18px;
+    border: 0;
+    border-radius: 10px;
+    background: #175dcc;
+    color: white;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.giving-management-spinner {
+    width: 36px;
+    height: 36px;
+    margin: 0 auto 18px;
+    border: 3px solid #e4eaf3;
+    border-top-color: #175dcc;
+    border-radius: 50%;
+    animation: givingSpin .8s linear infinite;
+}
+
+@keyframes givingSpin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* =========================================================
+   MODAL
+========================================================= */
+
+.giving-management-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(11, 20, 37, .58);
+}
+
+.giving-management-modal {
+    width: min(760px, 100%);
+    max-height: 90vh;
+    overflow-y: auto;
+    border-radius: 20px;
+    background: #ffffff;
+    box-shadow:
+        0 25px 80px rgba(0,0,0,.24);
+}
+
+.giving-management-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 24px 26px;
+    border-bottom: 1px solid #edf0f4;
+}
+
+.giving-management-modal-header span {
+    color: #7d8797;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .12em;
+}
+
+.giving-management-modal-header h2 {
+    margin: 6px 0 0;
+    color: #182235;
+}
+
+.giving-management-modal-header button {
+    width: 36px;
+    height: 36px;
+    border: 0;
+    border-radius: 10px;
+    background: #f2f4f7;
+    color: #5b6678;
+    font-size: 22px;
+    cursor: pointer;
+}
+
+/* =========================================================
+   FORM
+========================================================= */
+
+.giving-form-grid {
+    display: grid;
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+    gap: 18px;
+    padding: 26px;
+}
+
+.giving-form-grid label {
+    display: block;
+}
+
+.giving-form-grid label.full-width {
+    grid-column: 1 / -1;
+}
+
+.giving-form-grid label > span {
+    display: block;
+    margin-bottom: 7px;
+    color: #46536a;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.giving-form-grid input,
+.giving-form-grid select,
+.giving-form-grid textarea {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #dce1e8;
+    border-radius: 10px;
+    padding: 11px 12px;
+    background: #ffffff;
+    color: #263247;
+    font: inherit;
+    outline: none;
+}
+
+.giving-form-grid textarea {
+    resize: vertical;
+}
+
+.giving-amount-input {
+    position: relative;
+}
+
+.giving-amount-input > span {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6d7788;
+    font-weight: 700;
+}
+
+.giving-amount-input input {
+    padding-left: 30px;
+}
+
+/* =========================================================
+   MODAL FOOTER
+========================================================= */
+
+.giving-management-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 18px 26px;
+    border-top: 1px solid #edf0f4;
+}
+
+.giving-management-modal-footer button {
+    border: 0;
+    border-radius: 10px;
+    padding: 11px 17px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.giving-management-modal-footer .primary {
+    background: #175dcc;
+    color: #ffffff;
+}
+
+.giving-management-modal-footer .secondary {
+    background: #eef1f5;
+    color: #445167;
+}
+
+.giving-management-modal-footer .danger-button {
+    background: #fff0f0;
+    color: #a52a2a;
+}
+
+/* =========================================================
+   VIEW DETAILS
+========================================================= */
+
+.giving-detail-hero {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 26px;
+    padding: 20px;
+    border-radius: 15px;
+    background: #f6f9ff;
+}
+
+.giving-detail-hero > div {
+    width: 58px;
+    height: 58px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 15px;
+    background: #175dcc;
+    color: #ffffff;
+    font-size: 25px;
+    font-weight: 800;
+}
+
+.giving-detail-hero section span,
+.giving-detail-hero section strong,
+.giving-detail-hero section small {
+    display: block;
+}
+
+.giving-detail-hero section span {
+    color: #6f7b8f;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.giving-detail-hero section strong {
+    margin: 2px 0;
+    color: #182b4d;
+    font-size: 25px;
+}
+
+.giving-detail-hero section small {
+    color: #8b95a5;
+}
+
+.giving-detail-grid {
+    display: grid;
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+    gap: 1px;
+    margin: 0 26px;
+    overflow: hidden;
+    border: 1px solid #e7ebf0;
+    border-radius: 13px;
+}
+
+.giving-detail-grid div {
+    padding: 15px;
+    background: #fafbfd;
+}
+
+.giving-detail-grid span {
+    display: block;
+    margin-bottom: 5px;
+    color: #8a94a5;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .08em;
+}
+
+.giving-detail-grid strong {
+    color: #273348;
+    font-size: 13px;
+}
+
+.giving-detail-notes {
+    margin: 20px 26px 0;
+    padding: 15px;
+    border-radius: 12px;
+    background: #f8f9fb;
+}
+
+.giving-detail-notes span {
+    color: #7d8797;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.giving-detail-notes p {
+    margin: 7px 0 0;
+    color: #46536a;
+    line-height: 1.6;
+}
+
+.giving-management-back {
+    margin-top: 18px;
+    padding: 10px 15px;
+    border: 0;
+    border-radius: 9px;
+    background: #eef2f7;
+    color: #425069;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 1100px) {
+    .giving-management-stats {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 760px) {
+    .giving-management-page {
+        padding: 18px;
+    }
+
+    .giving-management-hero {
+        padding: 22px;
+    }
+
+    .giving-management-hero-icon {
+        display: none;
+    }
+
+    .giving-management-panel-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .giving-management-actions {
+        width: 100%;
+    }
+
+    .giving-refresh-button,
+    .giving-record-button {
+        flex: 1;
+    }
+
+    .giving-management-filters {
+        flex-direction: column;
+    }
+
+    .giving-management-filters select {
+        width: 100%;
+    }
+
+    .giving-form-grid,
+    .giving-detail-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .giving-form-grid label.full-width {
+        grid-column: auto;
+    }
+
+    .giving-management-modal-footer {
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 560px) {
+    .giving-management-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .giving-management-hero h1 {
+        font-size: 24px;
+    }
+
+    .giving-management-actions {
+        flex-direction: column;
+    }
+
+    .giving-refresh-button,
+    .giving-record-button {
+        width: 100%;
+    }
+}
+

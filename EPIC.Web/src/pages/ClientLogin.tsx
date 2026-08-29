@@ -1,3 +1,4 @@
+
 import React, {
     useCallback,
     useEffect,
@@ -25,25 +26,102 @@ interface ClientLoginProps {
     onBackToLanding?: () => void;
 }
 
+// =========================================================
+// CLIENT INFORMATION
+// =========================================================
+
 interface ClientInfo {
     clientId?: number;
     clientName?: string;
-    email?: string;
     churchName?: string;
+    contactPerson?: string;
+    email?: string | null;
+    phone?: string | null;
     status?: string;
     subscriptionStatus?: string;
 }
 
+// =========================================================
+// CLIENT MEMBER USER INFORMATION
+// =========================================================
+
+interface ClientUserInfo {
+    clientMemberId?: number;
+
+    // Compatibility
+    userId?: number;
+
+    username?: string;
+
+    fullName?: string;
+
+    roleId?: number;
+
+    role?: string;
+
+    accountType?: string;
+
+    customerId?: number | null;
+
+    memberId?: number | null;
+
+    memberCode?: string;
+
+    email?: string | null;
+
+    contactNumber?: string | null;
+
+    status?: string;
+
+    approvalStatus?: string;
+
+    isActive?: boolean;
+
+    lastLoginDate?: string | null;
+}
+
+// =========================================================
+// MEMBER INFORMATION
+// =========================================================
+
+interface ClientMemberInfo {
+    memberId?: number;
+
+    memberCode?: string;
+
+    firstName?: string;
+
+    middleName?: string;
+
+    lastName?: string;
+
+    fullName?: string;
+
+    customerId?: number;
+
+    status?: string;
+}
+
+// =========================================================
+// LOGIN RESPONSE
+// =========================================================
+
 interface ClientLoginResponse {
     success?: boolean;
+
     message?: string;
 
     token?: string;
+
     accessToken?: string;
+
     jwt?: string;
 
+    user?: ClientUserInfo;
+
     client?: ClientInfo;
-    user?: ClientInfo;
+
+    member?: ClientMemberInfo;
 }
 
 // =========================================================
@@ -60,6 +138,7 @@ const CLIENT_USER_KEYS = [
     "clientUser",
     "client",
     "clientInfo",
+    "clientMember",
 ];
 
 const REMEMBERED_EMAIL_KEY =
@@ -73,13 +152,16 @@ const ClientLogin: React.FC<ClientLoginProps> = ({
     onLoginSuccess,
     onBackToLanding,
 }) => {
+
     // =====================================================
     // STATE
     // =====================================================
 
-    const [email, setEmail] = useState("");
+    const [email, setEmail] =
+        useState("");
 
-    const [password, setPassword] = useState("");
+    const [password, setPassword] =
+        useState("");
 
     const [showPassword, setShowPassword] =
         useState(false);
@@ -97,26 +179,37 @@ const ClientLogin: React.FC<ClientLoginProps> = ({
         useState("");
 
     // =====================================================
-    // LOAD REMEMBERED EMAIL / USERNAME
+    // LOAD REMEMBERED USERNAME
     // =====================================================
 
     useEffect(() => {
+
         try {
+
             const savedEmail =
                 localStorage.getItem(
                     REMEMBERED_EMAIL_KEY
                 );
 
             if (savedEmail) {
-                setEmail(savedEmail);
-                setRememberMe(true);
+
+                setEmail(
+                    savedEmail
+                );
+
+                setRememberMe(
+                    true
+                );
             }
+
         } catch (error) {
+
             console.warn(
-                "Unable to load remembered client email:",
+                "Unable to load remembered client username:",
                 error
             );
         }
+
     }, []);
 
     // =====================================================
@@ -125,274 +218,731 @@ const ClientLogin: React.FC<ClientLoginProps> = ({
 
     const clearClientAuthentication =
         useCallback(() => {
-            CLIENT_TOKEN_KEYS.forEach((key) => {
-                localStorage.removeItem(key);
-                sessionStorage.removeItem(key);
-            });
 
-            CLIENT_USER_KEYS.forEach((key) => {
-                localStorage.removeItem(key);
-                sessionStorage.removeItem(key);
-            });
+            CLIENT_TOKEN_KEYS.forEach(
+                (key) => {
+
+                    localStorage.removeItem(
+                        key
+                    );
+
+                    sessionStorage.removeItem(
+                        key
+                    );
+                }
+            );
+
+            CLIENT_USER_KEYS.forEach(
+                (key) => {
+
+                    localStorage.removeItem(
+                        key
+                    );
+
+                    sessionStorage.removeItem(
+                        key
+                    );
+                }
+            );
+
         }, []);
 
     // =====================================================
     // GET ERROR MESSAGE
     // =====================================================
 
-    const getErrorMessage = useCallback(
-        (
-            error: AxiosError<ClientLoginResponse>
-        ): string => {
-            const responseData =
-                error.response?.data;
+    const getErrorMessage =
+        useCallback(
+            (
+                error: AxiosError<ClientLoginResponse>
+            ): string => {
 
-            if (responseData?.message) {
-                return responseData.message;
-            }
+                const responseData =
+                    error.response?.data;
 
-            switch (error.response?.status) {
-                case 400:
-                    return "Please check your username/email and password.";
+                // -------------------------------------------------
+                // BACKEND MESSAGE
+                // -------------------------------------------------
 
-                case 401:
-                    return "Invalid client username/email or password.";
+                if (
+                    responseData &&
+                    typeof responseData.message ===
+                        "string" &&
+                    responseData.message.trim()
+                ) {
 
-                case 403:
-                    return "Your client account does not currently have access to EPIC.";
+                    return responseData.message;
+                }
 
-                case 404:
-                    return "Client login service could not be found.";
+                // -------------------------------------------------
+                // HTTP STATUS
+                // -------------------------------------------------
 
-                case 500:
-                    return "The EPIC server encountered an error. Please try again.";
+                switch (
+                    error.response?.status
+                ) {
 
-                default:
-                    break;
-            }
+                    case 400:
 
-            if (error.code === "ERR_NETWORK") {
-                return "Unable to connect to the EPIC server. Please check your connection.";
-            }
+                        return (
+                            "Please check your username/email and password."
+                        );
 
-            return (
-                error.message ||
-                "Unable to sign in. Please try again."
-            );
-        },
-        []
-    );
+                    case 401:
+
+                        return (
+                            "Invalid client username/email or password."
+                        );
+
+                    case 403:
+
+                        return (
+                            "Your client account does not currently have access to EPIC."
+                        );
+
+                    case 404:
+
+                        return (
+                            "Client login service could not be found."
+                        );
+
+                    case 408:
+
+                        return (
+                            "The request timed out. Please try again."
+                        );
+
+                    case 500:
+
+                        return (
+                            "The EPIC server encountered an error. Please try again."
+                        );
+
+                    case 502:
+                    case 503:
+                    case 504:
+
+                        return (
+                            "The EPIC server is temporarily unavailable. Please try again."
+                        );
+
+                    default:
+                        break;
+                }
+
+                // -------------------------------------------------
+                // TIMEOUT
+                // -------------------------------------------------
+
+                if (
+                    error.code ===
+                    "ECONNABORTED"
+                ) {
+
+                    return (
+                        "The login request timed out. Please try again."
+                    );
+                }
+
+                // -------------------------------------------------
+                // NETWORK ERROR
+                // -------------------------------------------------
+
+                if (
+                    error.code ===
+                    "ERR_NETWORK"
+                ) {
+
+                    return (
+                        "Unable to connect to the EPIC server. Please check your connection."
+                    );
+                }
+
+                return (
+                    error.message ||
+                    "Unable to sign in. Please try again."
+                );
+            },
+            []
+        );
 
     // =====================================================
     // SAVE AUTHENTICATION
     // =====================================================
 
-    const saveAuthentication = useCallback(
-        (
-            response: ClientLoginResponse
-        ) => {
-            const token =
-                response.token ||
-                response.accessToken ||
-                response.jwt;
+    const saveAuthentication =
+        useCallback(
+            (
+                response: ClientLoginResponse
+            ) => {
 
-            if (!token) {
-                throw new Error(
-                    "Login succeeded, but no authentication token was returned by the server."
+                // -------------------------------------------------
+                // GET TOKEN
+                // -------------------------------------------------
+
+                const token =
+                    response.token ||
+                    response.accessToken ||
+                    response.jwt;
+
+                if (!token) {
+
+                    throw new Error(
+                        "Login succeeded, but no authentication token was returned by the server."
+                    );
+                }
+
+                // -------------------------------------------------
+                // GET RESPONSE OBJECTS
+                // -------------------------------------------------
+
+                const user =
+                    response.user ||
+                    null;
+
+                const client =
+                    response.client ||
+                    null;
+
+                const member =
+                    response.member ||
+                    null;
+
+                // -------------------------------------------------
+                // VALIDATE CLIENT MEMBER
+                // -------------------------------------------------
+
+                if (!user) {
+
+                    throw new Error(
+                        "Login succeeded, but the client member information was not returned by the server."
+                    );
+                }
+
+                if (
+                    user.clientMemberId ===
+                    undefined ||
+                    user.clientMemberId ===
+                    null
+                ) {
+
+                    throw new Error(
+                        "Login succeeded, but the Client Member ID was not returned by the server."
+                    );
+                }
+
+                // -------------------------------------------------
+                // CLEAR OLD AUTHENTICATION
+                // -------------------------------------------------
+
+                clearClientAuthentication();
+
+                // -------------------------------------------------
+                // SELECT STORAGE
+                // -------------------------------------------------
+
+                const storage =
+                    rememberMe
+                        ? localStorage
+                        : sessionStorage;
+
+                // -------------------------------------------------
+                // STORE TOKEN
+                // -------------------------------------------------
+
+                storage.setItem(
+                    "clientToken",
+                    token
                 );
-            }
 
-            const client =
-                response.client ||
-                response.user ||
-                null;
+                storage.setItem(
+                    "clientAccessToken",
+                    token
+                );
 
-            // -------------------------------------------------
-            // Clear previous client authentication
-            // -------------------------------------------------
+                storage.setItem(
+                    "clientJwt",
+                    token
+                );
 
-            clearClientAuthentication();
-
-            // -------------------------------------------------
-            // Select storage
-            // -------------------------------------------------
-
-            const storage = rememberMe
-                ? localStorage
-                : sessionStorage;
-
-            // -------------------------------------------------
-            // Store authentication token
-            // -------------------------------------------------
-
-            storage.setItem(
-                "clientToken",
-                token
-            );
-
-            storage.setItem(
-                "clientAccessToken",
-                token
-            );
-
-            // -------------------------------------------------
-            // Store client information
-            // -------------------------------------------------
-
-            if (client) {
-                const clientJson =
-                    JSON.stringify(client);
+                // -------------------------------------------------
+                // STORE CLIENT MEMBER USER
+                // -------------------------------------------------
 
                 storage.setItem(
                     "clientUser",
-                    clientJson
+                    JSON.stringify(user)
                 );
+
+                // -------------------------------------------------
+                // STORE CLIENT / CHURCH
+                // -------------------------------------------------
+
+                if (client) {
+
+                    storage.setItem(
+                        "client",
+                        JSON.stringify(client)
+                    );
+
+                    storage.setItem(
+                        "clientInfo",
+                        JSON.stringify(client)
+                    );
+                }
+
+                // -------------------------------------------------
+                // STORE MEMBER
+                // -------------------------------------------------
+
+                if (member) {
+
+                    storage.setItem(
+                        "clientMember",
+                        JSON.stringify(member)
+                    );
+                }
+
+                // -------------------------------------------------
+                // STORE NORMALIZED CLIENT SESSION
+                //
+                // Useful for future portal components.
+                // -------------------------------------------------
+
+                const clientSession = {
+
+                    clientMemberId:
+                        user.clientMemberId,
+
+                    username:
+                        user.username || "",
+
+                    fullName:
+                        user.fullName || "",
+
+                    role:
+                        user.role || "CLIENT",
+
+                    accountType:
+                        user.accountType || "CLIENT",
+
+                    customerId:
+                        user.customerId ?? null,
+
+                    memberId:
+                        user.memberId ?? null,
+
+                    memberCode:
+                        user.memberCode || "",
+
+                    email:
+                        user.email ?? null,
+
+                    contactNumber:
+                        user.contactNumber ?? null,
+
+                    status:
+                        user.status || "ACTIVE",
+
+                    isActive:
+                        user.isActive ?? true,
+
+                    client:
+                        client,
+
+                    member:
+                        member,
+                };
 
                 storage.setItem(
-                    "client",
-                    clientJson
+                    "clientSession",
+                    JSON.stringify(
+                        clientSession
+                    )
                 );
 
-                storage.setItem(
-                    "clientInfo",
-                    clientJson
-                );
-            }
+                // -------------------------------------------------
+                // REMEMBER USERNAME
+                // -------------------------------------------------
 
-            // -------------------------------------------------
-            // Remember username/email
-            // -------------------------------------------------
+                if (rememberMe) {
 
-            if (rememberMe) {
-                localStorage.setItem(
-                    REMEMBERED_EMAIL_KEY,
-                    email.trim()
+                    localStorage.setItem(
+                        REMEMBERED_EMAIL_KEY,
+                        email.trim()
+                    );
+
+                } else {
+
+                    localStorage.removeItem(
+                        REMEMBERED_EMAIL_KEY
+                    );
+                }
+
+                // -------------------------------------------------
+                // DEBUG INFORMATION
+                // -------------------------------------------------
+
+                console.log(
+                    "EPIC CLIENT LOGIN: Authentication saved."
                 );
-            } else {
-                localStorage.removeItem(
-                    REMEMBERED_EMAIL_KEY
+
+                console.log(
+                    "EPIC CLIENT LOGIN: ClientMemberId:",
+                    user.clientMemberId
                 );
-            }
-        },
-        [
-            clearClientAuthentication,
-            email,
-            rememberMe,
-        ]
-    );
+
+                console.log(
+                    "EPIC CLIENT LOGIN: CustomerId:",
+                    user.customerId
+                );
+
+                console.log(
+                    "EPIC CLIENT LOGIN: MemberId:",
+                    user.memberId
+                );
+
+                console.log(
+                    "EPIC CLIENT LOGIN: MemberCode:",
+                    user.memberCode
+                );
+
+                console.log(
+                    "EPIC CLIENT LOGIN: Role:",
+                    user.role
+                );
+
+            },
+            [
+                clearClientAuthentication,
+                email,
+                rememberMe,
+            ]
+        );
 
     // =====================================================
     // LOGIN
     // =====================================================
 
-    const handleSubmit = useCallback(
-        async (
-            event: FormEvent<HTMLFormElement>
-        ) => {
-            event.preventDefault();
+    const handleSubmit =
+        useCallback(
+            async (
+                event: FormEvent<HTMLFormElement>
+            ) => {
 
-            if (isSubmitting) {
-                return;
-            }
+                event.preventDefault();
 
-            setErrorMessage("");
-            setSuccessMessage("");
+                // -------------------------------------------------
+                // PREVENT DOUBLE SUBMIT
+                // -------------------------------------------------
 
-            const normalizedUsername =
-                email.trim();
+                if (isSubmitting) {
+                    return;
+                }
 
-            // -------------------------------------------------
-            // Basic validation
-            // -------------------------------------------------
+                setErrorMessage("");
 
-            if (!normalizedUsername) {
-                setErrorMessage(
-                    "Please enter your email address or username."
-                );
-                return;
-            }
+                setSuccessMessage("");
 
-            if (!password) {
-                setErrorMessage(
-                    "Please enter your password."
-                );
-                return;
-            }
+                // -------------------------------------------------
+                // NORMALIZE USERNAME
+                // -------------------------------------------------
 
-            // -------------------------------------------------
-            // Submit
-            // -------------------------------------------------
+                const normalizedUsername =
+                    email.trim();
 
-            try {
-                setIsSubmitting(true);
+                // -------------------------------------------------
+                // VALIDATION
+                // -------------------------------------------------
 
-                const response =
-                    await axios.post<ClientLoginResponse>(
-                        `${API_BASE_URL}/ClientAuth/login`,
-                        {
-                            username:
-                                normalizedUsername,
-                            password,
-                        },
-                        {
-                            headers: {
-                                "Content-Type":
-                                    "application/json",
-                                Accept:
-                                    "application/json",
-                            },
-                            timeout: 30000,
-                        }
+                if (!normalizedUsername) {
+
+                    setErrorMessage(
+                        "Please enter your email address or username."
                     );
 
-                const data =
-                    response.data;
+                    return;
+                }
 
-                saveAuthentication(data);
+                if (!password) {
 
-                setSuccessMessage(
-                    "Login successful. Welcome to your EPIC Client Portal."
-                );
+                    setErrorMessage(
+                        "Please enter your password."
+                    );
 
-                setPassword("");
+                    return;
+                }
 
                 // -------------------------------------------------
-                // Navigate after brief success message
+                // LOGIN
                 // -------------------------------------------------
 
-                window.setTimeout(() => {
-                    onLoginSuccess?.();
-                }, 500);
-            } catch (error) {
-                console.error(
-                    "EPIC Client Login Error:",
-                    error
-                );
+                try {
 
-                clearClientAuthentication();
+                    setIsSubmitting(
+                        true
+                    );
 
-                const axiosError =
-                    error as AxiosError<ClientLoginResponse>;
+                    console.log(
+                        "========================================"
+                    );
 
-                setErrorMessage(
-                    getErrorMessage(
-                        axiosError
-                    )
-                );
-            } finally {
-                setIsSubmitting(false);
-            }
-        },
-        [
-            email,
-            password,
-            isSubmitting,
-            saveAuthentication,
-            clearClientAuthentication,
-            getErrorMessage,
-            onLoginSuccess,
-        ]
-    );
+                    console.log(
+                        "EPIC CLIENT LOGIN"
+                    );
+
+                    console.log(
+                        "Starting login request..."
+                    );
+
+                    console.log(
+                        "API URL:",
+                        `${API_BASE_URL}/ClientAuth/login`
+                    );
+
+                    console.log(
+                        "Username:",
+                        normalizedUsername
+                    );
+
+                    console.log(
+                        "========================================"
+                    );
+
+                    // -------------------------------------------------
+                    // API REQUEST
+                    // -------------------------------------------------
+
+                    const response =
+                        await axios.post<ClientLoginResponse>(
+                            `${API_BASE_URL}/ClientAuth/login`,
+                            {
+                                username:
+                                    normalizedUsername,
+
+                                password:
+                                    password,
+                            },
+                            {
+                                headers: {
+
+                                    "Content-Type":
+                                        "application/json",
+
+                                    Accept:
+                                        "application/json",
+                                },
+
+                                timeout:
+                                    30000,
+                            }
+                        );
+
+                    // -------------------------------------------------
+                    // RESPONSE
+                    // -------------------------------------------------
+
+                    const data =
+                        response.data;
+
+                    console.log(
+                        "EPIC CLIENT LOGIN: HTTP STATUS:",
+                        response.status
+                    );
+
+                    console.log(
+                        "EPIC CLIENT LOGIN: API RESPONSE:",
+                        data
+                    );
+
+                    // -------------------------------------------------
+                    // VERIFY TOKEN
+                    // -------------------------------------------------
+
+                    const token =
+                        data.token ||
+                        data.accessToken ||
+                        data.jwt;
+
+                    if (!token) {
+
+                        throw new Error(
+                            "The server did not return an authentication token."
+                        );
+                    }
+
+                    // -------------------------------------------------
+                    // VERIFY USER
+                    // -------------------------------------------------
+
+                    if (!data.user) {
+
+                        throw new Error(
+                            "The server did not return client member information."
+                        );
+                    }
+
+                    // -------------------------------------------------
+                    // SAVE AUTHENTICATION
+                    // -------------------------------------------------
+
+                    saveAuthentication(
+                        data
+                    );
+
+                    // -------------------------------------------------
+                    // SUCCESS MESSAGE
+                    // -------------------------------------------------
+
+                    setErrorMessage("");
+
+                    setSuccessMessage(
+                        data.message ||
+                        "Login successful. Welcome to your EPIC Client Portal."
+                    );
+
+                    // -------------------------------------------------
+                    // CLEAR PASSWORD
+                    // -------------------------------------------------
+
+                    setPassword("");
+
+                    // -------------------------------------------------
+                    // SUCCESS LOG
+                    // -------------------------------------------------
+
+                    console.log(
+                        "EPIC CLIENT LOGIN: Login successful."
+                    );
+
+                    console.log(
+                        "EPIC CLIENT LOGIN: ClientMemberId:",
+                        data.user.clientMemberId
+                    );
+
+                    console.log(
+                        "EPIC CLIENT LOGIN: MemberId:",
+                        data.user.memberId
+                    );
+
+                    console.log(
+                        "EPIC CLIENT LOGIN: CustomerId:",
+                        data.user.customerId
+                    );
+
+                    // -------------------------------------------------
+                    // NAVIGATE
+                    // -------------------------------------------------
+
+                    window.setTimeout(
+                        () => {
+
+                            onLoginSuccess?.();
+
+                        },
+                        500
+                    );
+
+                }
+
+                // =====================================================
+                // LOGIN ERROR
+                // =====================================================
+
+                catch (error) {
+
+                    console.error(
+                        "EPIC Client Login Error:",
+                        error
+                    );
+
+                    // -------------------------------------------------
+                    // AXIOS ERROR
+                    // -------------------------------------------------
+
+                    if (
+                        axios.isAxiosError(error)
+                    ) {
+
+                        console.error(
+                            "EPIC CLIENT LOGIN - HTTP STATUS:",
+                            error.response?.status
+                        );
+
+                        console.error(
+                            "EPIC CLIENT LOGIN - API RESPONSE:",
+                            error.response?.data
+                        );
+
+                        console.error(
+                            "EPIC CLIENT LOGIN - API MESSAGE:",
+                            error.response?.data?.message
+                        );
+
+                        console.error(
+                            "EPIC CLIENT LOGIN - REQUEST URL:",
+                            error.config?.url
+                        );
+
+                        console.error(
+                            "EPIC CLIENT LOGIN - REQUEST METHOD:",
+                            error.config?.method
+                        );
+
+                        // -------------------------------------------------
+                        // SHOW ERROR
+                        // -------------------------------------------------
+
+                        setErrorMessage(
+                            getErrorMessage(
+                                error
+                            )
+                        );
+
+                    }
+
+                    // -------------------------------------------------
+                    // NON AXIOS ERROR
+                    // -------------------------------------------------
+
+                    else {
+
+                        console.error(
+                            "EPIC CLIENT LOGIN - UNKNOWN ERROR:",
+                            error
+                        );
+
+                        setErrorMessage(
+                            error instanceof Error
+                                ? error.message
+                                : "Unable to sign in. Please try again."
+                        );
+                    }
+
+                    setSuccessMessage("");
+                }
+
+                // =====================================================
+                // RESET SUBMITTING
+                // =====================================================
+
+                finally {
+
+                    setIsSubmitting(
+                        false
+                    );
+                }
+
+            },
+            [
+                email,
+                password,
+                isSubmitting,
+                saveAuthentication,
+                onLoginSuccess,
+                getErrorMessage,
+            ]
+        );
 
     // =====================================================
     // BACK TO WEBSITE
@@ -400,13 +950,19 @@ const ClientLogin: React.FC<ClientLoginProps> = ({
 
     const handleBackToWebsite =
         useCallback(() => {
+
             if (onBackToLanding) {
+
                 onBackToLanding();
+
                 return;
             }
 
             window.location.href = "/";
-        }, [onBackToLanding]);
+
+        }, [
+            onBackToLanding,
+        ]);
 
     // =====================================================
     // FORGOT PASSWORD
@@ -414,42 +970,54 @@ const ClientLogin: React.FC<ClientLoginProps> = ({
 
     const handleForgotPassword =
         useCallback(() => {
+
             setErrorMessage("");
 
             setSuccessMessage(
                 "Please contact your EPIC administrator to reset your client account password."
             );
+
         }, []);
 
     // =====================================================
-    // INPUT CHANGE HANDLERS
+    // USERNAME CHANGE
     // =====================================================
 
     const handleUsernameChange =
         useCallback(
             (
-                event: React.ChangeEvent<HTMLInputElement>
+                event:
+                    React.ChangeEvent<HTMLInputElement>
             ) => {
+
                 setEmail(
                     event.target.value
                 );
 
                 setErrorMessage("");
+
                 setSuccessMessage("");
             },
             []
         );
 
+    // =====================================================
+    // PASSWORD CHANGE
+    // =====================================================
+
     const handlePasswordChange =
         useCallback(
             (
-                event: React.ChangeEvent<HTMLInputElement>
+                event:
+                    React.ChangeEvent<HTMLInputElement>
             ) => {
+
                 setPassword(
                     event.target.value
                 );
 
                 setErrorMessage("");
+
                 setSuccessMessage("");
             },
             []
@@ -481,14 +1049,18 @@ const ClientLogin: React.FC<ClientLoginProps> = ({
                 <button
                     type="button"
                     className="epic-client-brand"
-                    onClick={handleBackToWebsite}
+                    onClick={
+                        handleBackToWebsite
+                    }
                     aria-label="Back to EPIC website"
                 >
+
                     <span className="epic-client-brand-mark">
                         E
                     </span>
 
                     <span className="epic-client-brand-text">
+
                         <strong>
                             EPIC
                         </strong>
@@ -496,16 +1068,25 @@ const ClientLogin: React.FC<ClientLoginProps> = ({
                         <small>
                             CHURCH MANAGEMENT SYSTEM
                         </small>
+
                     </span>
+
                 </button>
 
                 <button
                     type="button"
                     className="epic-client-back-button"
-                    onClick={handleBackToWebsite}
+                    onClick={
+                        handleBackToWebsite
+                    }
                 >
-                    <span>←</span>
+
+                    <span>
+                        ←
+                    </span>
+
                     Back to Website
+
                 </button>
 
             </header>
@@ -525,14 +1106,19 @@ const ClientLogin: React.FC<ClientLoginProps> = ({
                     <section className="epic-client-intro">
 
                         <div className="epic-client-eyebrow">
+
                             <span className="epic-status-dot" />
+
                             SECURE CLIENT ACCESS
+
                         </div>
 
                         <div className="epic-client-large-logo">
+
                             <span>
                                 E
                             </span>
+
                         </div>
 
                         <div className="epic-client-heading">
@@ -548,18 +1134,23 @@ const ClientLogin: React.FC<ClientLoginProps> = ({
                         </div>
 
                         <h2>
+
                             Manage your church
                             <br />
+
                             <span>
                                 with confidence.
                             </span>
+
                         </h2>
 
                         <p className="epic-client-description">
+
                             Access your EPIC Church Management
                             System, manage your church information,
                             subscription, account and services from
                             one secure portal.
+
                         </p>
 
                         {/* FEATURES */}
@@ -573,6 +1164,7 @@ const ClientLogin: React.FC<ClientLoginProps> = ({
                                 </div>
 
                                 <div>
+
                                     <strong>
                                         Secure Client Access
                                     </strong>
@@ -580,6 +1172,7 @@ const ClientLogin: React.FC<ClientLoginProps> = ({
                                     <span>
                                         Protected access to your church account
                                     </span>
+
                                 </div>
 
                             </div>
@@ -591,6 +1184,7 @@ const ClientLogin: React.FC<ClientLoginProps> = ({
                                 </div>
 
                                 <div>
+
                                     <strong>
                                         Church Management
                                     </strong>
@@ -598,6 +1192,7 @@ const ClientLogin: React.FC<ClientLoginProps> = ({
                                     <span>
                                         Manage your church information
                                     </span>
+
                                 </div>
 
                             </div>
@@ -609,6 +1204,7 @@ const ClientLogin: React.FC<ClientLoginProps> = ({
                                 </div>
 
                                 <div>
+
                                     <strong>
                                         Subscription Management
                                     </strong>
@@ -616,6 +1212,7 @@ const ClientLogin: React.FC<ClientLoginProps> = ({
                                     <span>
                                         Manage your EPIC services and subscription
                                     </span>
+
                                 </div>
 
                             </div>
@@ -629,6 +1226,7 @@ const ClientLogin: React.FC<ClientLoginProps> = ({
                             </span>
 
                             <div>
+
                                 <strong>
                                     Secure EPIC Environment
                                 </strong>
@@ -637,6 +1235,7 @@ const ClientLogin: React.FC<ClientLoginProps> = ({
                                     Your client account is protected
                                     by authenticated access.
                                 </p>
+
                             </div>
 
                         </div>
@@ -656,6 +1255,7 @@ const ClientLogin: React.FC<ClientLoginProps> = ({
                             <div className="epic-login-card-header">
 
                                 <div className="epic-login-mini-brand">
+
                                     <span>
                                         EPIC
                                     </span>
@@ -663,12 +1263,15 @@ const ClientLogin: React.FC<ClientLoginProps> = ({
                                     <small>
                                         CLIENT ACCESS
                                     </small>
+
                                 </div>
 
                                 <div className="epic-login-lock">
+
                                     <span>
                                         ✓
                                     </span>
+
                                 </div>
 
                             </div>
@@ -688,10 +1291,12 @@ const ClientLogin: React.FC<ClientLoginProps> = ({
                             {/* ALERTS */}
 
                             {errorMessage && (
+
                                 <div
                                     className="epic-login-alert epic-login-alert-error"
                                     role="alert"
                                 >
+
                                     <span>
                                         !
                                     </span>
@@ -699,14 +1304,18 @@ const ClientLogin: React.FC<ClientLoginProps> = ({
                                     <div>
                                         {errorMessage}
                                     </div>
+
                                 </div>
+
                             )}
 
                             {successMessage && (
+
                                 <div
                                     className="epic-login-alert epic-login-alert-success"
                                     role="status"
                                 >
+
                                     <span>
                                         ✓
                                     </span>
@@ -714,14 +1323,18 @@ const ClientLogin: React.FC<ClientLoginProps> = ({
                                     <div>
                                         {successMessage}
                                     </div>
+
                                 </div>
+
                             )}
 
                             {/* FORM */}
 
                             <form
                                 className="epic-login-form"
-                                onSubmit={handleSubmit}
+                                onSubmit={
+                                    handleSubmit
+                                }
                                 noValidate
                             >
 
@@ -749,7 +1362,9 @@ const ClientLogin: React.FC<ClientLoginProps> = ({
                                             }
                                             placeholder="Enter your email or username"
                                             autoComplete="username"
-                                            disabled={isSubmitting}
+                                            disabled={
+                                                isSubmitting
+                                            }
                                             required
                                         />
 
@@ -773,7 +1388,9 @@ const ClientLogin: React.FC<ClientLoginProps> = ({
                                             onClick={
                                                 handleForgotPassword
                                             }
-                                            disabled={isSubmitting}
+                                            disabled={
+                                                isSubmitting
+                                            }
                                         >
                                             Forgot password?
                                         </button>
@@ -800,7 +1417,9 @@ const ClientLogin: React.FC<ClientLoginProps> = ({
                                             }
                                             placeholder="Enter your password"
                                             autoComplete="current-password"
-                                            disabled={isSubmitting}
+                                            disabled={
+                                                isSubmitting
+                                            }
                                             required
                                         />
 
@@ -809,20 +1428,26 @@ const ClientLogin: React.FC<ClientLoginProps> = ({
                                             className="epic-show-password"
                                             onClick={() =>
                                                 setShowPassword(
-                                                    (previous) =>
+                                                    previous =>
                                                         !previous
                                                 )
                                             }
-                                            disabled={isSubmitting}
+                                            disabled={
+                                                isSubmitting
+                                            }
                                             aria-label={
                                                 showPassword
                                                     ? "Hide password"
                                                     : "Show password"
                                             }
                                         >
-                                            {showPassword
-                                                ? "Hide"
-                                                : "Show"}
+
+                                            {
+                                                showPassword
+                                                    ? "Hide"
+                                                    : "Show"
+                                            }
+
                                         </button>
 
                                     </div>
@@ -837,13 +1462,18 @@ const ClientLogin: React.FC<ClientLoginProps> = ({
 
                                         <input
                                             type="checkbox"
-                                            checked={rememberMe}
-                                            onChange={(event) =>
-                                                setRememberMe(
-                                                    event.target.checked
-                                                )
+                                            checked={
+                                                rememberMe
                                             }
-                                            disabled={isSubmitting}
+                                            onChange={
+                                                event =>
+                                                    setRememberMe(
+                                                        event.target.checked
+                                                    )
+                                            }
+                                            disabled={
+                                                isSubmitting
+                                            }
                                         />
 
                                         <span className="epic-custom-checkbox">
@@ -863,23 +1493,33 @@ const ClientLogin: React.FC<ClientLoginProps> = ({
                                 <button
                                     type="submit"
                                     className="epic-client-signin-button"
-                                    disabled={isSubmitting}
+                                    disabled={
+                                        isSubmitting
+                                    }
                                 >
 
                                     {isSubmitting ? (
+
                                         <>
+
                                             <span className="epic-login-spinner" />
 
                                             Signing In...
+
                                         </>
+
                                     ) : (
+
                                         <>
+
                                             Sign In
 
                                             <span>
                                                 →
                                             </span>
+
                                         </>
+
                                     )}
 
                                 </button>
@@ -958,3 +1598,4 @@ const ClientLogin: React.FC<ClientLoginProps> = ({
 };
 
 export default ClientLogin;
+

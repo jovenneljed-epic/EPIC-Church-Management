@@ -10,10 +10,16 @@ import { API_BASE_URL } from "../config";
 
 import "./ClientPortal.css";
 
-import ClientSidebar from "../components/client/ClientSidebar";
+import ClientSidebar, {
+    type ClientPermission,
+} from "../components/client/ClientSidebar";
 
 import ClientChurchProfile from "./ClientChurchProfile";
 import ClientMembers from "./ClientMembers";
+import ClientAttendance from "./ClientAttendance";
+import ClientChurchServices from "./ClientChurchServices";
+import GivingManagementPage from "./GivingManagementPage";
+
 
 // =========================================================
 // TYPES
@@ -28,16 +34,62 @@ interface ClientData {
     status?: string;
 }
 
+interface ClientMemberData {
+    memberId: number;
+    memberCode?: string;
+    firstName?: string;
+    middleName?: string;
+    lastName?: string;
+    fullName?: string;
+    customerId?: number;
+    status?: string;
+}
+
+interface ClientRoleData {
+    clientRoleId: number;
+    roleName: string;
+    description?: string;
+    isSystemRole?: boolean;
+    isActive?: boolean;
+}
+
 interface ClientMeResponse {
-    userId: number;
+    clientMemberId: number;
     username: string;
-    fullName: string;
-    roleId: number;
     role: string;
+    accountType?: string;
+
+    clientRoleId?: number;
+    clientRoleName?: string;
+
     customerId: number;
-    approvalStatus: string;
+
+    memberId?: number;
+    memberCode?: string;
+
+    email?: string | null;
+    contactNumber?: string | null;
+
+    status?: string;
     isActive: boolean;
+
+    createdDate?: string;
+    lastLoginDate?: string;
+
     client: ClientData;
+
+    member?: ClientMemberData;
+
+    clientRole?: ClientRoleData;
+}
+
+interface ClientPermissionsResponse {
+    message: string;
+    clientMemberId: number;
+    customerId: number;
+    clientRoleId: number;
+    clientRoleName: string;
+    permissions: ClientPermission[];
 }
 
 interface ClientPortalProps {
@@ -60,6 +112,9 @@ const ClientPortal: React.FC<ClientPortalProps> = ({
     const [client, setClient] =
         useState<ClientMeResponse | null>(null);
 
+    const [permissions, setPermissions] =
+        useState<ClientPermission[]>([]);
+
     const [loading, setLoading] =
         useState<boolean>(true);
 
@@ -70,6 +125,151 @@ const ClientPortal: React.FC<ClientPortalProps> = ({
         useState<string>("dashboard");
 
     // =========================================================
+    // GET CLIENT TOKEN
+    // =========================================================
+
+    const getClientToken = (): string | null => {
+
+        return (
+            localStorage.getItem("clientToken") ||
+            sessionStorage.getItem("clientToken") ||
+            localStorage.getItem("clientAccessToken") ||
+            sessionStorage.getItem("clientAccessToken")
+        );
+    };
+
+    // =========================================================
+    // GET PERMISSION FOR MODULE
+    // =========================================================
+
+    const getPermission = (
+        moduleName: string
+    ): ClientPermission | undefined => {
+
+        return permissions.find(
+            (permission) =>
+                permission.moduleName
+                    ?.trim()
+                    .toLowerCase() ===
+                moduleName
+                    .trim()
+                    .toLowerCase()
+        );
+    };
+
+    // =========================================================
+    // CHECK VIEW PERMISSION
+    // =========================================================
+
+    const canView = (
+        moduleName: string
+    ): boolean => {
+
+        const permission =
+            getPermission(moduleName);
+
+        return permission?.canView === true;
+    };
+
+    // =========================================================
+    // CHECK CREATE PERMISSION
+    // =========================================================
+
+    const canCreate = (
+        moduleName: string
+    ): boolean => {
+
+        const permission =
+            getPermission(moduleName);
+
+        return permission?.canCreate === true;
+    };
+
+    // =========================================================
+    // CHECK EDIT PERMISSION
+    // =========================================================
+
+    const canEdit = (
+        moduleName: string
+    ): boolean => {
+
+        const permission =
+            getPermission(moduleName);
+
+        return permission?.canEdit === true;
+    };
+
+    // =========================================================
+    // CHECK DELETE PERMISSION
+    // =========================================================
+
+    const canDelete = (
+        moduleName: string
+    ): boolean => {
+
+        const permission =
+            getPermission(moduleName);
+
+        return permission?.canDelete === true;
+    };
+
+    // =========================================================
+    // CHECK MANAGE PERMISSION
+    // =========================================================
+
+  
+
+    // =========================================================
+    // PAGE → MODULE MAP
+    // MUST MATCH BACKEND PERMISSION MODULE NAMES
+    // =========================================================
+
+    const pageToModule: Record<string, string> = {
+
+        dashboard:
+            "Dashboard",
+
+        "church-profile":
+            "ChurchProfile",
+
+        members:
+            "Members",
+
+        attendance:
+            "Attendance",
+
+        visitors:
+            "Visitors",
+
+        services:
+            "Services",
+
+        giving:
+            "Giving",
+
+        income:
+            "Income",
+
+        expenses:
+            "Expenses",
+
+        ministries:
+            "Ministries",
+
+        events:
+            "Events",
+
+        learning:
+            "Learning",
+
+        reports:
+            "Reports",
+
+        settings:
+            "Settings",
+    };
+
+    // =========================================================
     // NAVIGATION
     // =========================================================
 
@@ -77,21 +277,53 @@ const ClientPortal: React.FC<ClientPortalProps> = ({
         page: string
     ): void => {
 
+        const moduleName =
+            pageToModule[page];
+
+        // -----------------------------------------------------
+        // UNKNOWN PAGE
+        // -----------------------------------------------------
+
+        if (!moduleName) {
+
+            console.warn(
+                "⚠️ EPIC CLIENT: Unknown page:",
+                page
+            );
+
+            return;
+        }
+
+        // -----------------------------------------------------
+        // PERMISSION CHECK
+        // -----------------------------------------------------
+
+        if (!canView(moduleName)) {
+
+            console.warn(
+                `⛔ EPIC CLIENT: Access denied to ${moduleName}`
+            );
+
+            return;
+        }
+
+        console.log(
+            "EPIC CLIENT: Navigating:",
+            {
+                page,
+                moduleName,
+            }
+        );
+
+        // -----------------------------------------------------
+        // NAVIGATE
+        // -----------------------------------------------------
+
         setActivePage(page);
     };
 
     // =========================================================
-    // LOAD CURRENT CLIENT
-    // =========================================================
-
-    useEffect(() => {
-
-        loadClient();
-
-    }, []);
-
-    // =========================================================
-    // GET /ClientAuth/me
+    // LOAD CLIENT
     // =========================================================
 
     const loadClient = async (): Promise<void> => {
@@ -101,11 +333,16 @@ const ClientPortal: React.FC<ClientPortalProps> = ({
             setLoading(true);
             setError("");
 
+            console.log(
+                "🔥 EPIC CLIENT PORTAL: Loading current client..."
+            );
+
             const token =
-                localStorage.getItem("clientToken") ||
-                sessionStorage.getItem("clientToken") ||
-                localStorage.getItem("clientAccessToken") ||
-                sessionStorage.getItem("clientAccessToken");
+                getClientToken();
+
+            // -------------------------------------------------
+            // NO TOKEN
+            // -------------------------------------------------
 
             if (!token) {
 
@@ -116,36 +353,207 @@ const ClientPortal: React.FC<ClientPortalProps> = ({
                 return;
             }
 
-            const response =
+            const headers = {
+                Authorization:
+                    `Bearer ${token}`,
+            };
+
+            // =================================================
+            // LOAD CURRENT CLIENT
+            // =================================================
+
+            const clientResponse =
                 await axios.get<ClientMeResponse>(
                     `${API_BASE_URL}/ClientAuth/me`,
                     {
-                        headers: {
-                            Authorization:
-                                `Bearer ${token}`,
-                        },
+                        headers,
                     }
                 );
 
-            setClient(response.data);
+            const clientData =
+                clientResponse.data;
 
-            // Keep latest verified client information
+            console.log(
+                "🔥 EPIC CLIENT ME:",
+                clientData
+            );
+
+            // -------------------------------------------------
+            // STORE CLIENT
+            // -------------------------------------------------
+
+            setClient(clientData);
+
             localStorage.setItem(
                 "clientUser",
-                JSON.stringify(response.data)
+                JSON.stringify(clientData)
+            );
+
+            localStorage.setItem(
+                "clientCustomerId",
+                String(
+                    clientData.customerId
+                )
+            );
+
+            localStorage.setItem(
+                "clientMemberId",
+                String(
+                    clientData.clientMemberId
+                )
+            );
+
+            // =================================================
+            // LOAD CLIENT PERMISSIONS
+            // =================================================
+
+            const permissionsResponse =
+                await axios.get<ClientPermissionsResponse>(
+                    `${API_BASE_URL}/ClientPermissions/my`,
+                    {
+                        headers,
+                    }
+                );
+
+            const permissionsData =
+                permissionsResponse.data;
+
+            const loadedPermissions =
+                permissionsData.permissions || [];
+
+            // -------------------------------------------------
+            // STORE PERMISSIONS
+            // -------------------------------------------------
+
+            setPermissions(
+                loadedPermissions
+            );
+
+            // =================================================
+            // DEBUG
+            // =================================================
+
+            console.log(
+                "🔥 EPIC CLIENT PERMISSIONS FULL:",
+                JSON.stringify(
+                    permissionsData,
+                    null,
+                    2
+                )
+            );
+
+            console.log(
+                "🔥 EPIC CLIENT ROLE:",
+                permissionsData.clientRoleName
+            );
+
+            console.log(
+                "🔥 EPIC CLIENT CUSTOMER ID:",
+                permissionsData.customerId
+            );
+
+            console.log(
+                "🔥 EPIC CLIENT MEMBER ID:",
+                permissionsData.clientMemberId
+            );
+
+            console.log(
+                "🔥 EPIC CLIENT MODULES:",
+                loadedPermissions.map(
+                    (
+                        permission
+                    ) => ({
+                        module:
+                            permission.moduleName,
+
+                        view:
+                            permission.canView,
+
+                        create:
+                            permission.canCreate,
+
+                        edit:
+                            permission.canEdit,
+
+                        delete:
+                            permission.canDelete,
+
+                        manage:
+                            permission.canManage,
+                    })
+                )
+            );
+
+            // =================================================
+            // VERIFY DASHBOARD ACCESS
+            // =================================================
+
+            const dashboardPermission =
+                loadedPermissions.find(
+                    (permission) =>
+                        permission.moduleName
+                            ?.trim()
+                            .toLowerCase() ===
+                        "dashboard"
+                );
+
+            // -------------------------------------------------
+            // NO DASHBOARD ACCESS
+            // -------------------------------------------------
+
+            if (
+                !dashboardPermission?.canView
+            ) {
+
+                const firstAvailablePermission =
+                    loadedPermissions.find(
+                        (permission) =>
+                            permission.canView
+                    );
+
+                if (
+                    firstAvailablePermission
+                ) {
+
+                    const firstPage =
+                        Object.entries(
+                            pageToModule
+                        ).find(
+                            ([, moduleName]) =>
+                                moduleName
+                                    .toLowerCase() ===
+                                firstAvailablePermission
+                                    .moduleName
+                                    ?.toLowerCase()
+                        );
+
+                    if (firstPage) {
+
+                        setActivePage(
+                            firstPage[0]
+                        );
+                    }
+                }
+            }
+
+            console.log(
+                "🔥 EPIC CLIENT PORTAL: Client + permissions loaded successfully."
             );
 
         } catch (err) {
 
             console.error(
-                "Client portal error:",
+                "EPIC CLIENT PORTAL ERROR:",
                 err
             );
 
-            if (axios.isAxiosError(err)) {
+            if (
+                axios.isAxiosError(err)
+            ) {
 
                 if (
-                    err.response?.status === 401
+                    err.response?.status ===
+                    401
                 ) {
 
                     setError(
@@ -153,7 +561,8 @@ const ClientPortal: React.FC<ClientPortalProps> = ({
                     );
 
                 } else if (
-                    err.response?.status === 403
+                    err.response?.status ===
+                    403
                 ) {
 
                     setError(
@@ -163,7 +572,8 @@ const ClientPortal: React.FC<ClientPortalProps> = ({
                 } else {
 
                     setError(
-                        err.response?.data?.message ||
+                        err.response?.data
+                            ?.message ||
                         "Unable to load your client account."
                     );
                 }
@@ -182,31 +592,53 @@ const ClientPortal: React.FC<ClientPortalProps> = ({
     };
 
     // =========================================================
+    // INITIAL LOAD
+    // =========================================================
+
+    useEffect(() => {
+
+        loadClient();
+
+    }, []);
+
+    // =========================================================
     // LOGOUT
     // =========================================================
 
     const handleLogout = (): void => {
 
         const authKeys = [
+
             "clientToken",
             "clientAccessToken",
             "clientJwt",
             "clientAuthToken",
+
             "clientUser",
+
             "clientId",
             "clientName",
             "clientEmail",
             "clientChurchName",
+
             "clientCustomerId",
+            "clientMemberId",
             "clientUserId",
+
         ];
 
-        authKeys.forEach((key) => {
+        authKeys.forEach(
+            (key) => {
 
-            localStorage.removeItem(key);
-            sessionStorage.removeItem(key);
+                localStorage.removeItem(
+                    key
+                );
 
-        });
+                sessionStorage.removeItem(
+                    key
+                );
+            }
+        );
 
         window.dispatchEvent(
             new Event(
@@ -224,6 +656,7 @@ const ClientPortal: React.FC<ClientPortalProps> = ({
     if (loading) {
 
         return (
+
             <div className="epic-portal-loading">
 
                 <div className="epic-loading-card">
@@ -252,9 +685,13 @@ const ClientPortal: React.FC<ClientPortalProps> = ({
     // ERROR
     // =========================================================
 
-    if (error || !client) {
+    if (
+        error ||
+        !client
+    ) {
 
         return (
+
             <div className="epic-portal-error-page">
 
                 <div className="epic-portal-error-card">
@@ -272,14 +709,18 @@ const ClientPortal: React.FC<ClientPortalProps> = ({
                     </h2>
 
                     <p>
-                        {error ||
-                            "Unable to load your client account."}
+                        {
+                            error ||
+                            "Unable to load your client account."
+                        }
                     </p>
 
                     <button
                         type="button"
                         className="epic-error-button"
-                        onClick={handleLogout}
+                        onClick={
+                            handleLogout
+                        }
                     >
                         Return to Login
                     </button>
@@ -291,438 +732,585 @@ const ClientPortal: React.FC<ClientPortalProps> = ({
     }
 
     // =========================================================
+    // PLACEHOLDER PAGE
+    // =========================================================
+
+    const renderPlaceholder = (
+        title: string,
+        description: string,
+        icon: string
+    ) => (
+
+        <section className="epic-client-page-placeholder">
+
+            <div className="epic-client-placeholder-icon">
+                {icon}
+            </div>
+
+            <h2>
+                {title}
+            </h2>
+
+            <p>
+                {description}
+            </p>
+
+            <button
+                type="button"
+                onClick={() =>
+                    handleNavigate(
+                        "dashboard"
+                    )
+                }
+            >
+                Back to Dashboard
+            </button>
+
+        </section>
+    );
+
+    // =========================================================
     // MAIN PORTAL
     // =========================================================
 
     return (
+
         <div className="epic-client-portal">
 
-            {/* =================================================
+            {/* =============================================
                 SIDEBAR
-            ================================================= */}
+            ============================================= */}
 
             <ClientSidebar
-                activePage={activePage}
-                onNavigate={handleNavigate}
-                onLogout={handleLogout}
+                activePage={
+                    activePage
+                }
+
+                onNavigate={
+                    handleNavigate
+                }
+
+                onLogout={
+                    handleLogout
+                }
+
                 clientName={
-                    client.client?.clientName ||
-                    client.fullName ||
+                    client.client
+                        ?.clientName ||
+                    client.member
+                        ?.fullName ||
+                    client.username ||
                     "Client"
+                }
+
+                permissions={
+                    permissions
                 }
             />
 
-            {/* =================================================
-                MAIN CONTENT
-            ================================================= */}
+            {/* =============================================
+                MAIN
+            ============================================= */}
 
             <div className="epic-client-main">
 
-                {/* =================================================
+                {/* =============================================
                     HEADER
-                ================================================= */}
+                ============================================= */}
 
-             <header className="epic-client-header">
+                <header className="epic-client-header">
 
-    <div className="epic-client-header-title">
+                    <div className="epic-client-header-title">
 
-        <div className="epic-client-header-label">
-            EPIC CHURCH MANAGEMENT SYSTEM
-        </div>
+                        <div className="epic-client-header-label">
+                            EPIC CHURCH MANAGEMENT SYSTEM
+                        </div>
 
-        <h1>
-            {activePage === "dashboard" && "Dashboard"}
-            {activePage === "church-profile" && "Church Profile"}
-            {activePage === "members" && "Members"}
-            {activePage === "attendance" && "Attendance"}
-            {activePage === "giving" && "Giving"}
-            {activePage === "reports" && "Reports"}
-            {activePage === "subscription" && "Subscription"}
-            {activePage === "settings" && "Account Settings"}
-        </h1>
+                        <h1>
 
-    </div>
+                            {
+                                activePage
+                                    .replace(
+                                        "-",
+                                        " "
+                                    )
+                                    .replace(
+                                        /\b\w/g,
+                                        (
+                                            character
+                                        ) =>
+                                            character.toUpperCase()
+                                    )
+                            }
 
-    <div className="epic-client-header-user">
+                        </h1>
 
-        <div className="epic-client-header-avatar">
-            {client.fullName
-                ?.charAt(0)
-                .toUpperCase() || "C"}
-        </div>
+                    </div>
 
-        <div className="epic-client-header-user-info">
+                    <div className="epic-client-header-user">
 
-            <strong>
-                {client.fullName}
-            </strong>
+                        <div className="epic-client-header-avatar">
 
-        </div>
+                            {
+                                (
+                                    client.member
+                                        ?.fullName ||
+                                    client.username ||
+                                    "C"
+                                )
+                                    .charAt(0)
+                                    .toUpperCase()
+                            }
 
-    </div>
+                        </div>
 
-</header>
-                {/* =================================================
-                    PAGE CONTENT
-                ================================================= */}
+                        <div className="epic-client-header-user-info">
+
+                            <strong>
+
+                                {
+                                    client.member
+                                        ?.fullName ||
+                                    client.username
+                                }
+
+                            </strong>
+
+                            <span>
+
+                                {
+                                    client.clientRoleName ||
+                                    client.clientRole
+                                        ?.roleName ||
+                                    client.role
+                                }
+
+                            </span>
+
+                        </div>
+
+                    </div>
+
+                </header>
+
+                {/* =============================================
+                    CONTENT
+                ============================================= */}
 
                 <main className="epic-client-content">
 
-                    {/* =================================================
+                    {/* =========================================
                         DASHBOARD
-                    ================================================= */}
+                    ========================================= */}
 
-                    {activePage === "dashboard" && (
+                    {
+                        activePage ===
+                        "dashboard" &&
+                        canView(
+                            "Dashboard"
+                        ) && (
 
-                        <section>
+                            <section>
 
-                            <div className="epic-client-welcome">
-
-                                <div>
-
-                                    <span>
-                                        WELCOME BACK
-                                    </span>
-
-                                    <h2>
-                                        {client.fullName}
-                                    </h2>
-
-                                    <p>
-                                        Manage your church account
-                                        through EPIC Church
-                                        Management System.
-                                    </p>
-
-                                </div>
-
-                                <div className="epic-client-status">
-
-                                    <span>
-                                        ✓
-                                    </span>
+                                <div className="epic-client-welcome">
 
                                     <div>
 
-                                        <strong>
-                                            Account Verified
-                                        </strong>
+                                        <span>
+                                            WELCOME BACK
+                                        </span>
 
-                                        <small>
-                                            Secure client access
-                                        </small>
+                                        <h2>
+
+                                            {
+                                                client.member
+                                                    ?.fullName ||
+                                                client.username
+                                            }
+
+                                        </h2>
+
+                                        <p>
+                                            Manage your church account
+                                            through EPIC Church
+                                            Management System.
+                                        </p>
+
+                                    </div>
+
+                                    <div className="epic-client-status">
+
+                                        <span>
+                                            ✓
+                                        </span>
+
+                                        <div>
+
+                                            <strong>
+                                                Account Verified
+                                            </strong>
+
+                                            <small>
+                                                Secure client access
+                                            </small>
+
+                                        </div>
 
                                     </div>
 
                                 </div>
 
-                            </div>
+                                <div className="epic-client-overview">
 
-                            {/* OVERVIEW CARDS */}
+                                    <article className="epic-client-card">
 
-                            <div className="epic-client-overview">
+                                        <span className="epic-client-card-label">
+                                            CHURCH
+                                        </span>
 
-                                {/* CHURCH */}
+                                        <h3>
 
-                                <article className="epic-client-card">
+                                            {
+                                                client.client
+                                                    ?.clientName ||
+                                                "Church"
+                                            }
 
-                                    <span className="epic-client-card-label">
-                                        CHURCH
-                                    </span>
+                                        </h3>
 
-                                    <h3>
-                                        {
-                                            client.client
-                                                ?.clientName ||
-                                            "Church"
-                                        }
-                                    </h3>
+                                        <p>
+                                            Contact Person
+                                        </p>
 
-                                    <p>
-                                        Contact Person
-                                    </p>
+                                        <strong>
 
-                                    <strong>
-                                        {
-                                            client.client
-                                                ?.contactPerson ||
-                                            "Not provided"
-                                        }
-                                    </strong>
+                                            {
+                                                client.client
+                                                    ?.contactPerson ||
+                                                "Not provided"
+                                            }
 
-                                </article>
+                                        </strong>
 
-                                {/* ACCOUNT */}
+                                    </article>
 
-                                <article className="epic-client-card">
+                                    <article className="epic-client-card">
 
-                                    <span className="epic-client-card-label">
-                                        ACCOUNT
-                                    </span>
+                                        <span className="epic-client-card-label">
+                                            ACCOUNT
+                                        </span>
 
-                                    <h3>
-                                        {client.username}
-                                    </h3>
+                                        <h3>
+                                            {
+                                                client.username
+                                            }
+                                        </h3>
 
-                                    <p>
-                                        Account Status
-                                    </p>
+                                        <p>
+                                            Account Status
+                                        </p>
 
-                                    <strong>
-                                        {client.isActive
-                                            ? "Active"
-                                            : "Inactive"}
-                                    </strong>
+                                        <strong>
 
-                                </article>
+                                            {
+                                                client.isActive
+                                                    ? "Active"
+                                                    : "Inactive"
+                                            }
 
-                                {/* SUBSCRIPTION */}
+                                        </strong>
 
-                                <article className="epic-client-card">
+                                    </article>
 
-                                    <span className="epic-client-card-label">
-                                        SUBSCRIPTION
-                                    </span>
+                                    <article className="epic-client-card">
 
-                                    <h3>
-                                        {
-                                            client.client
-                                                ?.status ||
-                                            "Active"
-                                        }
-                                    </h3>
+                                        <span className="epic-client-card-label">
+                                            ROLE
+                                        </span>
 
-                                    <p>
-                                        Approval
-                                    </p>
+                                        <h3>
 
-                                    <strong>
-                                        ✓{" "}
-                                        {
-                                            client.approvalStatus ||
-                                            "APPROVED"
-                                        }
-                                    </strong>
+                                            {
+                                                client.clientRoleName ||
+                                                client.clientRole
+                                                    ?.roleName ||
+                                                client.role
+                                            }
 
-                                </article>
+                                        </h3>
 
-                            </div>
+                                        <p>
+                                            Customer ID
+                                        </p>
 
-                        </section>
-                    )}
+                                        <strong>
+                                            #
+                                            {
+                                                client.customerId
+                                            }
+                                        </strong>
 
-                    {/* =================================================
+                                    </article>
+
+                                </div>
+
+                            </section>
+                        )
+                    }
+
+                    {/* =========================================
                         CHURCH PROFILE
-                    ================================================= */}
+                    ========================================= */}
 
-                    {activePage === "church-profile" && (
+                    {
+                        activePage ===
+                        "church-profile" &&
+                        canView(
+                            "ChurchProfile"
+                        ) && (
 
-                        <ClientChurchProfile
-                            onBack={() =>
-                                handleNavigate(
-                                    "dashboard"
-                                )
-                            }
-                        />
+                            <ClientChurchProfile
+                                onBack={() =>
+                                    handleNavigate(
+                                        "dashboard"
+                                    )
+                                }
+                            />
 
-                    )}
+                        )
+                    }
 
-                    {/* =================================================
+                    {/* =========================================
                         MEMBERS
-                    ================================================= */}
+                    ========================================= */}
 
-                   {activePage === "members" && (
-    <ClientMembers
-        onBack={() =>
-            handleNavigate("dashboard")
-        }
-    />
-)}
-                    {/* =================================================
+                    {
+                        activePage ===
+                        "members" &&
+                        canView(
+                            "Members"
+                        ) && (
+
+                            <ClientMembers
+                                onBack={() =>
+                                    handleNavigate(
+                                        "dashboard"
+                                    )
+                                }
+                            />
+
+                        )
+                    }
+
+                    {/* =========================================
                         ATTENDANCE
-                    ================================================= */}
+                    ========================================= */}
 
-                    {activePage === "attendance" && (
+                   {
+    activePage ===
+    "attendance" &&
+    canView("Attendance") && (
 
-                        <section className="epic-client-page-placeholder">
+        <ClientAttendance
+            canCreate={canCreate("Attendance")}
+            canEdit={canEdit("Attendance")}
+            canDelete={canDelete("Attendance")}
+            onBack={() =>
+                handleNavigate("dashboard")
+            }
+        />
 
-                            <div className="epic-client-placeholder-icon">
-                                ◷
-                            </div>
+    )
+}
+                    {/* =========================================
+                        VISITORS
+                    ========================================= */}
 
-                            <h2>
-                                Attendance
-                            </h2>
+                    {
+                        activePage ===
+                        "visitors" &&
+                        canView(
+                            "Visitors"
+                        ) &&
 
-                            <p>
-                                Church attendance management will
-                                be connected next.
-                            </p>
+                        renderPlaceholder(
+                            "Visitors",
+                            "Visitor management will be connected next.",
+                            "◉"
+                        )
+                    }
 
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    handleNavigate(
-                                        "dashboard"
-                                    )
-                                }
-                            >
-                                Back to Dashboard
-                            </button>
+                    {/* =========================================
+                        SERVICES
+                    ========================================= */}
 
-                        </section>
+                  {
+    activePage === "services" &&
+    canView("Services") && (
+        <ClientChurchServices
+            permissions={permissions}
+        />
+    )
+}
 
-                    )}
-
-                    {/* =================================================
+                    {/* =========================================
                         GIVING
-                    ================================================= */}
+                    ========================================= */}
 
-                    {activePage === "giving" && (
+                   {/* =========================================
+    GIVING
+========================================= */}
 
-                        <section className="epic-client-page-placeholder">
 
-                            <div className="epic-client-placeholder-icon">
-                                ◇
-                            </div>
+{
+    activePage === "giving" &&
+    canView("Giving") && (
 
-                            <h2>
-                                Giving
-                            </h2>
+        <GivingManagementPage
+            permissions={permissions}
+            canCreate={canCreate("Giving")}
+            canEdit={canEdit("Giving")}
+            canDelete={canDelete("Giving")}
+            onBack={() =>
+                handleNavigate("dashboard")
+            }
+        />
 
-                            <p>
-                                Giving and financial management will
-                                be connected next.
-                            </p>
+    )
+}
 
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    handleNavigate(
-                                        "dashboard"
-                                    )
-                                }
-                            >
-                                Back to Dashboard
-                            </button>
 
-                        </section>
+                    {/* =========================================
+                        INCOME
+                    ========================================= */}
 
-                    )}
+                    {
+                        activePage ===
+                        "income" &&
+                        canView(
+                            "Income"
+                        ) &&
 
-                    {/* =================================================
+                        renderPlaceholder(
+                            "Income",
+                            "Income management will be connected next.",
+                            "↑"
+                        )
+                    }
+
+                    {/* =========================================
+                        EXPENSES
+                    ========================================= */}
+
+                    {
+                        activePage ===
+                        "expenses" &&
+                        canView(
+                            "Expenses"
+                        ) &&
+
+                        renderPlaceholder(
+                            "Expenses",
+                            "Expense management will be connected next.",
+                            "↓"
+                        )
+                    }
+
+                    {/* =========================================
+                        MINISTRIES
+                    ========================================= */}
+
+                    {
+                        activePage ===
+                        "ministries" &&
+                        canView(
+                            "Ministries"
+                        ) &&
+
+                        renderPlaceholder(
+                            "Ministries",
+                            "Ministry management will be connected next.",
+                            "✦"
+                        )
+                    }
+
+                    {/* =========================================
+                        EVENTS
+                    ========================================= */}
+
+                    {
+                        activePage ===
+                        "events" &&
+                        canView(
+                            "Events"
+                        ) &&
+
+                        renderPlaceholder(
+                            "Events",
+                            "Event management will be connected next.",
+                            "◈"
+                        )
+                    }
+
+                    {/* =========================================
+                        LEARNING
+                    ========================================= */}
+
+                    {
+                        activePage ===
+                        "learning" &&
+                        canView(
+                            "Learning"
+                        ) &&
+
+                        renderPlaceholder(
+                            "EPIC Learning",
+                            "Learning and discipleship management will be connected next.",
+                            "▣"
+                        )
+                    }
+
+                    {/* =========================================
                         REPORTS
-                    ================================================= */}
+                    ========================================= */}
 
-                    {activePage === "reports" && (
+                    {
+                        activePage ===
+                        "reports" &&
+                        canView(
+                            "Reports"
+                        ) &&
 
-                        <section className="epic-client-page-placeholder">
+                        renderPlaceholder(
+                            "Reports",
+                            "Client reports will be connected next.",
+                            "▥"
+                        )
+                    }
 
-                            <div className="epic-client-placeholder-icon">
-                                ▥
-                            </div>
-
-                            <h2>
-                                Reports
-                            </h2>
-
-                            <p>
-                                Client reports will be connected
-                                next.
-                            </p>
-
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    handleNavigate(
-                                        "dashboard"
-                                    )
-                                }
-                            >
-                                Back to Dashboard
-                            </button>
-
-                        </section>
-
-                    )}
-
-                    {/* =================================================
-                        SUBSCRIPTION
-                    ================================================= */}
-
-                    {activePage === "subscription" && (
-
-                        <section className="epic-client-page-placeholder">
-
-                            <div className="epic-client-placeholder-icon">
-                                ◆
-                            </div>
-
-                            <h2>
-                                Subscription
-                            </h2>
-
-                            <p>
-                                Subscription management will be
-                                connected next.
-                            </p>
-
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    handleNavigate(
-                                        "dashboard"
-                                    )
-                                }
-                            >
-                                Back to Dashboard
-                            </button>
-
-                        </section>
-
-                    )}
-
-                    {/* =================================================
+                    {/* =========================================
                         SETTINGS
-                    ================================================= */}
+                    ========================================= */}
 
-                    {activePage === "settings" && (
+                    {
+                        activePage ===
+                        "settings" &&
+                        canView(
+                            "Settings"
+                        ) &&
 
-                        <section className="epic-client-page-placeholder">
-
-                            <div className="epic-client-placeholder-icon">
-                                ⚙
-                            </div>
-
-                            <h2>
-                                Account Settings
-                            </h2>
-
-                            <p>
-                                Client account settings will be
-                                connected next.
-                            </p>
-
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    handleNavigate(
-                                        "dashboard"
-                                    )
-                                }
-                            >
-                                Back to Dashboard
-                            </button>
-
-                        </section>
-
-                    )}
+                        renderPlaceholder(
+                            "Account Settings",
+                            "Client account settings will be connected next.",
+                            "⚙"
+                        )
+                    }
 
                 </main>
 
-                {/* =================================================
+                {/* =============================================
                     FOOTER
-                ================================================= */}
+                ============================================= */}
 
                 <footer className="epic-client-footer">
 

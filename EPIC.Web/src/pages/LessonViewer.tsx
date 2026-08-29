@@ -1,5 +1,15 @@
-import React, { useEffect, useMemo, useState } from "react";
+
+import React, {
+    useEffect,
+    useMemo,
+    useState,
+} from "react";
+
 import "./LessonViewer.css";
+
+// =========================================================
+// API
+// =========================================================
 
 const API_BASE_URL =
     import.meta.env.VITE_API_URL ||
@@ -31,6 +41,16 @@ interface LessonData {
     courseTitle?: string | null;
 }
 
+interface LessonModule {
+    lessons?: LessonData[];
+}
+
+interface CourseProgressData {
+    courseId?: number;
+    courseTitle?: string | null;
+    modules?: LessonModule[];
+}
+
 // =========================================================
 // PROPS
 // =========================================================
@@ -48,8 +68,11 @@ interface LessonViewerProps {
 const LessonViewer: React.FC<LessonViewerProps> = ({
     lessonId,
     courseId,
-    onBack
+    onBack,
 }) => {
+    // =====================================================
+    // STATE
+    // =====================================================
 
     const [lesson, setLesson] =
         useState<LessonData | null>(null);
@@ -61,7 +84,7 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
         useState("");
 
     const [videoLoading, setVideoLoading] =
-        useState(true);
+        useState(false);
 
     const [videoError, setVideoError] =
         useState(false);
@@ -74,7 +97,6 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
     // =====================================================
 
     const getToken = (): string | null => {
-
         return (
             localStorage.getItem("token") ||
             localStorage.getItem("accessToken") ||
@@ -92,56 +114,57 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
         url: string,
         options: RequestInit = {}
     ) => {
-
         const token = getToken();
 
         if (!token) {
             throw new Error(
-                "Authentication token not found."
+                "Authentication token not found. Please log in again."
             );
         }
 
-        const response =
-            await fetch(
-                `${API_BASE_URL}${url}`,
-                {
-                    ...options,
+        const response = await fetch(
+            `${API_BASE_URL}${url}`,
+            {
+                ...options,
 
-                    headers: {
-                        Authorization:
-                            `Bearer ${token}`,
-
-                        Accept:
-                            "application/json",
-
-                        "Content-Type":
-                            "application/json",
-
-                        ...(options.headers || {})
-                    }
-                }
-            );
+                headers: {
+                    Accept: "application/json",
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json",
+                    ...(options.headers || {}),
+                },
+            }
+        );
 
         if (!response.ok) {
-
             let message =
                 `Request failed. Status: ${response.status}`;
 
             try {
-
                 const errorData =
                     await response.json();
 
-                if (errorData?.message) {
+                if (
+                    errorData?.message
+                ) {
                     message =
                         errorData.message;
+                } else if (
+                    errorData?.title
+                ) {
+                    message =
+                        errorData.title;
                 }
-
             } catch {
-                // Ignore invalid JSON
+                // Ignore invalid JSON response
             }
 
             throw new Error(message);
+        }
+
+        // Some successful requests may have no body.
+        if (response.status === 204) {
+            return null;
         }
 
         return response.json();
@@ -151,27 +174,8 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
     // LOAD LESSON
     // =====================================================
 
-    useEffect(() => {
-
-        if (!lessonId) {
-
-            setError(
-                "Invalid lesson."
-            );
-
-            setLoading(false);
-
-            return;
-        }
-
-        loadLesson();
-
-    }, [lessonId, courseId]);
-
     const loadLesson = async () => {
-
         try {
-
             setLoading(true);
             setError("");
 
@@ -197,19 +201,17 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
                 "================================="
             );
 
-            /*
-             * We use the course lesson-progress endpoint
-             * because your existing backend already returns
-             * the lessons with their progress information.
-             */
-
             const courseData =
-                await apiRequest(
+                (await apiRequest(
                     `/LessonProgress/course/${courseId}`
-                );
+                )) as CourseProgressData;
 
-            let foundLesson: LessonData | null =
-                null;
+            let foundLesson:
+                LessonData | null = null;
+
+            // -------------------------------------------------
+            // SEARCH LESSON INSIDE COURSE MODULES
+            // -------------------------------------------------
 
             if (
                 courseData?.modules &&
@@ -217,11 +219,10 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
                     courseData.modules
                 )
             ) {
-
                 for (
-                    const module of courseData.modules
+                    const module
+                    of courseData.modules
                 ) {
-
                     if (
                         !module.lessons ||
                         !Array.isArray(
@@ -233,7 +234,9 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
 
                     const match =
                         module.lessons.find(
-                            (item: LessonData) =>
+                            (
+                                item
+                            ) =>
                                 Number(
                                     item.lessonId
                                 ) ===
@@ -243,15 +246,16 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
                         );
 
                     if (match) {
-
                         foundLesson = {
                             ...match,
 
                             courseId:
-                                courseData.courseId,
+                                courseData.courseId ??
+                                courseId,
 
                             courseTitle:
-                                courseData.courseTitle
+                                courseData.courseTitle ??
+                                null,
                         };
 
                         break;
@@ -260,9 +264,8 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
             }
 
             if (!foundLesson) {
-
                 throw new Error(
-                    "Lesson not found."
+                    "Lesson not found in this course."
                 );
             }
 
@@ -271,15 +274,19 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
                 foundLesson
             );
 
-            setLesson(
-                foundLesson
-            );
+            setLesson(foundLesson);
 
-        }
-        catch (err) {
+            // Reset video state.
+            const hasVideo =
+                Boolean(
+                    foundLesson.videoUrl?.trim()
+                );
 
+            setVideoLoading(hasVideo);
+            setVideoError(false);
+        } catch (err) {
             console.error(
-                "Error loading lesson:",
+                "EPIC LESSON LOAD ERROR:",
                 err
             );
 
@@ -289,14 +296,34 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
                     : "Failed to load lesson."
             );
 
-        }
-        finally {
-
+            setLesson(null);
+        } finally {
             setLoading(false);
+        }
+    };
 
+    // =====================================================
+    // LOAD WHEN COURSE / LESSON CHANGES
+    // =====================================================
+
+    useEffect(() => {
+        if (!lessonId) {
+            setError("Invalid lesson.");
+            setLoading(false);
+            return;
         }
 
-    };
+        if (!courseId) {
+            setError("Invalid course.");
+            setLoading(false);
+            return;
+        }
+
+        loadLesson();
+    }, [
+        lessonId,
+        courseId,
+    ]);
 
     // =====================================================
     // VIDEO URL
@@ -306,94 +333,281 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
         lesson?.videoUrl?.trim() || "";
 
     // =====================================================
-    // YOUTUBE DETECTION
+    // RESET VIDEO STATE
     // =====================================================
 
-    const youtubeId =
-        useMemo(() => {
+    useEffect(() => {
+        setVideoLoading(
+            Boolean(videoUrl)
+        );
 
-            if (!videoUrl) {
-                return null;
-            }
+        setVideoError(false);
+    }, [
+        videoUrl,
+    ]);
 
-            try {
+    // =====================================================
+    // YOUTUBE ID
+    // =====================================================
 
-                const url =
-                    new URL(videoUrl);
-
-                if (
-                    url.hostname.includes(
-                        "youtube.com"
-                    )
-                ) {
-
-                    return (
-                        url.searchParams.get(
-                            "v"
-                        )
-                    );
-                }
-
-                if (
-                    url.hostname.includes(
-                        "youtu.be"
-                    )
-                ) {
-
-                    return (
-                        url.pathname
-                            .replace(
-                                "/",
-                                ""
-                            )
-                    );
-                }
-
-            }
-            catch {
-                return null;
-            }
-
+    const youtubeId = useMemo(() => {
+        if (!videoUrl) {
             return null;
+        }
 
-        }, [videoUrl]);
+        try {
+            const url =
+                new URL(videoUrl);
+
+            const hostname =
+                url.hostname
+                    .toLowerCase()
+                    .replace(
+                        /^www\./,
+                        ""
+                    );
+
+            // ---------------------------------------------
+            // youtu.be
+            // ---------------------------------------------
+
+            if (
+                hostname ===
+                "youtu.be"
+            ) {
+                const id =
+                    url.pathname
+                        .replace(
+                            /^\/+/,
+                            ""
+                        )
+                        .split(
+                            "/"
+                        )[0];
+
+                return id || null;
+            }
+
+            // ---------------------------------------------
+            // youtube.com
+            // ---------------------------------------------
+
+            if (
+                hostname ===
+                    "youtube.com" ||
+                hostname ===
+                    "m.youtube.com" ||
+                hostname ===
+                    "music.youtube.com"
+            ) {
+                // Standard watch URL
+                const watchId =
+                    url.searchParams.get(
+                        "v"
+                    );
+
+                if (watchId) {
+                    return watchId;
+                }
+
+                // Embed URL
+                const embedMatch =
+                    url.pathname.match(
+                        /^\/embed\/([^/?#]+)/
+                    );
+
+                if (
+                    embedMatch?.[1]
+                ) {
+                    return (
+                        embedMatch[1]
+                    );
+                }
+
+                // Shorts URL
+                const shortsMatch =
+                    url.pathname.match(
+                        /^\/shorts\/([^/?#]+)/
+                    );
+
+                if (
+                    shortsMatch?.[1]
+                ) {
+                    return (
+                        shortsMatch[1]
+                    );
+                }
+
+                // Live URL
+                const liveMatch =
+                    url.pathname.match(
+                        /^\/live\/([^/?#]+)/
+                    );
+
+                if (
+                    liveMatch?.[1]
+                ) {
+                    return (
+                        liveMatch[1]
+                    );
+                }
+            }
+        } catch {
+            return null;
+        }
+
+        return null;
+    }, [
+        videoUrl,
+    ]);
 
     // =====================================================
-    // VIMEO DETECTION
+    // YOUTUBE EMBED URL
     // =====================================================
 
-    const vimeoId =
+    const youtubeEmbedUrl =
         useMemo(() => {
+            if (!youtubeId) {
+                return "";
+            }
 
-            if (!videoUrl) {
+            return (
+                "https://www.youtube-nocookie.com/embed/" +
+                `${encodeURIComponent(
+                    youtubeId
+                )}` +
+                "?rel=0&modestbranding=1"
+            );
+        }, [
+            youtubeId,
+        ]);
+
+    // =====================================================
+    // VIMEO ID
+    // =====================================================
+
+    const vimeoId = useMemo(() => {
+        if (!videoUrl) {
+            return null;
+        }
+
+        try {
+            const url =
+                new URL(videoUrl);
+
+            const hostname =
+                url.hostname
+                    .toLowerCase()
+                    .replace(
+                        /^www\./,
+                        ""
+                    );
+
+            if (
+                hostname !==
+                    "vimeo.com" &&
+                hostname !==
+                    "player.vimeo.com"
+            ) {
                 return null;
             }
 
             const match =
-                videoUrl.match(
-                    /vimeo\.com\/(?:video\/)?(\d+)/
+                url.pathname.match(
+                    /\/(?:video\/)?(\d+)/
                 );
 
             return match
                 ? match[1]
                 : null;
+        } catch {
+            return null;
+        }
+    }, [
+        videoUrl,
+    ]);
 
-        }, [videoUrl]);
+    // =====================================================
+    // VIMEO EMBED URL
+    // =====================================================
+
+    const vimeoEmbedUrl =
+        useMemo(() => {
+            if (!vimeoId) {
+                return "";
+            }
+
+            return (
+                "https://player.vimeo.com/video/" +
+                `${encodeURIComponent(
+                    vimeoId
+                )}`
+            );
+        }, [
+            vimeoId,
+        ]);
 
     // =====================================================
     // DIRECT VIDEO
     // =====================================================
 
     const isDirectVideo =
-        videoUrl &&
-        !youtubeId &&
-        !vimeoId;
+        Boolean(
+            videoUrl &&
+            !youtubeId &&
+            !vimeoId
+        );
+
+    // =====================================================
+    // VIDEO TYPE
+    // =====================================================
+
+    const videoType =
+        youtubeId
+            ? "youtube"
+            : vimeoId
+                ? "vimeo"
+                : isDirectVideo
+                    ? "direct"
+                    : "none";
+
+    // =====================================================
+    // VIDEO LOADED
+    // =====================================================
+
+    const handleVideoLoaded = () => {
+        console.log(
+            "EPIC VIDEO LOADED:",
+            videoType
+        );
+
+        setVideoLoading(false);
+        setVideoError(false);
+    };
+
+    // =====================================================
+    // VIDEO ERROR
+    // =====================================================
+
+    const handleVideoError = () => {
+        console.error(
+            "EPIC VIDEO ERROR:",
+            {
+                lessonId,
+                videoType,
+                videoUrl,
+            }
+        );
+
+        setVideoLoading(false);
+        setVideoError(true);
+    };
+
     // =====================================================
     // VIDEO COMPLETE
     // =====================================================
 
     const handleVideoEnded = () => {
-
         console.log(
             "EPIC VIDEO COMPLETED:",
             lessonId
@@ -403,134 +617,133 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
          * Video completion does NOT automatically
          * complete the lesson.
          *
-         * The learner must still click
-         * Mark Lesson Complete.
+         * Learner must click:
+         *
+         * Mark Lesson Complete
          */
     };
 
     // =====================================================
-    // MARK COMPLETE
+    // MARK LESSON COMPLETE
     // =====================================================
 
-    const handleCompleteLesson = async () => {
-
-        if (!lesson) {
-            return;
-        }
-
-        try {
-
-            setCompleting(true);
-
-            console.log(
-                "================================="
-            );
-
-            console.log(
-                "EPIC COMPLETE LESSON"
-            );
-
-            console.log(
-                "Lesson ID:",
-                lessonId
-            );
-
-            console.log(
-                "================================="
-            );
-
-            /*
-             * Existing endpoint from your
-             * LessonProgressController.
-             *
-             * If your controller uses a slightly
-             * different route, we can adjust it
-             * after testing.
-             */
-
-            const response =
-                await fetch(
-                    `${API_BASE_URL}/LessonProgress/complete/${lessonId}`,
-                    {
-                        method: "POST",
-
-                        headers: {
-                            Authorization:
-                                `Bearer ${getToken()}`,
-
-                            Accept:
-                                "application/json",
-
-                            "Content-Type":
-                                "application/json"
-                        }
-                    }
-                );
-
-            console.log(
-                "Complete lesson response:",
-                response.status
-            );
-
-            if (!response.ok) {
-
-                let message =
-                    "Unable to complete lesson.";
-
-                try {
-
-                    const errorData =
-                        await response.json();
-
-                    if (errorData?.message) {
-                        message =
-                            errorData.message;
-                    }
-
-                }
-                catch {
-                    // Ignore
-                }
-
-                throw new Error(message);
+    const handleCompleteLesson =
+        async () => {
+            if (!lesson) {
+                return;
             }
 
-            /*
-             * Reload the lesson so the UI reflects
-             * the database state.
-             */
+            const token =
+                getToken();
 
-            await loadLesson();
+            if (!token) {
+                alert(
+                    "Your session has expired. Please log in again."
+                );
 
-        }
-        catch (err) {
+                return;
+            }
 
-            console.error(
-                "Error completing lesson:",
-                err
-            );
+            try {
+                setCompleting(true);
 
-            alert(
-                err instanceof Error
-                    ? err.message
-                    : "Unable to complete lesson."
-            );
+                console.log(
+                    "================================="
+                );
 
-        }
-        finally {
+                console.log(
+                    "EPIC COMPLETE LESSON"
+                );
 
-            setCompleting(false);
+                console.log(
+                    "Lesson ID:",
+                    lessonId
+                );
 
-        }
+                console.log(
+                    "================================="
+                );
 
-    };
+                const response =
+                    await fetch(
+                        `${API_BASE_URL}/LessonProgress/complete/${lessonId}`,
+                        {
+                            method: "POST",
+
+                            headers: {
+                                Authorization:
+                                    `Bearer ${token}`,
+
+                                Accept:
+                                    "application/json",
+
+                                "Content-Type":
+                                    "application/json",
+                            },
+                        }
+                    );
+
+                console.log(
+                    "Complete lesson response:",
+                    response.status
+                );
+
+                if (!response.ok) {
+                    let message =
+                        "Unable to complete lesson.";
+
+                    try {
+                        const errorData =
+                            await response.json();
+
+                        if (
+                            errorData?.message
+                        ) {
+                            message =
+                                errorData.message;
+                        } else if (
+                            errorData?.title
+                        ) {
+                            message =
+                                errorData.title;
+                        }
+                    } catch {
+                        // Ignore invalid JSON
+                    }
+
+                    throw new Error(
+                        message
+                    );
+                }
+
+                /*
+                 * Reload the lesson from the API
+                 * so the UI uses the actual database
+                 * progress state.
+                 */
+
+                await loadLesson();
+            } catch (err) {
+                console.error(
+                    "EPIC COMPLETE LESSON ERROR:",
+                    err
+                );
+
+                alert(
+                    err instanceof Error
+                        ? err.message
+                        : "Unable to complete lesson."
+                );
+            } finally {
+                setCompleting(false);
+            }
+        };
 
     // =====================================================
     // LOADING
     // =====================================================
 
     if (loading) {
-
         return (
             <div className="lesson-viewer-loading">
 
@@ -553,7 +766,6 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
     // =====================================================
 
     if (error) {
-
         return (
             <div className="lesson-viewer-error">
 
@@ -585,7 +797,6 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
     // =====================================================
 
     if (!lesson) {
-
         return (
             <div className="lesson-viewer-error">
 
@@ -615,7 +826,8 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
                 0,
                 Number(
                     lesson.progress
-                        ?.progressPercentage || 0
+                        ?.progressPercentage ??
+                    0
                 )
             )
         );
@@ -625,11 +837,10 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
             ?.isCompleted === true;
 
     // =====================================================
-    // COURSE VIEW
+    // VIEW
     // =====================================================
 
     return (
-
         <div className="lesson-viewer">
 
             {/* =================================================
@@ -656,7 +867,6 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
                 </span>
 
             </div>
-
 
             {/* =================================================
                 LESSON HEADER
@@ -694,91 +904,145 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
 
             </header>
 
-
             {/* =================================================
                 VIDEO
             ================================================= */}
 
             {videoUrl ? (
-
                 <section className="lesson-video-section">
 
                     <div className="lesson-video-container">
 
-                        {youtubeId ? (
+                        {/* =====================================
+                            YOUTUBE
+                        ===================================== */}
 
+                        {youtubeId && (
                             <iframe
-                                src={`https://www.youtube.com/embed/${youtubeId}`}
-                                title={lesson.title}
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                key={
+                                    youtubeEmbedUrl
+                                }
+                                src={
+                                    youtubeEmbedUrl
+                                }
+                                title={
+                                    lesson.title
+                                }
+                                frameBorder="0"
+                                loading="lazy"
+                                allow="
+                                    accelerometer;
+                                    autoplay;
+                                    clipboard-write;
+                                    encrypted-media;
+                                    gyroscope;
+                                    picture-in-picture;
+                                    web-share
+                                "
                                 allowFullScreen
-                                onLoad={() =>
-                                    setVideoLoading(false)
+                                referrerPolicy="strict-origin-when-cross-origin"
+                                onLoad={
+                                    handleVideoLoaded
+                                }
+                                onError={
+                                    handleVideoError
                                 }
                             />
+                        )}
 
-                        ) : vimeoId ? (
+                        {/* =====================================
+                            VIMEO
+                        ===================================== */}
 
-                            <iframe
-                                src={`https://player.vimeo.com/video/${vimeoId}`}
-                                title={lesson.title}
-                                allow="autoplay; fullscreen; picture-in-picture"
-                                allowFullScreen
-                                onLoad={() =>
-                                    setVideoLoading(false)
-                                }
-                            />
-
-                        ) : isDirectVideo ? (
-
-                            <video
-                                controls
-                                preload="metadata"
-                                onLoadedData={() =>
-                                    setVideoLoading(false)
-                                }
-                                onError={() => {
-
-                                    setVideoLoading(false);
-                                    setVideoError(true);
-
-                                }}
-                                onEnded={
-                                    handleVideoEnded
-                                }
-                            >
-
-                                <source
-                                    src={videoUrl}
-                                    type="video/mp4"
+                        {!youtubeId &&
+                            vimeoId && (
+                                <iframe
+                                    key={
+                                        vimeoEmbedUrl
+                                    }
+                                    src={
+                                        vimeoEmbedUrl
+                                    }
+                                    title={
+                                        lesson.title
+                                    }
+                                    frameBorder="0"
+                                    loading="lazy"
+                                    allow="
+                                        autoplay;
+                                        fullscreen;
+                                        picture-in-picture
+                                    "
+                                    allowFullScreen
+                                    onLoad={
+                                        handleVideoLoaded
+                                    }
+                                    onError={
+                                        handleVideoError
+                                    }
                                 />
+                            )}
 
-                                Your browser does not support
-                                HTML5 video.
+                        {/* =====================================
+                            DIRECT MP4
+                        ===================================== */}
 
-                            </video>
+                        {!youtubeId &&
+                            !vimeoId &&
+                            isDirectVideo && (
+                                <video
+                                    controls
+                                    preload="metadata"
+                                    playsInline
+                                    onLoadedData={
+                                        handleVideoLoaded
+                                    }
+                                    onCanPlay={
+                                        handleVideoLoaded
+                                    }
+                                    onError={
+                                        handleVideoError
+                                    }
+                                    onEnded={
+                                        handleVideoEnded
+                                    }
+                                >
+                                    <source
+                                        src={
+                                            videoUrl
+                                        }
+                                        type="video/mp4"
+                                    />
 
-                        ) : null}
+                                    Your browser does not
+                                    support HTML5 video.
+                                </video>
+                            )}
+
+                        {/* =====================================
+                            VIDEO LOADING
+                        ===================================== */}
 
                         {videoLoading &&
                             !videoError && (
+                                <div className="lesson-video-loading">
 
-                            <div className="lesson-video-loading">
+                                    <div className="lesson-video-spinner" />
 
-                                <div className="lesson-video-spinner" />
+                                    <span>
+                                        Loading video...
+                                    </span>
 
-                                <span>
-                                    Loading video...
-                                </span>
-
-                            </div>
-
-                        )}
+                                </div>
+                            )}
 
                     </div>
 
-                    {videoError && (
+                    {/* =========================================
+                        VIDEO ERROR
+                    ========================================= */}
 
+                    {videoError && (
                         <div className="lesson-video-error">
 
                             <strong>
@@ -790,20 +1054,33 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
                                 or try again later.
                             </span>
 
-                        </div>
+                            {youtubeId && (
+                                <a
+                                    href={
+                                        `https://www.youtube.com/watch?v=${encodeURIComponent(
+                                            youtubeId
+                                        )}`
+                                    }
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                >
+                                    Open video on YouTube →
+                                </a>
+                            )}
 
+                        </div>
                     )}
 
                     <div className="lesson-video-note">
-
                         🎥 Watch the lesson video before
                         continuing with the lesson.
-
                     </div>
 
                 </section>
-
             ) : (
+                /* =============================================
+                   NO VIDEO
+                ============================================= */
 
                 <section className="lesson-no-video">
 
@@ -821,9 +1098,7 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
                     </p>
 
                 </section>
-
             )}
-
 
             {/* =================================================
                 PROGRESS
@@ -853,7 +1128,7 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
                         className="lesson-progress-fill"
                         style={{
                             width:
-                                `${progress}%`
+                                `${progress}%`,
                         }}
                     />
 
@@ -861,13 +1136,11 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
 
             </section>
 
-
             {/* =================================================
                 CONTENT
             ================================================= */}
 
             {lesson.content && (
-
                 <section className="lesson-content-section">
 
                     <div className="lesson-content-heading">
@@ -894,21 +1167,18 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
                         className="lesson-content-body"
                         dangerouslySetInnerHTML={{
                             __html:
-                                lesson.content
+                                lesson.content,
                         }}
                     />
 
                 </section>
-
             )}
-
 
             {/* =================================================
                 RESOURCE
             ================================================= */}
 
             {lesson.resourceUrl && (
-
                 <section className="lesson-resource-card">
 
                     <div>
@@ -943,9 +1213,7 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
                     </a>
 
                 </section>
-
             )}
-
 
             {/* =================================================
                 COMPLETE LESSON
@@ -954,7 +1222,6 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
             <section className="lesson-completion-section">
 
                 {completed ? (
-
                     <div className="lesson-completed-panel">
 
                         <div className="lesson-completed-icon">
@@ -975,9 +1242,7 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
                         </div>
 
                     </div>
-
                 ) : (
-
                     <div className="lesson-completion-panel">
 
                         <div>
@@ -1007,22 +1272,18 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
                                 handleCompleteLesson
                             }
                         >
-
                             {completing
                                 ? "Saving..."
                                 : "✓ Mark Lesson Complete"}
-
                         </button>
 
                     </div>
-
                 )}
 
             </section>
 
-
             {/* =================================================
-                FOOTER NAVIGATION
+                FOOTER
             ================================================= */}
 
             <div className="lesson-viewer-footer">
@@ -1041,5 +1302,4 @@ const LessonViewer: React.FC<LessonViewerProps> = ({
 };
 
 export default LessonViewer;
-
 

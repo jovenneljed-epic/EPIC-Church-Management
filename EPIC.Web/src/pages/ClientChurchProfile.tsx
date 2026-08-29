@@ -1,4 +1,3 @@
-
 import React, {
     useCallback,
     useEffect,
@@ -42,7 +41,7 @@ interface ClientChurchProfileProps {
 }
 
 // =========================================================
-// REUSABLE INFO ITEM
+// INFO ITEM
 // =========================================================
 
 interface InfoItemProps {
@@ -68,7 +67,7 @@ const InfoItem: React.FC<InfoItemProps> = ({
 };
 
 // =========================================================
-// REUSABLE PROFILE CARD
+// PROFILE CARD
 // =========================================================
 
 interface ProfileCardProps {
@@ -93,7 +92,7 @@ const ProfileCard: React.FC<ProfileCardProps> = ({
                     {icon}
                 </div>
 
-                <div>
+                <div className="epic-profile-card-title">
                     <span>{eyebrow}</span>
 
                     <h2>{title}</h2>
@@ -158,11 +157,9 @@ const ClientChurchProfile: React.FC<ClientChurchProfileProps> = ({
             const token = getClientToken();
 
             if (!token) {
-
                 setError(
                     "Your client session could not be found."
                 );
-
                 return;
             }
 
@@ -292,7 +289,7 @@ const ClientChurchProfile: React.FC<ClientChurchProfileProps> = ({
     if (loading) {
 
         return (
-            <div className="epic-profile-loading">
+            <div className="epic-profile-state">
 
                 <div className="epic-profile-loading-card">
 
@@ -323,7 +320,7 @@ const ClientChurchProfile: React.FC<ClientChurchProfileProps> = ({
     if (error || !client) {
 
         return (
-            <div className="epic-profile-error">
+            <div className="epic-profile-state">
 
                 <div className="epic-profile-error-card">
 
@@ -332,7 +329,7 @@ const ClientChurchProfile: React.FC<ClientChurchProfileProps> = ({
                     </div>
 
                     <span className="epic-profile-error-brand">
-                        EPIC
+                        EPIC CLIENT PORTAL
                     </span>
 
                     <h2>
@@ -379,37 +376,25 @@ const ClientChurchProfile: React.FC<ClientChurchProfileProps> = ({
     return (
         <div className="epic-church-profile">
 
-            {/* =================================================
-                BACKGROUND
-            ================================================= */}
+            {/* Ambient background */}
 
             <div className="epic-profile-grid" />
 
-            <div
-                className="
-                    epic-profile-glow
-                    epic-profile-glow-one
-                "
-            />
+            <div className="epic-profile-glow epic-profile-glow-one" />
 
-            <div
-                className="
-                    epic-profile-glow
-                    epic-profile-glow-two
-                "
-            />
+            <div className="epic-profile-glow epic-profile-glow-two" />
 
             {/* =================================================
-                CONTENT
+                PAGE CONTENT
             ================================================= */}
 
             <main className="epic-profile-main">
 
                 {/* =================================================
-                    PAGE HEADING
+                    TOP HEADER
                 ================================================= */}
 
-                <section className="epic-profile-page-heading">
+                <header className="epic-profile-page-heading">
 
                     <div className="epic-profile-page-title">
 
@@ -419,12 +404,12 @@ const ClientChurchProfile: React.FC<ClientChurchProfileProps> = ({
                         </div>
 
                         <h1>
-                            Your Church
+                            Your Church Profile
                         </h1>
 
                         <p>
-                            View your registered church
-                            information and account details.
+                            Manage and view your registered church
+                            identity and account information.
                         </p>
 
                     </div>
@@ -441,37 +426,53 @@ const ClientChurchProfile: React.FC<ClientChurchProfileProps> = ({
                             </strong>
 
                             <small>
-                                Secure client access
+                                Secure EPIC access
                             </small>
                         </div>
 
                     </div>
 
-                </section>
+                </header>
 
                 {/* =================================================
-                    CHURCH SUMMARY
+                    CHURCH HERO
                 ================================================= */}
 
                 <section className="epic-profile-hero">
 
-                    <div className="epic-profile-church-avatar">
-                        {initials}
-                    </div>
+                    <div className="epic-profile-hero-left">
 
-                    <div className="epic-profile-hero-info">
+                        <div className="epic-profile-church-avatar">
+                            {initials}
+                        </div>
 
-                        <span>
-                            CHURCH
-                        </span>
+                        <div className="epic-profile-hero-info">
 
-                        <h2>
-                            {churchName}
-                        </h2>
+                            <span className="epic-profile-hero-label">
+                                YOUR CHURCH
+                            </span>
 
-                        <p>
-                            Customer ID #{client.customerId}
-                        </p>
+                            <h2>
+                                {churchName}
+                            </h2>
+
+                            <div className="epic-profile-hero-meta">
+
+                                <span>
+                                    Customer ID #{client.customerId}
+                                </span>
+
+                                <span className="epic-profile-meta-divider">
+                                    •
+                                </span>
+
+                                <span>
+                                    Client ID #{clientInfo?.clientId ?? "—"}
+                                </span>
+
+                            </div>
+
+                        </div>
 
                     </div>
 
@@ -479,87 +480,97 @@ const ClientChurchProfile: React.FC<ClientChurchProfileProps> = ({
 
                         <span className="epic-profile-active-dot" />
 
-                        {accountStatus}
+                        <span>
+                            {accountStatus}
+                        </span>
 
                     </div>
 
                 </section>
 
                 {/* =================================================
-                    ORGANIZATION
+                    INFORMATION GRID
                 ================================================= */}
 
-                <ProfileCard
-                    icon="◈"
-                    eyebrow="ORGANIZATION"
-                    title="Church Details"
-                >
+                <div className="epic-profile-sections">
 
-                    <InfoItem
-                        label="Church Name"
-                        value={churchName}
-                    />
+                    {/* =================================================
+                        ORGANIZATION
+                    ================================================= */}
 
-                    <InfoItem
-                        label="Customer ID"
-                        value={`#${client.customerId}`}
-                    />
+                    <ProfileCard
+                        icon="◈"
+                        eyebrow="ORGANIZATION"
+                        title="Church Details"
+                    >
 
-                    <InfoItem
-                        label="Client ID"
-                        value={`#${clientInfo?.clientId ?? "—"}`}
-                    />
+                        <InfoItem
+                            label="Church Name"
+                            value={churchName}
+                        />
 
-                    <InfoItem
-                        label="Account Status"
-                        value={
-                            <span className="epic-profile-success">
-                                <i />
-                                {accountStatus}
-                            </span>
-                        }
-                    />
+                        <InfoItem
+                            label="Customer ID"
+                            value={`#${client.customerId}`}
+                        />
 
-                </ProfileCard>
+                        <InfoItem
+                            label="Client ID"
+                            value={`#${clientInfo?.clientId ?? "—"}`}
+                        />
+
+                        <InfoItem
+                            label="Account Status"
+                            value={
+                                <span className="epic-profile-success">
+                                    <i />
+                                    {accountStatus}
+                                </span>
+                            }
+                        />
+
+                    </ProfileCard>
+
+                    {/* =================================================
+                        PRIMARY CONTACT
+                    ================================================= */}
+
+                    <ProfileCard
+                        icon="@"
+                        eyebrow="PRIMARY CONTACT"
+                        title="Contact Information"
+                    >
+
+                        <InfoItem
+                            label="Contact Person"
+                            value={
+                                clientInfo?.contactPerson
+                            }
+                        />
+
+                        <InfoItem
+                            label="Email Address"
+                            value={contactEmail}
+                            className="epic-profile-break"
+                        />
+
+                        <InfoItem
+                            label="Phone Number"
+                            value={clientInfo?.phone}
+                        />
+
+                        <InfoItem
+                            label="Client Username"
+                            value={client.username}
+                            className="epic-profile-break"
+                        />
+
+                    </ProfileCard>
+
+                </div>
 
                 {/* =================================================
-                    CONTACT
-                ================================================= */}
-
-                <ProfileCard
-                    icon="@"
-                    eyebrow="CONTACT"
-                    title="Primary Contact"
-                >
-
-                    <InfoItem
-                        label="Contact Person"
-                        value={
-                            clientInfo?.contactPerson
-                        }
-                    />
-
-                    <InfoItem
-                        label="Email Address"
-                        value={contactEmail}
-                        className="epic-profile-break"
-                    />
-
-                    <InfoItem
-                        label="Phone Number"
-                        value={clientInfo?.phone}
-                    />
-
-                    <InfoItem
-                        label="Client Username"
-                        value={client.username}
-                        className="epic-profile-break"
-                    />
-
-                </ProfileCard>
-
-                {/* =================================================
-                    SECURITY
+                    SECURITY NOTICE
                 ================================================= */}
 
                 <section className="epic-profile-security">
@@ -577,10 +588,14 @@ const ClientChurchProfile: React.FC<ClientChurchProfileProps> = ({
                         <p>
                             Your church information is retrieved
                             directly from your authenticated EPIC
-                            client account and is available only
-                            to authorized users.
+                            account and is available only to
+                            authorized users.
                         </p>
 
+                    </div>
+
+                    <div className="epic-profile-security-badge">
+                        SECURE
                     </div>
 
                 </section>
@@ -592,4 +607,3 @@ const ClientChurchProfile: React.FC<ClientChurchProfileProps> = ({
 };
 
 export default ClientChurchProfile;
-

@@ -1,39 +1,136 @@
 ﻿/* =========================================================
-   EPIC CLIENT PORTAL LAYOUT
+   EPIC CLIENT PORTAL
+   FUTURISTIC • ELEGANT • PROFESSIONAL DASHBOARD
+   STRUCTURE PRESERVED
+   ========================================================= */
+
+:root {
+    /* =====================================================
+       EPIC COLOR SYSTEM
+       ===================================================== */
+
+    --epic-primary: #2563eb;
+    --epic-primary-dark: #1747b5;
+    --epic-primary-light: #eff6ff;
+
+    --epic-cyan: #06b6d4;
+    --epic-cyan-soft: #ecfeff;
+
+    --epic-bg: #f4f7fb;
+    --epic-bg-deep: #eef3f9;
+
+    --epic-surface: rgba(255, 255, 255, 0.96);
+    --epic-surface-solid: #ffffff;
+    --epic-surface-soft: #f8fafc;
+
+    --epic-border: rgba(148, 163, 184, 0.20);
+    --epic-border-light: rgba(148, 163, 184, 0.12);
+
+    --epic-text: #0f172a;
+    --epic-text-secondary: #334155;
+    --epic-text-muted: #64748b;
+    --epic-text-light: #94a3b8;
+
+    --epic-success: #16a34a;
+    --epic-success-bg: #ecfdf5;
+
+    --epic-danger: #dc2626;
+    --epic-danger-bg: #fef2f2;
+
+    --epic-sidebar-width: 260px;
+
+    --epic-radius: 14px;
+    --epic-radius-lg: 18px;
+
+    --epic-shadow:
+        0 4px 18px rgba(15, 23, 42, 0.045);
+
+    --epic-shadow-hover:
+        0 12px 35px rgba(15, 23, 42, 0.10);
+
+    --epic-blue-glow:
+        0 8px 25px rgba(37, 99, 235, 0.20);
+}
+
+
+/* =========================================================
+   GLOBAL
+   ========================================================= */
+
+.epic-client-portal,
+.epic-client-portal * {
+    box-sizing: border-box;
+}
+
+.epic-client-portal {
+    width: 100%;
+    min-height: 100vh;
+
+    color: var(--epic-text);
+
+    font-family:
+        Inter,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Roboto,
+        Helvetica,
+        Arial,
+        sans-serif;
+
+    background:
+        radial-gradient(
+            circle at 90% 0%,
+            rgba(37, 99, 235, 0.045),
+            transparent 28%
+        ),
+        radial-gradient(
+            circle at 10% 80%,
+            rgba(6, 182, 212, 0.025),
+            transparent 25%
+        ),
+        var(--epic-bg);
+
+    -webkit-font-smoothing: antialiased;
+}
+
+
+/* =========================================================
+   MAIN APPLICATION
+   TWO COLUMN STRUCTURE PRESERVED
    ========================================================= */
 
 .epic-client-portal {
-    min-height: 100vh;
     display: flex;
-    background: #f4f7fb;
+    align-items: stretch;
 }
 
-/* =========================================================
-   SIDEBAR
-   ========================================================= */
-
-.epic-client-sidebar {
-    width: 260px;
-    min-width: 260px;
-    height: 100vh;
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 1000;
-}
 
 /* =========================================================
-   MAIN AREA
+   MAIN CONTENT COLUMN
    ========================================================= */
 
 .epic-client-main {
     flex: 1;
+
     min-width: 0;
+
     min-height: 100vh;
-    margin-left: 260px;
+
+    margin-left: var(--epic-sidebar-width);
+
     display: flex;
+
     flex-direction: column;
+
+    background:
+        linear-gradient(
+            180deg,
+            rgba(248, 250, 252, 0.72),
+            rgba(244, 247, 251, 0.96)
+        );
 }
+
 
 /* =========================================================
    HEADER
@@ -41,21 +138,864 @@
 
 .epic-client-header {
     width: 100%;
+
     min-height: 78px;
-    box-sizing: border-box;
+
+    padding: 0 32px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 24px;
+
+    background:
+        rgba(255, 255, 255, 0.88);
+
+    border-bottom:
+        1px solid var(--epic-border);
+
+    box-shadow:
+        0 1px 12px rgba(15, 23, 42, 0.025);
+
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+
+    position: sticky;
+
+    top: 0;
+
+    z-index: 20;
 }
 
+
 /* =========================================================
-   CONTENT
+   HEADER TITLE
+   ========================================================= */
+
+.epic-client-header-title {
+    min-width: 0;
+}
+
+.epic-client-header-label {
+    margin-bottom: 4px;
+
+    color: var(--epic-primary);
+
+    font-size: 10px;
+
+    font-weight: 800;
+
+    letter-spacing: 0.14em;
+
+    text-transform: uppercase;
+
+    opacity: 0.9;
+}
+
+.epic-client-header-title h1 {
+    margin: 0;
+
+    color: var(--epic-text);
+
+    font-size: 24px;
+
+    line-height: 1.25;
+
+    font-weight: 750;
+
+    letter-spacing: -0.025em;
+}
+
+
+/* =========================================================
+   HEADER USER
+   ========================================================= */
+
+.epic-client-header-user {
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+
+    flex-shrink: 0;
+
+    padding: 5px 7px 5px 5px;
+
+    border:
+        1px solid var(--epic-border-light);
+
+    border-radius: 30px;
+
+    background:
+        rgba(248, 250, 252, 0.75);
+}
+
+.epic-client-header-avatar {
+    width: 40px;
+
+    height: 40px;
+
+    border-radius: 50%;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    background:
+        linear-gradient(
+            135deg,
+            #2563eb 0%,
+            #1d4ed8 55%,
+            #06b6d4 120%
+        );
+
+    color: #ffffff;
+
+    font-size: 14px;
+
+    font-weight: 800;
+
+    box-shadow:
+        0 4px 14px rgba(37, 99, 235, 0.28);
+
+    border:
+        2px solid rgba(255, 255, 255, 0.9);
+}
+
+.epic-client-header-user-info {
+    display: flex;
+
+    flex-direction: column;
+
+    min-width: 0;
+
+    padding-right: 5px;
+}
+
+.epic-client-header-user-info strong {
+    color: var(--epic-text);
+
+    font-size: 13px;
+
+    font-weight: 700;
+
+    white-space: nowrap;
+
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+
+    max-width: 220px;
+}
+
+
+/* =========================================================
+   PAGE CONTENT
    ========================================================= */
 
 .epic-client-content {
-    width: 100%;
-    max-width: 100%;
-    box-sizing: border-box;
-    padding: 30px;
     flex: 1;
+
+    width: 100%;
+
+    max-width: 1440px;
+
+    margin: 0 auto;
+
+    padding:
+        32px 32px 42px;
+
+    overflow: visible;
 }
+
+
+/* =========================================================
+   DASHBOARD SECTION
+   ========================================================= */
+
+.epic-client-content > section {
+    width: 100%;
+}
+
+
+/* =========================================================
+   WELCOME BANNER
+   PREMIUM FUTURISTIC HERO
+   ========================================================= */
+
+.epic-client-welcome {
+    width: 100%;
+
+    min-height: 194px;
+
+    padding: 32px 34px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+    gap: 30px;
+
+    border:
+        1px solid rgba(255, 255, 255, 0.12);
+
+    border-radius:
+        var(--epic-radius-lg);
+
+    background:
+        linear-gradient(
+            120deg,
+            #0f2f72 0%,
+            #1747b5 42%,
+            #2563eb 76%,
+            #0891b2 130%
+        );
+
+    color: #ffffff;
+
+    box-shadow:
+        0 15px 40px rgba(23, 71, 181, 0.18);
+
+    position: relative;
+
+    overflow: hidden;
+}
+
+
+/* =========================================================
+   HERO GRID / LIGHT EFFECT
+   ========================================================= */
+
+.epic-client-welcome::before {
+    content: "";
+
+    position: absolute;
+
+    inset: 0;
+
+    background:
+        linear-gradient(
+            90deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.025) 50%,
+            transparent 100%
+        );
+
+    pointer-events: none;
+}
+
+
+/* =========================================================
+   HERO GLOW
+   ========================================================= */
+
+.epic-client-welcome::after {
+    content: "";
+
+    position: absolute;
+
+    width: 340px;
+
+    height: 340px;
+
+    right: -110px;
+
+    top: -150px;
+
+    border-radius: 50%;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(103, 232, 249, 0.22),
+            rgba(37, 99, 235, 0.06) 48%,
+            transparent 72%
+        );
+
+    pointer-events: none;
+}
+
+
+/* =========================================================
+   WELCOME TEXT
+   ========================================================= */
+
+.epic-client-welcome > div:first-child {
+    position: relative;
+
+    z-index: 2;
+}
+
+.epic-client-welcome > div:first-child > span {
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 7px;
+
+    margin-bottom: 9px;
+
+    color: #bae6fd;
+
+    font-size: 10px;
+
+    font-weight: 800;
+
+    letter-spacing: 0.15em;
+
+    text-transform: uppercase;
+}
+
+.epic-client-welcome > div:first-child > span::before {
+    content: "";
+
+    width: 6px;
+
+    height: 6px;
+
+    border-radius: 50%;
+
+    background: #67e8f9;
+
+    box-shadow:
+        0 0 10px rgba(103, 232, 249, 0.8);
+}
+
+.epic-client-welcome h2 {
+    margin: 0 0 8px;
+
+    color: #ffffff;
+
+    font-size: 30px;
+
+    line-height: 1.2;
+
+    font-weight: 750;
+
+    letter-spacing: -0.03em;
+}
+
+.epic-client-welcome p {
+    max-width: 620px;
+
+    margin: 0;
+
+    color: #dbeafe;
+
+    font-size: 14px;
+
+    line-height: 1.7;
+}
+
+
+/* =========================================================
+   VERIFIED ACCOUNT
+   GLASS PANEL
+   ========================================================= */
+
+.epic-client-status {
+    min-width: 235px;
+
+    padding: 15px 17px;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+
+    border:
+        1px solid rgba(255, 255, 255, 0.18);
+
+    border-radius: 13px;
+
+    background:
+        rgba(255, 255, 255, 0.105);
+
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.10),
+        0 8px 25px rgba(0, 0, 0, 0.08);
+
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+
+    position: relative;
+
+    z-index: 2;
+}
+
+.epic-client-status > span {
+    width: 38px;
+
+    height: 38px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    flex-shrink: 0;
+
+    border-radius: 11px;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(74, 222, 128, 0.24),
+            rgba(34, 197, 94, 0.12)
+        );
+
+    color: #86efac;
+
+    font-size: 17px;
+
+    font-weight: 800;
+
+    box-shadow:
+        inset 0 0 0 1px rgba(134, 239, 172, 0.15);
+}
+
+.epic-client-status div {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 3px;
+}
+
+.epic-client-status strong {
+    color: #ffffff;
+
+    font-size: 13px;
+
+    font-weight: 750;
+}
+
+.epic-client-status small {
+    color: #bfdbfe;
+
+    font-size: 11px;
+}
+
+
+/* =========================================================
+   OVERVIEW CARDS
+   ========================================================= */
+
+.epic-client-overview {
+    width: 100%;
+
+    margin-top: 24px;
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr));
+
+    gap: 20px;
+}
+
+
+/* =========================================================
+   INDIVIDUAL CARD
+   PREMIUM GLASS / SAAS STYLE
+   ========================================================= */
+
+.epic-client-card {
+    min-width: 0;
+
+    min-height: 185px;
+
+    padding: 24px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    justify-content: flex-start;
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(255, 255, 255, 0.98),
+            rgba(248, 250, 252, 0.96)
+        );
+
+    border:
+        1px solid var(--epic-border);
+
+    border-radius:
+        var(--epic-radius);
+
+    box-shadow:
+        var(--epic-shadow);
+
+    position: relative;
+
+    overflow: hidden;
+
+    transition:
+        transform 0.25s ease,
+        box-shadow 0.25s ease,
+        border-color 0.25s ease;
+}
+
+
+/* =========================================================
+   CARD TOP ACCENT
+   ========================================================= */
+
+.epic-client-card::before {
+    content: "";
+
+    position: absolute;
+
+    left: 0;
+
+    top: 0;
+
+    width: 100%;
+
+    height: 3px;
+
+    background:
+        linear-gradient(
+            90deg,
+            var(--epic-primary),
+            var(--epic-cyan)
+        );
+
+    opacity: 0.85;
+}
+
+
+/* =========================================================
+   CARD SOFT GLOW
+   ========================================================= */
+
+.epic-client-card::after {
+    content: "";
+
+    position: absolute;
+
+    width: 120px;
+
+    height: 120px;
+
+    right: -60px;
+
+    bottom: -65px;
+
+    border-radius: 50%;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(37, 99, 235, 0.08),
+            transparent 70%
+        );
+
+    pointer-events: none;
+}
+
+
+/* =========================================================
+   CARD HOVER
+   ========================================================= */
+
+.epic-client-card:hover {
+    transform:
+        translateY(-4px);
+
+    border-color:
+        rgba(37, 99, 235, 0.18);
+
+    box-shadow:
+        var(--epic-shadow-hover);
+}
+
+
+/* =========================================================
+   CARD LABEL
+   ========================================================= */
+
+.epic-client-card-label {
+    margin-bottom: 14px;
+
+    color: var(--epic-primary);
+
+    font-size: 10px;
+
+    font-weight: 800;
+
+    letter-spacing: 0.13em;
+
+    text-transform: uppercase;
+}
+
+
+/* =========================================================
+   CARD TITLE
+   ========================================================= */
+
+.epic-client-card h3 {
+    margin: 0 0 20px;
+
+    color: var(--epic-text);
+
+    font-size: 20px;
+
+    line-height: 1.35;
+
+    font-weight: 750;
+
+    letter-spacing: -0.02em;
+
+    word-break: break-word;
+}
+
+
+/* =========================================================
+   CARD DESCRIPTION
+   ========================================================= */
+
+.epic-client-card p {
+    margin: auto 0 5px;
+
+    color: var(--epic-text-muted);
+
+    font-size: 11px;
+
+    font-weight: 600;
+
+    letter-spacing: 0.01em;
+}
+
+
+/* =========================================================
+   CARD VALUE
+   ========================================================= */
+
+.epic-client-card strong {
+    color: var(--epic-text-secondary);
+
+    font-size: 14px;
+
+    font-weight: 650;
+
+    word-break: break-word;
+}
+
+
+/* =========================================================
+   PAGE PLACEHOLDER
+   ========================================================= */
+
+.epic-client-page-placeholder {
+    width: 100%;
+
+    min-height: 420px;
+
+    padding: 50px 30px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    justify-content: center;
+
+    text-align: center;
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(255, 255, 255, 0.98),
+            rgba(248, 250, 252, 0.95)
+        );
+
+    border:
+        1px solid var(--epic-border);
+
+    border-radius:
+        var(--epic-radius-lg);
+
+    box-shadow:
+        var(--epic-shadow);
+
+    position: relative;
+
+    overflow: hidden;
+}
+
+
+/* =========================================================
+   PLACEHOLDER DECORATIVE GLOW
+   ========================================================= */
+
+.epic-client-page-placeholder::before {
+    content: "";
+
+    position: absolute;
+
+    width: 260px;
+
+    height: 260px;
+
+    top: -150px;
+
+    right: -100px;
+
+    border-radius: 50%;
+
+    background:
+        radial-gradient(
+            circle,
+            rgba(37, 99, 235, 0.08),
+            transparent 70%
+        );
+
+    pointer-events: none;
+}
+
+
+/* =========================================================
+   PLACEHOLDER ICON
+   ========================================================= */
+
+.epic-client-placeholder-icon {
+    width: 66px;
+
+    height: 66px;
+
+    margin-bottom: 20px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    border:
+        1px solid rgba(37, 99, 235, 0.12);
+
+    border-radius: 17px;
+
+    background:
+        linear-gradient(
+            145deg,
+            #eff6ff,
+            #e0f2fe
+        );
+
+    color: var(--epic-primary);
+
+    font-size: 27px;
+
+    font-weight: 700;
+
+    box-shadow:
+        0 8px 20px rgba(37, 99, 235, 0.10);
+}
+
+
+/* =========================================================
+   PLACEHOLDER TITLE
+   ========================================================= */
+
+.epic-client-page-placeholder h2 {
+    margin: 0 0 10px;
+
+    color: var(--epic-text);
+
+    font-size: 24px;
+
+    font-weight: 750;
+
+    letter-spacing: -0.025em;
+}
+
+
+/* =========================================================
+   PLACEHOLDER TEXT
+   ========================================================= */
+
+.epic-client-page-placeholder p {
+    max-width: 520px;
+
+    margin: 0 0 24px;
+
+    color: var(--epic-text-muted);
+
+    font-size: 14px;
+
+    line-height: 1.7;
+}
+
+
+/* =========================================================
+   BUTTON
+   ========================================================= */
+
+.epic-client-page-placeholder button {
+    min-height: 42px;
+
+    padding: 0 19px;
+
+    border:
+        1px solid rgba(37, 99, 235, 0.12);
+
+    border-radius: 9px;
+
+    background:
+        linear-gradient(
+            135deg,
+            var(--epic-primary),
+            #1d4ed8
+        );
+
+    color: #ffffff;
+
+    font-size: 13px;
+
+    font-weight: 650;
+
+    cursor: pointer;
+
+    box-shadow:
+        0 5px 15px rgba(37, 99, 235, 0.18);
+
+    transition:
+        background 0.2s ease,
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.epic-client-page-placeholder button:hover {
+    background:
+        linear-gradient(
+            135deg,
+            #1d4ed8,
+            #1747b5
+        );
+
+    transform:
+        translateY(-2px);
+
+    box-shadow:
+        0 8px 20px rgba(37, 99, 235, 0.25);
+}
+
 
 /* =========================================================
    FOOTER
@@ -63,46 +1003,617 @@
 
 .epic-client-footer {
     width: 100%;
-    box-sizing: border-box;
+
+    min-height: 64px;
+
+    padding:
+        18px 32px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: flex-start;
+
+    gap: 10px;
+
+    background:
+        rgba(255, 255, 255, 0.82);
+
+    border-top:
+        1px solid var(--epic-border);
+
+    color: var(--epic-text-muted);
+
+    font-size: 11px;
+
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
 }
+
+.epic-client-footer strong {
+    color: var(--epic-primary);
+
+    font-size: 13px;
+
+    font-weight: 850;
+
+    letter-spacing: 0.04em;
+}
+
+.epic-client-footer span {
+    color: var(--epic-text-muted);
+}
+
+.epic-client-footer span:last-child {
+    margin-left: auto;
+
+    color: var(--epic-text-light);
+}
+
 
 /* =========================================================
-   RESPONSIVE
+   LOADING PAGE
    ========================================================= */
 
-@media (max-width: 900px) {
+.epic-portal-loading {
+    width: 100%;
 
-    .epic-client-sidebar {
-        width: 220px;
-        min-width: 220px;
-    }
+    min-height: 100vh;
 
-    .epic-client-main {
-        margin-left: 220px;
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    padding: 30px;
+
+    background:
+        radial-gradient(
+            circle at 50% 40%,
+            rgba(37, 99, 235, 0.08),
+            transparent 32%
+        ),
+        #f4f7fb;
+}
+
+
+/* =========================================================
+   LOADING CARD
+   ========================================================= */
+
+.epic-loading-card {
+    width: 100%;
+
+    max-width: 420px;
+
+    padding: 44px 34px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    text-align: center;
+
+    background:
+        rgba(255, 255, 255, 0.96);
+
+    border:
+        1px solid var(--epic-border);
+
+    border-radius: 18px;
+
+    box-shadow:
+        0 20px 50px rgba(15, 23, 42, 0.09);
+
+    backdrop-filter: blur(15px);
+}
+
+
+/* =========================================================
+   LOADING LOGO
+   ========================================================= */
+
+.epic-loading-logo {
+    width: 60px;
+
+    height: 60px;
+
+    margin-bottom: 22px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    border-radius: 16px;
+
+    background:
+        linear-gradient(
+            135deg,
+            #1747b5,
+            #2563eb,
+            #06b6d4
+        );
+
+    color: #ffffff;
+
+    font-size: 25px;
+
+    font-weight: 850;
+
+    box-shadow:
+        0 10px 25px rgba(37, 99, 235, 0.28);
+}
+
+
+/* =========================================================
+   LOADING SPINNER
+   ========================================================= */
+
+.epic-loading-spinner {
+    width: 34px;
+
+    height: 34px;
+
+    margin-bottom: 22px;
+
+    border:
+        3px solid #dbeafe;
+
+    border-top-color:
+        var(--epic-primary);
+
+    border-right-color:
+        var(--epic-cyan);
+
+    border-radius: 50%;
+
+    animation:
+        epicSpin 0.8s linear infinite;
+}
+
+@keyframes epicSpin {
+
+    to {
+        transform: rotate(360deg);
     }
 
 }
 
-@media (max-width: 700px) {
 
-    .epic-client-sidebar {
-        position: relative;
-        width: 100%;
-        min-width: 100%;
-        height: auto;
+/* =========================================================
+   LOADING TEXT
+   ========================================================= */
+
+.epic-loading-card h2 {
+    margin: 0 0 8px;
+
+    color: var(--epic-text);
+
+    font-size: 20px;
+
+    font-weight: 750;
+}
+
+.epic-loading-card p {
+    margin: 0;
+
+    color: var(--epic-text-muted);
+
+    font-size: 13px;
+
+    line-height: 1.6;
+}
+
+
+/* =========================================================
+   ERROR PAGE
+   ========================================================= */
+
+.epic-portal-error-page {
+    width: 100%;
+
+    min-height: 100vh;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    padding: 30px;
+
+    background:
+        radial-gradient(
+            circle at 50% 40%,
+            rgba(220, 38, 38, 0.045),
+            transparent 32%
+        ),
+        #f4f7fb;
+}
+
+
+/* =========================================================
+   ERROR CARD
+   ========================================================= */
+
+.epic-portal-error-card {
+    width: 100%;
+
+    max-width: 460px;
+
+    padding: 44px 34px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    text-align: center;
+
+    background:
+        rgba(255, 255, 255, 0.97);
+
+    border:
+        1px solid rgba(220, 38, 38, 0.15);
+
+    border-radius: 18px;
+
+    box-shadow:
+        0 20px 50px rgba(15, 23, 42, 0.08);
+}
+
+
+/* =========================================================
+   ERROR ICON
+   ========================================================= */
+
+.epic-error-icon {
+    width: 58px;
+
+    height: 58px;
+
+    margin-bottom: 18px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    border:
+        1px solid rgba(220, 38, 38, 0.12);
+
+    border-radius: 15px;
+
+    background:
+        linear-gradient(
+            145deg,
+            #fef2f2,
+            #fff1f2
+        );
+
+    color: var(--epic-danger);
+
+    font-size: 23px;
+
+    font-weight: 850;
+}
+
+
+/* =========================================================
+   ERROR BRAND
+   ========================================================= */
+
+.epic-error-brand {
+    margin-bottom: 8px;
+
+    color: var(--epic-primary);
+
+    font-size: 12px;
+
+    font-weight: 850;
+
+    letter-spacing: 0.14em;
+}
+
+
+/* =========================================================
+   ERROR TITLE
+   ========================================================= */
+
+.epic-portal-error-card h2 {
+    margin: 0 0 10px;
+
+    color: var(--epic-text);
+
+    font-size: 22px;
+
+    font-weight: 750;
+}
+
+
+/* =========================================================
+   ERROR MESSAGE
+   ========================================================= */
+
+.epic-portal-error-card p {
+    margin: 0 0 24px;
+
+    color: var(--epic-text-muted);
+
+    font-size: 13px;
+
+    line-height: 1.7;
+}
+
+
+/* =========================================================
+   ERROR BUTTON
+   ========================================================= */
+
+.epic-error-button {
+    min-height: 42px;
+
+    padding: 0 21px;
+
+    border:
+        1px solid rgba(37, 99, 235, 0.12);
+
+    border-radius: 9px;
+
+    background:
+        linear-gradient(
+            135deg,
+            var(--epic-primary),
+            #1d4ed8
+        );
+
+    color: #ffffff;
+
+    font-size: 13px;
+
+    font-weight: 650;
+
+    cursor: pointer;
+
+    box-shadow:
+        0 5px 15px rgba(37, 99, 235, 0.18);
+
+    transition:
+        background 0.2s ease,
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.epic-error-button:hover {
+    background:
+        linear-gradient(
+            135deg,
+            #1d4ed8,
+            #1747b5
+        );
+
+    transform:
+        translateY(-2px);
+
+    box-shadow:
+        0 8px 20px rgba(37, 99, 235, 0.25);
+}
+
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (max-width: 1100px) {
+
+    :root {
+        --epic-sidebar-width: 230px;
     }
 
-    .epic-client-main {
-        margin-left: 0;
-        width: 100%;
-    }
-
-    .epic-client-portal {
-        flex-direction: column;
+    .epic-client-header {
+        padding: 0 24px;
     }
 
     .epic-client-content {
-        padding: 20px;
+        padding: 26px 24px 36px;
+    }
+
+    .epic-client-overview {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 768px) {
+
+    .epic-client-main {
+        margin-left: 0;
+
+        width: 100%;
+
+        min-height: 100vh;
+    }
+
+    .epic-client-header {
+        min-height: 70px;
+
+        padding:
+            13px 18px;
+
+        position: relative;
+    }
+
+    .epic-client-header-label {
+        font-size: 9px;
+
+        letter-spacing: 0.11em;
+    }
+
+    .epic-client-header-title h1 {
+        font-size: 20px;
+    }
+
+    .epic-client-header-user-info {
+        display: none;
+    }
+
+    .epic-client-header-user {
+        padding: 3px;
+    }
+
+    .epic-client-header-avatar {
+        width: 38px;
+
+        height: 38px;
+    }
+
+    .epic-client-content {
+        padding:
+            20px 16px 30px;
+    }
+
+    .epic-client-welcome {
+        padding: 25px;
+
+        flex-direction: column;
+
+        align-items: flex-start;
+
+        min-height: auto;
+
+        gap: 22px;
+
+        border-radius: 15px;
+    }
+
+    .epic-client-welcome h2 {
+        font-size: 25px;
+    }
+
+    .epic-client-status {
+        width: 100%;
+
+        min-width: 0;
+    }
+
+    .epic-client-overview {
+        grid-template-columns: 1fr;
+
+        gap: 15px;
+    }
+
+    .epic-client-card {
+        min-height: 165px;
+
+        padding: 21px;
+    }
+
+    .epic-client-footer {
+        padding:
+            16px 18px;
+
+        flex-wrap: wrap;
+    }
+
+    .epic-client-footer span:last-child {
+        margin-left: 0;
+
+        width: 100%;
+    }
+
+}
+
+
+/* =========================================================
+   SMALL MOBILE
+   ========================================================= */
+
+@media (max-width: 480px) {
+
+    .epic-client-header {
+        padding:
+            12px 14px;
+    }
+
+    .epic-client-content {
+        padding:
+            16px 12px 24px;
+    }
+
+    .epic-client-welcome {
+        padding: 21px;
+
+        border-radius: 13px;
+    }
+
+    .epic-client-welcome h2 {
+        font-size: 22px;
+    }
+
+    .epic-client-welcome p {
+        font-size: 13px;
+    }
+
+    .epic-client-card h3 {
+        font-size: 18px;
+    }
+
+    .epic-client-page-placeholder {
+        min-height: 360px;
+
+        padding:
+            35px 20px;
+    }
+
+}
+
+
+/* =========================================================
+   ACCESSIBILITY
+   ========================================================= */
+
+.epic-client-main button,
+.epic-client-main a {
+    -webkit-tap-highlight-color: transparent;
+}
+
+.epic-client-main button:focus-visible,
+.epic-client-main a:focus-visible {
+    outline:
+        3px solid rgba(37, 99, 235, 0.25);
+
+    outline-offset: 2px;
+}
+
+
+/* =========================================================
+   REDUCED MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .epic-client-card,
+    .epic-client-page-placeholder button,
+    .epic-error-button {
+        transition: none;
+    }
+
+    .epic-loading-spinner {
+        animation: none;
     }
 
 }
