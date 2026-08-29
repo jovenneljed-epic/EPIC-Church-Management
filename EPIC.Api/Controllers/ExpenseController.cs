@@ -1,5 +1,7 @@
-﻿using EPIC.Api.Data;
+﻿
+using EPIC.Api.Data;
 using EPIC.Api.Models;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -25,8 +27,27 @@ namespace EPIC.Api.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Expense>>> GetExpenses()
         {
-            var expenses = await _context.Expenses
+            var query = _context.Expenses
                 .AsNoTracking()
+                .AsQueryable();
+
+            if (IsClientAccount())
+            {
+                var customerId = GetCustomerId();
+
+                if (!customerId.HasValue)
+                {
+                    return Unauthorized(new
+                    {
+                        message = "CUSTOMER ID NOT FOUND IN CLIENT TOKEN."
+                    });
+                }
+
+                query = query.Where(e =>
+                    e.CustomerId == customerId.Value);
+            }
+
+            var expenses = await query
                 .OrderByDescending(e => e.ExpenseDate)
                 .ThenByDescending(e => e.ExpenseId)
                 .ToListAsync();
@@ -41,9 +62,29 @@ namespace EPIC.Api.Controllers
         [HttpGet("{id:int}")]
         public async Task<ActionResult<Expense>> GetExpense(int id)
         {
-            var expense = await _context.Expenses
+            var query = _context.Expenses
                 .AsNoTracking()
-                .FirstOrDefaultAsync(e => e.ExpenseId == id);
+                .AsQueryable();
+
+            if (IsClientAccount())
+            {
+                var customerId = GetCustomerId();
+
+                if (!customerId.HasValue)
+                {
+                    return Unauthorized(new
+                    {
+                        message = "CUSTOMER ID NOT FOUND IN CLIENT TOKEN."
+                    });
+                }
+
+                query = query.Where(e =>
+                    e.CustomerId == customerId.Value);
+            }
+
+            var expense = await query
+                .FirstOrDefaultAsync(e =>
+                    e.ExpenseId == id);
 
             if (expense == null)
             {
@@ -69,61 +110,93 @@ namespace EPIC.Api.Controllers
             var monthStart = new DateTime(
                 today.Year,
                 today.Month,
-                1
-            );
+                1);
 
             var nextMonth = monthStart.AddMonths(1);
 
+            var query = _context.Expenses
+                .AsNoTracking()
+                .AsQueryable();
+
+            // =========================================================
+            // CLIENT TENANT FILTER
+            // =========================================================
+
+            if (IsClientAccount())
+            {
+                var customerId = GetCustomerId();
+
+                if (!customerId.HasValue)
+                {
+                    return Unauthorized(new
+                    {
+                        message =
+                            "CUSTOMER ID NOT FOUND IN CLIENT TOKEN."
+                    });
+                }
+
+                query = query.Where(e =>
+                    e.CustomerId == customerId.Value);
+            }
+
+            // =========================================================
+            // TOTAL EXPENSES
+            // =========================================================
+
             var totalExpenses =
-                await _context.Expenses
-                    .AsNoTracking()
+                await query
                     .SumAsync(e => (decimal?)e.Amount)
                 ?? 0m;
+
+            // =========================================================
+            // TODAY'S EXPENSES
+            // =========================================================
 
             var todayExpenses =
-                await _context.Expenses
-                    .AsNoTracking()
+                await query
                     .Where(e =>
                         e.ExpenseDate >= today &&
-                        e.ExpenseDate < tomorrow
-                    )
+                        e.ExpenseDate < tomorrow)
                     .SumAsync(e => (decimal?)e.Amount)
                 ?? 0m;
+
+            // =========================================================
+            // MONTHLY EXPENSES
+            // =========================================================
 
             var monthlyExpenses =
-                await _context.Expenses
-                    .AsNoTracking()
+                await query
                     .Where(e =>
                         e.ExpenseDate >= monthStart &&
-                        e.ExpenseDate < nextMonth
-                    )
+                        e.ExpenseDate < nextMonth)
                     .SumAsync(e => (decimal?)e.Amount)
                 ?? 0m;
 
+            // =========================================================
+            // RECORD COUNTS
+            // =========================================================
+
             var totalRecords =
-                await _context.Expenses
-                    .AsNoTracking()
-                    .CountAsync();
+                await query.CountAsync();
 
             var todayRecords =
-                await _context.Expenses
-                    .AsNoTracking()
+                await query
                     .CountAsync(e =>
                         e.ExpenseDate >= today &&
-                        e.ExpenseDate < tomorrow
-                    );
+                        e.ExpenseDate < tomorrow);
 
             var monthlyRecords =
-                await _context.Expenses
-                    .AsNoTracking()
+                await query
                     .CountAsync(e =>
                         e.ExpenseDate >= monthStart &&
-                        e.ExpenseDate < nextMonth
-                    );
+                        e.ExpenseDate < nextMonth);
+
+            // =========================================================
+            // CATEGORY BREAKDOWN
+            // =========================================================
 
             var categoryBreakdown =
-                await _context.Expenses
-                    .AsNoTracking()
+                await query
                     .GroupBy(e => e.Category)
                     .Select(g => new
                     {
@@ -133,6 +206,10 @@ namespace EPIC.Api.Controllers
                     })
                     .OrderByDescending(x => x.total)
                     .ToListAsync();
+
+            // =========================================================
+            // RESPONSE
+            // =========================================================
 
             return Ok(new
             {
@@ -164,6 +241,10 @@ namespace EPIC.Api.Controllers
                 });
             }
 
+            // =========================================================
+            // VALIDATION
+            // =========================================================
+
             if (string.IsNullOrWhiteSpace(expense.Category))
             {
                 return BadRequest(new
@@ -184,9 +265,68 @@ namespace EPIC.Api.Controllers
             {
                 return BadRequest(new
                 {
-                    message = "Expense amount must be greater than zero."
+                    message =
+                        "Expense amount must be greater than zero."
                 });
             }
+
+            // =========================================================
+            // CUSTOMER ID
+            // =========================================================
+
+            if (IsClientAccount())
+            {
+                var customerId = GetCustomerId();
+
+                if (!customerId.HasValue)
+                {
+                    return Unauthorized(new
+                    {
+                        message =
+                            "CUSTOMER ID NOT FOUND IN CLIENT TOKEN."
+                    });
+                }
+
+                // NEVER TRUST CUSTOMER ID FROM THE FRONTEND.
+                // Always use the authenticated client's customer.
+                expense.CustomerId = customerId.Value;
+            }
+            else
+            {
+                // ADMIN behavior.
+                //
+                // If CustomerId was supplied, preserve it.
+                // If not supplied, use CustomerId 1 for the
+                // current single-church installation.
+
+                if (expense.CustomerId <= 0)
+                {
+                    expense.CustomerId = 1;
+                }
+            }
+
+            // =========================================================
+            // VERIFY CUSTOMER EXISTS
+            // =========================================================
+
+            var customerExists =
+                await _context.Customers
+                    .AsNoTracking()
+                    .AnyAsync(c =>
+                        c.CustomerId ==
+                        expense.CustomerId);
+
+            if (!customerExists)
+            {
+                return BadRequest(new
+                {
+                    message = "CUSTOMER NOT FOUND."
+                });
+            }
+
+            // =========================================================
+            // DEFAULTS / NORMALIZATION
+            // =========================================================
 
             if (expense.ExpenseDate == default)
             {
@@ -194,29 +334,44 @@ namespace EPIC.Api.Controllers
             }
 
             expense.Category =
-                expense.Category.Trim().ToUpperInvariant();
+                expense.Category
+                    .Trim()
+                    .ToUpperInvariant();
 
             expense.Description =
                 expense.Description.Trim();
 
             expense.PaymentMethod =
-                string.IsNullOrWhiteSpace(expense.PaymentMethod)
+                string.IsNullOrWhiteSpace(
+                    expense.PaymentMethod)
                     ? "CASH"
-                    : expense.PaymentMethod.Trim().ToUpperInvariant();
+                    : expense.PaymentMethod
+                        .Trim()
+                        .ToUpperInvariant();
 
             expense.ReferenceNumber =
                 expense.ReferenceNumber?.Trim();
 
             expense.RecordedBy =
-                string.IsNullOrWhiteSpace(expense.RecordedBy)
+                string.IsNullOrWhiteSpace(
+                    expense.RecordedBy)
                     ? User.Identity?.Name ?? "SYSTEM"
                     : expense.RecordedBy.Trim();
 
-            expense.RecordedDate = DateTime.Now;
+            expense.RecordedDate =
+                DateTime.Now;
+
+            // =========================================================
+            // SAVE
+            // =========================================================
 
             _context.Expenses.Add(expense);
 
             await _context.SaveChangesAsync();
+
+            // =========================================================
+            // RESPONSE
+            // =========================================================
 
             return CreatedAtAction(
                 nameof(GetExpense),
@@ -224,8 +379,7 @@ namespace EPIC.Api.Controllers
                 {
                     id = expense.ExpenseId
                 },
-                expense
-            );
+                expense);
         }
 
         // ============================================================
@@ -245,19 +399,9 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            var expense =
-                await _context.Expenses
-                    .FirstOrDefaultAsync(
-                        e => e.ExpenseId == id
-                    );
-
-            if (expense == null)
-            {
-                return NotFound(new
-                {
-                    message = "Expense not found."
-                });
-            }
+            // =========================================================
+            // VALIDATION
+            // =========================================================
 
             if (string.IsNullOrWhiteSpace(
                 updatedExpense.Category))
@@ -286,6 +430,55 @@ namespace EPIC.Api.Controllers
                 });
             }
 
+            // =========================================================
+            // LOAD EXPENSE
+            // =========================================================
+
+            var query = _context.Expenses
+                .AsQueryable();
+
+            // =========================================================
+            // CLIENT TENANT FILTER
+            // =========================================================
+
+            if (IsClientAccount())
+            {
+                var customerId = GetCustomerId();
+
+                if (!customerId.HasValue)
+                {
+                    return Unauthorized(new
+                    {
+                        message =
+                            "CUSTOMER ID NOT FOUND IN CLIENT TOKEN."
+                    });
+                }
+
+                query = query.Where(e =>
+                    e.CustomerId == customerId.Value);
+            }
+
+            // =========================================================
+            // FIND EXPENSE
+            // =========================================================
+
+            var expense =
+                await query
+                    .FirstOrDefaultAsync(e =>
+                        e.ExpenseId == id);
+
+            if (expense == null)
+            {
+                return NotFound(new
+                {
+                    message = "Expense not found."
+                });
+            }
+
+            // =========================================================
+            // UPDATE
+            // =========================================================
+
             expense.Category =
                 updatedExpense.Category
                     .Trim()
@@ -297,8 +490,11 @@ namespace EPIC.Api.Controllers
             expense.Amount =
                 updatedExpense.Amount;
 
-            expense.ExpenseDate =
-                updatedExpense.ExpenseDate;
+            if (updatedExpense.ExpenseDate != default)
+            {
+                expense.ExpenseDate =
+                    updatedExpense.ExpenseDate;
+            }
 
             expense.PaymentMethod =
                 string.IsNullOrWhiteSpace(
@@ -310,6 +506,14 @@ namespace EPIC.Api.Controllers
 
             expense.ReferenceNumber =
                 updatedExpense.ReferenceNumber?.Trim();
+
+            // =========================================================
+            // IMPORTANT
+            //
+            // CustomerId is NEVER changed during an update.
+            // This prevents an expense from being transferred
+            // between customers through the API.
+            // =========================================================
 
             await _context.SaveChangesAsync();
 
@@ -323,11 +527,42 @@ namespace EPIC.Api.Controllers
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> DeleteExpense(int id)
         {
+            // =========================================================
+            // LOAD EXPENSE QUERY
+            // =========================================================
+
+            var query = _context.Expenses
+                .AsQueryable();
+
+            // =========================================================
+            // CLIENT TENANT FILTER
+            // =========================================================
+
+            if (IsClientAccount())
+            {
+                var customerId = GetCustomerId();
+
+                if (!customerId.HasValue)
+                {
+                    return Unauthorized(new
+                    {
+                        message =
+                            "CUSTOMER ID NOT FOUND IN CLIENT TOKEN."
+                    });
+                }
+
+                query = query.Where(e =>
+                    e.CustomerId == customerId.Value);
+            }
+
+            // =========================================================
+            // FIND EXPENSE
+            // =========================================================
+
             var expense =
-                await _context.Expenses
-                    .FirstOrDefaultAsync(
-                        e => e.ExpenseId == id
-                    );
+                await query
+                    .FirstOrDefaultAsync(e =>
+                        e.ExpenseId == id);
 
             if (expense == null)
             {
@@ -337,14 +572,96 @@ namespace EPIC.Api.Controllers
                 });
             }
 
+            // =========================================================
+            // DELETE
+            // =========================================================
+
             _context.Expenses.Remove(expense);
 
             await _context.SaveChangesAsync();
 
             return Ok(new
             {
-                message = "Expense deleted successfully."
+                message =
+                    "Expense deleted successfully."
             });
+        }
+
+        // ============================================================
+        // GET CUSTOMER ID FROM JWT
+        // ============================================================
+
+        private int? GetCustomerId()
+        {
+            // =========================================================
+            // PRIMARY CLAIM
+            // =========================================================
+
+            var claim =
+                User.FindFirst("customerId");
+
+            if (claim != null &&
+                int.TryParse(
+                    claim.Value,
+                    out var customerId))
+            {
+                return customerId;
+            }
+
+            // =========================================================
+            // COMPATIBILITY CLAIM
+            // =========================================================
+
+            claim =
+                User.FindFirst("CustomerId");
+
+            if (claim != null &&
+                int.TryParse(
+                    claim.Value,
+                    out customerId))
+            {
+                return customerId;
+            }
+
+            // =========================================================
+            // TENANT CLAIM
+            // =========================================================
+
+            claim =
+                User.FindFirst("tenantId");
+
+            if (claim != null &&
+                int.TryParse(
+                    claim.Value,
+                    out customerId))
+            {
+                return customerId;
+            }
+
+            return null;
+        }
+
+        // ============================================================
+        // CHECK CLIENT ACCOUNT
+        // ============================================================
+
+        private bool IsClientAccount()
+        {
+            // ASP.NET Core role claim
+            if (User.IsInRole("CLIENT"))
+            {
+                return true;
+            }
+
+            // Explicit role claim compatibility
+            var roleClaim =
+                User.FindFirst("role")?.Value;
+
+            return string.Equals(
+                roleClaim?.Trim(),
+                "CLIENT",
+                StringComparison.OrdinalIgnoreCase);
         }
     }
 }
+

@@ -1,4 +1,5 @@
-﻿using EPIC.Api.Models;
+﻿
+using EPIC.Api.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace EPIC.Api.Data
@@ -97,8 +98,10 @@ namespace EPIC.Api.Data
 
             ConfigureUsers(modelBuilder);
             ConfigureMembers(modelBuilder);
+
             ConfigureRoles(modelBuilder);
             ConfigurePermissions(modelBuilder);
+
             ConfigureClientRoles(modelBuilder);
             ConfigureClientPermissions(modelBuilder);
 
@@ -109,9 +112,12 @@ namespace EPIC.Api.Data
             ConfigureAttendance(modelBuilder);
             ConfigureVisitorAttendance(modelBuilder);
             ConfigureVisitors(modelBuilder);
-            ConfigureGiving(modelBuilder);
 
+            ConfigureExpenses(modelBuilder);
+            ConfigureIncome(modelBuilder);
+            ConfigureGiving(modelBuilder);
             ConfigureChurchServices(modelBuilder);
+
             ConfigureMinistries(modelBuilder);
             ConfigureMinistryMembers(modelBuilder);
             ConfigureMinistryPerformance(modelBuilder);
@@ -121,6 +127,7 @@ namespace EPIC.Api.Data
             ConfigureDemoRequests(modelBuilder);
             ConfigureCustomers(modelBuilder);
             ConfigureClientMembers(modelBuilder);
+
             ConfigureSubscriptionPlans(modelBuilder);
             ConfigureSubscriptions(modelBuilder);
             ConfigurePayments(modelBuilder);
@@ -432,33 +439,20 @@ namespace EPIC.Api.Data
             });
         }
 
-        
-// =========================================================
-// EVENTS
-// =========================================================
+        // =========================================================
+        // EVENTS
+        // =========================================================
 
-private static void ConfigureEvents(ModelBuilder modelBuilder)
+        private static void ConfigureEvents(ModelBuilder modelBuilder)
         {
-            // =========================================================
-            // EVENT
-            // =========================================================
-
             modelBuilder.Entity<Event>(entity =>
             {
                 entity.HasKey(e => e.EventId);
-
-                // -----------------------------------------------------
-                // CUSTOMER / TENANT
-                // -----------------------------------------------------
 
                 entity.HasOne(e => e.Customer)
                     .WithMany()
                     .HasForeignKey(e => e.CustomerId)
                     .OnDelete(DeleteBehavior.Restrict);
-
-                // -----------------------------------------------------
-                // EVENT INFORMATION
-                // -----------------------------------------------------
 
                 entity.Property(e => e.Title)
                     .HasMaxLength(200)
@@ -477,10 +471,6 @@ private static void ConfigureEvents(ModelBuilder modelBuilder)
                 entity.Property(e => e.EndTime)
                     .IsRequired(false);
 
-                // -----------------------------------------------------
-                // LOCATION / LEADERSHIP
-                // -----------------------------------------------------
-
                 entity.Property(e => e.Venue)
                     .HasMaxLength(200);
 
@@ -490,26 +480,14 @@ private static void ConfigureEvents(ModelBuilder modelBuilder)
                 entity.Property(e => e.Ministry)
                     .HasMaxLength(150);
 
-                // -----------------------------------------------------
-                // STATUS
-                // -----------------------------------------------------
-
                 entity.Property(e => e.Status)
                     .HasMaxLength(50)
                     .IsRequired()
                     .HasDefaultValue("SCHEDULED");
 
-                // -----------------------------------------------------
-                // DESCRIPTION / NOTES
-                // -----------------------------------------------------
-
                 entity.Property(e => e.Description);
 
                 entity.Property(e => e.Notes);
-
-                // -----------------------------------------------------
-                // AUDIT
-                // -----------------------------------------------------
 
                 entity.Property(e => e.CreatedAt)
                     .IsRequired();
@@ -517,16 +495,9 @@ private static void ConfigureEvents(ModelBuilder modelBuilder)
                 entity.Property(e => e.UpdatedAt)
                     .IsRequired(false);
 
-                // -----------------------------------------------------
-                // INDEXES
-                // -----------------------------------------------------
-
                 entity.HasIndex(e => e.CustomerId);
-
                 entity.HasIndex(e => e.EventDate);
-
                 entity.HasIndex(e => e.EventType);
-
                 entity.HasIndex(e => e.Status);
 
                 entity.HasIndex(e => new
@@ -536,36 +507,23 @@ private static void ConfigureEvents(ModelBuilder modelBuilder)
                 });
             });
 
-
-            // =========================================================
+            // =====================================================
             // EVENT DEPARTMENT
-            // =========================================================
+            // =====================================================
 
             modelBuilder.Entity<EventDepartment>(entity =>
             {
                 entity.HasKey(e => e.EventDepartmentId);
-
-                // -----------------------------------------------------
-                // EVENT
-                // -----------------------------------------------------
 
                 entity.HasOne(e => e.Event)
                     .WithMany(e => e.EventDepartments)
                     .HasForeignKey(e => e.EventId)
                     .OnDelete(DeleteBehavior.Cascade);
 
-                // -----------------------------------------------------
-                // DEPARTMENT HEAD
-                // -----------------------------------------------------
-
                 entity.HasOne(e => e.DepartmentHeadMember)
                     .WithMany()
                     .HasForeignKey(e => e.DepartmentHeadMemberId)
                     .OnDelete(DeleteBehavior.Restrict);
-
-                // -----------------------------------------------------
-                // DEPARTMENT INFORMATION
-                // -----------------------------------------------------
 
                 entity.Property(e => e.DepartmentName)
                     .HasMaxLength(150)
@@ -574,27 +532,15 @@ private static void ConfigureEvents(ModelBuilder modelBuilder)
                 entity.Property(e => e.DepartmentDescription)
                     .HasMaxLength(500);
 
-                // -----------------------------------------------------
-                // PRIORITY
-                // -----------------------------------------------------
-
                 entity.Property(e => e.Priority)
                     .HasMaxLength(20)
                     .IsRequired()
                     .HasDefaultValue("NORMAL");
 
-                // -----------------------------------------------------
-                // STATUS
-                // -----------------------------------------------------
-
                 entity.Property(e => e.Status)
                     .HasMaxLength(30)
                     .IsRequired()
                     .HasDefaultValue("PLANNING");
-
-                // -----------------------------------------------------
-                // AUDIT
-                // -----------------------------------------------------
 
                 entity.Property(e => e.CreatedAt)
                     .IsRequired();
@@ -602,20 +548,11 @@ private static void ConfigureEvents(ModelBuilder modelBuilder)
                 entity.Property(e => e.UpdatedAt)
                     .IsRequired(false);
 
-                // -----------------------------------------------------
-                // INDEXES
-                // -----------------------------------------------------
-
                 entity.HasIndex(e => e.EventId);
-
                 entity.HasIndex(e => e.DepartmentHeadMemberId);
-
                 entity.HasIndex(e => e.Status);
-
                 entity.HasIndex(e => e.Priority);
 
-                // Prevent duplicate department names
-                // within the same event.
                 entity.HasIndex(e => new
                 {
                     e.EventId,
@@ -624,27 +561,18 @@ private static void ConfigureEvents(ModelBuilder modelBuilder)
                 .IsUnique();
             });
 
-
-            // =========================================================
+            // =====================================================
             // EVENT ROLE
-            // =========================================================
+            // =====================================================
 
             modelBuilder.Entity<EventRole>(entity =>
             {
                 entity.HasKey(e => e.EventRoleId);
 
-                // -----------------------------------------------------
-                // EVENT DEPARTMENT
-                // -----------------------------------------------------
-
                 entity.HasOne(e => e.EventDepartment)
                     .WithMany(d => d.EventRoles)
                     .HasForeignKey(e => e.EventDepartmentId)
                     .OnDelete(DeleteBehavior.Cascade);
-
-                // -----------------------------------------------------
-                // ROLE INFORMATION
-                // -----------------------------------------------------
 
                 entity.Property(e => e.RoleName)
                     .HasMaxLength(150)
@@ -653,27 +581,15 @@ private static void ConfigureEvents(ModelBuilder modelBuilder)
                 entity.Property(e => e.RoleDescription)
                     .HasMaxLength(500);
 
-                // -----------------------------------------------------
-                // PRIORITY
-                // -----------------------------------------------------
-
                 entity.Property(e => e.Priority)
                     .HasMaxLength(20)
                     .IsRequired()
                     .HasDefaultValue("NORMAL");
 
-                // -----------------------------------------------------
-                // STATUS
-                // -----------------------------------------------------
-
                 entity.Property(e => e.Status)
                     .HasMaxLength(30)
                     .IsRequired()
                     .HasDefaultValue("ACTIVE");
-
-                // -----------------------------------------------------
-                // AUDIT
-                // -----------------------------------------------------
 
                 entity.Property(e => e.CreatedAt)
                     .IsRequired();
@@ -681,20 +597,11 @@ private static void ConfigureEvents(ModelBuilder modelBuilder)
                 entity.Property(e => e.UpdatedAt)
                     .IsRequired(false);
 
-                // -----------------------------------------------------
-                // INDEXES
-                // -----------------------------------------------------
-
                 entity.HasIndex(e => e.EventDepartmentId);
-
                 entity.HasIndex(e => e.RoleName);
-
                 entity.HasIndex(e => e.Status);
-
                 entity.HasIndex(e => e.Priority);
 
-                // Prevent duplicate role names
-                // within the same department.
                 entity.HasIndex(e => new
                 {
                     e.EventDepartmentId,
@@ -703,71 +610,33 @@ private static void ConfigureEvents(ModelBuilder modelBuilder)
                 .IsUnique();
             });
 
-
-            // =========================================================
+            // =====================================================
             // EVENT ASSIGNMENT
-            // =========================================================
+            // =====================================================
 
             modelBuilder.Entity<EventAssignment>(entity =>
             {
                 entity.HasKey(e => e.EventAssignmentId);
-
-                // -----------------------------------------------------
-                // EVENT
-                // -----------------------------------------------------
 
                 entity.HasOne(e => e.Event)
                     .WithMany(e => e.EventAssignments)
                     .HasForeignKey(e => e.EventId)
                     .OnDelete(DeleteBehavior.Cascade);
 
-                // -----------------------------------------------------
-                // EVENT DEPARTMENT
-                // -----------------------------------------------------
-
-                // Restrict is intentional.
-                //
-                // An assignment should not be automatically deleted
-                // through the department relationship.
-                //
-                // The Event relationship remains the primary cascade
-                // path for event-level cleanup.
-
                 entity.HasOne(e => e.EventDepartment)
                     .WithMany(d => d.EventAssignments)
                     .HasForeignKey(e => e.EventDepartmentId)
                     .OnDelete(DeleteBehavior.Restrict);
-
-                // -----------------------------------------------------
-                // EVENT ROLE
-                // -----------------------------------------------------
-
-                // Restrict prevents multiple cascade paths:
-                //
-                // Event
-                //   -> Department
-                //       -> Role
-                //           -> Assignment
-                //
-                // while Assignment also directly references Event.
 
                 entity.HasOne(e => e.EventRole)
                     .WithMany(r => r.EventAssignments)
                     .HasForeignKey(e => e.EventRoleId)
                     .OnDelete(DeleteBehavior.Restrict);
 
-                // -----------------------------------------------------
-                // MEMBER
-                // -----------------------------------------------------
-
                 entity.HasOne(e => e.Member)
                     .WithMany()
                     .HasForeignKey(e => e.MemberId)
                     .OnDelete(DeleteBehavior.Restrict);
-
-                // -----------------------------------------------------
-                // ASSIGNMENT INFORMATION
-                // -----------------------------------------------------
 
                 entity.Property(e => e.AssignedPerson)
                     .HasMaxLength(200);
@@ -778,33 +647,17 @@ private static void ConfigureEvents(ModelBuilder modelBuilder)
                 entity.Property(e => e.RoleName)
                     .HasMaxLength(150);
 
-                // -----------------------------------------------------
-                // ASSIGNMENT STATUS
-                // -----------------------------------------------------
-
                 entity.Property(e => e.AssignmentStatus)
                     .HasMaxLength(50)
                     .IsRequired()
                     .HasDefaultValue("PENDING");
-
-                // -----------------------------------------------------
-                // PRIORITY
-                // -----------------------------------------------------
 
                 entity.Property(e => e.Priority)
                     .HasMaxLength(50)
                     .IsRequired()
                     .HasDefaultValue("NORMAL");
 
-                // -----------------------------------------------------
-                // NOTES
-                // -----------------------------------------------------
-
                 entity.Property(e => e.Notes);
-
-                // -----------------------------------------------------
-                // AUDIT
-                // -----------------------------------------------------
 
                 entity.Property(e => e.CreatedAt)
                     .IsRequired();
@@ -812,53 +665,31 @@ private static void ConfigureEvents(ModelBuilder modelBuilder)
                 entity.Property(e => e.UpdatedAt)
                     .IsRequired(false);
 
-                // -----------------------------------------------------
-                // INDEXES
-                // -----------------------------------------------------
-
                 entity.HasIndex(e => e.EventId);
-
                 entity.HasIndex(e => e.EventDepartmentId);
-
                 entity.HasIndex(e => e.EventRoleId);
-
                 entity.HasIndex(e => e.MemberId);
-
                 entity.HasIndex(e => e.AssignmentStatus);
-
                 entity.HasIndex(e => e.Priority);
             });
 
-
-            // =========================================================
+            // =====================================================
             // EVENT NEED
-            // =========================================================
+            // =====================================================
 
             modelBuilder.Entity<EventNeed>(entity =>
             {
                 entity.HasKey(e => e.EventNeedId);
-
-                // -----------------------------------------------------
-                // EVENT
-                // -----------------------------------------------------
 
                 entity.HasOne(e => e.Event)
                     .WithMany(e => e.EventNeeds)
                     .HasForeignKey(e => e.EventId)
                     .OnDelete(DeleteBehavior.Cascade);
 
-                // -----------------------------------------------------
-                // RESPONSIBLE MEMBER
-                // -----------------------------------------------------
-
                 entity.HasOne(e => e.ResponsibleMember)
                     .WithMany()
                     .HasForeignKey(e => e.ResponsibleMemberId)
                     .OnDelete(DeleteBehavior.Restrict);
-
-                // -----------------------------------------------------
-                // NEED INFORMATION
-                // -----------------------------------------------------
 
                 entity.Property(e => e.NeedName)
                     .HasMaxLength(200)
@@ -870,10 +701,6 @@ private static void ConfigureEvents(ModelBuilder modelBuilder)
                 entity.Property(e => e.Category)
                     .HasMaxLength(100);
 
-                // -----------------------------------------------------
-                // QUANTITY
-                // -----------------------------------------------------
-
                 entity.Property(e => e.Quantity)
                     .HasColumnType("decimal(18,2)")
                     .HasDefaultValue(1m);
@@ -881,47 +708,23 @@ private static void ConfigureEvents(ModelBuilder modelBuilder)
                 entity.Property(e => e.Unit)
                     .HasMaxLength(50);
 
-                // -----------------------------------------------------
-                // RESPONSIBILITY
-                // -----------------------------------------------------
-
                 entity.Property(e => e.ResponsiblePerson)
                     .HasMaxLength(200);
-
-                // -----------------------------------------------------
-                // STATUS
-                // -----------------------------------------------------
 
                 entity.Property(e => e.Status)
                     .HasMaxLength(30)
                     .IsRequired()
                     .HasDefaultValue("PENDING");
 
-                // -----------------------------------------------------
-                // PRIORITY
-                // -----------------------------------------------------
-
                 entity.Property(e => e.Priority)
                     .HasMaxLength(20)
                     .IsRequired()
                     .HasDefaultValue("NORMAL");
 
-                // -----------------------------------------------------
-                // NOTES
-                // -----------------------------------------------------
-
                 entity.Property(e => e.Notes);
-
-                // -----------------------------------------------------
-                // DATES
-                // -----------------------------------------------------
 
                 entity.Property(e => e.NeededBy)
                     .IsRequired(false);
-
-                // -----------------------------------------------------
-                // AUDIT
-                // -----------------------------------------------------
 
                 entity.Property(e => e.CreatedAt)
                     .IsRequired();
@@ -929,62 +732,36 @@ private static void ConfigureEvents(ModelBuilder modelBuilder)
                 entity.Property(e => e.UpdatedAt)
                     .IsRequired(false);
 
-                // -----------------------------------------------------
-                // INDEXES
-                // -----------------------------------------------------
-
                 entity.HasIndex(e => e.EventId);
-
                 entity.HasIndex(e => e.ResponsibleMemberId);
-
                 entity.HasIndex(e => e.Status);
-
                 entity.HasIndex(e => e.Priority);
-
                 entity.HasIndex(e => e.Category);
-
                 entity.HasIndex(e => e.NeededBy);
             });
 
-
-            // =========================================================
+            // =====================================================
             // EVENT CHECKLIST
-            // =========================================================
+            // =====================================================
 
             modelBuilder.Entity<EventChecklist>(entity =>
             {
                 entity.HasKey(e => e.EventChecklistId);
-
-                // -----------------------------------------------------
-                // EVENT
-                // -----------------------------------------------------
 
                 entity.HasOne(e => e.Event)
                     .WithMany(e => e.EventChecklists)
                     .HasForeignKey(e => e.EventId)
                     .OnDelete(DeleteBehavior.Cascade);
 
-                // -----------------------------------------------------
-                // ASSIGNED MEMBER
-                // -----------------------------------------------------
-
                 entity.HasOne(e => e.AssignedMember)
                     .WithMany()
                     .HasForeignKey(e => e.AssignedMemberId)
                     .OnDelete(DeleteBehavior.Restrict);
 
-                // -----------------------------------------------------
-                // COMPLETED BY MEMBER
-                // -----------------------------------------------------
-
                 entity.HasOne(e => e.CompletedByMember)
                     .WithMany()
                     .HasForeignKey(e => e.CompletedByMemberId)
                     .OnDelete(DeleteBehavior.Restrict);
-
-                // -----------------------------------------------------
-                // CHECKLIST ITEM
-                // -----------------------------------------------------
 
                 entity.Property(e => e.TaskName)
                     .HasMaxLength(300)
@@ -993,68 +770,32 @@ private static void ConfigureEvents(ModelBuilder modelBuilder)
                 entity.Property(e => e.Description)
                     .HasMaxLength(1000);
 
-                // -----------------------------------------------------
-                // CATEGORY
-                // -----------------------------------------------------
-
                 entity.Property(e => e.Category)
                     .HasMaxLength(100);
 
-                // -----------------------------------------------------
-                // ASSIGNMENT
-                // -----------------------------------------------------
-
                 entity.Property(e => e.AssignedPerson)
                     .HasMaxLength(200);
-
-                // -----------------------------------------------------
-                // STATUS
-                // -----------------------------------------------------
 
                 entity.Property(e => e.Status)
                     .HasMaxLength(30)
                     .IsRequired()
                     .HasDefaultValue("PENDING");
 
-                // -----------------------------------------------------
-                // PRIORITY
-                // -----------------------------------------------------
-
                 entity.Property(e => e.Priority)
                     .HasMaxLength(20)
                     .IsRequired()
                     .HasDefaultValue("NORMAL");
 
-                // -----------------------------------------------------
-                // ORDER
-                // -----------------------------------------------------
-
                 entity.Property(e => e.SortOrder)
                     .HasDefaultValue(0);
-
-                // -----------------------------------------------------
-                // DUE DATE
-                // -----------------------------------------------------
 
                 entity.Property(e => e.DueDate)
                     .IsRequired(false);
 
-                // -----------------------------------------------------
-                // COMPLETION
-                // -----------------------------------------------------
-
                 entity.Property(e => e.CompletedAt)
                     .IsRequired(false);
 
-                // -----------------------------------------------------
-                // NOTES
-                // -----------------------------------------------------
-
                 entity.Property(e => e.Notes);
-
-                // -----------------------------------------------------
-                // AUDIT
-                // -----------------------------------------------------
 
                 entity.Property(e => e.CreatedAt)
                     .IsRequired();
@@ -1062,24 +803,13 @@ private static void ConfigureEvents(ModelBuilder modelBuilder)
                 entity.Property(e => e.UpdatedAt)
                     .IsRequired(false);
 
-                // -----------------------------------------------------
-                // INDEXES
-                // -----------------------------------------------------
-
                 entity.HasIndex(e => e.EventId);
-
                 entity.HasIndex(e => e.AssignedMemberId);
-
                 entity.HasIndex(e => e.CompletedByMemberId);
-
                 entity.HasIndex(e => e.Status);
-
                 entity.HasIndex(e => e.Priority);
-
                 entity.HasIndex(e => e.Category);
-
                 entity.HasIndex(e => e.SortOrder);
-
                 entity.HasIndex(e => e.DueDate);
             });
         }
@@ -1179,18 +909,23 @@ private static void ConfigureEvents(ModelBuilder modelBuilder)
         }
 
         // =========================================================
-        // GIVING
+        // EXPENSES
         // =========================================================
 
-        private static void ConfigureGiving(ModelBuilder modelBuilder)
+        private static void ConfigureExpenses(
+            ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<Giving>(entity =>
+            modelBuilder.Entity<Expense>(entity =>
             {
-                entity.HasKey(e => e.GivingId);
+                // =====================================================
+                // PRIMARY KEY
+                // =====================================================
 
-                // -----------------------------------------------------
+                entity.HasKey(e => e.ExpenseId);
+
+                // =====================================================
                 // CUSTOMER / TENANT
-                // -----------------------------------------------------
+                // =====================================================
 
                 entity.Property(e => e.CustomerId)
                     .IsRequired();
@@ -1200,27 +935,177 @@ private static void ConfigureEvents(ModelBuilder modelBuilder)
                     .HasForeignKey(e => e.CustomerId)
                     .OnDelete(DeleteBehavior.Restrict);
 
-                // -----------------------------------------------------
-                // MEMBER
-                // -----------------------------------------------------
+                // =====================================================
+                // EXPENSE INFORMATION
+                // =====================================================
+
+                entity.Property(e => e.Category)
+                    .HasMaxLength(100)
+                    .IsRequired();
+
+                entity.Property(e => e.Description)
+                    .HasMaxLength(500)
+                    .IsRequired();
+
+                entity.Property(e => e.Amount)
+                    .HasColumnType("decimal(18,2)")
+                    .IsRequired();
+
+                entity.Property(e => e.ExpenseDate)
+                    .IsRequired();
+
+                // =====================================================
+                // PAYMENT
+                // =====================================================
+
+                entity.Property(e => e.PaymentMethod)
+                    .HasMaxLength(50)
+                    .IsRequired();
+
+                entity.Property(e => e.ReferenceNumber)
+                    .HasMaxLength(100);
+
+                // =====================================================
+                // RECORD INFORMATION
+                // =====================================================
+
+                entity.Property(e => e.RecordedBy)
+                    .HasMaxLength(150);
+
+                entity.Property(e => e.RecordedDate)
+                    .IsRequired();
+
+                // =====================================================
+                // INDEXES
+                // =====================================================
+
+                entity.HasIndex(e => e.CustomerId);
+
+                entity.HasIndex(e => e.ExpenseDate);
+
+                entity.HasIndex(e => e.Category);
+
+                entity.HasIndex(e => e.PaymentMethod);
+
+                entity.HasIndex(e => new
+                {
+                    e.CustomerId,
+                    e.ExpenseDate
+                });
+            });
+        }
+        // =========================================================
+        // INCOME
+        // =========================================================
+
+        private static void ConfigureIncome(
+            ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Income>(entity =>
+            {
+                // =====================================================
+                // PRIMARY KEY
+                // =====================================================
+
+                entity.HasKey(e => e.IncomeId);
+
+                // =====================================================
+                // CUSTOMER / TENANT
+                // =====================================================
+
+                entity.Property(e => e.CustomerId)
+                    .IsRequired();
+
+                entity.HasOne(e => e.Customer)
+                    .WithMany()
+                    .HasForeignKey(e => e.CustomerId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // =====================================================
+                // INCOME INFORMATION
+                // =====================================================
+
+                entity.Property(e => e.Category)
+                    .HasMaxLength(50)
+                    .IsRequired();
+
+                entity.Property(e => e.Description)
+                    .HasMaxLength(250)
+                    .IsRequired();
+
+                entity.Property(e => e.Amount)
+                    .HasColumnType("decimal(18,2)")
+                    .IsRequired();
+
+                entity.Property(e => e.IncomeDate)
+                    .IsRequired();
+
+                // =====================================================
+                // PAYMENT
+                // =====================================================
+
+                entity.Property(e => e.PaymentMethod)
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.ReferenceNumber)
+                    .HasMaxLength(250);
+
+                // =====================================================
+                // RECORD INFORMATION
+                // =====================================================
+
+                entity.Property(e => e.RecordedBy)
+                    .HasMaxLength(150);
+
+                entity.Property(e => e.RecordedDate)
+                    .IsRequired();
+
+                // =====================================================
+                // INDEXES
+                // =====================================================
+
+                entity.HasIndex(e => e.CustomerId);
+
+                entity.HasIndex(e => e.IncomeDate);
+
+                entity.HasIndex(e => e.Category);
+
+                entity.HasIndex(e => e.PaymentMethod);
+
+                entity.HasIndex(e => new
+                {
+                    e.CustomerId,
+                    e.IncomeDate
+                });
+            });
+        }
+        // =========================================================
+        // GIVING
+        // =========================================================
+
+        private static void ConfigureGiving(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Giving>(entity =>
+            {
+                entity.HasKey(e => e.GivingId);
+
+                entity.Property(e => e.CustomerId)
+                    .IsRequired();
+
+                entity.HasOne(e => e.Customer)
+                    .WithMany()
+                    .HasForeignKey(e => e.CustomerId)
+                    .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasOne(e => e.Member)
                     .WithMany()
                     .HasForeignKey(e => e.MemberId)
                     .OnDelete(DeleteBehavior.SetNull);
 
-                // -----------------------------------------------------
-                // CHURCH SERVICE
-                // -----------------------------------------------------
-
                 entity.HasOne(e => e.ChurchService)
                     .WithMany()
                     .HasForeignKey(e => e.ChurchServiceId)
                     .OnDelete(DeleteBehavior.SetNull);
-
-                // -----------------------------------------------------
-                // GIVING INFORMATION
-                // -----------------------------------------------------
 
                 entity.Property(e => e.GivingType)
                     .HasMaxLength(50)
@@ -1233,10 +1118,6 @@ private static void ConfigureEvents(ModelBuilder modelBuilder)
                 entity.Property(e => e.GivingDate)
                     .IsRequired();
 
-                // -----------------------------------------------------
-                // PAYMENT
-                // -----------------------------------------------------
-
                 entity.Property(e => e.PaymentMethod)
                     .HasMaxLength(50)
                     .IsRequired();
@@ -1244,26 +1125,14 @@ private static void ConfigureEvents(ModelBuilder modelBuilder)
                 entity.Property(e => e.ReferenceNumber)
                     .HasMaxLength(100);
 
-                // -----------------------------------------------------
-                // NOTES
-                // -----------------------------------------------------
-
                 entity.Property(e => e.Notes)
                     .HasMaxLength(500);
-
-                // -----------------------------------------------------
-                // RECORD INFORMATION
-                // -----------------------------------------------------
 
                 entity.Property(e => e.RecordedBy)
                     .HasMaxLength(100);
 
                 entity.Property(e => e.RecordedDate)
                     .IsRequired();
-
-                // -----------------------------------------------------
-                // INDEXES
-                // -----------------------------------------------------
 
                 entity.HasIndex(e => e.CustomerId);
                 entity.HasIndex(e => e.MemberId);
@@ -1285,10 +1154,6 @@ private static void ConfigureEvents(ModelBuilder modelBuilder)
             {
                 entity.HasKey(e => e.ChurchServiceId);
 
-                // -----------------------------------------------------
-                // CUSTOMER / TENANT
-                // -----------------------------------------------------
-
                 entity.Property(e => e.CustomerId)
                     .IsRequired();
 
@@ -1296,10 +1161,6 @@ private static void ConfigureEvents(ModelBuilder modelBuilder)
                     .WithMany()
                     .HasForeignKey(e => e.CustomerId)
                     .OnDelete(DeleteBehavior.Restrict);
-
-                // -----------------------------------------------------
-                // SERVICE INFORMATION
-                // -----------------------------------------------------
 
                 entity.Property(e => e.ServiceName)
                     .HasMaxLength(150)
@@ -1317,16 +1178,8 @@ private static void ConfigureEvents(ModelBuilder modelBuilder)
                 entity.Property(e => e.EndTime)
                     .HasMaxLength(50);
 
-                // -----------------------------------------------------
-                // LOCATION
-                // -----------------------------------------------------
-
                 entity.Property(e => e.Location)
                     .HasMaxLength(200);
-
-                // -----------------------------------------------------
-                // LEADER / SPEAKER
-                // -----------------------------------------------------
 
                 entity.Property(e => e.ServiceLeader)
                     .HasMaxLength(150);
@@ -1334,25 +1187,13 @@ private static void ConfigureEvents(ModelBuilder modelBuilder)
                 entity.Property(e => e.Speaker)
                     .HasMaxLength(150);
 
-                // -----------------------------------------------------
-                // DESCRIPTION
-                // -----------------------------------------------------
-
                 entity.Property(e => e.Description)
                     .HasMaxLength(500);
-
-                // -----------------------------------------------------
-                // STATUS
-                // -----------------------------------------------------
 
                 entity.Property(e => e.Status)
                     .HasMaxLength(50)
                     .IsRequired()
                     .HasDefaultValue("SCHEDULED");
-
-                // -----------------------------------------------------
-                // AUDIT
-                // -----------------------------------------------------
 
                 entity.Property(e => e.CreatedDate)
                     .IsRequired();
@@ -1360,19 +1201,11 @@ private static void ConfigureEvents(ModelBuilder modelBuilder)
                 entity.Property(e => e.UpdatedDate)
                     .IsRequired(false);
 
-                // -----------------------------------------------------
-                // INDEXES
-                // -----------------------------------------------------
-
                 entity.HasIndex(e => e.CustomerId);
-
                 entity.HasIndex(e => e.ServiceDate);
-
                 entity.HasIndex(e => e.ServiceType);
-
                 entity.HasIndex(e => e.Status);
 
-                // Customer + date is useful for tenant dashboards
                 entity.HasIndex(e => new
                 {
                     e.CustomerId,
@@ -1447,7 +1280,13 @@ private static void ConfigureEvents(ModelBuilder modelBuilder)
                 .IsUnique();
             });
         }
-        private static void ConfigureMinistries(ModelBuilder modelBuilder)
+
+        // =========================================================
+        // MINISTRIES
+        // =========================================================
+
+        private static void ConfigureMinistries(
+            ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Ministry>(entity =>
             {
@@ -1461,8 +1300,6 @@ private static void ConfigureEvents(ModelBuilder modelBuilder)
                     .WithMany()
                     .HasForeignKey(e => e.CustomerId)
                     .OnDelete(DeleteBehavior.Restrict);
-
-                entity.HasIndex(e => e.CustomerId);
 
                 // =====================================================
                 // MINISTRY INFORMATION
@@ -1529,43 +1366,77 @@ private static void ConfigureEvents(ModelBuilder modelBuilder)
                 });
             });
         }
-        // =========================================================
-        // MINISTRY MEMBERS
-        // =========================================================
 
-        private static void ConfigureMinistryMembers(
-            ModelBuilder modelBuilder)
+    
+// =========================================================
+// MINISTRY MEMBERS
+// =========================================================
+
+private static void ConfigureMinistryMembers(
+    ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<MinistryMember>(entity =>
             {
+                // =====================================================
+                // PRIMARY KEY
+                // =====================================================
+
                 entity.HasKey(e => e.MinistryMemberId);
 
+                // =====================================================
+                // MINISTRY
+                // =====================================================
+
                 entity.HasOne(e => e.Ministry)
-                    .WithMany()
+                    .WithMany(m => m.MinistryMembers)
                     .HasForeignKey(e => e.MinistryId)
                     .OnDelete(DeleteBehavior.Cascade);
+
+                // =====================================================
+                // MEMBER
+                // =====================================================
 
                 entity.HasOne(e => e.Member)
                     .WithMany()
                     .HasForeignKey(e => e.MemberId)
                     .OnDelete(DeleteBehavior.Restrict);
 
+                // =====================================================
+                // ROLE
+                // =====================================================
+
                 entity.Property(e => e.Role)
                     .HasMaxLength(100)
                     .IsRequired(false);
 
+                // =====================================================
+                // POSITION
+                // =====================================================
+
                 entity.Property(e => e.Position)
                     .HasMaxLength(100)
                     .IsRequired(false);
+
+                // =====================================================
+                // STATUS
+                // =====================================================
 
                 entity.Property(e => e.Status)
                     .HasMaxLength(50)
                     .IsRequired()
                     .HasDefaultValue("ACTIVE");
 
+                // =====================================================
+                // NOTES
+                // =====================================================
+
                 entity.Property(e => e.Notes)
                     .HasMaxLength(500)
                     .IsRequired(false);
+
+                // =====================================================
+                // ASSIGNMENT DATES
+                // =====================================================
 
                 entity.Property(e => e.DateAssigned)
                     .IsRequired();
@@ -1573,23 +1444,40 @@ private static void ConfigureEvents(ModelBuilder modelBuilder)
                 entity.Property(e => e.DateEnded)
                     .IsRequired(false);
 
+                // =====================================================
+                // AUDIT
+                // =====================================================
+
                 entity.Property(e => e.CreatedDate)
                     .IsRequired();
 
                 entity.Property(e => e.UpdatedDate)
                     .IsRequired(false);
 
+                // =====================================================
+                // INDEXES
+                // =====================================================
+
                 entity.HasIndex(e => e.MinistryId);
+
                 entity.HasIndex(e => e.MemberId);
+
                 entity.HasIndex(e => e.Status);
+
+                // =====================================================
+                // UNIQUE MINISTRY MEMBER ASSIGNMENT
+                // =====================================================
 
                 entity.HasIndex(e => new
                 {
                     e.MinistryId,
                     e.MemberId
-                });
+                })
+                .IsUnique();
             });
         }
+
+
 
         // =========================================================
         // MINISTRY PERFORMANCE
@@ -2055,18 +1943,18 @@ private static void ConfigureEvents(ModelBuilder modelBuilder)
 
         private static void ConfigureLearning(ModelBuilder modelBuilder)
         {
-            // -----------------------------------------------------
+            // =====================================================
             // COURSE
-            // -----------------------------------------------------
+            // =====================================================
 
             modelBuilder.Entity<Course>(entity =>
             {
                 entity.HasKey(e => e.CourseId);
             });
 
-            // -----------------------------------------------------
+            // =====================================================
             // COURSE MODULE
-            // -----------------------------------------------------
+            // =====================================================
 
             modelBuilder.Entity<CourseModule>(entity =>
             {
@@ -2078,9 +1966,9 @@ private static void ConfigureEvents(ModelBuilder modelBuilder)
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
-            // -----------------------------------------------------
+            // =====================================================
             // LESSON
-            // -----------------------------------------------------
+            // =====================================================
 
             modelBuilder.Entity<Lesson>(entity =>
             {
@@ -2092,9 +1980,9 @@ private static void ConfigureEvents(ModelBuilder modelBuilder)
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
-            // -----------------------------------------------------
+            // =====================================================
             // COURSE ENROLLMENT
-            // -----------------------------------------------------
+            // =====================================================
 
             modelBuilder.Entity<CourseEnrollment>(entity =>
             {
@@ -2121,9 +2009,9 @@ private static void ConfigureEvents(ModelBuilder modelBuilder)
                 .IsUnique();
             });
 
-            // -----------------------------------------------------
+            // =====================================================
             // LESSON PROGRESS
-            // -----------------------------------------------------
+            // =====================================================
 
             modelBuilder.Entity<LessonProgress>(entity =>
             {
@@ -2150,9 +2038,9 @@ private static void ConfigureEvents(ModelBuilder modelBuilder)
                 .IsUnique();
             });
 
-            // -----------------------------------------------------
+            // =====================================================
             // CERTIFICATE
-            // -----------------------------------------------------
+            // =====================================================
 
             modelBuilder.Entity<Certificate>(entity =>
             {

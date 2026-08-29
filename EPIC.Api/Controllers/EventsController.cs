@@ -1,6 +1,7 @@
 ﻿
 using EPIC.Api.Data;
 using EPIC.Api.Models;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -20,16 +21,43 @@ namespace EPIC.Api.Controllers
         }
 
         // =========================================================
-        // CUSTOMER / TENANT HELPER
+        // GET CUSTOMER ID FROM JWT
         // =========================================================
 
         private int? GetCustomerId()
         {
-            var customerIdClaim =
-                User.FindFirst("CustomerId")?.Value
-                ?? User.FindFirst("customerId")?.Value;
+            // Primary claim
+            var claim =
+                User.FindFirst("customerId");
 
-            if (int.TryParse(customerIdClaim, out int customerId))
+            if (claim != null &&
+                int.TryParse(
+                    claim.Value,
+                    out var customerId))
+            {
+                return customerId;
+            }
+
+            // Compatibility claim
+            claim =
+                User.FindFirst("CustomerId");
+
+            if (claim != null &&
+                int.TryParse(
+                    claim.Value,
+                    out customerId))
+            {
+                return customerId;
+            }
+
+            // Tenant compatibility claim
+            claim =
+                User.FindFirst("tenantId");
+
+            if (claim != null &&
+                int.TryParse(
+                    claim.Value,
+                    out customerId))
             {
                 return customerId;
             }
@@ -38,15 +66,25 @@ namespace EPIC.Api.Controllers
         }
 
         // =========================================================
-        // CUSTOMER AUTHORIZATION
+        // CHECK CLIENT ACCOUNT
         // =========================================================
 
-        private IActionResult CustomerAuthorizationRequired()
+        private bool IsClientAccount()
         {
-            return Unauthorized(new
+            // ASP.NET Core role
+            if (User.IsInRole("CLIENT"))
             {
-                message = "Customer authorization is required."
-            });
+                return true;
+            }
+
+            // Explicit role claim compatibility
+            var roleClaim =
+                User.FindFirst("role")?.Value;
+
+            return string.Equals(
+                roleClaim?.Trim(),
+                "CLIENT",
+                StringComparison.OrdinalIgnoreCase);
         }
 
         // =========================================================
@@ -60,7 +98,9 @@ namespace EPIC.Api.Controllers
                 return "SCHEDULED";
             }
 
-            return status.Trim().ToUpperInvariant();
+            return status
+                .Trim()
+                .ToUpperInvariant();
         }
 
         // =========================================================
@@ -72,20 +112,41 @@ namespace EPIC.Api.Controllers
         {
             try
             {
-                var customerId = GetCustomerId();
+                var query =
+                    _context.Events
+                        .AsNoTracking()
+                        .AsQueryable();
 
-                if (!customerId.HasValue)
+                // -------------------------------------------------
+                // CLIENT = OWN CUSTOMER ONLY
+                // ADMIN = ALL EVENTS
+                // -------------------------------------------------
+
+                if (IsClientAccount())
                 {
-                    return CustomerAuthorizationRequired();
+                    var customerId =
+                        GetCustomerId();
+
+                    if (!customerId.HasValue)
+                    {
+                        return Unauthorized(new
+                        {
+                            message =
+                                "CUSTOMER ID NOT FOUND IN CLIENT TOKEN."
+                        });
+                    }
+
+                    query =
+                        query.Where(e =>
+                            e.CustomerId ==
+                            customerId.Value);
                 }
 
-                var events = await _context.Events
-                    .AsNoTracking()
-                    .Where(e =>
-                        e.CustomerId == customerId.Value)
-                    .OrderBy(e => e.EventDate)
-                    .ThenBy(e => e.StartTime)
-                    .ToListAsync();
+                var events =
+                    await query
+                        .OrderBy(e => e.EventDate)
+                        .ThenBy(e => e.StartTime)
+                        .ToListAsync();
 
                 return Ok(events);
             }
@@ -93,8 +154,12 @@ namespace EPIC.Api.Controllers
             {
                 return StatusCode(500, new
                 {
-                    message = "Unable to load events.",
-                    error = ex.Message
+                    message =
+                        "Unable to load events.",
+
+                    error =
+                        ex.InnerException?.Message
+                        ?? ex.Message
                 });
             }
         }
@@ -108,25 +173,48 @@ namespace EPIC.Api.Controllers
         {
             try
             {
-                var customerId = GetCustomerId();
+                var query =
+                    _context.Events
+                        .AsNoTracking()
+                        .AsQueryable();
 
-                if (!customerId.HasValue)
+                // -------------------------------------------------
+                // CLIENT = OWN CUSTOMER ONLY
+                // ADMIN = ALL EVENTS
+                // -------------------------------------------------
+
+                if (IsClientAccount())
                 {
-                    return CustomerAuthorizationRequired();
+                    var customerId =
+                        GetCustomerId();
+
+                    if (!customerId.HasValue)
+                    {
+                        return Unauthorized(new
+                        {
+                            message =
+                                "CUSTOMER ID NOT FOUND IN CLIENT TOKEN."
+                        });
+                    }
+
+                    query =
+                        query.Where(e =>
+                            e.CustomerId ==
+                            customerId.Value);
                 }
 
-                var today = DateTime.Today;
+                var today =
+                    DateTime.Today;
 
-                var events = await _context.Events
-                    .AsNoTracking()
-                    .Where(e =>
-                        e.CustomerId == customerId.Value &&
-                        e.EventDate >= today &&
-                        e.Status != "CANCELLED")
-                    .OrderBy(e => e.EventDate)
-                    .ThenBy(e => e.StartTime)
-                    .Take(10)
-                    .ToListAsync();
+                var events =
+                    await query
+                        .Where(e =>
+                            e.EventDate >= today &&
+                            e.Status != "CANCELLED")
+                        .OrderBy(e => e.EventDate)
+                        .ThenBy(e => e.StartTime)
+                        .Take(10)
+                        .ToListAsync();
 
                 return Ok(events);
             }
@@ -134,8 +222,12 @@ namespace EPIC.Api.Controllers
             {
                 return StatusCode(500, new
                 {
-                    message = "Unable to load upcoming events.",
-                    error = ex.Message
+                    message =
+                        "Unable to load upcoming events.",
+
+                    error =
+                        ex.InnerException?.Message
+                        ?? ex.Message
                 });
             }
         }
@@ -149,24 +241,47 @@ namespace EPIC.Api.Controllers
         {
             try
             {
-                var customerId = GetCustomerId();
+                var query =
+                    _context.Events
+                        .AsNoTracking()
+                        .AsQueryable();
 
-                if (!customerId.HasValue)
+                // -------------------------------------------------
+                // CLIENT = OWN CUSTOMER ONLY
+                // ADMIN = ALL EVENTS
+                // -------------------------------------------------
+
+                if (IsClientAccount())
                 {
-                    return CustomerAuthorizationRequired();
+                    var customerId =
+                        GetCustomerId();
+
+                    if (!customerId.HasValue)
+                    {
+                        return Unauthorized(new
+                        {
+                            message =
+                                "CUSTOMER ID NOT FOUND IN CLIENT TOKEN."
+                        });
+                    }
+
+                    query =
+                        query.Where(e =>
+                            e.CustomerId ==
+                            customerId.Value);
                 }
 
-                var churchEvent = await _context.Events
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(e =>
-                        e.EventId == id &&
-                        e.CustomerId == customerId.Value);
+                var churchEvent =
+                    await query
+                        .FirstOrDefaultAsync(e =>
+                            e.EventId == id);
 
                 if (churchEvent == null)
                 {
                     return NotFound(new
                     {
-                        message = "Event not found."
+                        message =
+                            "Event not found."
                     });
                 }
 
@@ -176,8 +291,12 @@ namespace EPIC.Api.Controllers
             {
                 return StatusCode(500, new
                 {
-                    message = "Unable to load event.",
-                    error = ex.Message
+                    message =
+                        "Unable to load event.",
+
+                    error =
+                        ex.InnerException?.Message
+                        ?? ex.Message
                 });
             }
         }
@@ -192,72 +311,160 @@ namespace EPIC.Api.Controllers
         {
             try
             {
+                if (churchEvent == null)
+                {
+                    return BadRequest(new
+                    {
+                        message =
+                            "Event data is required."
+                    });
+                }
+
                 if (!ModelState.IsValid)
                 {
                     return BadRequest(ModelState);
                 }
 
-                var customerId = GetCustomerId();
+                // =================================================
+                // CUSTOMER ID
+                // =================================================
 
-                if (!customerId.HasValue)
+                if (IsClientAccount())
                 {
-                    return CustomerAuthorizationRequired();
+                    var customerId =
+                        GetCustomerId();
+
+                    if (!customerId.HasValue)
+                    {
+                        return Unauthorized(new
+                        {
+                            message =
+                                "CUSTOMER ID NOT FOUND IN CLIENT TOKEN."
+                        });
+                    }
+
+                    // NEVER TRUST FRONTEND CUSTOMER ID
+                    churchEvent.CustomerId =
+                        customerId.Value;
+                }
+                else
+                {
+                    // ADMIN
+                    //
+                    // Preserve supplied CustomerId.
+                    // Default to Customer 1 for the current
+                    // single-church installation.
+
+                    if (churchEvent.CustomerId <= 0)
+                    {
+                        churchEvent.CustomerId = 1;
+                    }
                 }
 
-                // -------------------------------------------------
+                // =================================================
+                // VERIFY CUSTOMER
+                // =================================================
+
+                var customerExists =
+                    await _context.Customers
+                        .AsNoTracking()
+                        .AnyAsync(c =>
+                            c.CustomerId ==
+                            churchEvent.CustomerId);
+
+                if (!customerExists)
+                {
+                    return BadRequest(new
+                    {
+                        message =
+                            "CUSTOMER NOT FOUND."
+                    });
+                }
+
+                // =================================================
                 // SECURITY
-                // -------------------------------------------------
-                // Never trust these values from the frontend.
-                // -------------------------------------------------
+                // =================================================
 
                 churchEvent.EventId = 0;
-                churchEvent.CustomerId = customerId.Value;
 
-                // -------------------------------------------------
+                // =================================================
                 // STATUS
-                // -------------------------------------------------
+                // =================================================
 
                 churchEvent.Status =
-                    NormalizeStatus(churchEvent.Status);
+                    NormalizeStatus(
+                        churchEvent.Status);
 
-                // -------------------------------------------------
+                // =================================================
                 // AUDIT
-                // -------------------------------------------------
+                // =================================================
 
-                churchEvent.CreatedAt = DateTime.Now;
-                churchEvent.UpdatedAt = null;
+                churchEvent.CreatedAt =
+                    DateTime.Now;
 
-                // -------------------------------------------------
+                churchEvent.UpdatedAt =
+                    null;
+
+                // =================================================
                 // NAVIGATION PROPERTIES
-                // -------------------------------------------------
+                // =================================================
 
-                churchEvent.Customer = null;
-                churchEvent.EventAssignments = new List<EventAssignment>();
-                churchEvent.EventNeeds = new List<EventNeed>();
-                churchEvent.EventChecklists = new List<EventChecklist>();
+                churchEvent.Customer =
+                    null;
 
-                // -------------------------------------------------
+                churchEvent.EventAssignments =
+                    new List<EventAssignment>();
+
+                churchEvent.EventNeeds =
+                    new List<EventNeed>();
+
+                churchEvent.EventChecklists =
+                    new List<EventChecklist>();
+
+                // =================================================
                 // SAVE
-                // -------------------------------------------------
+                // =================================================
 
-                _context.Events.Add(churchEvent);
+                _context.Events.Add(
+                    churchEvent);
 
                 await _context.SaveChangesAsync();
+
+                // =================================================
+                // RESPONSE
+                // =================================================
 
                 return CreatedAtAction(
                     nameof(GetEvent),
                     new
                     {
-                        id = churchEvent.EventId
+                        id =
+                            churchEvent.EventId
                     },
                     churchEvent);
+            }
+            catch (DbUpdateException ex)
+            {
+                return StatusCode(500, new
+                {
+                    message =
+                        "Unable to create event.",
+
+                    error =
+                        ex.InnerException?.Message
+                        ?? ex.Message
+                });
             }
             catch (Exception ex)
             {
                 return StatusCode(500, new
                 {
-                    message = "Unable to create event.",
-                    error = ex.Message
+                    message =
+                        "Unable to create event.",
+
+                    error =
+                        ex.InnerException?.Message
+                        ?? ex.Message
                 });
             }
         }
@@ -273,45 +480,81 @@ namespace EPIC.Api.Controllers
         {
             try
             {
+                if (updatedEvent == null)
+                {
+                    return BadRequest(new
+                    {
+                        message =
+                            "Event data is required."
+                    });
+                }
+
                 if (!ModelState.IsValid)
                 {
                     return BadRequest(ModelState);
                 }
 
-                var customerId = GetCustomerId();
+                // =================================================
+                // QUERY
+                // =================================================
 
-                if (!customerId.HasValue)
+                var query =
+                    _context.Events
+                        .AsQueryable();
+
+                // =================================================
+                // CLIENT TENANT FILTER
+                // =================================================
+
+                if (IsClientAccount())
                 {
-                    return CustomerAuthorizationRequired();
+                    var customerId =
+                        GetCustomerId();
+
+                    if (!customerId.HasValue)
+                    {
+                        return Unauthorized(new
+                        {
+                            message =
+                                "CUSTOMER ID NOT FOUND IN CLIENT TOKEN."
+                        });
+                    }
+
+                    query =
+                        query.Where(e =>
+                            e.CustomerId ==
+                            customerId.Value);
                 }
 
-                // -------------------------------------------------
-                // TENANT ISOLATION
-                // -------------------------------------------------
+                // =================================================
+                // LOAD EXISTING EVENT
+                // =================================================
 
                 var existingEvent =
-                    await _context.Events
+                    await query
                         .FirstOrDefaultAsync(e =>
-                            e.EventId == id &&
-                            e.CustomerId == customerId.Value);
+                            e.EventId == id);
 
                 if (existingEvent == null)
                 {
                     return NotFound(new
                     {
-                        message = "Event not found."
+                        message =
+                            "Event not found."
                     });
                 }
 
-                // -------------------------------------------------
+                // =================================================
                 // EVENT INFORMATION
-                // -------------------------------------------------
+                // =================================================
 
                 existingEvent.Title =
-                    updatedEvent.Title?.Trim() ?? string.Empty;
+                    updatedEvent.Title?.Trim()
+                    ?? string.Empty;
 
                 existingEvent.EventType =
-                    updatedEvent.EventType?.Trim() ?? string.Empty;
+                    updatedEvent.EventType?.Trim()
+                    ?? string.Empty;
 
                 existingEvent.EventDate =
                     updatedEvent.EventDate;
@@ -322,70 +565,103 @@ namespace EPIC.Api.Controllers
                 existingEvent.EndTime =
                     updatedEvent.EndTime;
 
-                // -------------------------------------------------
-                // LOCATION / LEADERSHIP
-                // -------------------------------------------------
+                // =================================================
+                // LOCATION
+                // =================================================
 
                 existingEvent.Venue =
-                    string.IsNullOrWhiteSpace(updatedEvent.Venue)
+                    string.IsNullOrWhiteSpace(
+                        updatedEvent.Venue)
                         ? null
                         : updatedEvent.Venue.Trim();
 
+                // =================================================
+                // SPEAKER
+                // =================================================
+
                 existingEvent.Speaker =
-                    string.IsNullOrWhiteSpace(updatedEvent.Speaker)
+                    string.IsNullOrWhiteSpace(
+                        updatedEvent.Speaker)
                         ? null
                         : updatedEvent.Speaker.Trim();
 
+                // =================================================
+                // MINISTRY
+                // =================================================
+
                 existingEvent.Ministry =
-                    string.IsNullOrWhiteSpace(updatedEvent.Ministry)
+                    string.IsNullOrWhiteSpace(
+                        updatedEvent.Ministry)
                         ? null
                         : updatedEvent.Ministry.Trim();
 
-                // -------------------------------------------------
+                // =================================================
                 // STATUS
-                // -------------------------------------------------
+                // =================================================
 
                 existingEvent.Status =
-                    NormalizeStatus(updatedEvent.Status);
+                    NormalizeStatus(
+                        updatedEvent.Status);
 
-                // -------------------------------------------------
-                // DESCRIPTION / NOTES
-                // -------------------------------------------------
+                // =================================================
+                // DESCRIPTION
+                // =================================================
 
                 existingEvent.Description =
-                    string.IsNullOrWhiteSpace(updatedEvent.Description)
+                    string.IsNullOrWhiteSpace(
+                        updatedEvent.Description)
                         ? null
                         : updatedEvent.Description.Trim();
 
+                // =================================================
+                // NOTES
+                // =================================================
+
                 existingEvent.Notes =
-                    string.IsNullOrWhiteSpace(updatedEvent.Notes)
+                    string.IsNullOrWhiteSpace(
+                        updatedEvent.Notes)
                         ? null
                         : updatedEvent.Notes.Trim();
 
-                // -------------------------------------------------
+                // =================================================
                 // AUDIT
-                // -------------------------------------------------
+                // =================================================
 
                 existingEvent.UpdatedAt =
                     DateTime.Now;
 
-                // -------------------------------------------------
+                // =================================================
                 // IMPORTANT
-                // -------------------------------------------------
-                // CustomerId is deliberately NOT updated.
-                // This prevents cross-tenant reassignment.
-                // -------------------------------------------------
+                //
+                // CustomerId is deliberately NOT changed.
+                // =================================================
 
                 await _context.SaveChangesAsync();
 
                 return Ok(existingEvent);
             }
+            catch (DbUpdateException ex)
+            {
+                return StatusCode(500, new
+                {
+                    message =
+                        "Unable to update event.",
+
+                    error =
+                        ex.InnerException?.Message
+                        ?? ex.Message
+                });
+            }
             catch (Exception ex)
             {
                 return StatusCode(500, new
                 {
-                    message = "Unable to update event.",
-                    error = ex.Message
+                    message =
+                        "Unable to update event.",
+
+                    error =
+                        ex.InnerException?.Message
+                        ?? ex.Message
                 });
             }
         }
@@ -395,47 +671,73 @@ namespace EPIC.Api.Controllers
         // =========================================================
 
         [HttpDelete("{id:int}")]
-        public async Task<IActionResult> DeleteEvent(int id)
+        public async Task<IActionResult> DeleteEvent(
+            int id)
         {
             try
             {
-                var customerId = GetCustomerId();
+                var query =
+                    _context.Events
+                        .AsQueryable();
 
-                if (!customerId.HasValue)
+                // =================================================
+                // CLIENT TENANT FILTER
+                // =================================================
+
+                if (IsClientAccount())
                 {
-                    return CustomerAuthorizationRequired();
+                    var customerId =
+                        GetCustomerId();
+
+                    if (!customerId.HasValue)
+                    {
+                        return Unauthorized(new
+                        {
+                            message =
+                                "CUSTOMER ID NOT FOUND IN CLIENT TOKEN."
+                        });
+                    }
+
+                    query =
+                        query.Where(e =>
+                            e.CustomerId ==
+                            customerId.Value);
                 }
 
-                // -------------------------------------------------
-                // TENANT ISOLATION
-                // -------------------------------------------------
+                // =================================================
+                // LOAD EVENT
+                // =================================================
 
                 var churchEvent =
-                    await _context.Events
+                    await query
                         .FirstOrDefaultAsync(e =>
-                            e.EventId == id &&
-                            e.CustomerId == customerId.Value);
+                            e.EventId == id);
 
                 if (churchEvent == null)
                 {
                     return NotFound(new
                     {
-                        message = "Event not found."
+                        message =
+                            "Event not found."
                     });
                 }
 
-                // -------------------------------------------------
+                // =================================================
                 // DELETE
-                // -------------------------------------------------
+                // =================================================
 
-                _context.Events.Remove(churchEvent);
+                _context.Events.Remove(
+                    churchEvent);
 
                 await _context.SaveChangesAsync();
 
                 return Ok(new
                 {
-                    message = "Event deleted successfully.",
-                    eventId = id
+                    message =
+                        "Event deleted successfully.",
+
+                    eventId =
+                        id
                 });
             }
             catch (DbUpdateException ex)
@@ -444,15 +746,22 @@ namespace EPIC.Api.Controllers
                 {
                     message =
                         "Unable to delete event because related records may still exist.",
-                    error = ex.InnerException?.Message ?? ex.Message
+
+                    error =
+                        ex.InnerException?.Message
+                        ?? ex.Message
                 });
             }
             catch (Exception ex)
             {
                 return StatusCode(500, new
                 {
-                    message = "Unable to delete event.",
-                    error = ex.Message
+                    message =
+                        "Unable to delete event.",
+
+                    error =
+                        ex.InnerException?.Message
+                        ?? ex.Message
                 });
             }
         }
