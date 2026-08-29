@@ -17,6 +17,7 @@ namespace EPIC.Api.Data
 
         public DbSet<User> Users => Set<User>();
         public DbSet<Member> Members => Set<Member>();
+        public DbSet<ClientMember> ClientMembers { get; set; } = null!;
         public DbSet<Attendance> Attendances => Set<Attendance>();
         public DbSet<Income> Incomes => Set<Income>();
         public DbSet<Expense> Expenses => Set<Expense>();
@@ -50,6 +51,13 @@ namespace EPIC.Api.Data
 
         public DbSet<Role> Roles => Set<Role>();
         public DbSet<Permission> Permissions => Set<Permission>();
+
+        // =========================================================
+        // CLIENT SECURITY
+        // =========================================================
+
+        public DbSet<ClientRole> ClientRoles => Set<ClientRole>();
+        public DbSet<ClientPermission> ClientPermissions => Set<ClientPermission>();
 
         // =========================================================
         // SETTINGS
@@ -88,8 +96,11 @@ namespace EPIC.Api.Data
             base.OnModelCreating(modelBuilder);
 
             ConfigureUsers(modelBuilder);
+            ConfigureMembers(modelBuilder);
             ConfigureRoles(modelBuilder);
             ConfigurePermissions(modelBuilder);
+            ConfigureClientRoles(modelBuilder);
+            ConfigureClientPermissions(modelBuilder);
 
             ConfigureWebsiteVisits(modelBuilder);
 
@@ -100,6 +111,8 @@ namespace EPIC.Api.Data
             ConfigureVisitors(modelBuilder);
             ConfigureGiving(modelBuilder);
 
+            ConfigureChurchServices(modelBuilder);
+            ConfigureMinistries(modelBuilder);
             ConfigureMinistryMembers(modelBuilder);
             ConfigureMinistryPerformance(modelBuilder);
 
@@ -107,6 +120,7 @@ namespace EPIC.Api.Data
 
             ConfigureDemoRequests(modelBuilder);
             ConfigureCustomers(modelBuilder);
+            ConfigureClientMembers(modelBuilder);
             ConfigureSubscriptionPlans(modelBuilder);
             ConfigureSubscriptions(modelBuilder);
             ConfigurePayments(modelBuilder);
@@ -189,6 +203,107 @@ namespace EPIC.Api.Data
 
                 entity.HasIndex(e => e.RoleName)
                     .IsUnique();
+            });
+        }
+
+        // =========================================================
+        // CLIENT ROLES
+        // =========================================================
+
+        private static void ConfigureClientRoles(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<ClientRole>(entity =>
+            {
+                entity.HasKey(e => e.ClientRoleId);
+
+                entity.Property(e => e.CustomerId)
+                    .IsRequired();
+
+                entity.Property(e => e.RoleName)
+                    .HasMaxLength(100)
+                    .IsRequired();
+
+                entity.Property(e => e.Description)
+                    .HasMaxLength(500);
+
+                entity.Property(e => e.IsSystemRole)
+                    .IsRequired()
+                    .HasDefaultValue(false);
+
+                entity.Property(e => e.IsActive)
+                    .IsRequired()
+                    .HasDefaultValue(true);
+
+                entity.Property(e => e.CreatedDate)
+                    .IsRequired();
+
+                entity.Property(e => e.UpdatedDate)
+                    .IsRequired(false);
+
+                entity.HasOne(e => e.Customer)
+                    .WithMany()
+                    .HasForeignKey(e => e.CustomerId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(e => e.CustomerId);
+
+                entity.HasIndex(e => new
+                {
+                    e.CustomerId,
+                    e.RoleName
+                })
+                .IsUnique();
+            });
+        }
+
+        // =========================================================
+        // CLIENT PERMISSIONS
+        // =========================================================
+
+        private static void ConfigureClientPermissions(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<ClientPermission>(entity =>
+            {
+                entity.HasKey(e => e.ClientPermissionId);
+
+                entity.Property(e => e.ModuleName)
+                    .HasMaxLength(100)
+                    .IsRequired();
+
+                entity.Property(e => e.CanView)
+                    .IsRequired()
+                    .HasDefaultValue(false);
+
+                entity.Property(e => e.CanCreate)
+                    .IsRequired()
+                    .HasDefaultValue(false);
+
+                entity.Property(e => e.CanEdit)
+                    .IsRequired()
+                    .HasDefaultValue(false);
+
+                entity.Property(e => e.CanDelete)
+                    .IsRequired()
+                    .HasDefaultValue(false);
+
+                entity.Property(e => e.CanManage)
+                    .IsRequired()
+                    .HasDefaultValue(false);
+
+                entity.Property(e => e.CreatedDate)
+                    .IsRequired();
+
+                entity.HasOne(e => e.ClientRole)
+                    .WithMany(r => r.ClientPermissions)
+                    .HasForeignKey(e => e.ClientRoleId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(e => new
+                {
+                    e.ClientRoleId,
+                    e.ModuleName
+                })
+                .IsUnique();
             });
         }
 
@@ -317,19 +432,33 @@ namespace EPIC.Api.Data
             });
         }
 
-        // =========================================================
-        // EVENTS
-        // =========================================================
+        
+// =========================================================
+// EVENTS
+// =========================================================
 
-        private static void ConfigureEvents(ModelBuilder modelBuilder)
+private static void ConfigureEvents(ModelBuilder modelBuilder)
         {
-            // -----------------------------------------------------
+            // =========================================================
             // EVENT
-            // -----------------------------------------------------
+            // =========================================================
 
             modelBuilder.Entity<Event>(entity =>
             {
                 entity.HasKey(e => e.EventId);
+
+                // -----------------------------------------------------
+                // CUSTOMER / TENANT
+                // -----------------------------------------------------
+
+                entity.HasOne(e => e.Customer)
+                    .WithMany()
+                    .HasForeignKey(e => e.CustomerId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // -----------------------------------------------------
+                // EVENT INFORMATION
+                // -----------------------------------------------------
 
                 entity.Property(e => e.Title)
                     .HasMaxLength(200)
@@ -338,6 +467,19 @@ namespace EPIC.Api.Data
                 entity.Property(e => e.EventType)
                     .HasMaxLength(100)
                     .IsRequired();
+
+                entity.Property(e => e.EventDate)
+                    .IsRequired();
+
+                entity.Property(e => e.StartTime)
+                    .IsRequired();
+
+                entity.Property(e => e.EndTime)
+                    .IsRequired(false);
+
+                // -----------------------------------------------------
+                // LOCATION / LEADERSHIP
+                // -----------------------------------------------------
 
                 entity.Property(e => e.Venue)
                     .HasMaxLength(200);
@@ -348,13 +490,26 @@ namespace EPIC.Api.Data
                 entity.Property(e => e.Ministry)
                     .HasMaxLength(150);
 
+                // -----------------------------------------------------
+                // STATUS
+                // -----------------------------------------------------
+
                 entity.Property(e => e.Status)
                     .HasMaxLength(50)
                     .IsRequired()
                     .HasDefaultValue("SCHEDULED");
 
+                // -----------------------------------------------------
+                // DESCRIPTION / NOTES
+                // -----------------------------------------------------
+
                 entity.Property(e => e.Description);
+
                 entity.Property(e => e.Notes);
+
+                // -----------------------------------------------------
+                // AUDIT
+                // -----------------------------------------------------
 
                 entity.Property(e => e.CreatedAt)
                     .IsRequired();
@@ -362,28 +517,55 @@ namespace EPIC.Api.Data
                 entity.Property(e => e.UpdatedAt)
                     .IsRequired(false);
 
+                // -----------------------------------------------------
+                // INDEXES
+                // -----------------------------------------------------
+
+                entity.HasIndex(e => e.CustomerId);
+
                 entity.HasIndex(e => e.EventDate);
+
                 entity.HasIndex(e => e.EventType);
+
                 entity.HasIndex(e => e.Status);
+
+                entity.HasIndex(e => new
+                {
+                    e.CustomerId,
+                    e.EventDate
+                });
             });
 
-            // -----------------------------------------------------
+
+            // =========================================================
             // EVENT DEPARTMENT
-            // -----------------------------------------------------
+            // =========================================================
 
             modelBuilder.Entity<EventDepartment>(entity =>
             {
                 entity.HasKey(e => e.EventDepartmentId);
 
+                // -----------------------------------------------------
+                // EVENT
+                // -----------------------------------------------------
+
                 entity.HasOne(e => e.Event)
-                    .WithMany()
+                    .WithMany(e => e.EventDepartments)
                     .HasForeignKey(e => e.EventId)
                     .OnDelete(DeleteBehavior.Cascade);
+
+                // -----------------------------------------------------
+                // DEPARTMENT HEAD
+                // -----------------------------------------------------
 
                 entity.HasOne(e => e.DepartmentHeadMember)
                     .WithMany()
                     .HasForeignKey(e => e.DepartmentHeadMemberId)
                     .OnDelete(DeleteBehavior.Restrict);
+
+                // -----------------------------------------------------
+                // DEPARTMENT INFORMATION
+                // -----------------------------------------------------
 
                 entity.Property(e => e.DepartmentName)
                     .HasMaxLength(150)
@@ -392,37 +574,77 @@ namespace EPIC.Api.Data
                 entity.Property(e => e.DepartmentDescription)
                     .HasMaxLength(500);
 
+                // -----------------------------------------------------
+                // PRIORITY
+                // -----------------------------------------------------
+
                 entity.Property(e => e.Priority)
                     .HasMaxLength(20)
                     .IsRequired()
                     .HasDefaultValue("NORMAL");
+
+                // -----------------------------------------------------
+                // STATUS
+                // -----------------------------------------------------
 
                 entity.Property(e => e.Status)
                     .HasMaxLength(30)
                     .IsRequired()
                     .HasDefaultValue("PLANNING");
 
+                // -----------------------------------------------------
+                // AUDIT
+                // -----------------------------------------------------
+
                 entity.Property(e => e.CreatedAt)
                     .IsRequired();
 
+                entity.Property(e => e.UpdatedAt)
+                    .IsRequired(false);
+
+                // -----------------------------------------------------
+                // INDEXES
+                // -----------------------------------------------------
+
                 entity.HasIndex(e => e.EventId);
+
                 entity.HasIndex(e => e.DepartmentHeadMemberId);
+
                 entity.HasIndex(e => e.Status);
+
                 entity.HasIndex(e => e.Priority);
+
+                // Prevent duplicate department names
+                // within the same event.
+                entity.HasIndex(e => new
+                {
+                    e.EventId,
+                    e.DepartmentName
+                })
+                .IsUnique();
             });
 
-            // -----------------------------------------------------
+
+            // =========================================================
             // EVENT ROLE
-            // -----------------------------------------------------
+            // =========================================================
 
             modelBuilder.Entity<EventRole>(entity =>
             {
                 entity.HasKey(e => e.EventRoleId);
 
+                // -----------------------------------------------------
+                // EVENT DEPARTMENT
+                // -----------------------------------------------------
+
                 entity.HasOne(e => e.EventDepartment)
-                    .WithMany()
+                    .WithMany(d => d.EventRoles)
                     .HasForeignKey(e => e.EventDepartmentId)
-                    .OnDelete(DeleteBehavior.NoAction);
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // -----------------------------------------------------
+                // ROLE INFORMATION
+                // -----------------------------------------------------
 
                 entity.Property(e => e.RoleName)
                     .HasMaxLength(150)
@@ -431,52 +653,121 @@ namespace EPIC.Api.Data
                 entity.Property(e => e.RoleDescription)
                     .HasMaxLength(500);
 
+                // -----------------------------------------------------
+                // PRIORITY
+                // -----------------------------------------------------
+
                 entity.Property(e => e.Priority)
                     .HasMaxLength(20)
                     .IsRequired()
                     .HasDefaultValue("NORMAL");
+
+                // -----------------------------------------------------
+                // STATUS
+                // -----------------------------------------------------
 
                 entity.Property(e => e.Status)
                     .HasMaxLength(30)
                     .IsRequired()
                     .HasDefaultValue("ACTIVE");
 
+                // -----------------------------------------------------
+                // AUDIT
+                // -----------------------------------------------------
+
                 entity.Property(e => e.CreatedAt)
                     .IsRequired();
 
+                entity.Property(e => e.UpdatedAt)
+                    .IsRequired(false);
+
+                // -----------------------------------------------------
+                // INDEXES
+                // -----------------------------------------------------
+
                 entity.HasIndex(e => e.EventDepartmentId);
+
                 entity.HasIndex(e => e.RoleName);
+
                 entity.HasIndex(e => e.Status);
+
                 entity.HasIndex(e => e.Priority);
+
+                // Prevent duplicate role names
+                // within the same department.
+                entity.HasIndex(e => new
+                {
+                    e.EventDepartmentId,
+                    e.RoleName
+                })
+                .IsUnique();
             });
 
-            // -----------------------------------------------------
+
+            // =========================================================
             // EVENT ASSIGNMENT
-            // -----------------------------------------------------
+            // =========================================================
 
             modelBuilder.Entity<EventAssignment>(entity =>
             {
                 entity.HasKey(e => e.EventAssignmentId);
+
+                // -----------------------------------------------------
+                // EVENT
+                // -----------------------------------------------------
 
                 entity.HasOne(e => e.Event)
                     .WithMany(e => e.EventAssignments)
                     .HasForeignKey(e => e.EventId)
                     .OnDelete(DeleteBehavior.Cascade);
 
+                // -----------------------------------------------------
+                // EVENT DEPARTMENT
+                // -----------------------------------------------------
+
+                // Restrict is intentional.
+                //
+                // An assignment should not be automatically deleted
+                // through the department relationship.
+                //
+                // The Event relationship remains the primary cascade
+                // path for event-level cleanup.
+
                 entity.HasOne(e => e.EventDepartment)
-                    .WithMany()
+                    .WithMany(d => d.EventAssignments)
                     .HasForeignKey(e => e.EventDepartmentId)
-                    .OnDelete(DeleteBehavior.NoAction);
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // -----------------------------------------------------
+                // EVENT ROLE
+                // -----------------------------------------------------
+
+                // Restrict prevents multiple cascade paths:
+                //
+                // Event
+                //   -> Department
+                //       -> Role
+                //           -> Assignment
+                //
+                // while Assignment also directly references Event.
 
                 entity.HasOne(e => e.EventRole)
                     .WithMany(r => r.EventAssignments)
                     .HasForeignKey(e => e.EventRoleId)
-                    .OnDelete(DeleteBehavior.NoAction);
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // -----------------------------------------------------
+                // MEMBER
+                // -----------------------------------------------------
 
                 entity.HasOne(e => e.Member)
                     .WithMany()
                     .HasForeignKey(e => e.MemberId)
-                    .OnDelete(DeleteBehavior.NoAction);
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // -----------------------------------------------------
+                // ASSIGNMENT INFORMATION
+                // -----------------------------------------------------
 
                 entity.Property(e => e.AssignedPerson)
                     .HasMaxLength(200);
@@ -487,17 +778,33 @@ namespace EPIC.Api.Data
                 entity.Property(e => e.RoleName)
                     .HasMaxLength(150);
 
+                // -----------------------------------------------------
+                // ASSIGNMENT STATUS
+                // -----------------------------------------------------
+
                 entity.Property(e => e.AssignmentStatus)
                     .HasMaxLength(50)
                     .IsRequired()
                     .HasDefaultValue("PENDING");
+
+                // -----------------------------------------------------
+                // PRIORITY
+                // -----------------------------------------------------
 
                 entity.Property(e => e.Priority)
                     .HasMaxLength(50)
                     .IsRequired()
                     .HasDefaultValue("NORMAL");
 
+                // -----------------------------------------------------
+                // NOTES
+                // -----------------------------------------------------
+
                 entity.Property(e => e.Notes);
+
+                // -----------------------------------------------------
+                // AUDIT
+                // -----------------------------------------------------
 
                 entity.Property(e => e.CreatedAt)
                     .IsRequired();
@@ -505,31 +812,53 @@ namespace EPIC.Api.Data
                 entity.Property(e => e.UpdatedAt)
                     .IsRequired(false);
 
+                // -----------------------------------------------------
+                // INDEXES
+                // -----------------------------------------------------
+
                 entity.HasIndex(e => e.EventId);
+
                 entity.HasIndex(e => e.EventDepartmentId);
+
                 entity.HasIndex(e => e.EventRoleId);
+
                 entity.HasIndex(e => e.MemberId);
+
                 entity.HasIndex(e => e.AssignmentStatus);
+
                 entity.HasIndex(e => e.Priority);
             });
 
-            // -----------------------------------------------------
+
+            // =========================================================
             // EVENT NEED
-            // -----------------------------------------------------
+            // =========================================================
 
             modelBuilder.Entity<EventNeed>(entity =>
             {
                 entity.HasKey(e => e.EventNeedId);
+
+                // -----------------------------------------------------
+                // EVENT
+                // -----------------------------------------------------
 
                 entity.HasOne(e => e.Event)
                     .WithMany(e => e.EventNeeds)
                     .HasForeignKey(e => e.EventId)
                     .OnDelete(DeleteBehavior.Cascade);
 
+                // -----------------------------------------------------
+                // RESPONSIBLE MEMBER
+                // -----------------------------------------------------
+
                 entity.HasOne(e => e.ResponsibleMember)
                     .WithMany()
                     .HasForeignKey(e => e.ResponsibleMemberId)
-                    .OnDelete(DeleteBehavior.NoAction);
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // -----------------------------------------------------
+                // NEED INFORMATION
+                // -----------------------------------------------------
 
                 entity.Property(e => e.NeedName)
                     .HasMaxLength(200)
@@ -541,6 +870,10 @@ namespace EPIC.Api.Data
                 entity.Property(e => e.Category)
                     .HasMaxLength(100);
 
+                // -----------------------------------------------------
+                // QUANTITY
+                // -----------------------------------------------------
+
                 entity.Property(e => e.Quantity)
                     .HasColumnType("decimal(18,2)")
                     .HasDefaultValue(1m);
@@ -548,23 +881,47 @@ namespace EPIC.Api.Data
                 entity.Property(e => e.Unit)
                     .HasMaxLength(50);
 
+                // -----------------------------------------------------
+                // RESPONSIBILITY
+                // -----------------------------------------------------
+
                 entity.Property(e => e.ResponsiblePerson)
                     .HasMaxLength(200);
+
+                // -----------------------------------------------------
+                // STATUS
+                // -----------------------------------------------------
 
                 entity.Property(e => e.Status)
                     .HasMaxLength(30)
                     .IsRequired()
                     .HasDefaultValue("PENDING");
 
+                // -----------------------------------------------------
+                // PRIORITY
+                // -----------------------------------------------------
+
                 entity.Property(e => e.Priority)
                     .HasMaxLength(20)
                     .IsRequired()
                     .HasDefaultValue("NORMAL");
 
+                // -----------------------------------------------------
+                // NOTES
+                // -----------------------------------------------------
+
                 entity.Property(e => e.Notes);
+
+                // -----------------------------------------------------
+                // DATES
+                // -----------------------------------------------------
 
                 entity.Property(e => e.NeededBy)
                     .IsRequired(false);
+
+                // -----------------------------------------------------
+                // AUDIT
+                // -----------------------------------------------------
 
                 entity.Property(e => e.CreatedAt)
                     .IsRequired();
@@ -572,35 +929,62 @@ namespace EPIC.Api.Data
                 entity.Property(e => e.UpdatedAt)
                     .IsRequired(false);
 
+                // -----------------------------------------------------
+                // INDEXES
+                // -----------------------------------------------------
+
                 entity.HasIndex(e => e.EventId);
+
                 entity.HasIndex(e => e.ResponsibleMemberId);
+
                 entity.HasIndex(e => e.Status);
+
                 entity.HasIndex(e => e.Priority);
+
                 entity.HasIndex(e => e.Category);
+
+                entity.HasIndex(e => e.NeededBy);
             });
 
-            // -----------------------------------------------------
+
+            // =========================================================
             // EVENT CHECKLIST
-            // -----------------------------------------------------
+            // =========================================================
 
             modelBuilder.Entity<EventChecklist>(entity =>
             {
                 entity.HasKey(e => e.EventChecklistId);
+
+                // -----------------------------------------------------
+                // EVENT
+                // -----------------------------------------------------
 
                 entity.HasOne(e => e.Event)
                     .WithMany(e => e.EventChecklists)
                     .HasForeignKey(e => e.EventId)
                     .OnDelete(DeleteBehavior.Cascade);
 
+                // -----------------------------------------------------
+                // ASSIGNED MEMBER
+                // -----------------------------------------------------
+
                 entity.HasOne(e => e.AssignedMember)
                     .WithMany()
                     .HasForeignKey(e => e.AssignedMemberId)
-                    .OnDelete(DeleteBehavior.NoAction);
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // -----------------------------------------------------
+                // COMPLETED BY MEMBER
+                // -----------------------------------------------------
 
                 entity.HasOne(e => e.CompletedByMember)
                     .WithMany()
                     .HasForeignKey(e => e.CompletedByMemberId)
-                    .OnDelete(DeleteBehavior.NoAction);
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // -----------------------------------------------------
+                // CHECKLIST ITEM
+                // -----------------------------------------------------
 
                 entity.Property(e => e.TaskName)
                     .HasMaxLength(300)
@@ -609,32 +993,68 @@ namespace EPIC.Api.Data
                 entity.Property(e => e.Description)
                     .HasMaxLength(1000);
 
+                // -----------------------------------------------------
+                // CATEGORY
+                // -----------------------------------------------------
+
                 entity.Property(e => e.Category)
                     .HasMaxLength(100);
 
+                // -----------------------------------------------------
+                // ASSIGNMENT
+                // -----------------------------------------------------
+
                 entity.Property(e => e.AssignedPerson)
                     .HasMaxLength(200);
+
+                // -----------------------------------------------------
+                // STATUS
+                // -----------------------------------------------------
 
                 entity.Property(e => e.Status)
                     .HasMaxLength(30)
                     .IsRequired()
                     .HasDefaultValue("PENDING");
 
+                // -----------------------------------------------------
+                // PRIORITY
+                // -----------------------------------------------------
+
                 entity.Property(e => e.Priority)
                     .HasMaxLength(20)
                     .IsRequired()
                     .HasDefaultValue("NORMAL");
 
+                // -----------------------------------------------------
+                // ORDER
+                // -----------------------------------------------------
+
                 entity.Property(e => e.SortOrder)
                     .HasDefaultValue(0);
+
+                // -----------------------------------------------------
+                // DUE DATE
+                // -----------------------------------------------------
 
                 entity.Property(e => e.DueDate)
                     .IsRequired(false);
 
+                // -----------------------------------------------------
+                // COMPLETION
+                // -----------------------------------------------------
+
                 entity.Property(e => e.CompletedAt)
                     .IsRequired(false);
 
+                // -----------------------------------------------------
+                // NOTES
+                // -----------------------------------------------------
+
                 entity.Property(e => e.Notes);
+
+                // -----------------------------------------------------
+                // AUDIT
+                // -----------------------------------------------------
 
                 entity.Property(e => e.CreatedAt)
                     .IsRequired();
@@ -642,13 +1062,25 @@ namespace EPIC.Api.Data
                 entity.Property(e => e.UpdatedAt)
                     .IsRequired(false);
 
+                // -----------------------------------------------------
+                // INDEXES
+                // -----------------------------------------------------
+
                 entity.HasIndex(e => e.EventId);
+
                 entity.HasIndex(e => e.AssignedMemberId);
+
                 entity.HasIndex(e => e.CompletedByMemberId);
+
                 entity.HasIndex(e => e.Status);
+
                 entity.HasIndex(e => e.Priority);
+
                 entity.HasIndex(e => e.Category);
+
                 entity.HasIndex(e => e.SortOrder);
+
+                entity.HasIndex(e => e.DueDate);
             });
         }
 
@@ -665,8 +1097,6 @@ namespace EPIC.Api.Data
                     .HasForeignKey(e => e.EventId)
                     .OnDelete(DeleteBehavior.SetNull);
 
-                // One member can only have one attendance
-                // record for a church service.
                 entity.HasIndex(e => new
                 {
                     e.MemberId,
@@ -675,8 +1105,6 @@ namespace EPIC.Api.Data
                 .HasFilter("[ChurchServiceId] IS NOT NULL")
                 .IsUnique();
 
-                // One member can only have one attendance
-                // record for an event.
                 entity.HasIndex(e => new
                 {
                     e.MemberId,
@@ -758,21 +1186,349 @@ namespace EPIC.Api.Data
         {
             modelBuilder.Entity<Giving>(entity =>
             {
+                entity.HasKey(e => e.GivingId);
+
+                // -----------------------------------------------------
+                // CUSTOMER / TENANT
+                // -----------------------------------------------------
+
+                entity.Property(e => e.CustomerId)
+                    .IsRequired();
+
+                entity.HasOne(e => e.Customer)
+                    .WithMany()
+                    .HasForeignKey(e => e.CustomerId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // -----------------------------------------------------
+                // MEMBER
+                // -----------------------------------------------------
+
                 entity.HasOne(e => e.Member)
                     .WithMany()
                     .HasForeignKey(e => e.MemberId)
                     .OnDelete(DeleteBehavior.SetNull);
+
+                // -----------------------------------------------------
+                // CHURCH SERVICE
+                // -----------------------------------------------------
 
                 entity.HasOne(e => e.ChurchService)
                     .WithMany()
                     .HasForeignKey(e => e.ChurchServiceId)
                     .OnDelete(DeleteBehavior.SetNull);
 
+                // -----------------------------------------------------
+                // GIVING INFORMATION
+                // -----------------------------------------------------
+
+                entity.Property(e => e.GivingType)
+                    .HasMaxLength(50)
+                    .IsRequired();
+
                 entity.Property(e => e.Amount)
-                    .HasColumnType("decimal(18,2)");
+                    .HasColumnType("decimal(18,2)")
+                    .IsRequired();
+
+                entity.Property(e => e.GivingDate)
+                    .IsRequired();
+
+                // -----------------------------------------------------
+                // PAYMENT
+                // -----------------------------------------------------
+
+                entity.Property(e => e.PaymentMethod)
+                    .HasMaxLength(50)
+                    .IsRequired();
+
+                entity.Property(e => e.ReferenceNumber)
+                    .HasMaxLength(100);
+
+                // -----------------------------------------------------
+                // NOTES
+                // -----------------------------------------------------
+
+                entity.Property(e => e.Notes)
+                    .HasMaxLength(500);
+
+                // -----------------------------------------------------
+                // RECORD INFORMATION
+                // -----------------------------------------------------
+
+                entity.Property(e => e.RecordedBy)
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.RecordedDate)
+                    .IsRequired();
+
+                // -----------------------------------------------------
+                // INDEXES
+                // -----------------------------------------------------
+
+                entity.HasIndex(e => e.CustomerId);
+                entity.HasIndex(e => e.MemberId);
+                entity.HasIndex(e => e.ChurchServiceId);
+                entity.HasIndex(e => e.GivingDate);
+                entity.HasIndex(e => e.GivingType);
+                entity.HasIndex(e => e.PaymentMethod);
             });
         }
 
+        // =========================================================
+        // CHURCH SERVICES
+        // =========================================================
+
+        private static void ConfigureChurchServices(
+            ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<ChurchService>(entity =>
+            {
+                entity.HasKey(e => e.ChurchServiceId);
+
+                // -----------------------------------------------------
+                // CUSTOMER / TENANT
+                // -----------------------------------------------------
+
+                entity.Property(e => e.CustomerId)
+                    .IsRequired();
+
+                entity.HasOne(e => e.Customer)
+                    .WithMany()
+                    .HasForeignKey(e => e.CustomerId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // -----------------------------------------------------
+                // SERVICE INFORMATION
+                // -----------------------------------------------------
+
+                entity.Property(e => e.ServiceName)
+                    .HasMaxLength(150)
+                    .IsRequired();
+
+                entity.Property(e => e.ServiceType)
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.ServiceDate)
+                    .IsRequired();
+
+                entity.Property(e => e.StartTime)
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.EndTime)
+                    .HasMaxLength(50);
+
+                // -----------------------------------------------------
+                // LOCATION
+                // -----------------------------------------------------
+
+                entity.Property(e => e.Location)
+                    .HasMaxLength(200);
+
+                // -----------------------------------------------------
+                // LEADER / SPEAKER
+                // -----------------------------------------------------
+
+                entity.Property(e => e.ServiceLeader)
+                    .HasMaxLength(150);
+
+                entity.Property(e => e.Speaker)
+                    .HasMaxLength(150);
+
+                // -----------------------------------------------------
+                // DESCRIPTION
+                // -----------------------------------------------------
+
+                entity.Property(e => e.Description)
+                    .HasMaxLength(500);
+
+                // -----------------------------------------------------
+                // STATUS
+                // -----------------------------------------------------
+
+                entity.Property(e => e.Status)
+                    .HasMaxLength(50)
+                    .IsRequired()
+                    .HasDefaultValue("SCHEDULED");
+
+                // -----------------------------------------------------
+                // AUDIT
+                // -----------------------------------------------------
+
+                entity.Property(e => e.CreatedDate)
+                    .IsRequired();
+
+                entity.Property(e => e.UpdatedDate)
+                    .IsRequired(false);
+
+                // -----------------------------------------------------
+                // INDEXES
+                // -----------------------------------------------------
+
+                entity.HasIndex(e => e.CustomerId);
+
+                entity.HasIndex(e => e.ServiceDate);
+
+                entity.HasIndex(e => e.ServiceType);
+
+                entity.HasIndex(e => e.Status);
+
+                // Customer + date is useful for tenant dashboards
+                entity.HasIndex(e => new
+                {
+                    e.CustomerId,
+                    e.ServiceDate
+                });
+            });
+        }
+
+        // =========================================================
+        // MEMBERS
+        // =========================================================
+
+        private static void ConfigureMembers(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Member>(entity =>
+            {
+                entity.HasKey(e => e.MemberId);
+
+                entity.HasOne(e => e.Customer)
+                    .WithMany()
+                    .HasForeignKey(e => e.CustomerId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.Property(e => e.MemberCode)
+                    .HasMaxLength(50)
+                    .IsRequired();
+
+                entity.Property(e => e.FirstName)
+                    .HasMaxLength(100)
+                    .IsRequired();
+
+                entity.Property(e => e.MiddleName)
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.LastName)
+                    .HasMaxLength(100)
+                    .IsRequired();
+
+                entity.Property(e => e.Gender)
+                    .HasMaxLength(30);
+
+                entity.Property(e => e.ContactNumber)
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.Address)
+                    .HasMaxLength(500);
+
+                entity.Property(e => e.CivilStatus)
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.Ministry)
+                    .HasMaxLength(150);
+
+                entity.Property(e => e.Status)
+                    .HasMaxLength(30)
+                    .IsRequired()
+                    .HasDefaultValue("ACTIVE");
+
+                entity.Property(e => e.PhotoPath)
+                    .HasMaxLength(500);
+
+                entity.Property(e => e.CreatedDate)
+                    .IsRequired();
+
+                entity.HasIndex(e => e.CustomerId);
+
+                entity.HasIndex(e => new
+                {
+                    e.CustomerId,
+                    e.MemberCode
+                })
+                .IsUnique();
+            });
+        }
+        private static void ConfigureMinistries(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Ministry>(entity =>
+            {
+                entity.HasKey(e => e.MinistryId);
+
+                // =====================================================
+                // CUSTOMER / TENANT
+                // =====================================================
+
+                entity.HasOne(e => e.Customer)
+                    .WithMany()
+                    .HasForeignKey(e => e.CustomerId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(e => e.CustomerId);
+
+                // =====================================================
+                // MINISTRY INFORMATION
+                // =====================================================
+
+                entity.Property(e => e.Name)
+                    .HasMaxLength(150)
+                    .IsRequired();
+
+                entity.Property(e => e.MinistryCode)
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.MinistryHead)
+                    .HasMaxLength(100);
+
+                entity.Property(e => e.ContactNumber)
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.Description)
+                    .HasMaxLength(500);
+
+                // =====================================================
+                // MEETING INFORMATION
+                // =====================================================
+
+                entity.Property(e => e.MeetingDay)
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.MeetingTime)
+                    .HasMaxLength(50);
+
+                entity.Property(e => e.MeetingLocation)
+                    .HasMaxLength(250);
+
+                // =====================================================
+                // STATUS
+                // =====================================================
+
+                entity.Property(e => e.Status)
+                    .HasMaxLength(50)
+                    .IsRequired()
+                    .HasDefaultValue("ACTIVE");
+
+                // =====================================================
+                // AUDIT
+                // =====================================================
+
+                entity.Property(e => e.CreatedDate)
+                    .IsRequired();
+
+                entity.Property(e => e.UpdatedDate)
+                    .IsRequired(false);
+
+                // =====================================================
+                // INDEXES
+                // =====================================================
+
+                entity.HasIndex(e => e.CustomerId);
+
+                entity.HasIndex(e => new
+                {
+                    e.CustomerId,
+                    e.Name
+                });
+            });
+        }
         // =========================================================
         // MINISTRY MEMBERS
         // =========================================================
@@ -835,18 +1591,15 @@ namespace EPIC.Api.Data
             });
         }
 
-// =========================================================
-// MINISTRY PERFORMANCE
-// =========================================================
+        // =========================================================
+        // MINISTRY PERFORMANCE
+        // =========================================================
 
-private static void ConfigureMinistryPerformance(ModelBuilder modelBuilder)
+        private static void ConfigureMinistryPerformance(
+            ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<MinistryPerformanceRating>(entity =>
             {
-                // Primary key is discovered from the model convention.
-                // Do NOT reference MinistryPerformanceRatingId because
-                // that property does not exist in the model.
-
                 entity.HasOne(p => p.MinistryMember)
                     .WithMany()
                     .HasForeignKey(p => p.MinistryMemberId)
@@ -879,8 +1632,6 @@ private static void ConfigureMinistryPerformance(ModelBuilder modelBuilder)
                 entity.HasIndex(p => p.MinistryMemberId);
             });
         }
-
-
 
         // =========================================================
         // CHURCH SETTINGS
@@ -981,7 +1732,8 @@ private static void ConfigureMinistryPerformance(ModelBuilder modelBuilder)
         // CUSTOMERS
         // =========================================================
 
-        private static void ConfigureCustomers(ModelBuilder modelBuilder)
+        private static void ConfigureCustomers(
+            ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Customer>(entity =>
             {
@@ -1025,6 +1777,70 @@ private static void ConfigureMinistryPerformance(ModelBuilder modelBuilder)
                 entity.HasIndex(e => e.Email);
                 entity.HasIndex(e => e.Status);
                 entity.HasIndex(e => e.CreatedDate);
+            });
+        }
+
+        // =========================================================
+        // CLIENT MEMBERS
+        // =========================================================
+
+        private static void ConfigureClientMembers(
+            ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<ClientMember>(entity =>
+            {
+                entity.HasKey(e => e.ClientMemberId);
+
+                entity.HasOne(e => e.Customer)
+                    .WithMany()
+                    .HasForeignKey(e => e.CustomerId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Member)
+                    .WithMany()
+                    .HasForeignKey(e => e.MemberId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.ClientRole)
+                    .WithMany(r => r.ClientMembers)
+                    .HasForeignKey(e => e.ClientRoleId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(e => e.CustomerId);
+                entity.HasIndex(e => e.MemberId);
+                entity.HasIndex(e => e.ClientRoleId);
+
+                entity.HasIndex(e => new
+                {
+                    e.CustomerId,
+                    e.MemberId
+                })
+                .IsUnique();
+
+                entity.Property(e => e.Username)
+                    .HasMaxLength(100)
+                    .IsRequired();
+
+                entity.Property(e => e.PasswordHash)
+                    .IsRequired();
+
+                entity.Property(e => e.Status)
+                    .HasMaxLength(30)
+                    .IsRequired()
+                    .HasDefaultValue("ACTIVE");
+
+                entity.Property(e => e.IsActive)
+                    .IsRequired()
+                    .HasDefaultValue(true);
+
+                entity.Property(e => e.CreatedDate)
+                    .IsRequired();
+
+                entity.Property(e => e.Email)
+                    .HasMaxLength(200);
+
+                entity.Property(e => e.ContactNumber)
+                    .HasMaxLength(20);
             });
         }
 
@@ -1167,7 +1983,8 @@ private static void ConfigureMinistryPerformance(ModelBuilder modelBuilder)
         // PAYMENTS
         // =========================================================
 
-        private static void ConfigurePayments(ModelBuilder modelBuilder)
+        private static void ConfigurePayments(
+            ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Payment>(entity =>
             {

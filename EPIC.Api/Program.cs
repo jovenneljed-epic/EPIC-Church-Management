@@ -26,61 +26,42 @@ var configuration = builder.Configuration;
 // ============================================================
 // CONFIGURATION
 // ============================================================
+//
+// Prevent JSON configuration files from automatically
+// reloading while the application is running.
+//
 
-builder.Configuration.Sources
-    .OfType<Microsoft.Extensions.Configuration.Json.JsonConfigurationSource>()
-    .ToList()
-    .ForEach(source =>
-    {
-        source.ReloadOnChange = false;
-    });
-
-
-// ============================================================
-// RESEND EMAIL SERVICE
-// ============================================================
-
-var resendApiKey = configuration["Resend:ApiKey"];
-
-if (string.IsNullOrWhiteSpace(resendApiKey))
+foreach (var source in builder.Configuration.Sources
+    .OfType<Microsoft.Extensions.Configuration.Json.JsonConfigurationSource>())
 {
-    throw new InvalidOperationException(
-        "Resend API key is missing. " +
-        "Check appsettings.json, User Secrets, " +
-        "or environment variables.");
+    source.ReloadOnChange = false;
 }
 
-builder.Services.AddHttpClient();
-
-builder.Services.Configure<ResendClientOptions>(
-    options =>
-    {
-        options.ApiToken = resendApiKey;
-    });
-
-builder.Services.AddScoped<IResend, ResendClient>();
-
-builder.Services.AddScoped<ResendEmailService>();
-
 
 // ============================================================
-// DATABASE
+// SERVICES
 // ============================================================
 
-var connectionString =
-    configuration.GetConnectionString("EPICChurchDB");
+ConfigureResend(
+    builder,
+    configuration);
 
-if (string.IsNullOrWhiteSpace(connectionString))
-{
-    throw new InvalidOperationException(
-        "Database connection string 'EPICChurchDB' is missing.");
-}
+ConfigureApplicationServices(
+    builder);
 
-builder.Services.AddDbContext<ApplicationDbContext>(
-    options =>
-    {
-        options.UseSqlServer(connectionString);
-    });
+ConfigureDatabase(
+    builder.Services,
+    configuration);
+
+ConfigureCors(
+    builder.Services);
+
+ConfigureJwtAuthentication(
+    builder.Services,
+    configuration);
+
+ConfigureSwagger(
+    builder.Services);
 
 
 // ============================================================
@@ -88,316 +69,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(
 // ============================================================
 
 builder.Services.AddControllers();
-
-
-// ============================================================
-// CORS
-// ============================================================
-
-builder.Services.AddCors(
-    options =>
-    {
-        options.AddPolicy(
-            "EPICWebPolicy",
-            policy =>
-            {
-                policy
-                    .SetIsOriginAllowed(IsAllowedOrigin)
-                    .AllowAnyHeader()
-                    .AllowAnyMethod()
-                    .AllowCredentials();
-            });
-    });
-
-
-// ============================================================
-// APPLICATION SERVICES
-// ============================================================
-
-// Permission service
-builder.Services.AddScoped<
-    IPermissionService,
-    PermissionService>();
-
-// Subscription lifecycle
-builder.Services.AddScoped<
-    SubscriptionLifecycleService>();
-
-builder.Services.AddHostedService<
-    SubscriptionLifecycleWorker>();
-
-
-// ============================================================
-// JWT CONFIGURATION
-// ============================================================
-
-var jwtKey =
-    configuration["Jwt:Key"];
-
-var jwtIssuer =
-    configuration["Jwt:Issuer"];
-
-var jwtAudience =
-    configuration["Jwt:Audience"];
-
-if (string.IsNullOrWhiteSpace(jwtKey))
-{
-    throw new InvalidOperationException(
-        "JWT Key is missing. Check appsettings.json.");
-}
-
-if (string.IsNullOrWhiteSpace(jwtIssuer))
-{
-    throw new InvalidOperationException(
-        "JWT Issuer is missing. Check appsettings.json.");
-}
-
-if (string.IsNullOrWhiteSpace(jwtAudience))
-{
-    throw new InvalidOperationException(
-        "JWT Audience is missing. Check appsettings.json.");
-}
-
-
-// ============================================================
-// AUTHENTICATION
-// ============================================================
-
-builder.Services
-    .AddAuthentication(
-        JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        // --------------------------------------------------------
-        // HTTPS
-        // --------------------------------------------------------
-
-        options.RequireHttpsMetadata = false;
-
-        options.SaveToken = true;
-
-
-        // --------------------------------------------------------
-        // TOKEN VALIDATION
-        // --------------------------------------------------------
-
-        options.TokenValidationParameters =
-            new TokenValidationParameters
-            {
-                ValidateIssuer = true,
-
-                ValidateAudience = true,
-
-                ValidateLifetime = true,
-
-                ValidateIssuerSigningKey = true,
-
-
-                // ------------------------------------------------
-                // ISSUER
-                // ------------------------------------------------
-
-                ValidIssuer =
-                    jwtIssuer,
-
-
-                // ------------------------------------------------
-                // AUDIENCE
-                // ------------------------------------------------
-
-                ValidAudiences = new[]
-                {
-                    jwtAudience,
-                    "EPIC.Web",
-                    "EPIC.MobileApp"
-                },
-
-
-                // ------------------------------------------------
-                // SIGNING KEY
-                // ------------------------------------------------
-
-                IssuerSigningKey =
-                    new SymmetricSecurityKey(
-                        Encoding.UTF8.GetBytes(
-                            jwtKey)),
-
-                RoleClaimType = ClaimTypes.Role,
-                NameClaimType = ClaimTypes.Name,
-                // ------------------------------------------------
-                // CLOCK SKEW
-                // ------------------------------------------------
-
-                ClockSkew =
-                    TimeSpan.Zero
-            };
-
-
-        // ========================================================
-        // JWT DEBUGGING
-        // ========================================================
-
-        options.Events =
-            new JwtBearerEvents
-            {
-                // ------------------------------------------------
-                // AUTHENTICATION FAILED
-                // ------------------------------------------------
-
-                OnAuthenticationFailed =
-                    context =>
-                    {
-                        Console.WriteLine();
-
-                        Console.WriteLine(
-                            "================================================");
-
-                        Console.WriteLine(
-                            "JWT AUTHENTICATION FAILED");
-
-                        Console.WriteLine(
-                            "================================================");
-
-                        Console.WriteLine(
-                            "Exception Type:");
-
-                        Console.WriteLine(
-                            context.Exception
-                                .GetType()
-                                .FullName);
-
-                        Console.WriteLine();
-
-                        Console.WriteLine(
-                            "Message:");
-
-                        Console.WriteLine(
-                            context.Exception.Message);
-
-                        Console.WriteLine();
-
-                        Console.WriteLine(
-                            "Full Exception:");
-
-                        Console.WriteLine(
-                            context.Exception);
-
-                        if (context.Exception.InnerException != null)
-                        {
-                            Console.WriteLine();
-
-                            Console.WriteLine(
-                                "Inner Exception:");
-
-                            Console.WriteLine(
-                                context.Exception.InnerException);
-                        }
-
-                        Console.WriteLine(
-                            "================================================");
-
-                        Console.WriteLine();
-
-                        return Task.CompletedTask;
-                    },
-
-
-                // ------------------------------------------------
-                // TOKEN VALIDATED
-                // ------------------------------------------------
-
-                OnTokenValidated =
-                    context =>
-                    {
-                        Console.WriteLine();
-
-                        Console.WriteLine(
-                            "================================================");
-
-                        Console.WriteLine(
-                            "JWT TOKEN VALIDATED");
-
-                        Console.WriteLine(
-                            "================================================");
-
-                        Console.WriteLine(
-                            $"User: {context.Principal?.Identity?.Name}");
-
-                        Console.WriteLine(
-                            $"Authenticated: " +
-                            $"{context.Principal?.Identity?.IsAuthenticated}");
-
-                        Console.WriteLine();
-
-                        foreach (
-                            var claim
-                            in context.Principal?.Claims
-                            ?? Enumerable.Empty<Claim>())
-                        {
-                            Console.WriteLine(
-                                $"CLAIM: {claim.Type} = {claim.Value}");
-                        }
-
-                        Console.WriteLine(
-                            "================================================");
-
-                        Console.WriteLine();
-
-                        return Task.CompletedTask;
-                    },
-
-
-                // ------------------------------------------------
-                // AUTHORIZATION CHALLENGE
-                // ------------------------------------------------
-
-                OnChallenge =
-                    context =>
-                    {
-                        Console.WriteLine();
-
-                        Console.WriteLine(
-                            "================================================");
-
-                        Console.WriteLine(
-                            "JWT AUTHORIZATION CHALLENGE");
-
-                        Console.WriteLine(
-                            "================================================");
-
-                        Console.WriteLine(
-                            $"Error: " +
-                            $"{context.Error ?? "(none)"}");
-
-                        Console.WriteLine(
-                            $"Description: " +
-                            $"{context.ErrorDescription ?? "(none)"}");
-
-                        Console.WriteLine(
-                            $"AuthenticateFailure: " +
-                            $"{context.AuthenticateFailure?.GetType().FullName ?? "(none)"}");
-
-                        if (context.AuthenticateFailure != null)
-                        {
-                            Console.WriteLine();
-
-                            Console.WriteLine(
-                                "Authentication Failure:");
-
-                            Console.WriteLine(
-                                context.AuthenticateFailure);
-                        }
-
-                        Console.WriteLine(
-                            "================================================");
-
-                        Console.WriteLine();
-
-                        return Task.CompletedTask;
-                    }
-            };
-    });
-
+builder.Services.AddMemoryCache();
 
 // ============================================================
 // AUTHORIZATION
@@ -407,82 +79,17 @@ builder.Services.AddAuthorization();
 
 
 // ============================================================
-// SWAGGER
-// ============================================================
-
-builder.Services.AddEndpointsApiExplorer();
-
-builder.Services.AddSwaggerGen(
-    options =>
-    {
-        options.SwaggerDoc(
-            "v1",
-            new Microsoft.OpenApi.OpenApiInfo
-            {
-                Title =
-                    "EPIC Church Management API",
-
-                Version =
-                    "v1",
-
-                Description =
-                    "EPIC Church Management System API"
-            });
-
-
-        // --------------------------------------------------------
-        // BEARER SECURITY DEFINITION
-        // --------------------------------------------------------
-
-        options.AddSecurityDefinition(
-            "Bearer",
-            new Microsoft.OpenApi.OpenApiSecurityScheme
-            {
-                Name =
-                    "Authorization",
-
-                Type =
-                    Microsoft.OpenApi.SecuritySchemeType.Http,
-
-                Scheme =
-                    "bearer",
-
-                BearerFormat =
-                    "JWT",
-
-                In =
-                    Microsoft.OpenApi.ParameterLocation.Header,
-
-                Description =
-                    "Enter your JWT token."
-            });
-
-
-        // --------------------------------------------------------
-        // BEARER SECURITY REQUIREMENT
-        // --------------------------------------------------------
-
-        options.AddSecurityRequirement(
-            document =>
-                new Microsoft.OpenApi.OpenApiSecurityRequirement
-                {
-                    {
-                        new Microsoft.OpenApi
-                            .OpenApiSecuritySchemeReference(
-                                "Bearer",
-                                document),
-
-                        new List<string>()
-                    }
-                });
-    });
-
-
-// ============================================================
 // BUILD
 // ============================================================
 
 var app = builder.Build();
+
+
+// ============================================================
+// DATABASE SEEDING
+// ============================================================
+
+await SeedDatabaseAsync(app);
 
 
 // ============================================================
@@ -504,16 +111,15 @@ Directory.CreateDirectory(
 
 app.UseSwagger();
 
-app.UseSwaggerUI(
-    options =>
-    {
-        options.SwaggerEndpoint(
-            "/swagger/v1/swagger.json",
-            "EPIC Church Management API v1");
+app.UseSwaggerUI(options =>
+{
+    options.SwaggerEndpoint(
+        "/swagger/v1/swagger.json",
+        "EPIC Church Management API v1");
 
-        options.DocumentTitle =
-            "EPIC Church Management API";
-    });
+    options.DocumentTitle =
+        "EPIC Church Management API";
+});
 
 
 // ============================================================
@@ -552,7 +158,8 @@ app.UseStaticFiles(
 // LAN:
 // http://192.168.1.10:5109
 //
-// ============================================================
+// Enable when HTTPS is configured for production.
+//
 
 // app.UseHttpsRedirection();
 
@@ -560,6 +167,10 @@ app.UseStaticFiles(
 // ============================================================
 // AUTHENTICATION
 // ============================================================
+//
+// IMPORTANT:
+// Authentication MUST run before Authorization.
+//
 
 app.UseAuthentication();
 
@@ -586,6 +197,593 @@ app.Run();
 
 
 // ============================================================
+// APPLICATION SERVICES
+// ============================================================
+
+static void ConfigureApplicationServices(
+    WebApplicationBuilder builder)
+{
+    // --------------------------------------------------------
+    // HTTP CONTEXT
+    // --------------------------------------------------------
+
+    builder.Services.AddHttpContextAccessor();
+
+
+    // --------------------------------------------------------
+    // CURRENT USER
+    // --------------------------------------------------------
+
+    builder.Services.AddScoped<
+        ICurrentUserService,
+        CurrentUserService>();
+
+
+    // --------------------------------------------------------
+    // MEMBER ACCOUNT PROVISIONING
+    // --------------------------------------------------------
+
+    builder.Services.AddScoped<
+        MemberAccountProvisioningService>();
+
+
+    // --------------------------------------------------------
+    // CLIENT PERMISSIONS
+    // --------------------------------------------------------
+
+    builder.Services.AddScoped<
+        IClientPermissionService,
+        ClientPermissionService>();
+
+    builder.Services.AddScoped<
+        ClientPermissionAuthorization>();
+
+
+    // --------------------------------------------------------
+    // GENERAL PERMISSIONS
+    // --------------------------------------------------------
+
+    builder.Services.AddScoped<
+        IPermissionService,
+        PermissionService>();
+
+
+    // --------------------------------------------------------
+    // SUBSCRIPTIONS
+    // --------------------------------------------------------
+
+    builder.Services.AddScoped<
+        SubscriptionLifecycleService>();
+
+    builder.Services.AddHostedService<
+        SubscriptionLifecycleWorker>();
+}
+
+
+// ============================================================
+// RESEND EMAIL CONFIGURATION
+// ============================================================
+
+static void ConfigureResend(
+    WebApplicationBuilder builder,
+    IConfiguration configuration)
+{
+    var resendApiKey =
+        configuration["Resend:ApiKey"];
+
+    if (string.IsNullOrWhiteSpace(
+        resendApiKey))
+    {
+        throw new InvalidOperationException(
+            "Resend API key is missing. " +
+            "Check appsettings.json, User Secrets, " +
+            "or environment variables.");
+    }
+
+
+    builder.Services.AddHttpClient();
+
+
+    builder.Services.Configure<ResendClientOptions>(
+        options =>
+        {
+            options.ApiToken =
+                resendApiKey;
+        });
+
+
+    builder.Services.AddScoped<
+        IResend,
+        ResendClient>();
+
+
+    builder.Services.AddScoped<
+        ResendEmailService>();
+}
+
+
+// ============================================================
+// DATABASE CONFIGURATION
+// ============================================================
+
+static void ConfigureDatabase(
+    IServiceCollection services,
+    IConfiguration configuration)
+{
+    var connectionString =
+        configuration.GetConnectionString(
+            "EPICChurchDB");
+
+    if (string.IsNullOrWhiteSpace(
+        connectionString))
+    {
+        throw new InvalidOperationException(
+            "Database connection string " +
+            "'EPICChurchDB' is missing.");
+    }
+
+
+    services.AddDbContext<ApplicationDbContext>(
+        options =>
+        {
+            options.UseSqlServer(
+                connectionString);
+        });
+}
+
+
+// ============================================================
+// CORS CONFIGURATION
+// ============================================================
+
+static void ConfigureCors(
+    IServiceCollection services)
+{
+    services.AddCors(
+        options =>
+        {
+            options.AddPolicy(
+                "EPICWebPolicy",
+                policy =>
+                {
+                    policy
+                        .SetIsOriginAllowed(
+                            IsAllowedOrigin)
+                        .AllowAnyHeader()
+                        .AllowAnyMethod()
+                        .AllowCredentials();
+                });
+        });
+}
+
+
+// ============================================================
+// JWT CONFIGURATION
+// ============================================================
+
+static void ConfigureJwtAuthentication(
+    IServiceCollection services,
+    IConfiguration configuration)
+{
+    // --------------------------------------------------------
+    // READ SETTINGS
+    // --------------------------------------------------------
+
+    var jwtKey =
+        configuration["Jwt:Key"];
+
+    var jwtIssuer =
+        configuration["Jwt:Issuer"];
+
+    var jwtAudience =
+        configuration["Jwt:Audience"];
+
+
+    // --------------------------------------------------------
+    // VALIDATE SETTINGS
+    // --------------------------------------------------------
+
+    if (string.IsNullOrWhiteSpace(jwtKey))
+    {
+        throw new InvalidOperationException(
+            "JWT Key is missing. " +
+            "Check appsettings.json.");
+    }
+
+
+    if (string.IsNullOrWhiteSpace(jwtIssuer))
+    {
+        throw new InvalidOperationException(
+            "JWT Issuer is missing. " +
+            "Check appsettings.json.");
+    }
+
+
+    if (string.IsNullOrWhiteSpace(jwtAudience))
+    {
+        throw new InvalidOperationException(
+            "JWT Audience is missing. " +
+            "Check appsettings.json.");
+    }
+
+
+    // --------------------------------------------------------
+    // SECURITY KEY
+    // --------------------------------------------------------
+
+    var securityKey =
+        new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes(
+                jwtKey));
+
+
+    // --------------------------------------------------------
+    // AUTHENTICATION
+    // --------------------------------------------------------
+
+    services
+        .AddAuthentication(
+            JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(
+            options =>
+            {
+                // ------------------------------------------------
+                // IMPORTANT
+                // ------------------------------------------------
+                //
+                // Keep custom JWT claims exactly as generated
+                // by ClientAuthController.
+                //
+                // Examples:
+                //
+                // clientMemberId
+                // customerId
+                // CustomerId
+                // memberId
+                // MemberId
+                // clientRoleId
+                // clientRoleName
+                //
+                // ------------------------------------------------
+
+                options.MapInboundClaims =
+                    false;
+
+
+                // ------------------------------------------------
+                // TOKEN VALIDATION
+                // ------------------------------------------------
+
+                options.TokenValidationParameters =
+                    new TokenValidationParameters
+                    {
+                        ValidateIssuerSigningKey =
+                            true,
+
+                        IssuerSigningKey =
+                            securityKey,
+
+                        ValidateIssuer =
+                            true,
+
+                        ValidIssuer =
+                            jwtIssuer,
+
+                        ValidateAudience =
+                            true,
+
+                        ValidAudience =
+                            jwtAudience,
+
+                        ValidateLifetime =
+                            true,
+
+                        ClockSkew =
+                            TimeSpan.Zero,
+
+                        // ------------------------------------------------
+                        // ROLE CLAIM
+                        // ------------------------------------------------
+                        //
+                        // ClientAuthController creates:
+                        //
+                        // ClaimTypes.Role = "CLIENT"
+                        //
+                        // Explicitly tell JWT authentication to use
+                        // ClaimTypes.Role for [Authorize(Roles = "...")].
+                        //
+
+                        RoleClaimType =
+                            ClaimTypes.Role,
+
+                        // ------------------------------------------------
+                        // NAME CLAIM
+                        // ------------------------------------------------
+
+                        NameClaimType =
+                            ClaimTypes.Name
+                    };
+
+
+                // ------------------------------------------------
+                // JWT EVENTS
+                // ------------------------------------------------
+
+                options.Events =
+                    new JwtBearerEvents
+                    {
+                        // ============================================
+                        // AUTHENTICATION FAILED
+                        // ============================================
+
+                        OnAuthenticationFailed =
+                            context =>
+                            {
+                                Console.WriteLine();
+                                Console.WriteLine(
+                                    "================================================");
+                                Console.WriteLine(
+                                    "JWT AUTHENTICATION FAILED");
+                                Console.WriteLine(
+                                    "================================================");
+
+                                Console.WriteLine(
+                                    $"Exception Type: " +
+                                    $"{context.Exception.GetType().FullName}");
+
+                                Console.WriteLine(
+                                    $"Message: " +
+                                    $"{context.Exception.Message}");
+
+                                if (context.Exception.InnerException != null)
+                                {
+                                    Console.WriteLine();
+                                    Console.WriteLine(
+                                        "Inner Exception:");
+
+                                    Console.WriteLine(
+                                        context.Exception.InnerException);
+                                }
+
+                                Console.WriteLine(
+                                    "================================================");
+                                Console.WriteLine();
+
+                                return Task.CompletedTask;
+                            },
+
+
+                        // ============================================
+                        // TOKEN VALIDATED
+                        // ============================================
+
+                        OnTokenValidated =
+                            context =>
+                            {
+                                Console.WriteLine();
+                                Console.WriteLine(
+                                    "================================================");
+                                Console.WriteLine(
+                                    "JWT TOKEN VALIDATED");
+                                Console.WriteLine(
+                                    "================================================");
+
+                                Console.WriteLine(
+                                    $"User: " +
+                                    $"{context.Principal?.Identity?.Name}");
+
+                                Console.WriteLine(
+                                    $"Authenticated: " +
+                                    $"{context.Principal?.Identity?.IsAuthenticated}");
+
+                                Console.WriteLine(
+                                    $"Authentication Type: " +
+                                    $"{context.Principal?.Identity?.AuthenticationType}");
+
+                                Console.WriteLine();
+
+                                foreach (
+                                    var claim
+                                    in context.Principal?.Claims
+                                    ?? Enumerable.Empty<Claim>())
+                                {
+                                    Console.WriteLine(
+                                        $"CLAIM: {claim.Type} = {claim.Value}");
+                                }
+
+                                Console.WriteLine(
+                                    "================================================");
+                                Console.WriteLine();
+
+                                return Task.CompletedTask;
+                            },
+
+
+                        // ============================================
+                        // AUTHORIZATION CHALLENGE
+                        // ============================================
+
+                        OnChallenge =
+                            context =>
+                            {
+                                Console.WriteLine();
+                                Console.WriteLine(
+                                    "================================================");
+                                Console.WriteLine(
+                                    "JWT AUTHORIZATION CHALLENGE");
+                                Console.WriteLine(
+                                    "================================================");
+
+                                Console.WriteLine(
+                                    $"Error: " +
+                                    $"{context.Error ?? "(none)"}");
+
+                                Console.WriteLine(
+                                    $"Description: " +
+                                    $"{context.ErrorDescription ?? "(none)"}");
+
+                                var failureType =
+                                    context.AuthenticateFailure
+                                        ?.GetType()
+                                        .FullName
+                                    ?? "(none)";
+
+                                Console.WriteLine(
+                                    $"Authenticate Failure: " +
+                                    $"{failureType}");
+
+                                if (context.AuthenticateFailure != null)
+                                {
+                                    Console.WriteLine();
+                                    Console.WriteLine(
+                                        "Authentication Failure:");
+
+                                    Console.WriteLine(
+                                        context.AuthenticateFailure);
+                                }
+
+                                Console.WriteLine(
+                                    "================================================");
+                                Console.WriteLine();
+
+                                return Task.CompletedTask;
+                            }
+                    };
+            });
+}
+
+
+// ============================================================
+// SWAGGER CONFIGURATION
+// ============================================================
+
+static void ConfigureSwagger(
+    IServiceCollection services)
+{
+    services.AddEndpointsApiExplorer();
+
+
+    services.AddSwaggerGen(
+        options =>
+        {
+            // ----------------------------------------------------
+            // DOCUMENT
+            // ----------------------------------------------------
+
+            options.SwaggerDoc(
+                "v1",
+                new Microsoft.OpenApi.OpenApiInfo
+                {
+                    Title =
+                        "EPIC Church Management API",
+
+                    Version =
+                        "v1",
+
+                    Description =
+                        "EPIC Church Management System API"
+                });
+
+
+            // ----------------------------------------------------
+            // BEARER SECURITY DEFINITION
+            // ----------------------------------------------------
+
+            options.AddSecurityDefinition(
+                "Bearer",
+                new Microsoft.OpenApi.OpenApiSecurityScheme
+                {
+                    Name =
+                        "Authorization",
+
+                    Type =
+                        Microsoft.OpenApi.SecuritySchemeType.Http,
+
+                    Scheme =
+                        "bearer",
+
+                    BearerFormat =
+                        "JWT",
+
+                    In =
+                        Microsoft.OpenApi.ParameterLocation.Header,
+
+                    Description =
+                        "Enter your JWT token."
+                });
+
+
+            // ----------------------------------------------------
+            // SECURITY REQUIREMENT
+            // ----------------------------------------------------
+
+            options.AddSecurityRequirement(
+                document =>
+                    new Microsoft.OpenApi.OpenApiSecurityRequirement
+                    {
+                        {
+                            new Microsoft.OpenApi
+                                .OpenApiSecuritySchemeReference(
+                                    "Bearer",
+                                    document),
+
+                            new List<string>()
+                        }
+                    });
+        });
+}
+
+
+// ============================================================
+// DATABASE SEEDING
+// ============================================================
+
+static async Task SeedDatabaseAsync(
+    WebApplication app)
+{
+    using var scope =
+        app.Services.CreateScope();
+
+    var services =
+        scope.ServiceProvider;
+
+
+    try
+    {
+        var context =
+            services.GetRequiredService<
+                ApplicationDbContext>();
+
+
+        // --------------------------------------------------------
+        // CLIENT ROLES
+        // --------------------------------------------------------
+
+        await ClientRoleSeeder.SeedAsync(
+            context);
+
+
+        // --------------------------------------------------------
+        // CLIENT PERMISSIONS
+        // --------------------------------------------------------
+
+        await ClientPermissionSeeder.SeedAsync(
+            context);
+    }
+    catch (Exception ex)
+    {
+        var logger =
+            services.GetRequiredService<
+                ILogger<Program>>();
+
+        logger.LogError(
+            ex,
+            "An error occurred while seeding client roles and permissions.");
+    }
+}
+
+
+// ============================================================
 // CORS HELPER
 // ============================================================
 
@@ -605,7 +803,7 @@ static bool IsAllowedOrigin(
 
 
     // --------------------------------------------------------
-    // LAN
+    // LOCAL LAN
     // --------------------------------------------------------
 
     if (origin.StartsWith(
@@ -627,6 +825,10 @@ static bool IsAllowedOrigin(
         return true;
     }
 
+
+    // --------------------------------------------------------
+    // DENY EVERYTHING ELSE
+    // --------------------------------------------------------
 
     return false;
 }

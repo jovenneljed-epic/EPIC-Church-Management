@@ -13,7 +13,6 @@ namespace EPIC.Api.Models
         [Key]
         public int VisitorAttendanceId { get; set; }
 
-
         // =========================================================
         // VISITOR
         // =========================================================
@@ -22,8 +21,7 @@ namespace EPIC.Api.Models
         public int VisitorId { get; set; }
 
         [ForeignKey(nameof(VisitorId))]
-        public Visitor? Visitor { get; set; }
-
+        public virtual Visitor? Visitor { get; set; }
 
         // =========================================================
         // CHURCH SERVICE
@@ -33,21 +31,24 @@ namespace EPIC.Api.Models
         public int ChurchServiceId { get; set; }
 
         [ForeignKey(nameof(ChurchServiceId))]
-        public ChurchService? ChurchService { get; set; }
-
+        public virtual ChurchService? ChurchService { get; set; }
 
         // =========================================================
         // ATTENDANCE INFORMATION
         // =========================================================
 
         [Required]
-        public DateTime AttendanceDate { get; set; }
-
+        public DateTime AttendanceDate { get; set; } = DateTime.Now;
 
         [Required]
         [MaxLength(50)]
         public string Status { get; set; } = "PRESENT";
 
+        // PRESENT
+        // LATE
+        // EARLY
+        // ABSENT
+        // EXCUSED
 
         // =========================================================
         // RECORD INFORMATION
@@ -55,7 +56,6 @@ namespace EPIC.Api.Models
 
         [MaxLength(100)]
         public string RecordedBy { get; set; } = string.Empty;
-
 
         [Required]
         public DateTime RecordedDate { get; set; } = DateTime.Now;

@@ -1,84 +1,66 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace EPIC.Api.Models
 {
-    public class Ministry
+    public class ClientRole
     {
         // =========================================================
         // PRIMARY KEY
         // =========================================================
 
         [Key]
-        public int MinistryId { get; set; }
+        public int ClientRoleId { get; set; }
 
         // =========================================================
-        // CUSTOMER / TENANT
+        // CUSTOMER
         // =========================================================
 
         [Required]
         public int CustomerId { get; set; }
 
         [ForeignKey(nameof(CustomerId))]
-        public virtual Customer? Customer { get; set; }
+        public Customer? Customer { get; set; }
 
         // =========================================================
-        // MINISTRY INFORMATION
+        // ROLE INFORMATION
         // =========================================================
 
         [Required]
-        [MaxLength(150)]
-        public string Name { get; set; } = string.Empty;
-
-        [MaxLength(50)]
-        public string? MinistryCode { get; set; }
-
         [MaxLength(100)]
-        public string? MinistryHead { get; set; }
-
-        [MaxLength(50)]
-        public string? ContactNumber { get; set; }
+        public string RoleName { get; set; } = string.Empty;
 
         [MaxLength(500)]
         public string? Description { get; set; }
 
         // =========================================================
-        // MEETING INFORMATION
+        // ROLE TYPE
         // =========================================================
 
-        [MaxLength(50)]
-        public string? MeetingDay { get; set; }
+        public bool IsSystemRole { get; set; } = false;
 
-        [MaxLength(50)]
-        public string? MeetingTime { get; set; }
-
-        [MaxLength(250)]
-        public string? MeetingLocation { get; set; }
+        public bool IsActive { get; set; } = true;
 
         // =========================================================
-        // STATUS
+        // DATES
         // =========================================================
 
-        [Required]
-        [MaxLength(50)]
-        public string Status { get; set; } = "ACTIVE";
-
-        // =========================================================
-        // AUDIT
-        // =========================================================
-
-        [Required]
-        public DateTime CreatedDate { get; set; } = DateTime.Now;
+        public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
 
         public DateTime? UpdatedDate { get; set; }
 
         // =========================================================
-        // MINISTRY MEMBERS
+        // CLIENT MEMBERS
         // =========================================================
 
-        public virtual ICollection<MinistryMember> MinistryMembers { get; set; }
-            = new List<MinistryMember>();
+        public ICollection<ClientMember> ClientMembers { get; set; }
+            = new List<ClientMember>();
+
+        // =========================================================
+        // CLIENT PERMISSIONS
+        // =========================================================
+
+        public ICollection<ClientPermission> ClientPermissions { get; set; }
+            = new List<ClientPermission>();
     }
 }

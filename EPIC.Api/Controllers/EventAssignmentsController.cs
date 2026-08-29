@@ -1,5 +1,7 @@
-﻿using EPIC.Api.Data;
+﻿
+using EPIC.Api.Data;
 using EPIC.Api.Models;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -19,131 +21,361 @@ namespace EPIC.Api.Controllers
         }
 
         // =========================================================
+        // CUSTOMER / TENANT HELPER
+        // =========================================================
+
+        private int? GetCustomerId()
+        {
+            var customerIdClaim =
+                User.FindFirst("CustomerId")?.Value
+                ?? User.FindFirst("customerId")?.Value;
+
+            return int.TryParse(customerIdClaim, out var customerId)
+                ? customerId
+                : null;
+        }
+
+        // =========================================================
         // GET ALL
-        // GET: /api/EventAssignments
+        // GET: api/EventAssignments
         // =========================================================
 
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var assignments = await _context.EventAssignments
-                .AsNoTracking()
-                .OrderByDescending(a => a.CreatedAt)
-                .ToListAsync();
+            var customerId = GetCustomerId();
 
-            return Ok(assignments);
+            if (!customerId.HasValue)
+            {
+                return Unauthorized(new
+                {
+                    success = false,
+                    message = "Customer authorization is required."
+                });
+            }
+
+            try
+            {
+                var assignments = await _context.EventAssignments
+                    .AsNoTracking()
+                    .Where(a =>
+                        a.Event != null &&
+                        a.Event.CustomerId == customerId.Value)
+                    .OrderByDescending(a => a.CreatedAt)
+                    .ToListAsync();
+
+                return Ok(assignments);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Unable to load event assignments.",
+                    error = ex.Message
+                });
+            }
         }
 
         // =========================================================
         // GET BY EVENT
-        // GET: /api/EventAssignments/event/{eventId}
+        // GET: api/EventAssignments/event/{eventId}
         // =========================================================
 
         [HttpGet("event/{eventId:int}")]
         public async Task<IActionResult> GetByEvent(int eventId)
         {
-            var eventExists = await _context.Events
-                .AsNoTracking()
-                .AnyAsync(e => e.EventId == eventId);
+            var customerId = GetCustomerId();
 
-            if (!eventExists)
+            if (!customerId.HasValue)
             {
-                return NotFound(new
+                return Unauthorized(new
                 {
                     success = false,
-                    message = "Event not found.",
-                    eventId
+                    message = "Customer authorization is required."
                 });
             }
 
-            var assignments = await _context.EventAssignments
-                .AsNoTracking()
-                .Where(a => a.EventId == eventId)
-                .OrderBy(a => a.CreatedAt)
-                .ToListAsync();
+            if (eventId <= 0)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "A valid event ID is required."
+                });
+            }
 
-            return Ok(assignments);
+            try
+            {
+                // -------------------------------------------------
+                // EVENT MUST BELONG TO CURRENT CUSTOMER
+                // -------------------------------------------------
+
+                var eventExists = await _context.Events
+                    .AsNoTracking()
+                    .AnyAsync(e =>
+                        e.EventId == eventId &&
+                        e.CustomerId == customerId.Value);
+
+                if (!eventExists)
+                {
+                    return NotFound(new
+                    {
+                        success = false,
+                        message = "Event not found.",
+                        eventId
+                    });
+                }
+
+                // -------------------------------------------------
+                // LOAD ASSIGNMENTS
+                // -------------------------------------------------
+
+                var assignments = await _context.EventAssignments
+                    .AsNoTracking()
+                    .Where(a =>
+                        a.EventId == eventId &&
+                        a.Event != null &&
+                        a.Event.CustomerId == customerId.Value)
+                    .OrderBy(a => a.CreatedAt)
+                    .ToListAsync();
+
+                return Ok(assignments);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Unable to load event assignments.",
+                    error = ex.Message
+                });
+            }
         }
 
         // =========================================================
-        // GET BY DEPARTMENT
-        // GET: /api/EventAssignments/department/{departmentId}
+        // GET BY DEPARTMENT NAME
+        // GET: api/EventAssignments/department-name/{departmentName}
+        // =========================================================
+        //
+        // IMPORTANT:
+        // EventAssignment does NOT have EventDepartmentId.
+        //
+        // Department is stored as DepartmentName text.
+        //
         // =========================================================
 
-        [HttpGet("department/{departmentId:int}")]
-        public async Task<IActionResult> GetByDepartment(int departmentId)
+        [HttpGet("department-name/{departmentName}")]
+        public async Task<IActionResult> GetByDepartmentName(
+            string departmentName)
         {
-            var assignments = await _context.EventAssignments
-                .AsNoTracking()
-                .Where(a => a.EventDepartmentId == departmentId)
-                .OrderByDescending(a => a.CreatedAt)
-                .ToListAsync();
+            var customerId = GetCustomerId();
 
-            return Ok(assignments);
+            if (!customerId.HasValue)
+            {
+                return Unauthorized(new
+                {
+                    success = false,
+                    message = "Customer authorization is required."
+                });
+            }
+
+            var normalizedDepartment =
+                NormalizeForComparison(departmentName);
+
+            if (string.IsNullOrWhiteSpace(normalizedDepartment))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Department name is required."
+                });
+            }
+
+            try
+            {
+                var assignments = await _context.EventAssignments
+                    .AsNoTracking()
+                    .Where(a =>
+                        a.Event != null &&
+                        a.Event.CustomerId == customerId.Value)
+                    .OrderByDescending(a => a.CreatedAt)
+                    .ToListAsync();
+
+                var result = assignments
+                    .Where(a =>
+                        NormalizeForComparison(
+                            a.DepartmentName) ==
+                        normalizedDepartment)
+                    .ToList();
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message =
+                        "Unable to load department assignments.",
+                    error = ex.Message
+                });
+            }
         }
 
         // =========================================================
         // GET BY MEMBER
-        // GET: /api/EventAssignments/member/{memberId}
+        // GET: api/EventAssignments/member/{memberId}
         // =========================================================
 
         [HttpGet("member/{memberId:int}")]
         public async Task<IActionResult> GetByMember(int memberId)
         {
-            var memberExists = await _context.Members
-                .AsNoTracking()
-                .AnyAsync(m => m.MemberId == memberId);
+            var customerId = GetCustomerId();
 
-            if (!memberExists)
+            if (!customerId.HasValue)
             {
-                return NotFound(new
+                return Unauthorized(new
                 {
                     success = false,
-                    message = "Member not found.",
-                    memberId
+                    message = "Customer authorization is required."
                 });
             }
 
-            var assignments = await _context.EventAssignments
-                .AsNoTracking()
-                .Where(a => a.MemberId == memberId)
-                .OrderByDescending(a => a.CreatedAt)
-                .ToListAsync();
+            if (memberId <= 0)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "A valid member ID is required."
+                });
+            }
 
-            return Ok(assignments);
+            try
+            {
+                // -------------------------------------------------
+                // MEMBER MUST BELONG TO CURRENT CUSTOMER
+                // -------------------------------------------------
+
+                var memberExists = await _context.Members
+                    .AsNoTracking()
+                    .AnyAsync(m =>
+                        m.MemberId == memberId &&
+                        m.CustomerId == customerId.Value);
+
+                if (!memberExists)
+                {
+                    return NotFound(new
+                    {
+                        success = false,
+                        message = "Member not found.",
+                        memberId
+                    });
+                }
+
+                // -------------------------------------------------
+                // LOAD ASSIGNMENTS
+                // -------------------------------------------------
+
+                var assignments = await _context.EventAssignments
+                    .AsNoTracking()
+                    .Where(a =>
+                        a.MemberId == memberId &&
+                        a.Event != null &&
+                        a.Event.CustomerId == customerId.Value)
+                    .OrderByDescending(a => a.CreatedAt)
+                    .ToListAsync();
+
+                return Ok(assignments);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Unable to load member assignments.",
+                    error = ex.Message
+                });
+            }
         }
 
         // =========================================================
         // GET SINGLE
-        // GET: /api/EventAssignments/{id}
+        // GET: api/EventAssignments/{id}
         // =========================================================
 
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById(int id)
         {
-            var assignment = await GetAssignment(id);
+            var customerId = GetCustomerId();
 
-            if (assignment == null)
+            if (!customerId.HasValue)
             {
-                return NotFound(new
+                return Unauthorized(new
                 {
                     success = false,
-                    message = "Event assignment not found."
+                    message = "Customer authorization is required."
                 });
             }
 
-            return Ok(assignment);
+            if (id <= 0)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "A valid assignment ID is required."
+                });
+            }
+
+            try
+            {
+                var assignment =
+                    await GetAssignmentForCustomer(
+                        id,
+                        customerId.Value);
+
+                if (assignment == null)
+                {
+                    return NotFound(new
+                    {
+                        success = false,
+                        message = "Event assignment not found."
+                    });
+                }
+
+                return Ok(assignment);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Unable to load event assignment.",
+                    error = ex.Message
+                });
+            }
         }
 
         // =========================================================
         // CREATE
-        // POST: /api/EventAssignments
+        // POST: api/EventAssignments
         // =========================================================
 
         [HttpPost]
         public async Task<IActionResult> Create(
             [FromBody] EventAssignment model)
         {
+            var customerId = GetCustomerId();
+
+            if (!customerId.HasValue)
+            {
+                return Unauthorized(new
+                {
+                    success = false,
+                    message = "Customer authorization is required."
+                });
+            }
+
             if (model == null)
             {
                 return BadRequest(new
@@ -153,143 +385,168 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            // -----------------------------------------------------
-            // EVENT VALIDATION
-            // -----------------------------------------------------
-
-            if (model.EventId <= 0)
+            try
             {
-                return BadRequest(new
+                // -------------------------------------------------
+                // EVENT REQUIRED
+                // -------------------------------------------------
+
+                if (model.EventId <= 0)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "EventId is required."
+                    });
+                }
+
+                // -------------------------------------------------
+                // EVENT MUST BELONG TO CURRENT CUSTOMER
+                // -------------------------------------------------
+
+                var eventExists = await _context.Events
+                    .AsNoTracking()
+                    .AnyAsync(e =>
+                        e.EventId == model.EventId &&
+                        e.CustomerId == customerId.Value);
+
+                if (!eventExists)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message =
+                            "The selected event does not exist or does not belong to your organization."
+                    });
+                }
+
+                // -------------------------------------------------
+                // NEVER TRUST FRONTEND PRIMARY KEY
+                // -------------------------------------------------
+
+                model.EventAssignmentId = 0;
+
+                // -------------------------------------------------
+                // NORMALIZE
+                // -------------------------------------------------
+
+                NormalizeAssignment(model);
+
+                // -------------------------------------------------
+                // VALIDATE MEMBER
+                // -------------------------------------------------
+
+                var memberValidation =
+                    await ValidateMember(
+                        model.MemberId,
+                        customerId.Value);
+
+                if (memberValidation != null)
+                {
+                    return memberValidation;
+                }
+
+                // -------------------------------------------------
+                // DUPLICATE CHECK
+                // -------------------------------------------------
+
+                var duplicate =
+                    await AssignmentExistsAsync(
+                        model.EventId,
+                        model.RoleName,
+                        model.AssignedPerson,
+                        model.DepartmentName);
+
+                if (duplicate)
+                {
+                    return Conflict(new
+                    {
+                        success = false,
+                        message =
+                            "This assignment already exists for this event.",
+                        eventId = model.EventId,
+                        roleName = model.RoleName,
+                        assignedPerson = model.AssignedPerson,
+                        departmentName = model.DepartmentName
+                    });
+                }
+
+                // -------------------------------------------------
+                // AUDIT
+                // -------------------------------------------------
+
+                model.CreatedAt = DateTime.Now;
+                model.UpdatedAt = null;
+
+                // -------------------------------------------------
+                // NEVER TRUST NAVIGATION OBJECTS FROM FRONTEND
+                // -------------------------------------------------
+
+                model.Event = null;
+                model.Member = null;
+
+                // -------------------------------------------------
+                // SAVE
+                // -------------------------------------------------
+
+                _context.EventAssignments.Add(model);
+
+                await _context.SaveChangesAsync();
+
+                // -------------------------------------------------
+                // LOAD CREATED RECORD
+                // -------------------------------------------------
+
+                var created =
+                    await GetAssignmentForCustomer(
+                        model.EventAssignmentId,
+                        customerId.Value);
+
+                return CreatedAtAction(
+                    nameof(GetById),
+                    new
+                    {
+                        id = model.EventAssignmentId
+                    },
+                    new
+                    {
+                        success = true,
+                        message = "Assignment saved successfully.",
+                        assignment = created
+                    });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
                 {
                     success = false,
-                    message = "EventId is required."
+                    message = "Unable to create event assignment.",
+                    error = ex.Message
                 });
             }
-
-            var eventExists = await _context.Events
-                .AsNoTracking()
-                .AnyAsync(e => e.EventId == model.EventId);
-
-            if (!eventExists)
-            {
-                return BadRequest(new
-                {
-                    success = false,
-                    message = "The selected event does not exist."
-                });
-            }
-
-            // -----------------------------------------------------
-            // NORMALIZE
-            // -----------------------------------------------------
-
-            model.RoleName = NormalizeText(model.RoleName);
-            model.AssignedPerson = NormalizeText(model.AssignedPerson);
-            model.DepartmentName = NormalizeText(model.DepartmentName);
-            model.Notes = NormalizeText(model.Notes);
-
-            model.AssignmentStatus =
-                NormalizeStatus(
-                    model.AssignmentStatus,
-                    "PENDING");
-
-            model.Priority =
-                NormalizeStatus(
-                    model.Priority,
-                    "NORMAL");
-
-            // -----------------------------------------------------
-            // RELATED ENTITY VALIDATION
-            // -----------------------------------------------------
-
-            var relatedValidation =
-                await ValidateRelatedEntities(
-                    model.EventId,
-                    model.EventDepartmentId,
-                    model.EventRoleId,
-                    model.MemberId);
-
-            if (relatedValidation != null)
-            {
-                return relatedValidation;
-            }
-
-            // -----------------------------------------------------
-            // DUPLICATE CHECK
-            // -----------------------------------------------------
-
-            var duplicate =
-                await AssignmentExistsAsync(
-                    model.EventId,
-                    model.RoleName,
-                    model.AssignedPerson,
-                    model.DepartmentName);
-
-            if (duplicate)
-            {
-                return Conflict(new
-                {
-                    success = false,
-                    message =
-                        "This assignment already exists for this event. " +
-                        "Please use a different role/person or edit the existing assignment.",
-                    eventId = model.EventId,
-                    roleName = model.RoleName,
-                    assignedPerson = model.AssignedPerson,
-                    departmentName = model.DepartmentName
-                });
-            }
-
-            // -----------------------------------------------------
-            // AUDIT VALUES
-            // -----------------------------------------------------
-
-            model.CreatedAt = DateTime.Now;
-            model.UpdatedAt = null;
-
-            // -----------------------------------------------------
-            // SAVE
-            // -----------------------------------------------------
-
-            _context.EventAssignments.Add(model);
-
-            await _context.SaveChangesAsync();
-
-            // -----------------------------------------------------
-            // RETURN CREATED RECORD
-            //
-            // IMPORTANT:
-            // Do NOT Include related entities here.
-            // -----------------------------------------------------
-
-            var created = await GetAssignment(
-                model.EventAssignmentId);
-
-            return CreatedAtAction(
-                nameof(GetById),
-                new
-                {
-                    id = model.EventAssignmentId
-                },
-                new
-                {
-                    success = true,
-                    message = "Assignment saved successfully.",
-                    assignment = created
-                });
         }
 
         // =========================================================
         // CREATE BULK
-        // POST: /api/EventAssignments/bulk
+        // POST: api/EventAssignments/bulk
         // =========================================================
 
         [HttpPost("bulk")]
         public async Task<IActionResult> CreateBulk(
             [FromBody] List<EventAssignment> assignments)
         {
-            if (assignments == null ||
-                assignments.Count == 0)
+            var customerId = GetCustomerId();
+
+            if (!customerId.HasValue)
+            {
+                return Unauthorized(new
+                {
+                    success = false,
+                    message = "Customer authorization is required."
+                });
+            }
+
+            if (assignments == null || assignments.Count == 0)
             {
                 return BadRequest(new
                 {
@@ -298,53 +555,33 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            // -----------------------------------------------------
-            // ALL SAME EVENT
-            // -----------------------------------------------------
-
-            var eventIds = assignments
-                .Select(a => a.EventId)
-                .Distinct()
-                .ToList();
-
-            if (eventIds.Count != 1 ||
-                eventIds[0] <= 0)
+            try
             {
-                return BadRequest(new
+                // -------------------------------------------------
+                // NULL CHECK
+                // -------------------------------------------------
+
+                if (assignments.Any(a => a == null))
                 {
-                    success = false,
-                    message =
-                        "All assignments must belong to the same event."
-                });
-            }
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message =
+                            "Invalid assignment data was supplied."
+                    });
+                }
 
-            var eventId = eventIds[0];
+                // -------------------------------------------------
+                // ALL ASSIGNMENTS MUST USE SAME EVENT
+                // -------------------------------------------------
 
-            // -----------------------------------------------------
-            // EVENT EXISTS
-            // -----------------------------------------------------
+                var eventIds = assignments
+                    .Select(a => a.EventId)
+                    .Distinct()
+                    .ToList();
 
-            var eventExists = await _context.Events
-                .AsNoTracking()
-                .AnyAsync(e => e.EventId == eventId);
-
-            if (!eventExists)
-            {
-                return BadRequest(new
-                {
-                    success = false,
-                    message =
-                        "The selected event does not exist."
-                });
-            }
-
-            // -----------------------------------------------------
-            // NORMALIZE + VALIDATE
-            // -----------------------------------------------------
-
-            foreach (var assignment in assignments)
-            {
-                if (assignment.EventId != eventId)
+                if (eventIds.Count != 1 ||
+                    eventIds[0] <= 0)
                 {
                     return BadRequest(new
                     {
@@ -354,151 +591,188 @@ namespace EPIC.Api.Controllers
                     });
                 }
 
-                assignment.RoleName =
-                    NormalizeText(assignment.RoleName);
+                var eventId = eventIds[0];
 
-                assignment.AssignedPerson =
-                    NormalizeText(assignment.AssignedPerson);
+                // -------------------------------------------------
+                // EVENT MUST BELONG TO CUSTOMER
+                // -------------------------------------------------
 
-                assignment.DepartmentName =
-                    NormalizeText(assignment.DepartmentName);
+                var eventExists = await _context.Events
+                    .AsNoTracking()
+                    .AnyAsync(e =>
+                        e.EventId == eventId &&
+                        e.CustomerId == customerId.Value);
 
-                assignment.Notes =
-                    NormalizeText(assignment.Notes);
-
-                assignment.AssignmentStatus =
-                    NormalizeStatus(
-                        assignment.AssignmentStatus,
-                        "PENDING");
-
-                assignment.Priority =
-                    NormalizeStatus(
-                        assignment.Priority,
-                        "NORMAL");
-
-                var validation =
-                    await ValidateRelatedEntities(
-                        assignment.EventId,
-                        assignment.EventDepartmentId,
-                        assignment.EventRoleId,
-                        assignment.MemberId);
-
-                if (validation != null)
+                if (!eventExists)
                 {
-                    return validation;
-                }
-            }
-
-            // -----------------------------------------------------
-            // DUPLICATES INSIDE REQUEST
-            // -----------------------------------------------------
-
-            var requestDuplicate =
-                assignments
-                    .GroupBy(a => new
+                    return BadRequest(new
                     {
-                        EventId = a.EventId,
-                        RoleName =
-                            NormalizeForComparison(
-                                a.RoleName),
-                        AssignedPerson =
-                            NormalizeForComparison(
-                                a.AssignedPerson),
-                        DepartmentName =
-                            NormalizeForComparison(
-                                a.DepartmentName)
-                    })
-                    .FirstOrDefault(g => g.Count() > 1);
+                        success = false,
+                        message =
+                            "The selected event does not exist or does not belong to your organization."
+                    });
+                }
 
-            if (requestDuplicate != null)
-            {
-                return Conflict(new
+                // -------------------------------------------------
+                // NORMALIZE + VALIDATE
+                // -------------------------------------------------
+
+                foreach (var assignment in assignments)
                 {
-                    success = false,
-                    message =
-                        "Duplicate assignments were detected in the request.",
-                    roleName =
-                        requestDuplicate.Key.RoleName,
-                    assignedPerson =
-                        requestDuplicate.Key.AssignedPerson,
-                    departmentName =
-                        requestDuplicate.Key.DepartmentName
-                });
-            }
+                    if (assignment.EventId != eventId)
+                    {
+                        return BadRequest(new
+                        {
+                            success = false,
+                            message =
+                                "All assignments must belong to the same event."
+                        });
+                    }
 
-            // -----------------------------------------------------
-            // DATABASE DUPLICATES
-            // -----------------------------------------------------
+                    // Never trust frontend primary key.
+                    assignment.EventAssignmentId = 0;
 
-            foreach (var assignment in assignments)
-            {
-                var duplicate =
-                    await AssignmentExistsAsync(
-                        assignment.EventId,
-                        assignment.RoleName,
-                        assignment.AssignedPerson,
-                        assignment.DepartmentName);
+                    NormalizeAssignment(assignment);
 
-                if (duplicate)
+                    var memberValidation =
+                        await ValidateMember(
+                            assignment.MemberId,
+                            customerId.Value);
+
+                    if (memberValidation != null)
+                    {
+                        return memberValidation;
+                    }
+                }
+
+                // -------------------------------------------------
+                // DUPLICATES INSIDE REQUEST
+                // -------------------------------------------------
+
+                var requestDuplicate =
+                    assignments
+                        .GroupBy(a => new
+                        {
+                            RoleName =
+                                NormalizeForComparison(
+                                    a.RoleName),
+
+                            AssignedPerson =
+                                NormalizeForComparison(
+                                    a.AssignedPerson),
+
+                            DepartmentName =
+                                NormalizeForComparison(
+                                    a.DepartmentName)
+                        })
+                        .FirstOrDefault(g =>
+                            g.Count() > 1);
+
+                if (requestDuplicate != null)
                 {
                     return Conflict(new
                     {
                         success = false,
                         message =
-                            $"Assignment '{assignment.RoleName}' " +
-                            $"for '{assignment.AssignedPerson}' " +
-                            "already exists for this event."
+                            "Duplicate assignments were detected in the request.",
+                        roleName =
+                            requestDuplicate.Key.RoleName,
+                        assignedPerson =
+                            requestDuplicate.Key.AssignedPerson,
+                        departmentName =
+                            requestDuplicate.Key.DepartmentName
                     });
                 }
+
+                // -------------------------------------------------
+                // DATABASE DUPLICATES
+                // -------------------------------------------------
+
+                foreach (var assignment in assignments)
+                {
+                    var duplicate =
+                        await AssignmentExistsAsync(
+                            assignment.EventId,
+                            assignment.RoleName,
+                            assignment.AssignedPerson,
+                            assignment.DepartmentName);
+
+                    if (duplicate)
+                    {
+                        return Conflict(new
+                        {
+                            success = false,
+                            message =
+                                $"Assignment '{assignment.RoleName}' " +
+                                $"for '{assignment.AssignedPerson}' " +
+                                "already exists for this event."
+                        });
+                    }
+                }
+
+                // -------------------------------------------------
+                // AUDIT + NAVIGATION CLEANUP
+                // -------------------------------------------------
+
+                foreach (var assignment in assignments)
+                {
+                    assignment.CreatedAt = DateTime.Now;
+                    assignment.UpdatedAt = null;
+
+                    assignment.Event = null;
+                    assignment.Member = null;
+                }
+
+                // -------------------------------------------------
+                // SAVE
+                // -------------------------------------------------
+
+                _context.EventAssignments.AddRange(assignments);
+
+                await _context.SaveChangesAsync();
+
+                // -------------------------------------------------
+                // RETURN CREATED RECORDS
+                // -------------------------------------------------
+
+                var ids = assignments
+                    .Select(a => a.EventAssignmentId)
+                    .ToList();
+
+                var created =
+                    await _context.EventAssignments
+                        .AsNoTracking()
+                        .Where(a =>
+                            ids.Contains(a.EventAssignmentId) &&
+                            a.Event != null &&
+                            a.Event.CustomerId == customerId.Value)
+                        .OrderBy(a => a.CreatedAt)
+                        .ToListAsync();
+
+                return Ok(new
+                {
+                    success = true,
+                    message =
+                        $"{created.Count} assignment(s) created successfully.",
+                    eventId,
+                    count = created.Count,
+                    assignments = created
+                });
             }
-
-            // -----------------------------------------------------
-            // PREPARE AUDIT
-            // -----------------------------------------------------
-
-            foreach (var assignment in assignments)
+            catch (Exception ex)
             {
-                assignment.CreatedAt = DateTime.Now;
-                assignment.UpdatedAt = null;
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Unable to create event assignments.",
+                    error = ex.Message
+                });
             }
-
-            // -----------------------------------------------------
-            // SAVE
-            // -----------------------------------------------------
-
-            _context.EventAssignments.AddRange(assignments);
-
-            await _context.SaveChangesAsync();
-
-            // -----------------------------------------------------
-            // RETURN
-            // -----------------------------------------------------
-
-            var ids = assignments
-                .Select(a => a.EventAssignmentId)
-                .ToList();
-
-            var created = await _context.EventAssignments
-                .AsNoTracking()
-                .Where(a =>
-                    ids.Contains(a.EventAssignmentId))
-                .OrderBy(a => a.CreatedAt)
-                .ToListAsync();
-
-            return Ok(new
-            {
-                success = true,
-                message =
-                    $"{created.Count} assignment(s) created successfully.",
-                eventId,
-                count = created.Count,
-                assignments = created
-            });
         }
 
         // =========================================================
         // UPDATE
-        // PUT: /api/EventAssignments/{id}
+        // PUT: api/EventAssignments/{id}
         // =========================================================
 
         [HttpPut("{id:int}")]
@@ -506,6 +780,26 @@ namespace EPIC.Api.Controllers
             int id,
             [FromBody] EventAssignment model)
         {
+            var customerId = GetCustomerId();
+
+            if (!customerId.HasValue)
+            {
+                return Unauthorized(new
+                {
+                    success = false,
+                    message = "Customer authorization is required."
+                });
+            }
+
+            if (id <= 0)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "A valid assignment ID is required."
+                });
+            }
+
             if (model == null)
             {
                 return BadRequest(new
@@ -515,279 +809,267 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            var existing =
-                await _context.EventAssignments
-                    .FirstOrDefaultAsync(
-                        a => a.EventAssignmentId == id);
-
-            if (existing == null)
+            try
             {
-                return NotFound(new
-                {
-                    success = false,
-                    message = "Event assignment not found."
-                });
-            }
+                // -------------------------------------------------
+                // LOAD ONLY CURRENT CUSTOMER'S ASSIGNMENT
+                // -------------------------------------------------
 
-            // -----------------------------------------------------
-            // EVENT CANNOT CHANGE
-            // -----------------------------------------------------
+                var existing =
+                    await _context.EventAssignments
+                        .FirstOrDefaultAsync(a =>
+                            a.EventAssignmentId == id &&
+                            a.Event != null &&
+                            a.Event.CustomerId ==
+                                customerId.Value);
 
-            if (model.EventId > 0 &&
-                model.EventId != existing.EventId)
-            {
-                return BadRequest(new
+                if (existing == null)
                 {
-                    success = false,
+                    return NotFound(new
+                    {
+                        success = false,
+                        message = "Event assignment not found."
+                    });
+                }
+
+                // -------------------------------------------------
+                // EVENT CANNOT CHANGE
+                // -------------------------------------------------
+
+                if (model.EventId > 0 &&
+                    model.EventId != existing.EventId)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message =
+                            "The event of an existing assignment cannot be changed."
+                    });
+                }
+
+                // -------------------------------------------------
+                // VALIDATE MEMBER
+                // -------------------------------------------------
+
+                var memberValidation =
+                    await ValidateMember(
+                        model.MemberId,
+                        customerId.Value);
+
+                if (memberValidation != null)
+                {
+                    return memberValidation;
+                }
+
+                // -------------------------------------------------
+                // NORMALIZE VALUES
+                // -------------------------------------------------
+
+                var roleName =
+                    NormalizeText(model.RoleName);
+
+                var assignedPerson =
+                    NormalizeText(model.AssignedPerson);
+
+                var departmentName =
+                    NormalizeText(model.DepartmentName);
+
+                var assignmentStatus =
+                    NormalizeStatus(
+                        model.AssignmentStatus,
+                        "PENDING");
+
+                var priority =
+                    NormalizeStatus(
+                        model.Priority,
+                        "NORMAL");
+
+                var notes =
+                    NormalizeText(model.Notes);
+
+                // -------------------------------------------------
+                // DUPLICATE CHECK
+                // -------------------------------------------------
+
+                var duplicate =
+                    await AssignmentExistsAsync(
+                        existing.EventId,
+                        roleName,
+                        assignedPerson,
+                        departmentName,
+                        id);
+
+                if (duplicate)
+                {
+                    return Conflict(new
+                    {
+                        success = false,
+                        message =
+                            "Another identical assignment already exists for this event."
+                    });
+                }
+
+                // -------------------------------------------------
+                // UPDATE ALLOWED FIELDS ONLY
+                // -------------------------------------------------
+
+                existing.MemberId =
+                    model.MemberId;
+
+                existing.AssignedPerson =
+                    assignedPerson;
+
+                existing.DepartmentName =
+                    departmentName;
+
+                existing.RoleName =
+                    roleName;
+
+                existing.AssignmentStatus =
+                    assignmentStatus;
+
+                existing.Priority =
+                    priority;
+
+                existing.Notes =
+                    notes;
+
+                existing.UpdatedAt =
+                    DateTime.Now;
+
+                // -------------------------------------------------
+                // SAVE
+                // -------------------------------------------------
+
+                await _context.SaveChangesAsync();
+
+                // -------------------------------------------------
+                // LOAD UPDATED RECORD
+                // -------------------------------------------------
+
+                var updated =
+                    await GetAssignmentForCustomer(
+                        id,
+                        customerId.Value);
+
+                return Ok(new
+                {
+                    success = true,
                     message =
-                        "The event of an existing assignment cannot be changed."
+                        "Event assignment updated successfully.",
+                    assignment = updated
                 });
             }
-
-            // -----------------------------------------------------
-            // VALIDATE RELATED ENTITIES
-            // -----------------------------------------------------
-
-            var validation =
-                await ValidateRelatedEntities(
-                    existing.EventId,
-                    model.EventDepartmentId,
-                    model.EventRoleId,
-                    model.MemberId);
-
-            if (validation != null)
+            catch (Exception ex)
             {
-                return validation;
-            }
-
-            // -----------------------------------------------------
-            // NORMALIZE
-            // -----------------------------------------------------
-
-            var roleName =
-                NormalizeText(model.RoleName);
-
-            var assignedPerson =
-                NormalizeText(model.AssignedPerson);
-
-            var departmentName =
-                NormalizeText(model.DepartmentName);
-
-            var assignmentStatus =
-                NormalizeStatus(
-                    model.AssignmentStatus,
-                    "PENDING");
-
-            var priority =
-                NormalizeStatus(
-                    model.Priority,
-                    "NORMAL");
-
-            var notes =
-                NormalizeText(model.Notes);
-
-            // -----------------------------------------------------
-            // DUPLICATE CHECK
-            // -----------------------------------------------------
-
-            var duplicate =
-                await AssignmentExistsAsync(
-                    existing.EventId,
-                    roleName,
-                    assignedPerson,
-                    departmentName,
-                    id);
-
-            if (duplicate)
-            {
-                return Conflict(new
+                return StatusCode(500, new
                 {
                     success = false,
-                    message =
-                        "Another identical assignment already exists for this event."
+                    message = "Unable to update event assignment.",
+                    error = ex.Message
                 });
             }
-
-            // -----------------------------------------------------
-            // UPDATE ONLY REAL DATABASE COLUMNS
-            // -----------------------------------------------------
-
-            existing.EventDepartmentId =
-                model.EventDepartmentId;
-
-            existing.EventRoleId =
-                model.EventRoleId;
-
-            existing.MemberId =
-                model.MemberId;
-
-            existing.AssignedPerson =
-                assignedPerson;
-
-            existing.DepartmentName =
-                departmentName;
-
-            existing.RoleName =
-                roleName;
-
-            existing.AssignmentStatus =
-                assignmentStatus;
-
-            existing.Priority =
-                priority;
-
-            existing.Notes =
-                notes;
-
-            existing.UpdatedAt =
-                DateTime.Now;
-
-            // -----------------------------------------------------
-            // SAVE
-            // -----------------------------------------------------
-
-            await _context.SaveChangesAsync();
-
-            // -----------------------------------------------------
-            // RETURN WITHOUT INCLUDES
-            // -----------------------------------------------------
-
-            var updated =
-                await GetAssignment(id);
-
-            return Ok(new
-            {
-                success = true,
-                message =
-                    "Event assignment updated successfully.",
-                assignment = updated
-            });
         }
 
         // =========================================================
         // DELETE
-        // DELETE: /api/EventAssignments/{id}
+        // DELETE: api/EventAssignments/{id}
         // =========================================================
 
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id)
         {
-            var assignment =
-                await _context.EventAssignments
-                    .FirstOrDefaultAsync(
-                        a => a.EventAssignmentId == id);
+            var customerId = GetCustomerId();
 
-            if (assignment == null)
+            if (!customerId.HasValue)
             {
-                return NotFound(new
+                return Unauthorized(new
                 {
                     success = false,
-                    message =
-                        "Event assignment not found."
+                    message = "Customer authorization is required."
                 });
             }
 
-            _context.EventAssignments.Remove(assignment);
-
-            await _context.SaveChangesAsync();
-
-            return Ok(new
+            if (id <= 0)
             {
-                success = true,
-                message =
-                    "Event assignment deleted successfully.",
-                eventAssignmentId = id
-            });
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "A valid assignment ID is required."
+                });
+            }
+
+            try
+            {
+                var assignment =
+                    await _context.EventAssignments
+                        .FirstOrDefaultAsync(a =>
+                            a.EventAssignmentId == id &&
+                            a.Event != null &&
+                            a.Event.CustomerId ==
+                                customerId.Value);
+
+                if (assignment == null)
+                {
+                    return NotFound(new
+                    {
+                        success = false,
+                        message = "Event assignment not found."
+                    });
+                }
+
+                _context.EventAssignments.Remove(assignment);
+
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    success = true,
+                    message =
+                        "Event assignment deleted successfully.",
+                    eventAssignmentId = id
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    success = false,
+                    message = "Unable to delete event assignment.",
+                    error = ex.Message
+                });
+            }
         }
 
         // =========================================================
-        // VALIDATE RELATED ENTITIES
+        // VALIDATE MEMBER
         // =========================================================
 
-        private async Task<IActionResult?> ValidateRelatedEntities(
-            int eventId,
-            int? eventDepartmentId,
-            int? eventRoleId,
-            int? memberId)
+        private async Task<IActionResult?> ValidateMember(
+            int? memberId,
+            int customerId)
         {
-            // -----------------------------------------------------
-            // DEPARTMENT
-            // -----------------------------------------------------
-
-            if (eventDepartmentId.HasValue)
+            // Member is optional.
+            if (!memberId.HasValue)
             {
-                var departmentExists =
-                    await _context.EventDepartments
-                        .AsNoTracking()
-                        .AnyAsync(d =>
-                            d.EventDepartmentId ==
-                                eventDepartmentId.Value
-                            &&
-                            d.EventId == eventId);
-
-                if (!departmentExists)
-                {
-                    return BadRequest(new
-                    {
-                        success = false,
-                        message =
-                            "The selected department does not belong to this event."
-                    });
-                }
+                return null;
             }
 
-            // -----------------------------------------------------
-            // ROLE
-            // -----------------------------------------------------
+            var memberExists =
+                await _context.Members
+                    .AsNoTracking()
+                    .AnyAsync(m =>
+                        m.MemberId == memberId.Value &&
+                        m.CustomerId == customerId);
 
-            if (eventRoleId.HasValue)
+            if (!memberExists)
             {
-                var roleExists =
-                    await _context.EventRoles
-                        .AsNoTracking()
-                        .AnyAsync(r =>
-                            r.EventRoleId ==
-                                eventRoleId.Value
-                            &&
-                            (
-                                !eventDepartmentId.HasValue
-                                ||
-                                r.EventDepartmentId ==
-                                    eventDepartmentId.Value
-                            ));
-
-                if (!roleExists)
+                return BadRequest(new
                 {
-                    return BadRequest(new
-                    {
-                        success = false,
-                        message =
-                            "The selected role is invalid."
-                    });
-                }
-            }
-
-            // -----------------------------------------------------
-            // MEMBER
-            // -----------------------------------------------------
-
-            if (memberId.HasValue)
-            {
-                var memberExists =
-                    await _context.Members
-                        .AsNoTracking()
-                        .AnyAsync(m =>
-                            m.MemberId == memberId.Value);
-
-                if (!memberExists)
-                {
-                    return BadRequest(new
-                    {
-                        success = false,
-                        message =
-                            "The selected member does not exist."
-                    });
-                }
+                    success = false,
+                    message =
+                        "The selected member does not exist or does not belong to your organization."
+                });
             }
 
             return null;
@@ -816,12 +1098,14 @@ namespace EPIC.Api.Controllers
             var query =
                 _context.EventAssignments
                     .AsNoTracking()
-                    .Where(a => a.EventId == eventId);
+                    .Where(a =>
+                        a.EventId == eventId);
 
             if (excludeId.HasValue)
             {
-                query = query.Where(
-                    a => a.EventAssignmentId != excludeId.Value);
+                query = query.Where(a =>
+                    a.EventAssignmentId !=
+                        excludeId.Value);
             }
 
             var existing =
@@ -839,31 +1123,67 @@ namespace EPIC.Api.Controllers
         }
 
         // =========================================================
-        // GET ASSIGNMENT
-        // IMPORTANT:
-        // NO Include()
+        // GET ASSIGNMENT FOR CUSTOMER
         // =========================================================
 
-        private async Task<EventAssignment?> GetAssignment(int id)
+        private async Task<EventAssignment?>
+            GetAssignmentForCustomer(
+                int id,
+                int customerId)
         {
             return await _context.EventAssignments
                 .AsNoTracking()
-                .FirstOrDefaultAsync(
-                    a => a.EventAssignmentId == id);
+                .Where(a =>
+                    a.EventAssignmentId == id &&
+                    a.Event != null &&
+                    a.Event.CustomerId == customerId)
+                .FirstOrDefaultAsync();
+        }
+
+        // =========================================================
+        // NORMALIZE ASSIGNMENT
+        // =========================================================
+
+        private static void NormalizeAssignment(
+            EventAssignment assignment)
+        {
+            assignment.RoleName =
+                NormalizeText(
+                    assignment.RoleName);
+
+            assignment.AssignedPerson =
+                NormalizeText(
+                    assignment.AssignedPerson);
+
+            assignment.DepartmentName =
+                NormalizeText(
+                    assignment.DepartmentName);
+
+            assignment.Notes =
+                NormalizeText(
+                    assignment.Notes);
+
+            assignment.AssignmentStatus =
+                NormalizeStatus(
+                    assignment.AssignmentStatus,
+                    "PENDING");
+
+            assignment.Priority =
+                NormalizeStatus(
+                    assignment.Priority,
+                    "NORMAL");
         }
 
         // =========================================================
         // NORMALIZE TEXT
         // =========================================================
 
-        private static string? NormalizeText(string? value)
+        private static string? NormalizeText(
+            string? value)
         {
-            if (string.IsNullOrWhiteSpace(value))
-            {
-                return null;
-            }
-
-            return value.Trim();
+            return string.IsNullOrWhiteSpace(value)
+                ? null
+                : value.Trim();
         }
 
         // =========================================================
@@ -875,7 +1195,8 @@ namespace EPIC.Api.Controllers
         {
             return string.IsNullOrWhiteSpace(value)
                 ? string.Empty
-                : value.Trim().ToLowerInvariant();
+                : value.Trim()
+                    .ToLowerInvariant();
         }
 
         // =========================================================
@@ -899,3 +1220,4 @@ namespace EPIC.Api.Controllers
         }
     }
 }
+

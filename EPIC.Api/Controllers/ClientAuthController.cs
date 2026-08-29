@@ -1,4 +1,6 @@
-﻿using BCrypt.Net;
+﻿
+using BCrypt.Net;
+
 using EPIC.Api.Data;
 using EPIC.Api.Models;
 
@@ -29,11 +31,8 @@ namespace EPIC.Api.Controllers
         }
 
         // =========================================================
-        // CREATE CLIENT ACCOUNT
-        //
+        // CREATE CLIENT MEMBER ACCOUNT
         // POST: api/ClientAuth/create-account
-        //
-        // ADMIN ONLY
         // =========================================================
 
         [HttpPost("create-account")]
@@ -41,10 +40,6 @@ namespace EPIC.Api.Controllers
         public async Task<IActionResult> CreateAccount(
             [FromBody] ClientCreateAccountRequest request)
         {
-            // -----------------------------------------------------
-            // VALIDATION
-            // -----------------------------------------------------
-
             if (request == null)
             {
                 return BadRequest(new
@@ -58,6 +53,14 @@ namespace EPIC.Api.Controllers
                 return BadRequest(new
                 {
                     message = "CustomerId is required."
+                });
+            }
+
+            if (request.MemberId <= 0)
+            {
+                return BadRequest(new
+                {
+                    message = "MemberId is required."
                 });
             }
 
@@ -85,9 +88,18 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            // -----------------------------------------------------
-            // FIND CUSTOMER
-            // -----------------------------------------------------
+            // =====================================================
+            // NORMALIZE
+            // =====================================================
+
+            var username = request.Username.Trim();
+
+            var normalizedUsername =
+                username.ToUpperInvariant();
+
+            // =====================================================
+            // CUSTOMER
+            // =====================================================
 
             var customer =
                 await _context.Customers
@@ -103,174 +115,208 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            // -----------------------------------------------------
-            // CUSTOMER STATUS
-            // -----------------------------------------------------
-
-            if (!string.Equals(
-                    customer.Status?.Trim(),
-                    "Active",
-                    StringComparison.OrdinalIgnoreCase))
+            if (!IsActiveCustomerStatus(customer.Status))
             {
                 return BadRequest(new
                 {
-                    message =
-                        "Customer account is not active."
+                    message = "Customer account is not active."
                 });
             }
 
-            // -----------------------------------------------------
-            // FIND CLIENT ROLE
-            // -----------------------------------------------------
+            // =====================================================
+            // MEMBER
+            // =====================================================
 
-            var role =
-                await _context.Roles
-                    .FirstOrDefaultAsync(r =>
-                        r.RoleName != null &&
-                        r.RoleName.ToUpper() == "CLIENT" &&
-                        r.IsActive);
+            var member =
+                await _context.Members
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(m =>
+                        m.MemberId == request.MemberId &&
+                        m.CustomerId == request.CustomerId);
 
-            if (role == null)
+            if (member == null)
+            {
+                return NotFound(new
+                {
+                    message =
+                        "Member not found or member does not belong to this customer."
+                });
+            }
+
+            if (!IsActiveMemberStatus(member.Status))
             {
                 return BadRequest(new
                 {
-                    message =
-                        "CLIENT role does not exist or is inactive."
+                    message = "Member account is not active."
                 });
             }
 
-            // -----------------------------------------------------
-            // NORMALIZE USERNAME
-            // -----------------------------------------------------
-
-            var username =
-                request.Username.Trim();
-
-            // -----------------------------------------------------
-            // CHECK USERNAME
-            // -----------------------------------------------------
+            // =====================================================
+            // USERNAME
+            // =====================================================
 
             var usernameExists =
-                await _context.Users
-                    .AnyAsync(u =>
-                        u.Username != null &&
-                        u.Username.ToLower() ==
-                        username.ToLower());
+                await _context.ClientMembers
+                    .AnyAsync(cm =>
+                        cm.Username != null &&
+                        cm.Username.Trim().ToUpper() ==
+                        normalizedUsername);
 
             if (usernameExists)
             {
                 return Conflict(new
                 {
-                    message =
-                        "Username already exists."
+                    message = "Username already exists."
                 });
             }
 
-            // -----------------------------------------------------
-            // CHECK CUSTOMER ACCOUNT
-            // -----------------------------------------------------
+            // =====================================================
+            // ONE CLIENT ACCOUNT PER MEMBER
+            // =====================================================
 
-            var existingCustomerAccount =
-                await _context.Users
-                    .AnyAsync(u =>
-                        u.CustomerId ==
-                        customer.CustomerId);
+            var existingMemberAccount =
+                await _context.ClientMembers
+                    .AnyAsync(cm =>
+                        cm.CustomerId == request.CustomerId &&
+                        cm.MemberId == request.MemberId);
 
-            if (existingCustomerAccount)
+            if (existingMemberAccount)
             {
                 return Conflict(new
                 {
                     message =
-                        "This customer already has a user account."
+                        "This member already has a client account."
                 });
             }
 
-            // -----------------------------------------------------
-            // CREATE USER
-            // -----------------------------------------------------
+            // =====================================================
+            // CLIENT ROLE
+            // =====================================================
 
-            var user = new User
+            ClientRole? clientRole;
+
+            if (request.ClientRoleId.HasValue)
             {
-                Username =
-                    username,
+                clientRole =
+                    await _context.ClientRoles
+                        .FirstOrDefaultAsync(r =>
+                            r.ClientRoleId ==
+                                request.ClientRoleId.Value &&
+                            r.CustomerId ==
+                                request.CustomerId &&
+                            r.IsActive);
+            }
+            else
+            {
+                clientRole =
+                    await _context.ClientRoles
+                        .FirstOrDefaultAsync(r =>
+                            r.CustomerId ==
+                                request.CustomerId &&
+                            r.RoleName != null &&
+                            r.RoleName.Trim().ToUpper() ==
+                                "CLIENT_MEMBER" &&
+                            r.IsActive);
+            }
 
-                PasswordHash =
-                    BCrypt.Net.BCrypt.HashPassword(
-                        request.Password),
+            if (clientRole == null)
+            {
+                return BadRequest(new
+                {
+                    message =
+                        request.ClientRoleId.HasValue
+                            ? "The selected client role does not exist, is inactive, or does not belong to this customer."
+                            : "Default CLIENT_MEMBER role was not found for this customer."
+                });
+            }
 
-                FullName =
-                    customer.ContactPerson,
+            // =====================================================
+            // CREATE ACCOUNT
+            // =====================================================
 
-                RoleId =
-                    role.RoleId,
+            var clientMember =
+                new ClientMember
+                {
+                    CustomerId = customer.CustomerId,
+                    MemberId = member.MemberId,
+                    ClientRoleId = clientRole.ClientRoleId,
 
-                MemberId =
-                    null,
+                    Username = username,
 
-                CustomerId =
-                    customer.CustomerId,
+                    PasswordHash =
+                        BCrypt.Net.BCrypt.HashPassword(
+                            request.Password),
 
-                IsActive =
-                    true,
+                    Status = "ACTIVE",
+                    IsActive = true,
 
-                ApprovalStatus =
-                    "APPROVED",
+                    CreatedDate = DateTime.UtcNow,
+                    LastLoginDate = null,
 
-                CreatedDate =
-                    DateTime.Now
-            };
+                    Email = null,
+                    ContactNumber = member.ContactNumber
+                };
 
-            _context.Users.Add(user);
+            _context.ClientMembers.Add(clientMember);
 
             await _context.SaveChangesAsync();
 
-            // -----------------------------------------------------
+            // =====================================================
             // RESPONSE
-            // -----------------------------------------------------
+            // =====================================================
 
             return Ok(new
             {
                 message =
-                    "CLIENT ACCOUNT CREATED SUCCESSFULLY.",
+                    "CLIENT MEMBER ACCOUNT CREATED SUCCESSFULLY.",
 
-                userId =
-                    user.UserId,
-
-                username =
-                    user.Username,
-
-                fullName =
-                    user.FullName,
-
-                roleId =
-                    role.RoleId,
-
-                role =
-                    "CLIENT",
+                clientMemberId =
+                    clientMember.ClientMemberId,
 
                 customerId =
-                    customer.CustomerId,
+                    clientMember.CustomerId,
 
                 churchName =
                     customer.ChurchName,
 
+                memberId =
+                    clientMember.MemberId,
+
+                memberCode =
+                    member.MemberCode,
+
+                memberName =
+                    GetMemberFullName(member),
+
+                clientRoleId =
+                    clientMember.ClientRoleId,
+
+                clientRoleName =
+                    clientRole.RoleName,
+
+                username =
+                    clientMember.Username,
+
                 email =
-                    customer.Email,
+                    clientMember.Email,
+
+                contactNumber =
+                    clientMember.ContactNumber,
+
+                status =
+                    clientMember.Status,
 
                 isActive =
-                    user.IsActive,
+                    clientMember.IsActive,
 
-                approvalStatus =
-                    user.ApprovalStatus
+                createdDate =
+                    clientMember.CreatedDate
             });
         }
 
         // =========================================================
         // CLIENT LOGIN
-        //
         // POST: api/ClientAuth/login
-        //
-        // PUBLIC
         // =========================================================
 
         [HttpPost("login")]
@@ -278,161 +324,98 @@ namespace EPIC.Api.Controllers
         public async Task<IActionResult> Login(
             [FromBody] ClientLoginRequest request)
         {
-            // -----------------------------------------------------
-            // VALIDATION
-            // -----------------------------------------------------
-
             if (request == null)
             {
                 return BadRequest(new
                 {
-                    message =
-                        "Login data is required."
+                    message = "Login data is required."
                 });
             }
 
-            if (string.IsNullOrWhiteSpace(
-                    request.Username))
+            if (string.IsNullOrWhiteSpace(request.Username))
             {
                 return BadRequest(new
                 {
-                    message =
-                        "Email or username is required."
+                    message = "Username or email is required."
                 });
             }
 
-            if (string.IsNullOrWhiteSpace(
-                    request.Password))
+            if (string.IsNullOrWhiteSpace(request.Password))
             {
                 return BadRequest(new
                 {
-                    message =
-                        "Password is required."
+                    message = "Password is required."
                 });
             }
 
             var login =
                 request.Username.Trim();
 
-            // -----------------------------------------------------
-            // FIND CLIENT USER
-            //
-            // LOGIN CAN USE:
-            // 1. Username
-            // 2. Customer Email
-            // -----------------------------------------------------
+            // =====================================================
+            // LOAD CLIENT ACCOUNT
+            // =====================================================
 
-            var user =
-                await _context.Users
-                    .Include(u => u.Role)
-                    .Include(u => u.Customer)
-                    .FirstOrDefaultAsync(u =>
-                        (
-                            u.Username != null &&
-                            u.Username.ToLower() ==
-                            login.ToLower()
-                        )
-                        ||
-                        (
-                            u.Customer != null &&
-                            u.Customer.Email != null &&
-                            u.Customer.Email.ToLower() ==
-                            login.ToLower()
-                        ));
+            var clientMember =
+                await _context.ClientMembers
+                    .Include(cm => cm.Customer)
+                    .Include(cm => cm.Member)
+                    .Include(cm => cm.ClientRole)
+                    .FirstOrDefaultAsync(cm =>
+                        cm.Username == login ||
+                        cm.Email == login);
 
-            if (user == null)
+            if (clientMember == null)
             {
                 return Unauthorized(new
                 {
                     message =
-                        "INVALID EMAIL/USERNAME OR PASSWORD."
+                        "INVALID CLIENT USERNAME/EMAIL OR PASSWORD."
                 });
             }
 
-            // -----------------------------------------------------
-            // VERIFY CLIENT ROLE
-            // -----------------------------------------------------
-
-            var roleName =
-                user.Role?.RoleName?
-                    .Trim()
-                    .ToUpperInvariant();
-
-            if (roleName != "CLIENT")
-            {
-                return Unauthorized(new
-                {
-                    message =
-                        "THIS ACCOUNT IS NOT A CLIENT ACCOUNT."
-                });
-            }
-
-            // -----------------------------------------------------
-            // VERIFY PASSWORD
-            // -----------------------------------------------------
+            // =====================================================
+            // PASSWORD
+            // =====================================================
 
             if (!VerifyPassword(
                     request.Password,
-                    user.PasswordHash))
+                    clientMember.PasswordHash))
             {
                 return Unauthorized(new
                 {
                     message =
-                        "INVALID EMAIL/USERNAME OR PASSWORD."
+                        "INVALID CLIENT USERNAME/EMAIL OR PASSWORD."
                 });
             }
 
-            // -----------------------------------------------------
-            // ACTIVE CHECK
-            // -----------------------------------------------------
+            // =====================================================
+            // CLIENT MEMBER VALIDATION
+            // =====================================================
 
-            if (!user.IsActive)
+            if (!clientMember.IsActive)
             {
                 return Unauthorized(new
                 {
                     message =
-                        "CLIENT ACCOUNT IS INACTIVE."
+                        "CLIENT MEMBER ACCOUNT IS INACTIVE."
                 });
             }
 
-            // -----------------------------------------------------
-            // APPROVAL CHECK
-            // -----------------------------------------------------
-
-            var approvalStatus =
-                string.IsNullOrWhiteSpace(
-                    user.ApprovalStatus)
-                        ? "APPROVED"
-                        : user.ApprovalStatus
-                            .Trim()
-                            .ToUpperInvariant();
-
-            if (approvalStatus != "APPROVED")
+            if (!IsActiveClientMemberStatus(
+                    clientMember.Status))
             {
                 return Unauthorized(new
                 {
                     message =
-                        "CLIENT ACCOUNT IS NOT APPROVED.",
-
-                    approvalStatus =
-                        approvalStatus
+                        "CLIENT MEMBER ACCOUNT IS NOT ACTIVE."
                 });
             }
 
-            // -----------------------------------------------------
-            // CUSTOMER CHECK
-            // -----------------------------------------------------
+            // =====================================================
+            // CUSTOMER
+            // =====================================================
 
-            if (!user.CustomerId.HasValue)
-            {
-                return Unauthorized(new
-                {
-                    message =
-                        "CLIENT ACCOUNT IS NOT LINKED TO A CUSTOMER."
-                });
-            }
-
-            if (user.Customer == null)
+            if (clientMember.Customer == null)
             {
                 return Unauthorized(new
                 {
@@ -441,14 +424,8 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            // -----------------------------------------------------
-            // CUSTOMER STATUS
-            // -----------------------------------------------------
-
-            if (!string.Equals(
-                    user.Customer.Status?.Trim(),
-                    "Active",
-                    StringComparison.OrdinalIgnoreCase))
+            if (!IsActiveCustomerStatus(
+                    clientMember.Customer.Status))
             {
                 return Unauthorized(new
                 {
@@ -457,262 +434,450 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            // -----------------------------------------------------
-            // GENERATE JWT
-            // -----------------------------------------------------
+            // =====================================================
+            // MEMBER
+            // =====================================================
+
+            if (clientMember.Member == null)
+            {
+                return Unauthorized(new
+                {
+                    message =
+                        "MEMBER RECORD COULD NOT BE FOUND."
+                });
+            }
+
+            if (!IsActiveMemberStatus(
+                    clientMember.Member.Status))
+            {
+                return Unauthorized(new
+                {
+                    message =
+                        "MEMBER ACCOUNT IS NOT ACTIVE."
+                });
+            }
+
+            // =====================================================
+            // CLIENT ROLE
+            // =====================================================
+
+            if (clientMember.ClientRole == null)
+            {
+                return Unauthorized(new
+                {
+                    message =
+                        "CLIENT ROLE RECORD COULD NOT BE FOUND."
+                });
+            }
+
+            if (!clientMember.ClientRole.IsActive)
+            {
+                return Unauthorized(new
+                {
+                    message =
+                        "CLIENT ROLE IS INACTIVE."
+                });
+            }
+
+            // =====================================================
+            // UPDATE LOGIN
+            // =====================================================
+
+            clientMember.LastLoginDate =
+                DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            // =====================================================
+            // GENERATE TOKEN
+            // =====================================================
 
             var token =
-                GenerateJwtToken(user);
+                GenerateJwtToken(clientMember);
 
-            // -----------------------------------------------------
+            // =====================================================
             // RESPONSE
-            // -----------------------------------------------------
+            // =====================================================
 
             return Ok(new
             {
                 message =
-                    "CLIENT LOGIN SUCCESSFUL.",
+                    "CLIENT MEMBER LOGIN SUCCESSFUL.",
 
-                token =
-                    token,
+                token = token,
+                accessToken = token,
 
-                accessToken =
-                    token,
+                user = BuildUserResponse(clientMember),
 
-                user = new
-                {
-                    userId =
-                        user.UserId,
+                client = BuildClientResponse(clientMember),
 
-                    username =
-                        user.Username,
+                member = BuildMemberResponse(clientMember),
 
-                    fullName =
-                        user.FullName,
-
-                    roleId =
-                        user.RoleId,
-
-                    role =
-                        "CLIENT",
-
-                    customerId =
-                        user.CustomerId,
-
-                    approvalStatus =
-                        approvalStatus,
-
-                    isActive =
-                        user.IsActive
-                },
-
-                client = new
-                {
-                    clientId =
-                        user.Customer.CustomerId,
-
-                    clientName =
-                        user.Customer.ChurchName,
-
-                    contactPerson =
-                        user.Customer.ContactPerson,
-
-                    email =
-                        user.Customer.Email,
-
-                    phone =
-                        user.Customer.Phone,
-
-                    status =
-                        user.Customer.Status
-                }
+                clientRole =
+                    BuildClientRoleResponse(clientMember)
             });
         }
 
         // =========================================================
-        // CURRENT CLIENT
-        //
+        // CURRENT CLIENT MEMBER
         // GET: api/ClientAuth/me
-        //
-        // CLIENT ONLY
         // =========================================================
 
         [HttpGet("me")]
         [Authorize(Roles = "CLIENT")]
         public async Task<IActionResult> Me()
         {
-            // -----------------------------------------------------
-            // GET USER ID FROM JWT
-            // -----------------------------------------------------
+            // =====================================================
+            // RESOLVE CLIENT MEMBER ID
+            // =====================================================
 
-            var userIdClaim =
-                User.FindFirst(
+            var clientMemberId =
+                GetIntClaim(
+                    "clientMemberId",
                     ClaimTypes.NameIdentifier);
 
-            if (userIdClaim == null ||
-                !int.TryParse(
-                    userIdClaim.Value,
-                    out var userId))
+            if (!clientMemberId.HasValue)
             {
                 return Unauthorized(new
                 {
                     message =
-                        "INVALID USER TOKEN."
+                        "INVALID CLIENT MEMBER TOKEN."
                 });
             }
 
-            // -----------------------------------------------------
-            // LOAD USER
-            // -----------------------------------------------------
+            // =====================================================
+            // LOAD ACCOUNT
+            // =====================================================
 
-            var user =
-                await _context.Users
-                    .Include(u => u.Role)
-                    .Include(u => u.Customer)
+            var clientMember =
+                await _context.ClientMembers
+                    .Include(cm => cm.Customer)
+                    .Include(cm => cm.Member)
+                    .Include(cm => cm.ClientRole)
                     .AsNoTracking()
-                    .FirstOrDefaultAsync(u =>
-                        u.UserId == userId);
+                    .FirstOrDefaultAsync(cm =>
+                        cm.ClientMemberId ==
+                        clientMemberId.Value);
 
-            if (user == null)
+            if (clientMember == null)
             {
                 return Unauthorized(new
                 {
                     message =
-                        "USER NOT FOUND."
+                        "CLIENT MEMBER ACCOUNT NOT FOUND."
                 });
             }
 
-            // -----------------------------------------------------
-            // ROLE CHECK
-            // -----------------------------------------------------
+            // =====================================================
+            // VALIDATE ACCOUNT
+            // =====================================================
 
-            if (user.Role == null ||
-                !string.Equals(
-                    user.Role.RoleName,
-                    "CLIENT",
-                    StringComparison.OrdinalIgnoreCase))
-            {
-                return Forbid();
-            }
+            var validationError =
+                ValidateClientMember(clientMember);
 
-            // -----------------------------------------------------
-            // ACTIVE CHECK
-            // -----------------------------------------------------
-
-            if (!user.IsActive)
+            if (validationError != null)
             {
                 return Unauthorized(new
                 {
-                    message =
-                        "CLIENT ACCOUNT IS INACTIVE."
+                    message = validationError
                 });
             }
 
-            // -----------------------------------------------------
-            // APPROVAL CHECK
-            // -----------------------------------------------------
-
-            var approvalStatus =
-                string.IsNullOrWhiteSpace(
-                    user.ApprovalStatus)
-                        ? "APPROVED"
-                        : user.ApprovalStatus
-                            .Trim()
-                            .ToUpperInvariant();
-
-            if (approvalStatus != "APPROVED")
-            {
-                return Unauthorized(new
-                {
-                    message =
-                        "CLIENT ACCOUNT IS NOT APPROVED.",
-
-                    approvalStatus =
-                        approvalStatus
-                });
-            }
-
-            // -----------------------------------------------------
-            // CUSTOMER CHECK
-            // -----------------------------------------------------
-
-            if (!user.CustomerId.HasValue ||
-                user.Customer == null)
-            {
-                return Unauthorized(new
-                {
-                    message =
-                        "CLIENT IS NOT LINKED TO A CUSTOMER."
-                });
-            }
-
-            // -----------------------------------------------------
-            // CUSTOMER STATUS
-            // -----------------------------------------------------
-
-            if (!string.Equals(
-                    user.Customer.Status?.Trim(),
-                    "Active",
-                    StringComparison.OrdinalIgnoreCase))
-            {
-                return Unauthorized(new
-                {
-                    message =
-                        "CUSTOMER ACCOUNT IS NOT ACTIVE."
-                });
-            }
-
-            // -----------------------------------------------------
+            // =====================================================
             // RESPONSE
-            // -----------------------------------------------------
+            // =====================================================
 
             return Ok(new
             {
-                userId =
-                    user.UserId,
+                clientMemberId =
+                    clientMember.ClientMemberId,
 
                 username =
-                    user.Username,
-
-                fullName =
-                    user.FullName,
-
-                roleId =
-                    user.RoleId,
+                    clientMember.Username,
 
                 role =
                     "CLIENT",
 
-                customerId =
-                    user.CustomerId,
+                accountType =
+                    "CLIENT",
 
-                approvalStatus =
-                    approvalStatus,
+                clientRoleId =
+                    clientMember.ClientRoleId,
+
+                clientRoleName =
+                    clientMember.ClientRole!.RoleName,
+
+                customerId =
+                    clientMember.CustomerId,
+
+                memberId =
+                    clientMember.MemberId,
+
+                memberCode =
+                    clientMember.Member!.MemberCode,
+
+                email =
+                    clientMember.Email,
+
+                contactNumber =
+                    clientMember.ContactNumber,
+
+                status =
+                    clientMember.Status,
 
                 isActive =
-                    user.IsActive,
+                    clientMember.IsActive,
 
-                client = new
-                {
-                    clientId =
-                        user.Customer.CustomerId,
+                createdDate =
+                    clientMember.CreatedDate,
 
-                    clientName =
-                        user.Customer.ChurchName,
+                lastLoginDate =
+                    clientMember.LastLoginDate,
 
-                    contactPerson =
-                        user.Customer.ContactPerson,
+                client =
+                    BuildClientResponse(clientMember),
 
-                    email =
-                        user.Customer.Email,
+                member =
+                    BuildMemberResponse(clientMember),
 
-                    phone =
-                        user.Customer.Phone,
-
-                    status =
-                        user.Customer.Status
-                }
+                clientRole =
+                    BuildClientRoleResponse(clientMember)
             });
+        }
+
+        // =========================================================
+        // BUILD USER RESPONSE
+        // =========================================================
+
+        private static object BuildUserResponse(
+            ClientMember clientMember)
+        {
+            return new
+            {
+                clientMemberId =
+                    clientMember.ClientMemberId,
+
+                username =
+                    clientMember.Username,
+
+                fullName =
+                    GetMemberFullName(
+                        clientMember.Member),
+
+                role =
+                    "CLIENT",
+
+                accountType =
+                    "CLIENT",
+
+                clientRoleId =
+                    clientMember.ClientRoleId,
+
+                clientRoleName =
+                    clientMember.ClientRole!.RoleName,
+
+                customerId =
+                    clientMember.CustomerId,
+
+                memberId =
+                    clientMember.MemberId,
+
+                memberCode =
+                    clientMember.Member!.MemberCode,
+
+                email =
+                    clientMember.Email,
+
+                contactNumber =
+                    clientMember.ContactNumber,
+
+                status =
+                    clientMember.Status,
+
+                isActive =
+                    clientMember.IsActive
+            };
+        }
+
+        // =========================================================
+        // BUILD CLIENT RESPONSE
+        // =========================================================
+
+        private static object BuildClientResponse(
+            ClientMember clientMember)
+        {
+            return new
+            {
+                clientId =
+                    clientMember.Customer!.CustomerId,
+
+                clientName =
+                    clientMember.Customer.ChurchName,
+
+                contactPerson =
+                    clientMember.Customer.ContactPerson,
+
+                email =
+                    clientMember.Customer.Email,
+
+                phone =
+                    clientMember.Customer.Phone,
+
+                status =
+                    clientMember.Customer.Status
+            };
+        }
+
+        // =========================================================
+        // BUILD MEMBER RESPONSE
+        // =========================================================
+
+        private static object BuildMemberResponse(
+            ClientMember clientMember)
+        {
+            var member =
+                clientMember.Member!;
+
+            return new
+            {
+                memberId =
+                    member.MemberId,
+
+                memberCode =
+                    member.MemberCode,
+
+                firstName =
+                    member.FirstName,
+
+                middleName =
+                    member.MiddleName,
+
+                lastName =
+                    member.LastName,
+
+                fullName =
+                    GetMemberFullName(member),
+
+                customerId =
+                    member.CustomerId,
+
+                status =
+                    member.Status
+            };
+        }
+
+        // =========================================================
+        // BUILD CLIENT ROLE RESPONSE
+        // =========================================================
+
+        private static object BuildClientRoleResponse(
+            ClientMember clientMember)
+        {
+            var role =
+                clientMember.ClientRole!;
+
+            return new
+            {
+                clientRoleId =
+                    role.ClientRoleId,
+
+                roleName =
+                    role.RoleName,
+
+                description =
+                    role.Description,
+
+                isSystemRole =
+                    role.IsSystemRole,
+
+                isActive =
+                    role.IsActive
+            };
+        }
+
+        // =========================================================
+        // VALIDATE CLIENT MEMBER
+        // =========================================================
+
+        private static string? ValidateClientMember(
+            ClientMember clientMember)
+        {
+            if (!clientMember.IsActive)
+            {
+                return
+                    "CLIENT MEMBER ACCOUNT IS INACTIVE.";
+            }
+
+            if (!IsActiveClientMemberStatus(
+                    clientMember.Status))
+            {
+                return
+                    "CLIENT MEMBER ACCOUNT IS NOT ACTIVE.";
+            }
+
+            if (clientMember.Customer == null)
+            {
+                return
+                    "CUSTOMER RECORD COULD NOT BE FOUND.";
+            }
+
+            if (!IsActiveCustomerStatus(
+                    clientMember.Customer.Status))
+            {
+                return
+                    "CUSTOMER ACCOUNT IS NOT ACTIVE.";
+            }
+
+            if (clientMember.Member == null)
+            {
+                return
+                    "MEMBER RECORD COULD NOT BE FOUND.";
+            }
+
+            if (!IsActiveMemberStatus(
+                    clientMember.Member.Status))
+            {
+                return
+                    "MEMBER ACCOUNT IS NOT ACTIVE.";
+            }
+
+            if (clientMember.ClientRole == null)
+            {
+                return
+                    "CLIENT ROLE RECORD COULD NOT BE FOUND.";
+            }
+
+            if (!clientMember.ClientRole.IsActive)
+            {
+                return
+                    "CLIENT ROLE IS INACTIVE.";
+            }
+
+            return null;
+        }
+
+        // =========================================================
+        // GET INTEGER CLAIM
+        // =========================================================
+
+        private int? GetIntClaim(
+            params string[] claimTypes)
+        {
+            foreach (var claimType in claimTypes)
+            {
+                var claim =
+                    User.FindFirst(claimType);
+
+                if (claim != null &&
+                    int.TryParse(
+                        claim.Value,
+                        out var value))
+                {
+                    return value;
+                }
+            }
+
+            return null;
         }
 
         // =========================================================
@@ -723,8 +888,7 @@ namespace EPIC.Api.Controllers
             string password,
             string? passwordHash)
         {
-            if (string.IsNullOrWhiteSpace(
-                    passwordHash))
+            if (string.IsNullOrWhiteSpace(passwordHash))
             {
                 return false;
             }
@@ -742,11 +906,80 @@ namespace EPIC.Api.Controllers
         }
 
         // =========================================================
-        // JWT
+        // CUSTOMER STATUS
+        // =========================================================
+
+        private static bool IsActiveCustomerStatus(
+            string? status)
+        {
+            return string.Equals(
+                status?.Trim(),
+                "ACTIVE",
+                StringComparison.OrdinalIgnoreCase);
+        }
+
+        // =========================================================
+        // MEMBER STATUS
+        // =========================================================
+
+        private static bool IsActiveMemberStatus(
+            string? status)
+        {
+            return string.Equals(
+                status?.Trim(),
+                "ACTIVE",
+                StringComparison.OrdinalIgnoreCase);
+        }
+
+        // =========================================================
+        // CLIENT MEMBER STATUS
+        // =========================================================
+
+        private static bool IsActiveClientMemberStatus(
+            string? status)
+        {
+            return string.Equals(
+                status?.Trim(),
+                "ACTIVE",
+                StringComparison.OrdinalIgnoreCase);
+        }
+
+        // =========================================================
+        // MEMBER FULL NAME
+        // =========================================================
+
+        private static string GetMemberFullName(
+            Member? member)
+        {
+            if (member == null)
+            {
+                return string.Empty;
+            }
+
+            var parts =
+                new[]
+                {
+                    member.FirstName,
+                    member.MiddleName,
+                    member.LastName
+                }
+                .Where(x =>
+                    !string.IsNullOrWhiteSpace(x) &&
+                    !string.Equals(
+                        x.Trim(),
+                        "N/A",
+                        StringComparison.OrdinalIgnoreCase))
+                .Select(x => x!.Trim());
+
+            return string.Join(" ", parts);
+        }
+
+        // =========================================================
+        // GENERATE JWT
         // =========================================================
 
         private string GenerateJwtToken(
-            User user)
+            ClientMember clientMember)
         {
             var key =
                 _configuration["Jwt:Key"];
@@ -784,24 +1017,56 @@ namespace EPIC.Api.Controllers
                 expirationMinutes = 60;
             }
 
-            // -----------------------------------------------------
-            // CLAIMS
-            // -----------------------------------------------------
+            // =====================================================
+            // IMPORTANT:
+            // These claims are deliberately duplicated using
+            // consistent names because the EPIC permission system
+            // uses clientMemberId, customerId and memberId.
+            // =====================================================
 
             var claims =
                 new List<Claim>
                 {
+                    // -------------------------------------------------
+                    // CLIENT MEMBER ID
+                    // -------------------------------------------------
+
+                    new Claim(
+                        "clientMemberId",
+                        clientMember.ClientMemberId.ToString()),
+
                     new Claim(
                         ClaimTypes.NameIdentifier,
-                        user.UserId.ToString()),
+                        clientMember.ClientMemberId.ToString()),
+
+                    // -------------------------------------------------
+                    // USER ID
+                    // -------------------------------------------------
+
+                    new Claim(
+                        "userId",
+                        clientMember.ClientMemberId.ToString()),
+
+                    // -------------------------------------------------
+                    // USERNAME
+                    // -------------------------------------------------
 
                     new Claim(
                         ClaimTypes.Name,
-                        user.Username ?? ""),
+                        clientMember.Username ?? string.Empty),
+
+                    // -------------------------------------------------
+                    // FULL NAME
+                    // -------------------------------------------------
 
                     new Claim(
                         ClaimTypes.GivenName,
-                        user.FullName ?? ""),
+                        GetMemberFullName(
+                            clientMember.Member)),
+
+                    // -------------------------------------------------
+                    // APPLICATION ROLE
+                    // -------------------------------------------------
 
                     new Claim(
                         ClaimTypes.Role,
@@ -812,47 +1077,84 @@ namespace EPIC.Api.Controllers
                         "CLIENT"),
 
                     new Claim(
-                        "userId",
-                        user.UserId.ToString())
-                };
+                        "accountType",
+                        "CLIENT"),
 
-            // -----------------------------------------------------
-            // CUSTOMER CLAIM
-            // -----------------------------------------------------
+                    // -------------------------------------------------
+                    // CUSTOMER / TENANT
+                    // -------------------------------------------------
 
-            if (user.CustomerId.HasValue)
-            {
-                var customerId =
-                    user.CustomerId.Value.ToString();
-
-                claims.Add(
-                    new Claim(
-                        "CustomerId",
-                        customerId));
-
-                claims.Add(
                     new Claim(
                         "customerId",
-                        customerId));
+                        clientMember.CustomerId.ToString()),
+
+                    new Claim(
+                        "CustomerId",
+                        clientMember.CustomerId.ToString()),
+
+                    new Claim(
+                        "tenantId",
+                        clientMember.CustomerId.ToString()),
+
+                    // -------------------------------------------------
+                    // MEMBER
+                    // -------------------------------------------------
+
+                    new Claim(
+                        "memberId",
+                        clientMember.MemberId.ToString()),
+
+                    new Claim(
+                        "MemberId",
+                        clientMember.MemberId.ToString()),
+
+                    // -------------------------------------------------
+                    // CLIENT ROLE
+                    // -------------------------------------------------
+
+                    new Claim(
+                        "clientRoleId",
+                        clientMember.ClientRoleId.ToString())
+                };
+
+            // =====================================================
+            // CLIENT ROLE NAME
+            // =====================================================
+
+            if (!string.IsNullOrWhiteSpace(
+                    clientMember.ClientRole?.RoleName))
+            {
+                claims.Add(
+                    new Claim(
+                        "clientRoleName",
+                        clientMember.ClientRole!.RoleName.Trim()));
             }
 
-            // -----------------------------------------------------
+            // =====================================================
+            // MEMBER CODE
+            // =====================================================
+
+            if (!string.IsNullOrWhiteSpace(
+                    clientMember.Member?.MemberCode))
+            {
+                claims.Add(
+                    new Claim(
+                        "memberCode",
+                        clientMember.Member!.MemberCode.Trim()));
+            }
+
+            // =====================================================
             // APPROVAL STATUS
-            // -----------------------------------------------------
+            // =====================================================
 
             claims.Add(
                 new Claim(
                     "approvalStatus",
-                    string.IsNullOrWhiteSpace(
-                        user.ApprovalStatus)
-                        ? "APPROVED"
-                        : user.ApprovalStatus
-                            .Trim()
-                            .ToUpperInvariant()));
+                    "APPROVED"));
 
-            // -----------------------------------------------------
-            // SECURITY KEY
-            // -----------------------------------------------------
+            // =====================================================
+            // SECURITY
+            // =====================================================
 
             var securityKey =
                 new SymmetricSecurityKey(
@@ -863,25 +1165,18 @@ namespace EPIC.Api.Controllers
                     securityKey,
                     SecurityAlgorithms.HmacSha256);
 
-            // -----------------------------------------------------
+            // =====================================================
             // TOKEN
-            // -----------------------------------------------------
+            // =====================================================
 
             var token =
                 new JwtSecurityToken(
-                    issuer:
-                        issuer,
-
-                    audience:
-                        audience,
-
-                    claims:
-                        claims,
-
+                    issuer: issuer,
+                    audience: audience,
+                    claims: claims,
                     expires:
                         DateTime.UtcNow.AddMinutes(
                             expirationMinutes),
-
                     signingCredentials:
                         credentials);
 
@@ -911,10 +1206,15 @@ namespace EPIC.Api.Controllers
     {
         public int CustomerId { get; set; }
 
+        public int MemberId { get; set; }
+
         public string Username { get; set; }
             = string.Empty;
 
         public string Password { get; set; }
             = string.Empty;
+
+        public int? ClientRoleId { get; set; }
     }
 }
+

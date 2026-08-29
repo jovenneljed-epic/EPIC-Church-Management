@@ -4,6 +4,7 @@ using EPIC.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EPIC.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260827112132_CheckCurrentModel")]
+    partial class CheckCurrentModel
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -73,7 +76,7 @@ namespace EPIC.Api.Migrations
                         .IsUnique()
                         .HasFilter("[EventId] IS NOT NULL");
 
-                    b.ToTable("Attendances", (string)null);
+                    b.ToTable("Attendances");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.CRBreakPass", b =>
@@ -122,7 +125,7 @@ namespace EPIC.Api.Migrations
 
                     b.HasIndex("MemberId");
 
-                    b.ToTable("CRBreakPasses", (string)null);
+                    b.ToTable("CRBreakPasses");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.Certificate", b =>
@@ -170,7 +173,7 @@ namespace EPIC.Api.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Certificates", (string)null);
+                    b.ToTable("Certificates");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.ChurchService", b =>
@@ -252,7 +255,7 @@ namespace EPIC.Api.Migrations
 
                     b.HasIndex("CustomerId", "ServiceDate");
 
-                    b.ToTable("ChurchServices", (string)null);
+                    b.ToTable("ChurchServices");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.ChurchSettings", b =>
@@ -303,7 +306,7 @@ namespace EPIC.Api.Migrations
 
                     b.HasKey("ChurchSettingsId");
 
-                    b.ToTable("ChurchSettings", (string)null);
+                    b.ToTable("ChurchSettings");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.ClientMember", b =>
@@ -369,7 +372,7 @@ namespace EPIC.Api.Migrations
                     b.HasIndex("CustomerId", "MemberId")
                         .IsUnique();
 
-                    b.ToTable("ClientMembers", (string)null);
+                    b.ToTable("ClientMembers");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.ClientPermission", b =>
@@ -421,7 +424,7 @@ namespace EPIC.Api.Migrations
                     b.HasIndex("ClientRoleId", "ModuleName")
                         .IsUnique();
 
-                    b.ToTable("ClientPermissions", (string)null);
+                    b.ToTable("ClientPermissions");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.ClientRole", b =>
@@ -467,7 +470,7 @@ namespace EPIC.Api.Migrations
                     b.HasIndex("CustomerId", "RoleName")
                         .IsUnique();
 
-                    b.ToTable("ClientRoles", (string)null);
+                    b.ToTable("ClientRoles");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.Course", b =>
@@ -519,7 +522,7 @@ namespace EPIC.Api.Migrations
 
                     b.HasKey("CourseId");
 
-                    b.ToTable("Courses", (string)null);
+                    b.ToTable("Courses");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.CourseEnrollment", b =>
@@ -557,7 +560,7 @@ namespace EPIC.Api.Migrations
                     b.HasIndex("CourseId", "UserId")
                         .IsUnique();
 
-                    b.ToTable("CourseEnrollments", (string)null);
+                    b.ToTable("CourseEnrollments");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.CourseModule", b =>
@@ -589,7 +592,7 @@ namespace EPIC.Api.Migrations
 
                     b.HasIndex("CourseId");
 
-                    b.ToTable("CourseModules", (string)null);
+                    b.ToTable("CourseModules");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.Customer", b =>
@@ -647,7 +650,7 @@ namespace EPIC.Api.Migrations
 
                     b.HasIndex("Status");
 
-                    b.ToTable("Customers", (string)null);
+                    b.ToTable("Customers");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.DemoRequest", b =>
@@ -720,7 +723,7 @@ namespace EPIC.Api.Migrations
 
                     b.HasIndex("Status");
 
-                    b.ToTable("DemoRequests", (string)null);
+                    b.ToTable("DemoRequests");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.Event", b =>
@@ -789,7 +792,7 @@ namespace EPIC.Api.Migrations
 
                     b.HasIndex("Status");
 
-                    b.ToTable("Events", (string)null);
+                    b.ToTable("Events");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.EventAssignment", b =>
@@ -861,7 +864,7 @@ namespace EPIC.Api.Migrations
 
                     b.HasIndex("Priority");
 
-                    b.ToTable("EventAssignments", (string)null);
+                    b.ToTable("EventAssignments");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.EventChecklist", b =>
@@ -948,7 +951,7 @@ namespace EPIC.Api.Migrations
 
                     b.HasIndex("Status");
 
-                    b.ToTable("EventChecklists", (string)null);
+                    b.ToTable("EventChecklists");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.EventDepartment", b =>
@@ -1004,7 +1007,7 @@ namespace EPIC.Api.Migrations
 
                     b.HasIndex("Status");
 
-                    b.ToTable("EventDepartments", (string)null);
+                    b.ToTable("EventDepartments");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.EventNeed", b =>
@@ -1085,7 +1088,7 @@ namespace EPIC.Api.Migrations
 
                     b.HasIndex("Status");
 
-                    b.ToTable("EventNeeds", (string)null);
+                    b.ToTable("EventNeeds");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.EventRole", b =>
@@ -1138,7 +1141,7 @@ namespace EPIC.Api.Migrations
 
                     b.HasIndex("Status");
 
-                    b.ToTable("EventRoles", (string)null);
+                    b.ToTable("EventRoles");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.Expense", b =>
@@ -1184,7 +1187,7 @@ namespace EPIC.Api.Migrations
 
                     b.HasKey("ExpenseId");
 
-                    b.ToTable("Expenses", (string)null);
+                    b.ToTable("Expenses");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.Giving", b =>
@@ -1241,7 +1244,7 @@ namespace EPIC.Api.Migrations
 
                     b.HasIndex("MemberId");
 
-                    b.ToTable("Givings", (string)null);
+                    b.ToTable("Givings");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.Income", b =>
@@ -1288,7 +1291,7 @@ namespace EPIC.Api.Migrations
 
                     b.HasKey("IncomeId");
 
-                    b.ToTable("Incomes", (string)null);
+                    b.ToTable("Incomes");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.Lesson", b =>
@@ -1340,7 +1343,7 @@ namespace EPIC.Api.Migrations
 
                     b.HasIndex("CourseModuleId");
 
-                    b.ToTable("Lessons", (string)null);
+                    b.ToTable("Lessons");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.LessonProgress", b =>
@@ -1378,7 +1381,7 @@ namespace EPIC.Api.Migrations
                     b.HasIndex("CourseEnrollmentId", "LessonId")
                         .IsUnique();
 
-                    b.ToTable("LessonProgresses", (string)null);
+                    b.ToTable("LessonProgresses");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.Member", b =>
@@ -1468,7 +1471,7 @@ namespace EPIC.Api.Migrations
                     b.HasIndex("CustomerId", "MemberCode")
                         .IsUnique();
 
-                    b.ToTable("Members", (string)null);
+                    b.ToTable("Members");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.Ministry", b =>
@@ -1532,7 +1535,7 @@ namespace EPIC.Api.Migrations
 
                     b.HasKey("MinistryId");
 
-                    b.ToTable("Ministries", (string)null);
+                    b.ToTable("Ministries");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.MinistryMember", b =>
@@ -1590,7 +1593,7 @@ namespace EPIC.Api.Migrations
 
                     b.HasIndex("MinistryId", "MemberId");
 
-                    b.ToTable("MinistryMembers", (string)null);
+                    b.ToTable("MinistryMembers");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.MinistryPerformanceRating", b =>
@@ -1666,7 +1669,7 @@ namespace EPIC.Api.Migrations
 
                     b.HasIndex("MinistryMemberId");
 
-                    b.ToTable("MinistryPerformanceRatings", (string)null);
+                    b.ToTable("MinistryPerformanceRatings");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.Payment", b =>
@@ -1766,7 +1769,7 @@ namespace EPIC.Api.Migrations
 
                     b.HasIndex("SubscriptionId");
 
-                    b.ToTable("Payments", (string)null);
+                    b.ToTable("Payments");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.Permission", b =>
@@ -1808,7 +1811,7 @@ namespace EPIC.Api.Migrations
                     b.HasIndex("RoleId", "Module")
                         .IsUnique();
 
-                    b.ToTable("Permissions", (string)null);
+                    b.ToTable("Permissions");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.Role", b =>
@@ -1840,7 +1843,7 @@ namespace EPIC.Api.Migrations
                     b.HasIndex("RoleName")
                         .IsUnique();
 
-                    b.ToTable("Roles", (string)null);
+                    b.ToTable("Roles");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.Subscription", b =>
@@ -1946,7 +1949,7 @@ namespace EPIC.Api.Migrations
 
                     b.HasIndex("SubscriptionPlanId");
 
-                    b.ToTable("Subscriptions", (string)null);
+                    b.ToTable("Subscriptions");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.SubscriptionPlan", b =>
@@ -2041,7 +2044,7 @@ namespace EPIC.Api.Migrations
 
                     b.HasKey("SubscriptionPlanId");
 
-                    b.ToTable("SubscriptionPlans", (string)null);
+                    b.ToTable("SubscriptionPlans");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.User", b =>
@@ -2123,7 +2126,7 @@ namespace EPIC.Api.Migrations
                     b.HasIndex("Username")
                         .IsUnique();
 
-                    b.ToTable("Users", (string)null);
+                    b.ToTable("Users");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.Visitor", b =>
@@ -2229,7 +2232,7 @@ namespace EPIC.Api.Migrations
                     b.HasIndex("VisitorCode")
                         .IsUnique();
 
-                    b.ToTable("Visitors", (string)null);
+                    b.ToTable("Visitors");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.VisitorAttendance", b =>
@@ -2277,7 +2280,7 @@ namespace EPIC.Api.Migrations
                     b.HasIndex("VisitorId", "ChurchServiceId")
                         .IsUnique();
 
-                    b.ToTable("VisitorAttendances", (string)null);
+                    b.ToTable("VisitorAttendances");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.WebsiteVisit", b =>
@@ -2426,7 +2429,7 @@ namespace EPIC.Api.Migrations
 
                     b.HasIndex("VisitorId");
 
-                    b.ToTable("WebsiteVisits", (string)null);
+                    b.ToTable("WebsiteVisits");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.Attendance", b =>

@@ -1,4 +1,5 @@
-﻿using System;
+﻿
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -12,6 +13,16 @@ namespace EPIC.Api.Models
 
         [Key]
         public int GivingId { get; set; }
+
+        // =========================================================
+        // CUSTOMER / TENANT
+        // =========================================================
+
+
+        public int CustomerId { get; set; }
+
+        [ForeignKey(nameof(CustomerId))]
+        public virtual Customer? Customer { get; set; }
 
         // =========================================================
         // MEMBER
@@ -74,3 +85,4 @@ namespace EPIC.Api.Models
         public DateTime RecordedDate { get; set; } = DateTime.Now;
     }
 }
+

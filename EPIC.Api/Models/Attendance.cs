@@ -1,4 +1,5 @@
-﻿using System;
+﻿
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -15,6 +16,10 @@ namespace EPIC.Api.Models
 
         // =========================================================
         // MEMBER
+        //
+        // Attendance belongs to a customer through:
+        //
+        // Attendance → Member → Customer
         // =========================================================
 
         [Required]
@@ -25,6 +30,10 @@ namespace EPIC.Api.Models
 
         // =========================================================
         // CHURCH SERVICE
+        //
+        // Attendance also belongs to a customer through:
+        //
+        // Attendance → ChurchService → Customer
         // =========================================================
 
         public int? ChurchServiceId { get; set; }
@@ -49,15 +58,17 @@ namespace EPIC.Api.Models
         public DateTime AttendanceDate { get; set; } = DateTime.Now;
 
         // Legacy compatibility field.
-        // Keep this property to prevent breaking existing
-        // controllers, reports, or database columns.
+        //
+        // Keep this because existing controllers/reports
+        // may still use the Service property.
         public string Service { get; set; } = string.Empty;
 
         [Required]
         [MaxLength(30)]
         public string Status { get; set; } = "PRESENT";
 
-        // Possible values:
+        // Allowed values:
+        //
         // PRESENT
         // LATE
         // EARLY
@@ -75,3 +86,4 @@ namespace EPIC.Api.Models
         public DateTime RecordedDate { get; set; } = DateTime.Now;
     }
 }
+

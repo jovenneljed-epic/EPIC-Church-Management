@@ -1,4 +1,5 @@
-﻿using EPIC.Core.Interfaces;
+﻿
+using EPIC.Core.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 
@@ -39,6 +40,29 @@ namespace EPIC.Api.Authorization
             }
 
             // =====================================================
+            // DEBUG JWT CLAIMS
+            // =====================================================
+
+            Console.WriteLine();
+            Console.WriteLine("==========================================");
+            Console.WriteLine("EPIC PERMISSION FILTER DEBUG");
+            Console.WriteLine("==========================================");
+
+            foreach (var claim in context.HttpContext.User.Claims)
+            {
+                Console.WriteLine(
+                    $"CLAIM: {claim.Type} = {claim.Value}");
+            }
+
+            Console.WriteLine(
+                $"MODULE: {_module}");
+
+            Console.WriteLine(
+                $"ACTION: {_action}");
+
+            Console.WriteLine("==========================================");
+
+            // =====================================================
             // CHECK PERMISSION
             // =====================================================
 
@@ -47,6 +71,15 @@ namespace EPIC.Api.Authorization
                     context.HttpContext.User,
                     _module,
                     _action);
+
+            // =====================================================
+            // DEBUG RESULT
+            // =====================================================
+
+            Console.WriteLine(
+                $"PERMISSION RESULT: {allowed}");
+
+            Console.WriteLine("==========================================");
 
             // =====================================================
             // DENIED
@@ -65,7 +98,10 @@ namespace EPIC.Api.Authorization
                         StatusCode =
                             StatusCodes.Status403Forbidden
                     };
+
+                return;
             }
         }
     }
 }
+

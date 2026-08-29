@@ -1,5 +1,4 @@
-﻿
-using System;
+﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -86,4 +85,3 @@ namespace EPIC.Api.Models
         public DateTime? UpdatedDate { get; set; }
     }
 }
-

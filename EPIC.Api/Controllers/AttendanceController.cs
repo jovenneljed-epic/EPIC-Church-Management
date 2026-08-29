@@ -1,4 +1,5 @@
-﻿using EPIC.Api.Authorization;
+﻿
+using EPIC.Api.Authorization;
 using EPIC.Api.Data;
 using EPIC.Api.Models;
 using EPIC.Core.Interfaces;
@@ -19,6 +20,10 @@ namespace EPIC.Api.Controllers
         private readonly ApplicationDbContext _context;
         private readonly IPermissionService _permissionService;
 
+        // =========================================================
+        // ALLOWED ATTENDANCE STATUSES
+        // =========================================================
+
         private static readonly HashSet<string> AllowedStatuses =
             new(StringComparer.OrdinalIgnoreCase)
             {
@@ -29,6 +34,10 @@ namespace EPIC.Api.Controllers
                 "EXCUSED"
             };
 
+        // =========================================================
+        // CONSTRUCTOR
+        // =========================================================
+
         public AttendanceController(
             ApplicationDbContext context,
             IPermissionService permissionService)
@@ -38,705 +47,1238 @@ namespace EPIC.Api.Controllers
         }
 
         // =========================================================
+        // CURRENT USER ID
+        // =========================================================
+
+        private int? CurrentUserId
+        {
+            get
+            {
+                var value =
+                    User.FindFirst("userId")?.Value
+                    ??
+                    User.FindFirst(
+                        ClaimTypes.NameIdentifier)?.Value;
+
+                return int.TryParse(value, out var id) && id > 0
+                    ? id
+                    : null;
+            }
+        }
+
+        // =========================================================
+        // CURRENT ROLE
+        // =========================================================
+
+        private string CurrentRole
+        {
+            get
+            {
+                var role =
+                    User.FindFirst(ClaimTypes.Role)?.Value
+                    ??
+                    User.FindFirst("role")?.Value;
+
+                return string.IsNullOrWhiteSpace(role)
+                    ? string.Empty
+                    : role.Trim().ToUpperInvariant();
+            }
+        }
+
+        // =========================================================
+        // CLIENT ROLE
+        //
+        // Supports:
+        // CLIENT
+        // CLIENT_ADMIN
+        // CLIENT_MANAGER
+        // CLIENT_STAFF
+        // CLIENT_*
+        // =========================================================
+
+        private bool IsClientRole =>
+            CurrentRole == "CLIENT" ||
+            CurrentRole.StartsWith("CLIENT_");
+
+        // =========================================================
+        // CLIENT MEMBER ID
+        // =========================================================
+
+        private int? CurrentClientMemberId
+        {
+            get
+            {
+                var value =
+                    User.FindFirst("clientMemberId")?.Value;
+
+                return int.TryParse(value, out var id) && id > 0
+                    ? id
+                    : null;
+            }
+        }
+
+        // =========================================================
+        // CUSTOMER ID FROM TOKEN
+        //
+        // Used only as fallback for ADMIN.
+        // =========================================================
+
+        private int? GetCustomerIdFromToken()
+        {
+            var value =
+                User.FindFirst("customerId")?.Value
+                ??
+                User.FindFirst("CustomerId")?.Value
+                ??
+                User.FindFirst("tenantId")?.Value;
+
+            return int.TryParse(value, out var id) && id > 0
+                ? id
+                : null;
+        }
+
+        // =========================================================
+        // RESOLVE CURRENT CUSTOMER
+        //
+        // CLIENT:
+        //
+        // JWT clientMemberId
+        //       ↓
+        // ClientMembers
+        //       ↓
+        // CustomerId
+        //
+        // ADMIN:
+        //
+        // UserId
+        //       ↓
+        // Users
+        //       ↓
+        // CustomerId
+        // =========================================================
+
+        private async Task<int?> GetCurrentCustomerIdAsync()
+        {
+            // -----------------------------------------------------
+            // CLIENT
+            // -----------------------------------------------------
+
+            if (IsClientRole)
+            {
+                var clientMemberId =
+                    CurrentClientMemberId;
+
+                if (!clientMemberId.HasValue)
+                {
+                    return null;
+                }
+
+                var clientMember =
+                    await _context.ClientMembers
+                        .AsNoTracking()
+                        .Where(cm =>
+                            cm.ClientMemberId ==
+                                clientMemberId.Value &&
+
+                            cm.IsActive &&
+
+                            cm.Status != null &&
+
+                            cm.Status.Trim().ToUpper() ==
+                                "ACTIVE")
+                        .Select(cm => new
+                        {
+                            cm.CustomerId,
+
+                            CustomerStatus =
+                                cm.Customer != null
+                                    ? cm.Customer.Status
+                                    : null,
+
+                            MemberStatus =
+                                cm.Member != null
+                                    ? cm.Member.Status
+                                    : null,
+
+                            ClientRoleActive =
+                                cm.ClientRole != null &&
+                                cm.ClientRole.IsActive
+                        })
+                        .FirstOrDefaultAsync();
+
+                if (clientMember == null)
+                {
+                    return null;
+                }
+
+                if (clientMember.CustomerId <= 0)
+                {
+                    return null;
+                }
+
+                if (!IsActiveStatus(
+                        clientMember.CustomerStatus))
+                {
+                    return null;
+                }
+
+                if (!IsActiveStatus(
+                        clientMember.MemberStatus))
+                {
+                    return null;
+                }
+
+                if (!clientMember.ClientRoleActive)
+                {
+                    return null;
+                }
+
+                return clientMember.CustomerId;
+            }
+
+            // -----------------------------------------------------
+            // ADMIN
+            // -----------------------------------------------------
+
+            if (CurrentRole == "ADMIN")
+            {
+                var userId =
+                    CurrentUserId;
+
+                if (userId.HasValue)
+                {
+                    var customerId =
+                        await _context.Users
+                            .AsNoTracking()
+                            .Where(u =>
+                                u.UserId ==
+                                userId.Value)
+                            .Select(u =>
+                                u.CustomerId)
+                            .FirstOrDefaultAsync();
+
+                    if (customerId > 0)
+                    {
+                        return customerId;
+                    }
+                }
+
+                return GetCustomerIdFromToken();
+            }
+
+            return null;
+        }
+
+        // =========================================================
+        // REQUIRE CHURCH ACCESS
+        // =========================================================
+
+        private async Task<(
+            IActionResult? Error,
+            int? CustomerId)>
+            RequireChurchAccessAsync()
+        {
+            // -----------------------------------------------------
+            // AUTHENTICATION
+            // -----------------------------------------------------
+
+            if (User.Identity?.IsAuthenticated != true)
+            {
+                return (
+                    Unauthorized(new
+                    {
+                        message =
+                            "Authentication is required."
+                    }),
+                    null
+                );
+            }
+
+            // -----------------------------------------------------
+            // ROLE
+            // -----------------------------------------------------
+
+            if (CurrentRole != "ADMIN" &&
+                !IsClientRole)
+            {
+                return (
+                    Forbid(),
+                    null
+                );
+            }
+
+            // -----------------------------------------------------
+            // CLIENT MEMBER ID
+            // -----------------------------------------------------
+
+            if (IsClientRole &&
+                !CurrentClientMemberId.HasValue)
+            {
+                return (
+                    Unauthorized(new
+                    {
+                        message =
+                            "Client member identity could not be determined.",
+
+                        role =
+                            CurrentRole
+                    }),
+                    null
+                );
+            }
+
+            // -----------------------------------------------------
+            // CUSTOMER
+            // -----------------------------------------------------
+
+            var customerId =
+                await GetCurrentCustomerIdAsync();
+
+            if (!customerId.HasValue ||
+                customerId.Value <= 0)
+            {
+                return (
+                    Unauthorized(new
+                    {
+                        message =
+                            "Customer identity could not be determined.",
+
+                        role =
+                            CurrentRole,
+
+                        userId =
+                            CurrentUserId,
+
+                        clientMemberId =
+                            CurrentClientMemberId,
+
+                        tokenCustomerId =
+                            GetCustomerIdFromToken()
+                    }),
+                    null
+                );
+            }
+
+            return (
+                null,
+                customerId.Value
+            );
+        }
+
+        // =========================================================
+        // PERMISSION HELPER
+        //
+        // IMPORTANT:
+        // The [Permission] attribute is still retained on each
+        // endpoint because it is part of your existing permission
+        // architecture.
+        //
+        // This helper is useful for edit/delete checks.
+        // =========================================================
+
+        private async Task<bool> HasPermissionAsync(
+            string action)
+        {
+            return await _permissionService
+                .HasPermissionAsync(
+                    User,
+                    "Attendance",
+                    action);
+        }
+
+        // =========================================================
+        // CUSTOMER MEMBERS
+        // =========================================================
+
+        private IQueryable<Member>
+            CustomerMembers(int customerId)
+        {
+            return _context.Members
+                .Where(m =>
+                    m.CustomerId == customerId);
+        }
+
+        // =========================================================
+        // CUSTOMER SERVICES
+        // =========================================================
+
+        private IQueryable<ChurchService>
+            CustomerServices(int customerId)
+        {
+            return _context.ChurchServices
+                .Where(s =>
+                    s.CustomerId == customerId);
+        }
+
+        // =========================================================
+        // CUSTOMER ATTENDANCE
+        //
+        // Attendance
+        //     ↓
+        // Member
+        //     ↓
+        // Customer
+        //
+        // AND
+        //
+        // Attendance
+        //     ↓
+        // ChurchService
+        //     ↓
+        // Customer
+        // =========================================================
+
+        private IQueryable<Attendance>
+            CustomerAttendance(int customerId)
+        {
+            return _context.Attendances
+                .Where(a =>
+                    a.Member != null &&
+                    a.Member.CustomerId == customerId &&
+
+                    a.ChurchService != null &&
+                    a.ChurchService.CustomerId == customerId);
+        }
+
+        // =========================================================
+        // GET CUSTOMER SERVICE
+        // =========================================================
+
+        private async Task<ChurchService?>
+            GetCustomerChurchServiceAsync(
+                int churchServiceId,
+                int customerId)
+        {
+            return await CustomerServices(customerId)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s =>
+                    s.ChurchServiceId ==
+                    churchServiceId);
+        }
+
+        // =========================================================
         // GET ALL ATTENDANCE
-        // GET: /api/Attendance
-        // Permission: Attendance / view
+        //
+        // GET:
+        // /api/Attendance
         // =========================================================
 
         [HttpGet]
         [Permission("Attendance", "view")]
-        public async Task<IActionResult> GetAttendance()
+        public async Task<IActionResult>
+            GetAttendance()
         {
-            var query = GetTenantAttendanceQuery();
-
-            if (query == null)
+            try
             {
-                return CustomerIdUnauthorized();
+                var access =
+                    await RequireChurchAccessAsync();
+
+                if (access.Error != null)
+                {
+                    return access.Error;
+                }
+
+                var customerId =
+                    access.CustomerId!.Value;
+
+                var records =
+                    await CustomerAttendance(customerId)
+                        .AsNoTracking()
+                        .Include(a => a.Member)
+                        .Include(a => a.ChurchService)
+                        .OrderByDescending(
+                            a => a.AttendanceDate)
+                        .ThenByDescending(
+                            a => a.AttendanceId)
+                        .ToListAsync();
+
+                var result =
+                    records.Select(a => new
+                    {
+                        attendanceId =
+                            a.AttendanceId,
+
+                        memberId =
+                            a.MemberId,
+
+                        memberCode =
+                            a.Member?.MemberCode ??
+                            string.Empty,
+
+                        memberName =
+                            a.Member != null
+                                ? BuildMemberName(a.Member)
+                                : string.Empty,
+
+                        churchServiceId =
+                            a.ChurchServiceId,
+
+                        eventId =
+                            a.EventId,
+
+                        serviceName =
+                            a.ChurchService != null
+                                ? a.ChurchService.ServiceName
+                                : a.Service,
+
+                        attendanceDate =
+                            a.AttendanceDate,
+
+                        status =
+                            NormalizeAttendanceStatus(
+                                a.Status),
+
+                        recordedBy =
+                            a.RecordedBy,
+
+                        recordedDate =
+                            a.RecordedDate
+                    }).ToList();
+
+                return Ok(result);
             }
-
-            var records = await query
-                .AsNoTracking()
-                .Include(a => a.Member)
-                .Include(a => a.ChurchService)
-                .OrderByDescending(a => a.AttendanceDate)
-                .ThenByDescending(a => a.AttendanceId)
-                .ToListAsync();
-
-            var result = records.Select(a => new
+            catch (Exception ex)
             {
-                attendanceId = a.AttendanceId,
-
-                memberId = a.MemberId,
-
-                memberCode = a.Member?.MemberCode ?? string.Empty,
-
-                memberName = a.Member != null
-                    ? BuildMemberName(a.Member)
-                    : string.Empty,
-
-                churchServiceId = a.ChurchServiceId,
-
-                eventId = a.EventId,
-
-                serviceName = a.ChurchService != null
-                    ? a.ChurchService.ServiceName
-                    : a.Service,
-
-                attendanceDate = a.AttendanceDate,
-
-                status = NormalizeAttendanceStatus(a.Status),
-
-                recordedBy = a.RecordedBy,
-
-                recordedDate = a.RecordedDate
-            }).ToList();
-
-            return Ok(result);
+                return AttendanceError(
+                    "Unable to load attendance.",
+                    ex);
+            }
         }
 
         // =========================================================
         // GET ATTENDANCE FOR CHURCH SERVICE
-        // GET: /api/Attendance/church-service/{churchServiceId}
-        // Permission: Attendance / view
+        //
+        // GET:
+        // /api/Attendance/church-service/{churchServiceId}
         // =========================================================
 
         [HttpGet("church-service/{churchServiceId:int}")]
         [Permission("Attendance", "view")]
-        public async Task<IActionResult> GetAttendanceForChurchService(
-            int churchServiceId)
+        public async Task<IActionResult>
+            GetAttendanceForChurchService(
+                int churchServiceId)
         {
-            var service = await GetTenantChurchServiceAsync(
-                churchServiceId);
-
-            if (service == null)
+            try
             {
-                return NotFound(new
+                // -------------------------------------------------
+                // ACCESS
+                // -------------------------------------------------
+
+                var access =
+                    await RequireChurchAccessAsync();
+
+                if (access.Error != null)
                 {
+                    return access.Error;
+                }
+
+                var customerId =
+                    access.CustomerId!.Value;
+
+                // -------------------------------------------------
+                // SERVICE
+                // -------------------------------------------------
+
+                var service =
+                    await GetCustomerChurchServiceAsync(
+                        churchServiceId,
+                        customerId);
+
+                if (service == null)
+                {
+                    return NotFound(new
+                    {
+                        message =
+                            "The selected church service was not found.",
+
+                        churchServiceId,
+
+                        customerId
+                    });
+                }
+
+                // -------------------------------------------------
+                // SERVICE STATUS
+                // -------------------------------------------------
+
+                var serviceStatus =
+                    NormalizeServiceStatus(
+                        service.Status);
+
+                if (serviceStatus == "CANCELLED")
+                {
+                    return Ok(
+                        BuildUnavailableServiceResponse(
+                            service,
+                            "CANCELLED",
+                            "This church service was cancelled. Attendance cannot be recorded."));
+                }
+
+                if (serviceStatus != "COMPLETED")
+                {
+                    return Ok(
+                        BuildUnavailableServiceResponse(
+                            service,
+                            serviceStatus,
+                            "This church service has not happened yet. Attendance will become available after the service is completed."));
+                }
+
+                // -------------------------------------------------
+                // ACTIVE MEMBERS
+                // -------------------------------------------------
+
+                var members =
+                    await CustomerMembers(customerId)
+                        .AsNoTracking()
+                        .Where(m =>
+                            m.Status != null &&
+                            m.Status.Trim().ToUpper() ==
+                                "ACTIVE")
+                        .OrderBy(m => m.LastName)
+                        .ThenBy(m => m.FirstName)
+                        .Select(m => new
+                        {
+                            m.MemberId,
+                            m.MemberCode,
+                            m.FirstName,
+                            m.MiddleName,
+                            m.LastName
+                        })
+                        .ToListAsync();
+
+                // -------------------------------------------------
+                // EXISTING ATTENDANCE
+                // -------------------------------------------------
+
+                var memberIds =
+                    members
+                        .Select(m => m.MemberId)
+                        .ToList();
+
+                var attendanceRecords =
+                    memberIds.Count == 0
+                        ? new List<Attendance>()
+                        : await _context.Attendances
+                            .AsNoTracking()
+                            .Where(a =>
+                                a.ChurchServiceId ==
+                                    churchServiceId &&
+
+                                memberIds.Contains(
+                                    a.MemberId))
+                            .ToListAsync();
+
+                // -------------------------------------------------
+                // LOOKUP
+                // -------------------------------------------------
+
+                var attendanceLookup =
+                    attendanceRecords
+                        .GroupBy(a => a.MemberId)
+                        .ToDictionary(
+                            g => g.Key,
+                            g => g.First());
+
+                // -------------------------------------------------
+                // COMBINE
+                // -------------------------------------------------
+
+                var attendance =
+                    members.Select(member =>
+                    {
+                        attendanceLookup.TryGetValue(
+                            member.MemberId,
+                            out var record);
+
+                        return new AttendanceListItem
+                        {
+                            MemberId =
+                                member.MemberId,
+
+                            MemberCode =
+                                member.MemberCode,
+
+                            FirstName =
+                                member.FirstName,
+
+                            MiddleName =
+                                member.MiddleName,
+
+                            LastName =
+                                member.LastName,
+
+                            Status =
+                                NormalizeAttendanceStatus(
+                                    record?.Status),
+
+                            AttendanceId =
+                                record?.AttendanceId,
+
+                            AttendanceDate =
+                                record?.AttendanceDate ??
+                                service.ServiceDate
+                        };
+                    }).ToList();
+
+                // -------------------------------------------------
+                // SUMMARY
+                // -------------------------------------------------
+
+                var summary =
+                    BuildAttendanceSummary(
+                        attendance.Select(
+                            x => x.Status));
+
+                // -------------------------------------------------
+                // RESPONSE
+                // -------------------------------------------------
+
+                return Ok(new
+                {
+                    churchServiceId =
+                        service.ChurchServiceId,
+
+                    serviceName =
+                        service.ServiceName,
+
+                    serviceDate =
+                        service.ServiceDate,
+
+                    startTime =
+                        service.StartTime,
+
+                    endTime =
+                        service.EndTime,
+
+                    location =
+                        service.Location,
+
+                    status =
+                        "COMPLETED",
+
+                    canRecordAttendance =
+                        true,
+
+                    attendanceStarted =
+                        true,
+
                     message =
-                        "The selected church service was not found."
+                        "Attendance is available for this completed church service.",
+
+                    summary,
+
+                    attendance
                 });
             }
-
-            var serviceStatus =
-                NormalizeServiceStatus(service.Status);
-
-            // -----------------------------------------------------
-            // SERVICE CANCELLED
-            // -----------------------------------------------------
-
-            if (serviceStatus == "CANCELLED")
+            catch (Exception ex)
             {
-                return Ok(
-                    BuildUnavailableServiceResponse(
-                        service,
-                        "CANCELLED",
-                        "This church service was cancelled. Attendance cannot be recorded."
-                    )
-                );
+                return AttendanceError(
+                    "Unable to load attendance for the selected church service.",
+                    ex);
             }
-
-            // -----------------------------------------------------
-            // SERVICE NOT COMPLETED
-            // -----------------------------------------------------
-
-            if (serviceStatus != "COMPLETED")
-            {
-                return Ok(
-                    BuildUnavailableServiceResponse(
-                        service,
-                        serviceStatus,
-                        "This church service has not happened yet. Attendance will become available after the service is completed."
-                    )
-                );
-            }
-
-            // -----------------------------------------------------
-            // GET MEMBERS FOR TENANT
-            // -----------------------------------------------------
-
-            var membersQuery =
-                GetTenantMembersQuery();
-
-            if (membersQuery == null)
-            {
-                return CustomerIdUnauthorized();
-            }
-
-            var members = await membersQuery
-                .AsNoTracking()
-                .Where(m =>
-                    m.Status != null &&
-                    m.Status.ToUpper() == "ACTIVE")
-                .OrderBy(m => m.LastName)
-                .ThenBy(m => m.FirstName)
-                .Select(m => new
-                {
-                    memberId = m.MemberId,
-                    memberCode = m.MemberCode,
-                    firstName = m.FirstName,
-                    middleName = m.MiddleName,
-                    lastName = m.LastName
-                })
-                .ToListAsync();
-
-            // -----------------------------------------------------
-            // EXISTING ATTENDANCE
-            // -----------------------------------------------------
-
-            var attendanceQuery =
-                GetTenantAttendanceQuery();
-
-            if (attendanceQuery == null)
-            {
-                return CustomerIdUnauthorized();
-            }
-
-            var attendanceRecords =
-                await attendanceQuery
-                    .AsNoTracking()
-                    .Where(a =>
-                        a.ChurchServiceId ==
-                        churchServiceId)
-                    .ToListAsync();
-
-            // -----------------------------------------------------
-            // COMBINE MEMBERS + ATTENDANCE
-            // -----------------------------------------------------
-
-            var attendance = members
-                .Select(member =>
-                {
-                    var record =
-                        attendanceRecords
-                            .FirstOrDefault(
-                                a =>
-                                    a.MemberId ==
-                                    member.memberId);
-
-                    return new AttendanceListItem
-                    {
-                        MemberId =
-                            member.memberId,
-
-                        MemberCode =
-                            member.memberCode,
-
-                        FirstName =
-                            member.firstName,
-
-                        MiddleName =
-                            member.middleName,
-
-                        LastName =
-                            member.lastName,
-
-                        Status =
-                            NormalizeAttendanceStatus(
-                                record?.Status),
-
-                        AttendanceId =
-                            record?.AttendanceId,
-
-                        AttendanceDate =
-                            record?.AttendanceDate
-                            ?? service.ServiceDate
-                    };
-                })
-                .ToList();
-
-            var summary =
-                BuildAttendanceSummary(
-                    attendance.Select(x => x.Status));
-
-            return Ok(new
-            {
-                churchServiceId =
-                    service.ChurchServiceId,
-
-                serviceName =
-                    service.ServiceName,
-
-                serviceDate =
-                    service.ServiceDate,
-
-                startTime =
-                    service.StartTime,
-
-                endTime =
-                    service.EndTime,
-
-                location =
-                    service.Location,
-
-                status =
-                    "COMPLETED",
-
-                canRecordAttendance =
-                    true,
-
-                attendanceStarted =
-                    true,
-
-                message =
-                    "Attendance is available for this completed church service.",
-
-                summary,
-
-                attendance
-            });
         }
 
         // =========================================================
         // SAVE / UPDATE ATTENDANCE
+        //
         // POST:
         // /api/Attendance/church-service/{churchServiceId}
-        //
-        // Permission: Attendance / create
-        // Existing records require Attendance / edit
         // =========================================================
 
         [HttpPost("church-service/{churchServiceId:int}")]
         [Permission("Attendance", "create")]
-        public async Task<IActionResult> SaveAttendance(
-            int churchServiceId,
-            [FromBody] AttendanceRequest request)
+        public async Task<IActionResult>
+            SaveAttendance(
+                int churchServiceId,
+                [FromBody] AttendanceRequest request)
         {
-            // -----------------------------------------------------
-            // VALIDATE REQUEST
-            // -----------------------------------------------------
-
-            if (request == null ||
-                request.Attendance == null ||
-                request.Attendance.Count == 0)
+            try
             {
-                return BadRequest(new
-                {
-                    message =
-                        "No attendance records were provided."
-                });
-            }
+                // -------------------------------------------------
+                // REQUEST
+                // -------------------------------------------------
 
-            // -----------------------------------------------------
-            // GET CURRENT TENANT
-            // -----------------------------------------------------
-
-            var customerId =
-                GetCurrentCustomerId();
-
-            if (!IsCurrentUserAdmin() &&
-                !customerId.HasValue)
-            {
-                return CustomerIdUnauthorized();
-            }
-
-            // -----------------------------------------------------
-            // GET SERVICE
-            // -----------------------------------------------------
-
-            var service =
-                await GetTenantChurchServiceAsync(
-                    churchServiceId);
-
-            if (service == null)
-            {
-                return NotFound(new
-                {
-                    message =
-                        "The selected church service was not found."
-                });
-            }
-
-            // -----------------------------------------------------
-            // VALIDATE SERVICE STATUS
-            // -----------------------------------------------------
-
-            var serviceStatus =
-                NormalizeServiceStatus(
-                    service.Status);
-
-            if (serviceStatus == "CANCELLED")
-            {
-                return BadRequest(new
-                {
-                    message =
-                        "Attendance cannot be recorded because this church service was cancelled."
-                });
-            }
-
-            if (serviceStatus != "COMPLETED")
-            {
-                return BadRequest(new
-                {
-                    message =
-                        "Attendance cannot be recorded yet. Complete the church service first."
-                });
-            }
-
-            // -----------------------------------------------------
-            // VALIDATE MEMBER IDS
-            // -----------------------------------------------------
-
-            var duplicateMemberIds =
-                request.Attendance
-                    .GroupBy(x => x.MemberId)
-                    .Where(g => g.Count() > 1)
-                    .Select(g => g.Key)
-                    .ToList();
-
-            if (duplicateMemberIds.Count > 0)
-            {
-                return BadRequest(new
-                {
-                    message =
-                        "Duplicate member attendance records were submitted.",
-
-                    memberIds =
-                        duplicateMemberIds
-                });
-            }
-
-            var memberIds =
-                request.Attendance
-                    .Select(x => x.MemberId)
-                    .Distinct()
-                    .ToList();
-
-            if (memberIds.Any(id => id <= 0))
-            {
-                return BadRequest(new
-                {
-                    message =
-                        "One or more member IDs are invalid."
-                });
-            }
-
-            // -----------------------------------------------------
-            // VALIDATE STATUSES
-            // -----------------------------------------------------
-
-            foreach (var item in request.Attendance)
-            {
-                var status =
-                    NormalizeAttendanceStatus(
-                        item.Status);
-
-                if (!AllowedStatuses.Contains(status))
+                if (request?.Attendance == null ||
+                    request.Attendance.Count == 0)
                 {
                     return BadRequest(new
                     {
                         message =
-                            $"Invalid attendance status: {item.Status}",
-
-                        allowedStatuses =
-                            AllowedStatuses
-                                .OrderBy(x => x)
-                                .ToArray()
+                            "No attendance records were provided."
                     });
                 }
-            }
 
-            // -----------------------------------------------------
-            // VALIDATE MEMBERS
-            // -----------------------------------------------------
+                // -------------------------------------------------
+                // ACCESS
+                // -------------------------------------------------
 
-            var membersQuery =
-                GetTenantMembersQuery();
+                var access =
+                    await RequireChurchAccessAsync();
 
-            if (membersQuery == null)
-            {
-                return CustomerIdUnauthorized();
-            }
-
-            var validMemberIds =
-                await membersQuery
-                    .AsNoTracking()
-                    .Where(m =>
-                        memberIds.Contains(m.MemberId) &&
-                        m.Status != null &&
-                        m.Status.ToUpper() == "ACTIVE")
-                    .Select(m => m.MemberId)
-                    .ToListAsync();
-
-            var invalidMemberIds =
-                memberIds
-                    .Except(validMemberIds)
-                    .ToList();
-
-            if (invalidMemberIds.Count > 0)
-            {
-                return BadRequest(new
+                if (access.Error != null)
                 {
-                    message =
-                        "One or more members are invalid, inactive, or do not belong to your customer.",
+                    return access.Error;
+                }
 
-                    memberIds =
-                        invalidMemberIds
-                });
-            }
+                var customerId =
+                    access.CustomerId!.Value;
 
-            // -----------------------------------------------------
-            // EXISTING RECORDS
-            // -----------------------------------------------------
+                // -------------------------------------------------
+                // SERVICE
+                // -------------------------------------------------
 
-            var existingQuery =
-                GetTenantAttendanceQuery();
+                var service =
+                    await GetCustomerChurchServiceAsync(
+                        churchServiceId,
+                        customerId);
 
-            if (existingQuery == null)
-            {
-                return CustomerIdUnauthorized();
-            }
-
-            var existingRecords =
-                await existingQuery
-                    .Where(a =>
-                        a.ChurchServiceId ==
-                            churchServiceId &&
-                        memberIds.Contains(
-                            a.MemberId))
-                    .ToListAsync();
-
-            // -----------------------------------------------------
-            // CHECK EDIT PERMISSION
-            // -----------------------------------------------------
-
-            if (existingRecords.Count > 0)
-            {
-                var canEdit =
-                    await _permissionService
-                        .HasPermissionAsync(
-                            User,
-                            "Attendance",
-                            "edit");
-
-                if (!canEdit)
+                if (service == null)
                 {
-                    return StatusCode(
-                        StatusCodes.Status403Forbidden,
-                        new
+                    return NotFound(new
+                    {
+                        message =
+                            "The selected church service was not found."
+                    });
+                }
+
+                // -------------------------------------------------
+                // SERVICE STATUS
+                // -------------------------------------------------
+
+                var serviceStatus =
+                    NormalizeServiceStatus(
+                        service.Status);
+
+                if (serviceStatus == "CANCELLED")
+                {
+                    return BadRequest(new
+                    {
+                        message =
+                            "Attendance cannot be recorded because this church service was cancelled."
+                    });
+                }
+
+                if (serviceStatus != "COMPLETED")
+                {
+                    return BadRequest(new
+                    {
+                        message =
+                            "Attendance cannot be recorded yet. Complete the church service first."
+                    });
+                }
+
+                // -------------------------------------------------
+                // DUPLICATES
+                // -------------------------------------------------
+
+                var duplicateMemberIds =
+                    request.Attendance
+                        .GroupBy(x => x.MemberId)
+                        .Where(g => g.Count() > 1)
+                        .Select(g => g.Key)
+                        .ToList();
+
+                if (duplicateMemberIds.Count > 0)
+                {
+                    return BadRequest(new
+                    {
+                        message =
+                            "Duplicate member attendance records were submitted.",
+
+                        memberIds =
+                            duplicateMemberIds
+                    });
+                }
+
+                // -------------------------------------------------
+                // MEMBER IDS
+                // -------------------------------------------------
+
+                var memberIds =
+                    request.Attendance
+                        .Select(x => x.MemberId)
+                        .Distinct()
+                        .ToList();
+
+                if (memberIds.Any(id => id <= 0))
+                {
+                    return BadRequest(new
+                    {
+                        message =
+                            "One or more member IDs are invalid."
+                    });
+                }
+
+                // -------------------------------------------------
+                // STATUS VALIDATION
+                // -------------------------------------------------
+
+                foreach (var item in request.Attendance)
+                {
+                    var status =
+                        NormalizeAttendanceStatus(
+                            item.Status);
+
+                    if (!AllowedStatuses.Contains(status))
+                    {
+                        return BadRequest(new
                         {
                             message =
-                                "Some attendance records already exist. Editing attendance requires the Edit permission.",
+                                $"Invalid attendance status: {item.Status}",
 
-                            module =
-                                "Attendance",
-
-                            action =
-                                "edit"
+                            allowedStatuses =
+                                AllowedStatuses
+                                    .OrderBy(x => x)
+                                    .ToArray()
                         });
+                    }
                 }
-            }
 
-            // -----------------------------------------------------
-            // AUDIT INFORMATION
-            // -----------------------------------------------------
+                // -------------------------------------------------
+                // VALID CUSTOMER MEMBERS
+                // -------------------------------------------------
 
-            var recordedBy =
-                GetCurrentUserName();
+                var validMemberIds =
+                    await CustomerMembers(customerId)
+                        .AsNoTracking()
+                        .Where(m =>
+                            memberIds.Contains(
+                                m.MemberId) &&
 
-            var recordedDate =
-                DateTime.Now;
+                            m.Status != null &&
 
-            var existingLookup =
-                existingRecords
-                    .GroupBy(x => x.MemberId)
-                    .ToDictionary(
-                        g => g.Key,
-                        g => g.First());
+                            m.Status.Trim().ToUpper() ==
+                                "ACTIVE")
+                        .Select(m => m.MemberId)
+                        .ToListAsync();
 
-            var savedCount = 0;
-            var updatedCount = 0;
+                var invalidMemberIds =
+                    memberIds
+                        .Except(validMemberIds)
+                        .ToList();
 
-            // -----------------------------------------------------
-            // SAVE / UPDATE
-            // -----------------------------------------------------
-
-            foreach (var item in request.Attendance)
-            {
-                var status =
-                    NormalizeAttendanceStatus(
-                        item.Status);
-
-                if (existingLookup.TryGetValue(
-                    item.MemberId,
-                    out var existing))
+                if (invalidMemberIds.Count > 0)
                 {
-                    existing.Status =
-                        status;
+                    return BadRequest(new
+                    {
+                        message =
+                            "One or more members are invalid, inactive, or do not belong to your customer.",
 
-                    existing.AttendanceDate =
-                        service.ServiceDate;
-
-                    existing.Service =
-                        service.ServiceName;
-
-                    existing.ChurchServiceId =
-                        churchServiceId;
-
-                    existing.EventId =
-                        null;
-
-                    existing.RecordedBy =
-                        recordedBy;
-
-                    existing.RecordedDate =
-                        recordedDate;
-
-                    updatedCount++;
+                        memberIds =
+                            invalidMemberIds
+                    });
                 }
-                else
+
+                // -------------------------------------------------
+                // EXISTING RECORDS
+                // -------------------------------------------------
+
+                var existingRecords =
+                    await _context.Attendances
+                        .Where(a =>
+                            a.ChurchServiceId ==
+                                churchServiceId &&
+
+                            memberIds.Contains(
+                                a.MemberId))
+                        .ToListAsync();
+
+                // -------------------------------------------------
+                // EDIT PERMISSION
+                // -------------------------------------------------
+
+                if (existingRecords.Count > 0)
                 {
-                    var attendance =
-                        new Attendance
-                        {
-                            MemberId =
-                                item.MemberId,
+                    var canEdit =
+                        await HasPermissionAsync("edit");
 
-                            ChurchServiceId =
-                                churchServiceId,
+                    if (!canEdit)
+                    {
+                        return StatusCode(
+                            StatusCodes.Status403Forbidden,
+                            new
+                            {
+                                message =
+                                    "Some attendance records already exist. Editing attendance requires the Edit permission.",
 
-                            EventId =
-                                null,
+                                module =
+                                    "Attendance",
 
-                            AttendanceDate =
-                                service.ServiceDate,
-
-                            Service =
-                                service.ServiceName,
-
-                            Status =
-                                status,
-
-                            RecordedBy =
-                                recordedBy,
-
-                            RecordedDate =
-                                recordedDate
-                        };
-
-                    _context.Attendances.Add(
-                        attendance);
-
-                    savedCount++;
+                                action =
+                                    "edit"
+                            });
+                    }
                 }
+
+                // -------------------------------------------------
+                // AUDIT
+                // -------------------------------------------------
+
+                var recordedBy =
+                    GetCurrentUserName();
+
+                var recordedDate =
+                    DateTime.Now;
+
+                // -------------------------------------------------
+                // EXISTING LOOKUP
+                // -------------------------------------------------
+
+                var existingLookup =
+                    existingRecords
+                        .GroupBy(x => x.MemberId)
+                        .ToDictionary(
+                            g => g.Key,
+                            g => g.First());
+
+                var savedCount = 0;
+                var updatedCount = 0;
+
+                // -------------------------------------------------
+                // SAVE / UPDATE
+                // -------------------------------------------------
+
+                foreach (var item in request.Attendance)
+                {
+                    var status =
+                        NormalizeAttendanceStatus(
+                            item.Status);
+
+                    if (existingLookup.TryGetValue(
+                        item.MemberId,
+                        out var existing))
+                    {
+                        existing.Status =
+                            status;
+
+                        existing.AttendanceDate =
+                            service.ServiceDate;
+
+                        existing.Service =
+                            service.ServiceName;
+
+                        existing.ChurchServiceId =
+                            churchServiceId;
+
+                        existing.EventId =
+                            null;
+
+                        existing.RecordedBy =
+                            recordedBy;
+
+                        existing.RecordedDate =
+                            recordedDate;
+
+                        updatedCount++;
+                    }
+                    else
+                    {
+                        _context.Attendances.Add(
+                            new Attendance
+                            {
+                                MemberId =
+                                    item.MemberId,
+
+                                ChurchServiceId =
+                                    churchServiceId,
+
+                                EventId =
+                                    null,
+
+                                AttendanceDate =
+                                    service.ServiceDate,
+
+                                Service =
+                                    service.ServiceName,
+
+                                Status =
+                                    status,
+
+                                RecordedBy =
+                                    recordedBy,
+
+                                RecordedDate =
+                                    recordedDate
+                            });
+
+                        savedCount++;
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    message =
+                        "Attendance saved successfully.",
+
+                    churchServiceId,
+
+                    serviceName =
+                        service.ServiceName,
+
+                    savedRecords =
+                        savedCount,
+
+                    updatedRecords =
+                        updatedCount,
+
+                    totalProcessed =
+                        savedCount +
+                        updatedCount
+                });
             }
-
-            await _context.SaveChangesAsync();
-
-            return Ok(new
+            catch (DbUpdateException ex)
             {
-                message =
-                    "Attendance saved successfully.",
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    new
+                    {
+                        message =
+                            "Unable to save attendance because the database rejected the operation.",
 
-                churchServiceId,
+                        error =
+                            ex.Message,
 
-                serviceName =
-                    service.ServiceName,
-
-                savedRecords =
-                    savedCount,
-
-                updatedRecords =
-                    updatedCount,
-
-                totalProcessed =
-                    savedCount +
-                    updatedCount
-            });
+                        detail =
+                            ex.InnerException?.Message
+                    });
+            }
+            catch (Exception ex)
+            {
+                return AttendanceError(
+                    "Unable to save attendance.",
+                    ex);
+            }
         }
 
         // =========================================================
         // GET MY ATTENDANCE
-        // GET: /api/Attendance/me
+        //
+        // GET:
+        // /api/Attendance/me
         // =========================================================
 
         [HttpGet("me")]
-        public async Task<IActionResult> GetMyAttendance()
+        public async Task<IActionResult>
+            GetMyAttendance()
         {
-            var memberId =
-                GetCurrentMemberId();
-
-            if (!memberId.HasValue)
+            try
             {
-                return Unauthorized(new
+                var access =
+                    await RequireChurchAccessAsync();
+
+                if (access.Error != null)
                 {
-                    message =
-                        "Your account is not linked to a member record."
-                });
-            }
+                    return access.Error;
+                }
 
-            var memberQuery =
-                GetTenantMembersQuery();
+                var customerId =
+                    access.CustomerId!.Value;
 
-            if (memberQuery == null)
-            {
-                return CustomerIdUnauthorized();
-            }
+                var clientMemberId =
+                    CurrentClientMemberId;
 
-            var member =
-                await memberQuery
-                    .AsNoTracking()
-                    .Where(m =>
-                        m.MemberId ==
-                        memberId.Value)
-                    .Select(m => new
+                if (!clientMemberId.HasValue)
+                {
+                    return Unauthorized(new
                     {
-                        memberId =
-                            m.MemberId,
+                        message =
+                            "Your client member identity could not be determined."
+                    });
+                }
 
-                        customerId =
-                            m.CustomerId,
+                // -------------------------------------------------
+                // CLIENT MEMBER
+                // -------------------------------------------------
 
-                        memberCode =
-                            m.MemberCode,
+                var clientMember =
+                    await _context.ClientMembers
+                        .AsNoTracking()
+                        .Where(cm =>
+                            cm.ClientMemberId ==
+                                clientMemberId.Value &&
 
-                        firstName =
-                            m.FirstName,
+                            cm.CustomerId ==
+                                customerId &&
 
-                        middleName =
-                            m.MiddleName,
+                            cm.IsActive &&
 
-                        lastName =
-                            m.LastName
-                    })
-                    .FirstOrDefaultAsync();
+                            cm.Status != null &&
 
-            if (member == null)
-            {
-                return NotFound(new
+                            cm.Status.Trim().ToUpper() ==
+                                "ACTIVE")
+                        .Select(cm => new
+                        {
+                            cm.MemberId,
+                            cm.CustomerId
+                        })
+                        .FirstOrDefaultAsync();
+
+                if (clientMember == null)
                 {
-                    message =
-                        "Member record was not found."
-                });
-            }
+                    return Unauthorized(new
+                    {
+                        message =
+                            "Your client member account is not valid for this customer."
+                    });
+                }
 
-            // -----------------------------------------------------
-            // ATTENDANCE
-            // -----------------------------------------------------
+                // -------------------------------------------------
+                // MEMBER
+                // -------------------------------------------------
 
-            var attendanceQuery =
-                GetTenantAttendanceQuery();
+                var member =
+                    await CustomerMembers(customerId)
+                        .AsNoTracking()
+                        .Where(m =>
+                            m.MemberId ==
+                                clientMember.MemberId)
+                        .Select(m => new
+                        {
+                            m.MemberId,
+                            m.CustomerId,
+                            m.MemberCode,
+                            m.FirstName,
+                            m.MiddleName,
+                            m.LastName
+                        })
+                        .FirstOrDefaultAsync();
 
-            if (attendanceQuery == null)
-            {
-                return CustomerIdUnauthorized();
-            }
+                if (member == null)
+                {
+                    return NotFound(new
+                    {
+                        message =
+                            "The member associated with your client account could not be found."
+                    });
+                }
 
-            var records =
-                await attendanceQuery
-                    .AsNoTracking()
-                    .Include(a => a.ChurchService)
-                    .Where(a =>
-                        a.MemberId ==
-                        memberId.Value)
-                    .OrderByDescending(
-                        a => a.AttendanceDate)
-                    .ThenByDescending(
-                        a => a.AttendanceId)
-                    .ToListAsync();
+                // -------------------------------------------------
+                // ATTENDANCE
+                // -------------------------------------------------
 
-            var attendance =
-                records
-                    .Select(a => new
+                var records =
+                    await _context.Attendances
+                        .AsNoTracking()
+                        .Include(a =>
+                            a.ChurchService)
+                        .Where(a =>
+                            a.MemberId ==
+                                member.MemberId &&
+
+                            a.ChurchService != null &&
+
+                            a.ChurchService.CustomerId ==
+                                customerId)
+                        .OrderByDescending(
+                            a => a.AttendanceDate)
+                        .ThenByDescending(
+                            a => a.AttendanceId)
+                        .ToListAsync();
+
+                var attendance =
+                    records.Select(a => new
                     {
                         attendanceId =
                             a.AttendanceId,
@@ -785,221 +1327,123 @@ namespace EPIC.Api.Controllers
                             a.ChurchService != null
                                 ? a.ChurchService.EndTime
                                 : null
-                    })
-                    .ToList();
+                    }).ToList();
 
-            var summary =
-                BuildAttendanceSummary(
-                    attendance.Select(
-                        x => x.status));
+                var summary =
+                    BuildAttendanceSummary(
+                        attendance.Select(
+                            x => x.status));
 
-            return Ok(new
+                return Ok(new
+                {
+                    member,
+
+                    summary,
+
+                    attendance
+                });
+            }
+            catch (Exception ex)
             {
-                member,
-
-                summary,
-
-                attendance
-            });
+                return AttendanceError(
+                    "Unable to load your attendance.",
+                    ex);
+            }
         }
 
         // =========================================================
         // DELETE ATTENDANCE
-        // DELETE: /api/Attendance/{id}
-        // Permission: Attendance / delete
+        //
+        // DELETE:
+        // /api/Attendance/{id}
         // =========================================================
 
         [HttpDelete("{id:int}")]
         [Permission("Attendance", "delete")]
-        public async Task<IActionResult> DeleteAttendance(
-            int id)
+        public async Task<IActionResult>
+            DeleteAttendance(int id)
         {
-            var query =
-                GetTenantAttendanceQuery();
-
-            if (query == null)
+            try
             {
-                return CustomerIdUnauthorized();
-            }
+                var access =
+                    await RequireChurchAccessAsync();
 
-            var attendance =
-                await query
-                    .FirstOrDefaultAsync(
-                        a =>
-                            a.AttendanceId ==
-                            id);
+                if (access.Error != null)
+                {
+                    return access.Error;
+                }
 
-            if (attendance == null)
-            {
-                return NotFound(new
+                var customerId =
+                    access.CustomerId!.Value;
+
+                var attendance =
+                    await CustomerAttendance(customerId)
+                        .FirstOrDefaultAsync(
+                            a =>
+                                a.AttendanceId == id);
+
+                if (attendance == null)
+                {
+                    return NotFound(new
+                    {
+                        message =
+                            "Attendance record not found.",
+
+                        attendanceId =
+                            id
+                    });
+                }
+
+                _context.Attendances.Remove(
+                    attendance);
+
+                await _context.SaveChangesAsync();
+
+                return Ok(new
                 {
                     message =
-                        "Attendance record not found.",
+                        "Attendance record deleted successfully.",
 
                     attendanceId =
                         id
                 });
             }
-
-            _context.Attendances.Remove(
-                attendance);
-
-            await _context.SaveChangesAsync();
-
-            return Ok(new
+            catch (DbUpdateException ex)
             {
-                message =
-                    "Attendance record deleted successfully.",
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    new
+                    {
+                        message =
+                            "Unable to delete attendance record because the database rejected the operation.",
 
-                attendanceId =
-                    id
-            });
+                        error =
+                            ex.Message,
+
+                        detail =
+                            ex.InnerException?.Message
+                    });
+            }
+            catch (Exception ex)
+            {
+                return AttendanceError(
+                    "Unable to delete attendance record.",
+                    ex);
+            }
         }
 
         // =========================================================
-        // TENANT-SCOPED ATTENDANCE QUERY
+        // HELPERS
         // =========================================================
 
-        private IQueryable<Attendance>?
-            GetTenantAttendanceQuery()
+        private static bool IsActiveStatus(
+            string? status)
         {
-            var query =
-                _context.Attendances
-                    .AsQueryable();
-
-            // -----------------------------------------------------
-            // ADMIN
-            // -----------------------------------------------------
-
-            if (IsCurrentUserAdmin())
-            {
-                return query;
-            }
-
-            // -----------------------------------------------------
-            // NON-ADMIN
-            // -----------------------------------------------------
-
-            var customerId =
-                GetCurrentCustomerId();
-
-            if (!customerId.HasValue)
-            {
-                return null;
-            }
-
-            return query.Where(a =>
-                a.Member != null &&
-                a.Member.CustomerId ==
-                customerId.Value);
+            return string.Equals(
+                status?.Trim(),
+                "ACTIVE",
+                StringComparison.OrdinalIgnoreCase);
         }
-
-        // =========================================================
-        // TENANT-SCOPED MEMBERS
-        // =========================================================
-
-        private IQueryable<Member>?
-            GetTenantMembersQuery()
-        {
-            var query =
-                _context.Members
-                    .AsQueryable();
-
-            if (IsCurrentUserAdmin())
-            {
-                return query;
-            }
-
-            var customerId =
-                GetCurrentCustomerId();
-
-            if (!customerId.HasValue)
-            {
-                return null;
-            }
-
-            return query.Where(m =>
-                m.CustomerId ==
-                customerId.Value);
-        }
-
-        // =========================================================
-        // TENANT-SCOPED CHURCH SERVICE
-        // =========================================================
-
-        private async Task<ChurchService?>
-            GetTenantChurchServiceAsync(
-                int churchServiceId)
-        {
-            var query =
-                _context.ChurchServices
-                    .AsQueryable();
-
-            if (IsCurrentUserAdmin())
-            {
-                return await query
-                    .FirstOrDefaultAsync(
-                        s =>
-                            s.ChurchServiceId ==
-                            churchServiceId);
-            }
-
-            var customerId =
-                GetCurrentCustomerId();
-
-            if (!customerId.HasValue)
-            {
-                return null;
-            }
-
-            return await query
-                .Where(s =>
-                    s.ChurchServiceId ==
-                        churchServiceId &&
-                    s.CustomerId ==
-                        customerId.Value)
-                .FirstOrDefaultAsync();
-        }
-
-        // =========================================================
-        // NORMALIZE ATTENDANCE STATUS
-        // =========================================================
-
-        private static string
-            NormalizeAttendanceStatus(
-                string? status)
-        {
-            if (string.IsNullOrWhiteSpace(status))
-            {
-                return "PRESENT";
-            }
-
-            return status
-                .Trim()
-                .ToUpperInvariant();
-        }
-
-        // =========================================================
-        // NORMALIZE SERVICE STATUS
-        // =========================================================
-
-        private static string
-            NormalizeServiceStatus(
-                string? status)
-        {
-            if (string.IsNullOrWhiteSpace(status))
-            {
-                return "SCHEDULED";
-            }
-
-            return status
-                .Trim()
-                .ToUpperInvariant();
-        }
-
-        // =========================================================
-        // CURRENT USER NAME
-        // =========================================================
 
         private string GetCurrentUserName()
         {
@@ -1023,136 +1467,49 @@ namespace EPIC.Api.Controllers
                 "SYSTEM";
         }
 
-        // =========================================================
-        // CURRENT CUSTOMER ID
-        // =========================================================
-
-        private int? GetCurrentCustomerId()
+        private static string
+            NormalizeAttendanceStatus(
+                string? status)
         {
-            var claim =
-                User.FindFirst("CustomerId")?.Value
-                ??
-                User.FindFirst("customerId")?.Value
-                ??
-                User.FindFirst("customer_id")?.Value;
-
-            if (!int.TryParse(
-                claim,
-                out var customerId))
+            if (string.IsNullOrWhiteSpace(status))
             {
-                return null;
+                return "PRESENT";
             }
 
-            return customerId > 0
-                ? customerId
-                : null;
-        }
-
-        // =========================================================
-        // CURRENT MEMBER ID
-        // =========================================================
-
-        private int? GetCurrentMemberId()
-        {
-            var claim =
-                User.FindFirst("MemberId")?.Value
-                ??
-                User.FindFirst("memberId")?.Value
-                ??
-                User.FindFirst("member_id")?.Value;
-
-            if (!int.TryParse(
-                claim,
-                out var memberId))
-            {
-                return null;
-            }
-
-            return memberId > 0
-                ? memberId
-                : null;
-        }
-
-        // =========================================================
-        // CURRENT ROLE
-        // =========================================================
-
-        private string GetCurrentRole()
-        {
-            var role =
-                User.FindFirst(
-                    ClaimTypes.Role)?.Value
-                ??
-                User.FindFirst("role")?.Value;
-
-            return role?
+            return status
                 .Trim()
-                .ToUpperInvariant()
-                ??
-                string.Empty;
+                .ToUpperInvariant();
         }
 
-        // =========================================================
-        // ADMIN CHECK
-        // =========================================================
-
-        private bool IsCurrentUserAdmin()
+        private static string
+            NormalizeServiceStatus(
+                string? status)
         {
-            return string.Equals(
-                GetCurrentRole(),
-                "ADMIN",
-                StringComparison.OrdinalIgnoreCase);
-        }
-
-        // =========================================================
-        // CUSTOMER ID ERROR
-        // =========================================================
-
-        private IActionResult
-            CustomerIdUnauthorized()
-        {
-            return Unauthorized(new
+            if (string.IsNullOrWhiteSpace(status))
             {
-                message =
-                    "CUSTOMER ID CLAIM IS MISSING OR INVALID."
-            });
-        }
+                return "SCHEDULED";
+            }
 
-        // =========================================================
-        // BUILD MEMBER NAME
-        // =========================================================
+            return status
+                .Trim()
+                .ToUpperInvariant();
+        }
 
         private static string
             BuildMemberName(
                 Member member)
         {
             var firstName =
-                member.FirstName?
-                    .Trim()
-                    ?? string.Empty;
+                member.FirstName?.Trim() ??
+                string.Empty;
 
             var middleName =
-                member.MiddleName?
-                    .Trim()
-                    ?? string.Empty;
+                member.MiddleName?.Trim() ??
+                string.Empty;
 
             var lastName =
-                member.LastName?
-                    .Trim()
-                    ?? string.Empty;
-
-            if (string.IsNullOrWhiteSpace(
-                lastName))
-            {
-                return string.Join(
-                    " ",
-                    new[]
-                    {
-                        firstName,
-                        middleName
-                    }.Where(x =>
-                        !string.IsNullOrWhiteSpace(x)));
-            }
+                member.LastName?.Trim() ??
+                string.Empty;
 
             var givenName =
                 string.Join(
@@ -1161,24 +1518,25 @@ namespace EPIC.Api.Controllers
                     {
                         firstName,
                         middleName
-                    }.Where(x =>
+                    }
+                    .Where(x =>
                         !string.IsNullOrWhiteSpace(x)));
 
-            return string.IsNullOrWhiteSpace(
-                givenName)
+            if (string.IsNullOrWhiteSpace(lastName))
+            {
+                return givenName;
+            }
+
+            return string.IsNullOrWhiteSpace(givenName)
                 ? lastName
                 : $"{lastName}, {givenName}";
         }
-
-        // =========================================================
-        // BUILD ATTENDANCE SUMMARY
-        // =========================================================
 
         private static object
             BuildAttendanceSummary(
                 IEnumerable<string?> statuses)
         {
-            var normalizedStatuses =
+            var normalized =
                 statuses
                     .Select(
                         NormalizeAttendanceStatus)
@@ -1187,33 +1545,29 @@ namespace EPIC.Api.Controllers
             return new
             {
                 total =
-                    normalizedStatuses.Count,
+                    normalized.Count,
 
                 present =
-                    normalizedStatuses.Count(
+                    normalized.Count(
                         x => x == "PRESENT"),
 
                 late =
-                    normalizedStatuses.Count(
+                    normalized.Count(
                         x => x == "LATE"),
 
                 early =
-                    normalizedStatuses.Count(
+                    normalized.Count(
                         x => x == "EARLY"),
 
                 absent =
-                    normalizedStatuses.Count(
+                    normalized.Count(
                         x => x == "ABSENT"),
 
                 excused =
-                    normalizedStatuses.Count(
+                    normalized.Count(
                         x => x == "EXCUSED")
             };
         }
-
-        // =========================================================
-        // UNAVAILABLE SERVICE RESPONSE
-        // =========================================================
 
         private static object
             BuildUnavailableServiceResponse(
@@ -1265,6 +1619,52 @@ namespace EPIC.Api.Controllers
                     new List<object>()
             };
         }
+
+        // =========================================================
+        // STANDARD ATTENDANCE ERROR
+        // =========================================================
+
+        private IActionResult AttendanceError(
+            string message,
+            Exception ex)
+        {
+            Console.WriteLine(
+                "========================================");
+
+            Console.WriteLine(
+                "ATTENDANCE API ERROR");
+
+            Console.WriteLine(
+                $"Type: {ex.GetType().FullName}");
+
+            Console.WriteLine(
+                $"Message: {ex.Message}");
+
+            Console.WriteLine(
+                $"Inner: {ex.InnerException?.Message}");
+
+            Console.WriteLine(
+                $"Stack: {ex.StackTrace}");
+
+            Console.WriteLine(
+                "========================================");
+
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                new
+                {
+                    message,
+
+                    exceptionType =
+                        ex.GetType().FullName,
+
+                    error =
+                        ex.Message,
+
+                    detail =
+                        ex.InnerException?.Message
+                });
+        }
     }
 
     // =============================================================
@@ -1283,7 +1683,8 @@ namespace EPIC.Api.Controllers
 
         public string? LastName { get; set; }
 
-        public string Status { get; set; } = "PRESENT";
+        public string Status { get; set; } =
+            "PRESENT";
 
         public int? AttendanceId { get; set; }
 
@@ -1304,7 +1705,8 @@ namespace EPIC.Api.Controllers
     {
         public int MemberId { get; set; }
 
-        public string Status { get; set; }
-            = "PRESENT";
+        public string Status { get; set; } =
+            "PRESENT";
     }
 }
+

@@ -14,6 +14,16 @@ namespace EPIC.Api.Models
         public int ExpenseId { get; set; }
 
         // =========================================================
+        // CUSTOMER / TENANT
+        // =========================================================
+
+        [Required]
+        public int CustomerId { get; set; }
+
+        [ForeignKey(nameof(CustomerId))]
+        public virtual Customer? Customer { get; set; }
+
+        // =========================================================
         // EXPENSE INFORMATION
         // =========================================================
 
@@ -47,7 +57,6 @@ namespace EPIC.Api.Models
         // RECORD INFORMATION
         // =========================================================
 
-        [Required]
         [MaxLength(150)]
         public string RecordedBy { get; set; } = "SYSTEM";
 

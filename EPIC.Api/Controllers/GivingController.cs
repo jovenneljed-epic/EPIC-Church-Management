@@ -1,8 +1,14 @@
-﻿using EPIC.Api.Data;
+﻿
+using EPIC.Api.Authorization;
+using EPIC.Api.Data;
 using EPIC.Api.Models;
+using EPIC.Core.Interfaces;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+
+using System.Security.Claims;
 
 namespace EPIC.Api.Controllers
 {
@@ -12,967 +18,1733 @@ namespace EPIC.Api.Controllers
     public class GivingController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IPermissionService _permissionService;
 
-        public GivingController(ApplicationDbContext context)
+        // =========================================================
+        // ALLOWED GIVING TYPES
+        // =========================================================
+
+        private static readonly HashSet<string> AllowedGivingTypes =
+            new(StringComparer.OrdinalIgnoreCase)
+            {
+                "TITHE",
+                "OFFERING",
+                "MISSION",
+                "SPECIAL OFFERING",
+                "PLEDGE",
+                "OTHER"
+            };
+
+        // =========================================================
+        // ALLOWED PAYMENT METHODS
+        // =========================================================
+
+        private static readonly HashSet<string> AllowedPaymentMethods =
+            new(StringComparer.OrdinalIgnoreCase)
+            {
+                "CASH",
+                "GCASH",
+                "BANK TRANSFER",
+                "CHECK",
+                "OTHER"
+            };
+
+        // =========================================================
+        // CONSTRUCTOR
+        // =========================================================
+
+        public GivingController(
+            ApplicationDbContext context,
+            IPermissionService permissionService)
         {
             _context = context;
+            _permissionService = permissionService;
+        }
+
+        // =========================================================
+        // CURRENT USER ID
+        // =========================================================
+
+        private int? CurrentUserId
+        {
+            get
+            {
+                var value =
+                    User.FindFirst("userId")?.Value
+                    ??
+                    User.FindFirst(
+                        ClaimTypes.NameIdentifier)?.Value;
+
+                return int.TryParse(
+                    value,
+                    out var id) &&
+                    id > 0
+                        ? id
+                        : null;
+            }
+        }
+
+        // =========================================================
+        // CURRENT ROLE
+        // =========================================================
+
+        private string CurrentRole
+        {
+            get
+            {
+                var role =
+                    User.FindFirst(
+                        ClaimTypes.Role)?.Value
+                    ??
+                    User.FindFirst(
+                        "role")?.Value;
+
+                return string.IsNullOrWhiteSpace(role)
+                    ? string.Empty
+                    : role.Trim().ToUpperInvariant();
+            }
+        }
+
+        // =========================================================
+        // CLIENT ROLE FAMILY
+        // =========================================================
+
+        private bool IsClientRole
+        {
+            get
+            {
+                return
+                    CurrentRole == "CLIENT" ||
+                    CurrentRole.StartsWith("CLIENT_");
+            }
+        }
+
+        // =========================================================
+        // CURRENT CLIENT MEMBER ID
+        // =========================================================
+
+        private int? CurrentClientMemberId
+        {
+            get
+            {
+                var value =
+                    User.FindFirst(
+                        "clientMemberId")?.Value
+                    ??
+                    User.FindFirst(
+                        "ClientMemberId")?.Value;
+
+                return int.TryParse(
+                    value,
+                    out var id) &&
+                    id > 0
+                        ? id
+                        : null;
+            }
+        }
+
+        // =========================================================
+        // JWT CUSTOMER ID
+        //
+        // FALLBACK ONLY
+        // =========================================================
+
+        private int? GetCustomerIdFromToken()
+        {
+            var value =
+                User.FindFirst("customerId")?.Value
+                ??
+                User.FindFirst("CustomerId")?.Value
+                ??
+                User.FindFirst("tenantId")?.Value;
+
+            return int.TryParse(
+                value,
+                out var id) &&
+                id > 0
+                    ? id
+                    : null;
+        }
+
+        // =========================================================
+        // GET CURRENT CUSTOMER ID
+        //
+        // CLIENT:
+        //
+        // clientMemberId
+        //      ↓
+        // ClientMembers
+        //      ↓
+        // CustomerId
+        //
+        // ADMIN:
+        //
+        // UserId
+        //      ↓
+        // Users
+        //      ↓
+        // CustomerId
+        // =========================================================
+
+        private async Task<int?>
+            GetCurrentCustomerIdAsync()
+        {
+            // =====================================================
+            // CLIENT
+            // =====================================================
+
+            if (IsClientRole)
+            {
+                var clientMemberId =
+                    CurrentClientMemberId;
+
+                if (!clientMemberId.HasValue)
+                {
+                    return null;
+                }
+
+                var client =
+                    await _context.ClientMembers
+                        .AsNoTracking()
+                        .Where(cm =>
+                            cm.ClientMemberId ==
+                                clientMemberId.Value &&
+
+                            cm.IsActive &&
+
+                            cm.Status != null &&
+
+                            cm.Status.Trim().ToUpper() ==
+                                "ACTIVE")
+                        .Select(cm => new
+                        {
+                            CustomerId =
+                                cm.CustomerId,
+
+                            CustomerStatus =
+                                cm.Customer != null
+                                    ? cm.Customer.Status
+                                    : null,
+
+                            MemberStatus =
+                                cm.Member != null
+                                    ? cm.Member.Status
+                                    : null,
+
+                            ClientRoleActive =
+                                cm.ClientRole != null &&
+                                cm.ClientRole.IsActive
+                        })
+                        .FirstOrDefaultAsync();
+
+                if (client == null)
+                {
+                    return null;
+                }
+
+                if (client.CustomerId <= 0)
+                {
+                    return null;
+                }
+
+                if (!string.Equals(
+                    client.CustomerStatus?.Trim(),
+                    "ACTIVE",
+                    StringComparison.OrdinalIgnoreCase))
+                {
+                    return null;
+                }
+
+                if (!string.Equals(
+                    client.MemberStatus?.Trim(),
+                    "ACTIVE",
+                    StringComparison.OrdinalIgnoreCase))
+                {
+                    return null;
+                }
+
+                if (!client.ClientRoleActive)
+                {
+                    return null;
+                }
+
+                return client.CustomerId;
+            }
+
+            // =====================================================
+            // ADMIN
+            // =====================================================
+
+            if (CurrentRole == "ADMIN")
+            {
+                var userId =
+                    CurrentUserId;
+
+                if (userId.HasValue)
+                {
+                    var customerId =
+                        await _context.Users
+                            .AsNoTracking()
+                            .Where(u =>
+                                u.UserId ==
+                                userId.Value)
+                            .Select(u =>
+                                u.CustomerId)
+                            .FirstOrDefaultAsync();
+
+                    if (customerId > 0)
+                    {
+                        return customerId;
+                    }
+                }
+
+                return GetCustomerIdFromToken();
+            }
+
+            return null;
+        }
+
+        // =========================================================
+        // REQUIRE CHURCH ACCESS
+        // =========================================================
+
+        private async Task<(
+            IActionResult? Error,
+            int? CustomerId)>
+            RequireChurchAccessAsync()
+        {
+            // =====================================================
+            // AUTHENTICATION
+            // =====================================================
+
+            if (User.Identity?.IsAuthenticated != true)
+            {
+                return (
+                    Unauthorized(new
+                    {
+                        message =
+                            "Authentication is required."
+                    }),
+                    null
+                );
+            }
+
+            // =====================================================
+            // ROLE
+            // =====================================================
+
+            if (CurrentRole != "ADMIN" &&
+                !IsClientRole)
+            {
+                return (
+                    Forbid(),
+                    null
+                );
+            }
+
+            // =====================================================
+            // CLIENT IDENTITY
+            // =====================================================
+
+            if (IsClientRole &&
+                !CurrentClientMemberId.HasValue)
+            {
+                return (
+                    Unauthorized(new
+                    {
+                        message =
+                            "Client member identity could not be determined.",
+
+                        role =
+                            CurrentRole,
+
+                        clientMemberId =
+                            CurrentClientMemberId
+                    }),
+                    null
+                );
+            }
+
+            // =====================================================
+            // CUSTOMER
+            // =====================================================
+
+            var customerId =
+                await GetCurrentCustomerIdAsync();
+
+            if (!customerId.HasValue ||
+                customerId.Value <= 0)
+            {
+                return (
+                    Unauthorized(new
+                    {
+                        message =
+                            "Customer identity could not be determined from the authenticated account.",
+
+                        role =
+                            CurrentRole,
+
+                        userId =
+                            CurrentUserId,
+
+                        clientMemberId =
+                            CurrentClientMemberId,
+
+                        tokenCustomerId =
+                            GetCustomerIdFromToken()
+                    }),
+                    null
+                );
+            }
+
+            return (
+                null,
+                customerId.Value
+            );
+        }
+
+        // =========================================================
+        // CUSTOMER-SCOPED GIVING
+        // =========================================================
+
+        private IQueryable<Giving>
+            CustomerGivings(
+                int customerId)
+        {
+            return _context.Givings
+                .Where(g =>
+                    g.CustomerId ==
+                    customerId);
         }
 
         // =========================================================
         // GET ALL GIVING
         //
-        // GET /api/Giving
+        // GET:
+        // api/Giving
         // =========================================================
 
         [HttpGet]
-        public async Task<IActionResult> GetGivings()
+        [Permission("Giving", "view")]
+        public async Task<IActionResult>
+            GetGivings()
+
+
         {
-            var givings = await _context.Givings
-                .AsNoTracking()
-                .Include(g => g.Member)
-                .Include(g => g.ChurchService)
-                .OrderByDescending(g => g.GivingDate)
-                .ThenByDescending(g => g.GivingId)
-                .Select(g => new
+            Console.WriteLine();
+            Console.WriteLine("==========================================");
+            Console.WriteLine("EPIC GIVING AUTH DIAGNOSTIC");
+            Console.WriteLine($"Authenticated: {User.Identity?.IsAuthenticated}");
+            Console.WriteLine($"Role: {User.FindFirst(ClaimTypes.Role)?.Value}");
+            Console.WriteLine($"role: {User.FindFirst("role")?.Value}");
+            Console.WriteLine($"UserId: {User.FindFirst("userId")?.Value}");
+            Console.WriteLine($"NameIdentifier: {User.FindFirst(ClaimTypes.NameIdentifier)?.Value}");
+            Console.WriteLine($"customerId: {User.FindFirst("customerId")?.Value}");
+            Console.WriteLine($"clientMemberId: {User.FindFirst("clientMemberId")?.Value}");
+            Console.WriteLine("==========================================");
+            try
+            {
+                var access =
+                    await RequireChurchAccessAsync();
+
+                if (access.Error != null)
                 {
-                    givingId = g.GivingId,
+                    return access.Error;
+                }
 
-                    memberId = g.MemberId,
+                var customerId =
+                    access.CustomerId!.Value;
 
-                    memberCode = g.Member != null
-                        ? g.Member.MemberCode
-                        : "",
+                var givings =
+                    await CustomerGivings(customerId)
+                        .AsNoTracking()
+                        .Include(g =>
+                            g.Member)
+                        .Include(g =>
+                            g.ChurchService)
+                        .OrderByDescending(
+                            g => g.GivingDate)
+                        .ThenByDescending(
+                            g => g.GivingId)
+                        .Select(g => new
+                        {
+                            givingId =
+                                g.GivingId,
 
-                    memberName = g.Member != null
-                        ? g.Member.LastName + ", " +
-                          g.Member.FirstName +
-                          (string.IsNullOrWhiteSpace(g.Member.MiddleName)
-                              ? ""
-                              : " " + g.Member.MiddleName)
-                        : "Anonymous",
+                            customerId =
+                                g.CustomerId,
 
-                    churchServiceId = g.ChurchServiceId,
+                            memberId =
+                                g.MemberId,
 
-                    serviceName = g.ChurchService != null
-                        ? g.ChurchService.ServiceName
-                        : "",
+                            memberCode =
+                                g.Member != null
+                                    ? g.Member.MemberCode
+                                    : "",
 
-                    givingType = g.GivingType,
+                            memberName =
+                                g.Member != null
+                                    ? BuildMemberName(
+                                        g.Member)
+                                    : "Anonymous",
 
-                    amount = g.Amount,
+                            churchServiceId =
+                                g.ChurchServiceId,
 
-                    givingDate = g.GivingDate,
+                            serviceName =
+                                g.ChurchService != null
+                                    ? g.ChurchService.ServiceName
+                                    : "",
 
-                    paymentMethod = g.PaymentMethod,
+                            givingType =
+                                g.GivingType,
 
-                    referenceNumber = g.ReferenceNumber,
+                            amount =
+                                g.Amount,
 
-                    notes = g.Notes,
+                            givingDate =
+                                g.GivingDate,
 
-                    recordedBy = g.RecordedBy,
+                            paymentMethod =
+                                g.PaymentMethod,
 
-                    recordedDate = g.RecordedDate
-                })
-                .ToListAsync();
+                            referenceNumber =
+                                g.ReferenceNumber,
 
-            return Ok(givings);
+                            notes =
+                                g.Notes,
+
+                            recordedBy =
+                                g.RecordedBy,
+
+                            recordedDate =
+                                g.RecordedDate
+                        })
+                        .ToListAsync();
+
+                return Ok(givings);
+            }
+            catch (Exception ex)
+            {
+                return InternalServerError(
+                    "Unable to load giving records.",
+                    ex);
+            }
         }
-
 
         // =========================================================
         // GET GIVING BY ID
         //
-        // GET /api/Giving/{id}
+        // GET:
+        // api/Giving/{id}
         // =========================================================
 
         [HttpGet("{id:int}")]
-        public async Task<IActionResult> GetGiving(int id)
+        [Permission("Giving", "view")]
+        public async Task<IActionResult>
+            GetGiving(int id)
         {
-            var giving = await _context.Givings
-                .AsNoTracking()
-                .Include(g => g.Member)
-                .Include(g => g.ChurchService)
-                .Where(g => g.GivingId == id)
-                .Select(g => new
-                {
-                    givingId = g.GivingId,
-
-                    memberId = g.MemberId,
-
-                    memberCode = g.Member != null
-                        ? g.Member.MemberCode
-                        : "",
-
-                    memberName = g.Member != null
-                        ? g.Member.LastName + ", " +
-                          g.Member.FirstName +
-                          (string.IsNullOrWhiteSpace(g.Member.MiddleName)
-                              ? ""
-                              : " " + g.Member.MiddleName)
-                        : "Anonymous",
-
-                    churchServiceId = g.ChurchServiceId,
-
-                    serviceName = g.ChurchService != null
-                        ? g.ChurchService.ServiceName
-                        : "",
-
-                    givingType = g.GivingType,
-
-                    amount = g.Amount,
-
-                    givingDate = g.GivingDate,
-
-                    paymentMethod = g.PaymentMethod,
-
-                    referenceNumber = g.ReferenceNumber,
-
-                    notes = g.Notes,
-
-                    recordedBy = g.RecordedBy,
-
-                    recordedDate = g.RecordedDate
-                })
-                .FirstOrDefaultAsync();
-
-            if (giving == null)
+            try
             {
-                return NotFound(new
+                var access =
+                    await RequireChurchAccessAsync();
+
+                if (access.Error != null)
                 {
-                    message = "Giving record not found."
-                });
+                    return access.Error;
+                }
+
+                var customerId =
+                    access.CustomerId!.Value;
+
+                var giving =
+                    await CustomerGivings(customerId)
+                        .AsNoTracking()
+                        .Include(g =>
+                            g.Member)
+                        .Include(g =>
+                            g.ChurchService)
+                        .Where(g =>
+                            g.GivingId == id)
+                        .Select(g => new
+                        {
+                            givingId =
+                                g.GivingId,
+
+                            customerId =
+                                g.CustomerId,
+
+                            memberId =
+                                g.MemberId,
+
+                            memberCode =
+                                g.Member != null
+                                    ? g.Member.MemberCode
+                                    : "",
+
+                            memberName =
+                                g.Member != null
+                                    ? BuildMemberName(
+                                        g.Member)
+                                    : "Anonymous",
+
+                            churchServiceId =
+                                g.ChurchServiceId,
+
+                            serviceName =
+                                g.ChurchService != null
+                                    ? g.ChurchService.ServiceName
+                                    : "",
+
+                            givingType =
+                                g.GivingType,
+
+                            amount =
+                                g.Amount,
+
+                            givingDate =
+                                g.GivingDate,
+
+                            paymentMethod =
+                                g.PaymentMethod,
+
+                            referenceNumber =
+                                g.ReferenceNumber,
+
+                            notes =
+                                g.Notes,
+
+                            recordedBy =
+                                g.RecordedBy,
+
+                            recordedDate =
+                                g.RecordedDate
+                        })
+                        .FirstOrDefaultAsync();
+
+                if (giving == null)
+                {
+                    return NotFound(new
+                    {
+                        message =
+                            "Giving record not found.",
+
+                        givingId =
+                            id
+                    });
+                }
+
+                return Ok(giving);
             }
-
-            return Ok(giving);
+            catch (Exception ex)
+            {
+                return InternalServerError(
+                    "Unable to load the giving record.",
+                    ex);
+            }
         }
-
 
         // =========================================================
         // GIVING DASHBOARD
         //
-        // GET /api/Giving/dashboard
+        // GET:
+        // api/Giving/dashboard
         // =========================================================
 
         [HttpGet("dashboard")]
-        public async Task<IActionResult> GetDashboard()
+        [Permission("Giving", "view")]
+        public async Task<IActionResult>
+            GetDashboard()
         {
-            var today = DateTime.Today;
+            try
+            {
+                var access =
+                    await RequireChurchAccessAsync();
 
-            var tomorrow = today.AddDays(1);
+                if (access.Error != null)
+                {
+                    return access.Error;
+                }
 
-            var firstDayOfMonth =
-                new DateTime(
-                    today.Year,
-                    today.Month,
-                    1);
+                var customerId =
+                    access.CustomerId!.Value;
 
-            var firstDayOfNextMonth =
-                firstDayOfMonth.AddMonths(1);
+                var today =
+                    DateTime.Today;
 
+                var tomorrow =
+                    today.AddDays(1);
 
-            // =====================================================
-            // TOTAL GIVING
-            // =====================================================
+                var firstDayOfMonth =
+                    new DateTime(
+                        today.Year,
+                        today.Month,
+                        1);
 
-            var totalGiving =
-                await _context.Givings
-                    .AsNoTracking()
-                    .SumAsync(g => (decimal?)g.Amount)
-                ?? 0m;
+                var firstDayOfNextMonth =
+                    firstDayOfMonth.AddMonths(1);
 
+                var givings =
+                    CustomerGivings(customerId)
+                        .AsNoTracking();
 
-            // =====================================================
-            // TODAY'S GIVING
-            // =====================================================
+                var totalGiving =
+                    await givings
+                        .SumAsync(g =>
+                            (decimal?)g.Amount)
+                    ?? 0m;
 
-            var todayGiving =
-                await _context.Givings
-                    .AsNoTracking()
-                    .Where(g =>
-                        g.GivingDate >= today &&
-                        g.GivingDate < tomorrow)
-                    .SumAsync(g => (decimal?)g.Amount)
-                ?? 0m;
+                var todayGiving =
+                    await givings
+                        .Where(g =>
+                            g.GivingDate >= today &&
+                            g.GivingDate < tomorrow)
+                        .SumAsync(g =>
+                            (decimal?)g.Amount)
+                    ?? 0m;
 
+                var monthlyGiving =
+                    await givings
+                        .Where(g =>
+                            g.GivingDate >=
+                                firstDayOfMonth &&
+                            g.GivingDate <
+                                firstDayOfNextMonth)
+                        .SumAsync(g =>
+                            (decimal?)g.Amount)
+                    ?? 0m;
 
-            // =====================================================
-            // THIS MONTH
-            // =====================================================
+                var totalRecords =
+                    await givings.CountAsync();
 
-            var monthlyGiving =
-                await _context.Givings
-                    .AsNoTracking()
-                    .Where(g =>
-                        g.GivingDate >= firstDayOfMonth &&
-                        g.GivingDate < firstDayOfNextMonth)
-                    .SumAsync(g => (decimal?)g.Amount)
-                ?? 0m;
-
-
-            // =====================================================
-            // RECORD COUNTS
-            // =====================================================
-
-            var totalRecords =
-                await _context.Givings
-                    .CountAsync();
-
-            var todayRecords =
-                await _context.Givings
-                    .CountAsync(g =>
+                var todayRecords =
+                    await givings.CountAsync(g =>
                         g.GivingDate >= today &&
                         g.GivingDate < tomorrow);
 
-            var monthlyRecords =
-                await _context.Givings
-                    .CountAsync(g =>
-                        g.GivingDate >= firstDayOfMonth &&
-                        g.GivingDate < firstDayOfNextMonth);
+                var monthlyRecords =
+                    await givings.CountAsync(g =>
+                        g.GivingDate >=
+                            firstDayOfMonth &&
+                        g.GivingDate <
+                            firstDayOfNextMonth);
 
+                var typeTotals =
+                    await givings
+                        .GroupBy(g =>
+                            g.GivingType)
+                        .Select(g => new
+                        {
+                            Type =
+                                g.Key,
 
-            // =====================================================
-            // TITHE
-            // =====================================================
+                            Total =
+                                g.Sum(x =>
+                                    x.Amount)
+                        })
+                        .ToListAsync();
 
-            var tithes =
-                await _context.Givings
-                    .AsNoTracking()
-                    .Where(g =>
-                        g.GivingType == "TITHE")
-                    .SumAsync(g => (decimal?)g.Amount)
-                ?? 0m;
+                decimal GetTypeTotal(
+                    string type)
+                {
+                    return typeTotals
+                        .Where(x =>
+                            string.Equals(
+                                x.Type,
+                                type,
+                                StringComparison.OrdinalIgnoreCase))
+                        .Select(x =>
+                            x.Total)
+                        .FirstOrDefault();
+                }
 
+                return Ok(new
+                {
+                    customerId,
 
-            // =====================================================
-            // OFFERING
-            // =====================================================
+                    totalGiving,
 
-            var offerings =
-                await _context.Givings
-                    .AsNoTracking()
-                    .Where(g =>
-                        g.GivingType == "OFFERING")
-                    .SumAsync(g => (decimal?)g.Amount)
-                ?? 0m;
+                    todayGiving,
 
+                    monthlyGiving,
 
-            // =====================================================
-            // MISSION
-            // =====================================================
+                    totalRecords,
 
-            var missions =
-                await _context.Givings
-                    .AsNoTracking()
-                    .Where(g =>
-                        g.GivingType == "MISSION")
-                    .SumAsync(g => (decimal?)g.Amount)
-                ?? 0m;
+                    todayRecords,
 
+                    monthlyRecords,
 
-            // =====================================================
-            // SPECIAL OFFERING
-            // =====================================================
+                    tithes =
+                        GetTypeTotal("TITHE"),
 
-            var specialOfferings =
-                await _context.Givings
-                    .AsNoTracking()
-                    .Where(g =>
-                        g.GivingType == "SPECIAL OFFERING")
-                    .SumAsync(g => (decimal?)g.Amount)
-                ?? 0m;
+                    offerings =
+                        GetTypeTotal("OFFERING"),
 
+                    missions =
+                        GetTypeTotal("MISSION"),
 
-            // =====================================================
-            // PLEDGE
-            // =====================================================
+                    specialOfferings =
+                        GetTypeTotal(
+                            "SPECIAL OFFERING"),
 
-            var pledges =
-                await _context.Givings
-                    .AsNoTracking()
-                    .Where(g =>
-                        g.GivingType == "PLEDGE")
-                    .SumAsync(g => (decimal?)g.Amount)
-                ?? 0m;
+                    pledges =
+                        GetTypeTotal("PLEDGE"),
 
-
-            // =====================================================
-            // OTHER
-            // =====================================================
-
-            var other =
-                await _context.Givings
-                    .AsNoTracking()
-                    .Where(g =>
-                        g.GivingType == "OTHER")
-                    .SumAsync(g => (decimal?)g.Amount)
-                ?? 0m;
-
-
-            // =====================================================
-            // RETURN DASHBOARD
-            // =====================================================
-
-            return Ok(new
+                    other =
+                        GetTypeTotal("OTHER")
+                });
+            }
+            catch (Exception ex)
             {
-                totalGiving,
-
-                todayGiving,
-
-                monthlyGiving,
-
-                totalRecords,
-
-                todayRecords,
-
-                monthlyRecords,
-
-                tithes,
-
-                offerings,
-
-                missions,
-
-                specialOfferings,
-
-                pledges,
-
-                other
-            });
+                return InternalServerError(
+                    "Unable to load giving dashboard.",
+                    ex);
+            }
         }
-
 
         // =========================================================
         // MEMBER GIVING HISTORY
         //
-        // GET /api/Giving/member/{memberId}
+        // GET:
+        // api/Giving/member/{memberId}
         // =========================================================
 
         [HttpGet("member/{memberId:int}")]
-        public async Task<IActionResult> GetMemberGiving(
-            int memberId)
+        [Permission("Giving", "view")]
+        public async Task<IActionResult>
+            GetMemberGiving(int memberId)
         {
-            var member = await _context.Members
-                .AsNoTracking()
-                .FirstOrDefaultAsync(
-                    m => m.MemberId == memberId);
-
-            if (member == null)
+            try
             {
-                return NotFound(new
+                var access =
+                    await RequireChurchAccessAsync();
+
+                if (access.Error != null)
                 {
-                    message = "Member not found."
+                    return access.Error;
+                }
+
+                var customerId =
+                    access.CustomerId!.Value;
+
+                var member =
+                    await _context.Members
+                        .AsNoTracking()
+                        .Where(m =>
+                            m.MemberId == memberId &&
+                            m.CustomerId == customerId)
+                        .Select(m => new
+                        {
+                            memberId =
+                                m.MemberId,
+
+                            memberCode =
+                                m.MemberCode,
+
+                            fullName =
+                                BuildMemberName(m)
+                        })
+                        .FirstOrDefaultAsync();
+
+                if (member == null)
+                {
+                    return NotFound(new
+                    {
+                        message =
+                            "Member not found."
+                    });
+                }
+
+                var givings =
+                    await CustomerGivings(customerId)
+                        .AsNoTracking()
+                        .Where(g =>
+                            g.MemberId == memberId)
+                        .Include(g =>
+                            g.ChurchService)
+                        .OrderByDescending(
+                            g => g.GivingDate)
+                        .ThenByDescending(
+                            g => g.GivingId)
+                        .Select(g => new
+                        {
+                            givingId =
+                                g.GivingId,
+
+                            givingType =
+                                g.GivingType,
+
+                            amount =
+                                g.Amount,
+
+                            givingDate =
+                                g.GivingDate,
+
+                            paymentMethod =
+                                g.PaymentMethod,
+
+                            referenceNumber =
+                                g.ReferenceNumber,
+
+                            serviceName =
+                                g.ChurchService != null
+                                    ? g.ChurchService.ServiceName
+                                    : "",
+
+                            notes =
+                                g.Notes
+                        })
+                        .ToListAsync();
+
+                return Ok(new
+                {
+                    member,
+
+                    totalGiving =
+                        givings.Sum(x =>
+                            x.amount),
+
+                    records =
+                        givings
                 });
             }
-
-            var givings =
-                await _context.Givings
-                    .AsNoTracking()
-                    .Include(g => g.ChurchService)
-                    .Where(g =>
-                        g.MemberId == memberId)
-                    .OrderByDescending(
-                        g => g.GivingDate)
-                    .ThenByDescending(
-                        g => g.GivingId)
-                    .Select(g => new
-                    {
-                        givingId =
-                            g.GivingId,
-
-                        givingType =
-                            g.GivingType,
-
-                        amount =
-                            g.Amount,
-
-                        givingDate =
-                            g.GivingDate,
-
-                        paymentMethod =
-                            g.PaymentMethod,
-
-                        referenceNumber =
-                            g.ReferenceNumber,
-
-                        serviceName =
-                            g.ChurchService != null
-                                ? g.ChurchService.ServiceName
-                                : "",
-
-                        notes =
-                            g.Notes
-                    })
-                    .ToListAsync();
-
-            return Ok(new
+            catch (Exception ex)
             {
-                member = new
-                {
-                    memberId =
-                        member.MemberId,
-
-                    memberCode =
-                        member.MemberCode,
-
-                    fullName =
-                        member.LastName + ", " +
-                        member.FirstName +
-                        (string.IsNullOrWhiteSpace(
-                            member.MiddleName)
-                            ? ""
-                            : " " + member.MiddleName)
-                },
-
-                totalGiving =
-                    givings.Sum(x => x.amount),
-
-                records =
-                    givings
-            });
+                return InternalServerError(
+                    "Unable to load member giving history.",
+                    ex);
+            }
         }
-
 
         // =========================================================
         // GET GIVING BY DATE
         //
-        // GET /api/Giving/date/{date}
+        // GET:
+        // api/Giving/date/{date}
         // =========================================================
 
         [HttpGet("date/{date:datetime}")]
-        public async Task<IActionResult> GetGivingByDate(
-            DateTime date)
+        [Permission("Giving", "view")]
+        public async Task<IActionResult>
+            GetGivingByDate(DateTime date)
         {
-            var startDate =
-                date.Date;
-
-            var endDate =
-                startDate.AddDays(1);
-
-            var records =
-                await _context.Givings
-                    .AsNoTracking()
-                    .Include(g => g.Member)
-                    .Include(g => g.ChurchService)
-                    .Where(g =>
-                        g.GivingDate >= startDate &&
-                        g.GivingDate < endDate)
-                    .OrderByDescending(
-                        g => g.GivingId)
-                    .Select(g => new
-                    {
-                        givingId =
-                            g.GivingId,
-
-                        memberId =
-                            g.MemberId,
-
-                        memberName =
-                            g.Member != null
-                                ? g.Member.LastName +
-                                  ", " +
-                                  g.Member.FirstName
-                                : "Anonymous",
-
-                        serviceName =
-                            g.ChurchService != null
-                                ? g.ChurchService.ServiceName
-                                : "",
-
-                        givingType =
-                            g.GivingType,
-
-                        amount =
-                            g.Amount,
-
-                        givingDate =
-                            g.GivingDate,
-
-                        paymentMethod =
-                            g.PaymentMethod,
-
-                        referenceNumber =
-                            g.ReferenceNumber,
-
-                        notes =
-                            g.Notes
-                    })
-                    .ToListAsync();
-
-            return Ok(new
+            try
             {
-                date = startDate,
+                var access =
+                    await RequireChurchAccessAsync();
 
-                total =
-                    records.Sum(x => x.amount),
+                if (access.Error != null)
+                {
+                    return access.Error;
+                }
 
-                records
-            });
+                var customerId =
+                    access.CustomerId!.Value;
+
+                var startDate =
+                    date.Date;
+
+                var endDate =
+                    startDate.AddDays(1);
+
+                var records =
+                    await CustomerGivings(customerId)
+                        .AsNoTracking()
+                        .Where(g =>
+                            g.GivingDate >= startDate &&
+                            g.GivingDate < endDate)
+                        .Include(g =>
+                            g.Member)
+                        .Include(g =>
+                            g.ChurchService)
+                        .OrderByDescending(
+                            g => g.GivingId)
+                        .Select(g => new
+                        {
+                            givingId =
+                                g.GivingId,
+
+                            memberId =
+                                g.MemberId,
+
+                            memberName =
+                                g.Member != null
+                                    ? BuildMemberName(
+                                        g.Member)
+                                    : "Anonymous",
+
+                            serviceName =
+                                g.ChurchService != null
+                                    ? g.ChurchService.ServiceName
+                                    : "",
+
+                            givingType =
+                                g.GivingType,
+
+                            amount =
+                                g.Amount,
+
+                            givingDate =
+                                g.GivingDate,
+
+                            paymentMethod =
+                                g.PaymentMethod,
+
+                            referenceNumber =
+                                g.ReferenceNumber,
+
+                            notes =
+                                g.Notes
+                        })
+                        .ToListAsync();
+
+                return Ok(new
+                {
+                    date = startDate,
+
+                    total =
+                        records.Sum(x =>
+                            x.amount),
+
+                    records
+                });
+            }
+            catch (Exception ex)
+            {
+                return InternalServerError(
+                    "Unable to load giving records for the selected date.",
+                    ex);
+            }
         }
-
 
         // =========================================================
         // CREATE GIVING
         //
-        // POST /api/Giving
+        // POST:
+        // api/Giving
         // =========================================================
 
         [HttpPost]
-        public async Task<IActionResult> CreateGiving(
-            [FromBody] GivingRequest request)
+        [Permission("Giving", "create")]
+        public async Task<IActionResult>
+            CreateGiving(
+                [FromBody] GivingRequest request)
         {
-            if (request == null)
+            try
             {
-                return BadRequest(new
-                {
-                    message =
-                        "Giving information is required."
-                });
-            }
-
-
-            // =====================================================
-            // VALIDATE AMOUNT
-            // =====================================================
-
-            if (request.Amount <= 0)
-            {
-                return BadRequest(new
-                {
-                    message =
-                        "Giving amount must be greater than zero."
-                });
-            }
-
-
-            // =====================================================
-            // VALIDATE GIVING TYPE
-            // =====================================================
-
-            var allowedGivingTypes =
-                new[]
-                {
-                    "TITHE",
-                    "OFFERING",
-                    "MISSION",
-                    "SPECIAL OFFERING",
-                    "PLEDGE",
-                    "OTHER"
-                };
-
-            var givingType =
-                string.IsNullOrWhiteSpace(
-                    request.GivingType)
-                    ? "OFFERING"
-                    : request.GivingType
-                        .Trim()
-                        .ToUpper();
-
-            if (!allowedGivingTypes.Contains(
-                givingType))
-            {
-                return BadRequest(new
-                {
-                    message =
-                        $"Invalid giving type: {givingType}",
-
-                    allowedGivingTypes
-                });
-            }
-
-
-            // =====================================================
-            // VALIDATE PAYMENT METHOD
-            // =====================================================
-
-            var allowedPaymentMethods =
-                new[]
-                {
-                    "CASH",
-                    "GCASH",
-                    "BANK TRANSFER",
-                    "CHECK",
-                    "OTHER"
-                };
-
-            var paymentMethod =
-                string.IsNullOrWhiteSpace(
-                    request.PaymentMethod)
-                    ? "CASH"
-                    : request.PaymentMethod
-                        .Trim()
-                        .ToUpper();
-
-            if (!allowedPaymentMethods.Contains(
-                paymentMethod))
-            {
-                return BadRequest(new
-                {
-                    message =
-                        $"Invalid payment method: {paymentMethod}",
-
-                    allowedPaymentMethods
-                });
-            }
-
-
-            // =====================================================
-            // VALIDATE MEMBER
-            // =====================================================
-
-            if (request.MemberId.HasValue)
-            {
-                var memberExists =
-                    await _context.Members
-                        .AnyAsync(m =>
-                            m.MemberId ==
-                            request.MemberId.Value);
-
-                if (!memberExists)
+                if (request == null)
                 {
                     return BadRequest(new
                     {
                         message =
-                            "The selected member does not exist."
+                            "Giving information is required."
                     });
                 }
-            }
 
+                var access =
+                    await RequireChurchAccessAsync();
 
-            // =====================================================
-            // VALIDATE CHURCH SERVICE
-            // =====================================================
+                if (access.Error != null)
+                {
+                    return access.Error;
+                }
 
-            if (request.ChurchServiceId.HasValue)
-            {
-                var serviceExists =
-                    await _context.ChurchServices
-                        .AnyAsync(s =>
-                            s.ChurchServiceId ==
-                            request.ChurchServiceId.Value);
+                var customerId =
+                    access.CustomerId!.Value;
 
-                if (!serviceExists)
+                if (request.Amount <= 0)
                 {
                     return BadRequest(new
                     {
                         message =
-                            "The selected church service does not exist."
+                            "Giving amount must be greater than zero."
                     });
                 }
+
+                var givingType =
+                    NormalizeGivingType(
+                        request.GivingType);
+
+                if (!AllowedGivingTypes.Contains(
+                    givingType))
+                {
+                    return BadRequest(new
+                    {
+                        message =
+                            $"Invalid giving type: {givingType}",
+
+                        allowedGivingTypes =
+                            AllowedGivingTypes
+                                .OrderBy(x => x)
+                                .ToArray()
+                    });
+                }
+
+                var paymentMethod =
+                    NormalizePaymentMethod(
+                        request.PaymentMethod);
+
+                if (!AllowedPaymentMethods.Contains(
+                    paymentMethod))
+                {
+                    return BadRequest(new
+                    {
+                        message =
+                            $"Invalid payment method: {paymentMethod}",
+
+                        allowedPaymentMethods =
+                            AllowedPaymentMethods
+                                .OrderBy(x => x)
+                                .ToArray()
+                    });
+                }
+
+                // =================================================
+                // MEMBER VALIDATION
+                // =================================================
+
+                if (request.MemberId.HasValue)
+                {
+                    var memberExists =
+                        await _context.Members
+                            .AsNoTracking()
+                            .AnyAsync(m =>
+                                m.MemberId ==
+                                    request.MemberId.Value &&
+
+                                m.CustomerId ==
+                                    customerId);
+
+                    if (!memberExists)
+                    {
+                        return BadRequest(new
+                        {
+                            message =
+                                "The selected member does not exist for this customer."
+                        });
+                    }
+                }
+
+                // =================================================
+                // CHURCH SERVICE VALIDATION
+                // =================================================
+
+                if (request.ChurchServiceId.HasValue)
+                {
+                    var serviceExists =
+                        await _context.ChurchServices
+                            .AsNoTracking()
+                            .AnyAsync(s =>
+                                s.ChurchServiceId ==
+                                    request.ChurchServiceId.Value &&
+
+                                s.CustomerId ==
+                                    customerId);
+
+                    if (!serviceExists)
+                    {
+                        return BadRequest(new
+                        {
+                            message =
+                                "The selected church service does not exist for this customer."
+                        });
+                    }
+                }
+
+                // =================================================
+                // AUDIT
+                // =================================================
+
+                var recordedBy =
+                    GetCurrentUserName();
+
+                var now =
+                    DateTime.Now;
+
+                // =================================================
+                // CREATE
+                // =================================================
+
+                var giving =
+                    new Giving
+                    {
+                        CustomerId =
+                            customerId,
+
+                        MemberId =
+                            request.MemberId,
+
+                        ChurchServiceId =
+                            request.ChurchServiceId,
+
+                        GivingType =
+                            givingType,
+
+                        Amount =
+                            request.Amount,
+
+                        GivingDate =
+                            request.GivingDate?.Date
+                            ??
+                            DateTime.Today,
+
+                        PaymentMethod =
+                            paymentMethod,
+
+                        ReferenceNumber =
+                            request.ReferenceNumber?
+                                .Trim()
+                            ??
+                            string.Empty,
+
+                        Notes =
+                            request.Notes?
+                                .Trim()
+                            ??
+                            string.Empty,
+
+                        RecordedBy =
+                            recordedBy,
+
+                        RecordedDate =
+                            now
+                    };
+
+                _context.Givings.Add(giving);
+
+                await _context.SaveChangesAsync();
+
+                return CreatedAtAction(
+                    nameof(GetGiving),
+                    new
+                    {
+                        id =
+                            giving.GivingId
+                    },
+                    new
+                    {
+                        message =
+                            "Giving recorded successfully.",
+
+                        givingId =
+                            giving.GivingId,
+
+                        customerId =
+                            giving.CustomerId,
+
+                        amount =
+                            giving.Amount,
+
+                        givingType =
+                            giving.GivingType
+                    });
             }
-
-
-            // =====================================================
-            // RECORDED BY
-            // =====================================================
-
-            var recordedBy =
-                User.Identity?.Name
-                ?? User.FindFirst("name")?.Value
-                ?? User.FindFirst("email")?.Value
-                ?? "SYSTEM";
-
-
-            // =====================================================
-            // CREATE RECORD
-            // =====================================================
-
-            var giving =
-                new Giving
-                {
-                    MemberId =
-                        request.MemberId,
-
-                    ChurchServiceId =
-                        request.ChurchServiceId,
-
-                    GivingType =
-                        givingType,
-
-                    Amount =
-                        request.Amount,
-
-                    GivingDate =
-                        request.GivingDate?.Date
-                        ?? DateTime.Today,
-
-                    PaymentMethod =
-                        paymentMethod,
-
-                    ReferenceNumber =
-                        request.ReferenceNumber?
-                            .Trim() ?? "",
-
-                    Notes =
-                        request.Notes?
-                            .Trim() ?? "",
-
-                    RecordedBy =
-                        recordedBy,
-
-                    RecordedDate =
-                        DateTime.Now
-                };
-
-            _context.Givings.Add(giving);
-
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction(
-                nameof(GetGiving),
-                new
-                {
-                    id = giving.GivingId
-                },
-                new
-                {
-                    message =
-                        "Giving recorded successfully.",
-
-                    givingId =
-                        giving.GivingId,
-
-                    amount =
-                        giving.Amount,
-
-                    givingType =
-                        giving.GivingType
-                });
+            catch (DbUpdateException ex)
+            {
+                return DatabaseError(
+                    "Unable to save the giving record.",
+                    ex);
+            }
+            catch (Exception ex)
+            {
+                return InternalServerError(
+                    "Unable to save the giving record.",
+                    ex);
+            }
         }
-
 
         // =========================================================
         // UPDATE GIVING
         //
-        // PUT /api/Giving/{id}
+        // PUT:
+        // api/Giving/{id}
         // =========================================================
 
         [HttpPut("{id:int}")]
-        public async Task<IActionResult> UpdateGiving(
-            int id,
-            [FromBody] GivingRequest request)
+        [Permission("Giving", "edit")]
+        public async Task<IActionResult>
+            UpdateGiving(
+                int id,
+                [FromBody] GivingRequest request)
         {
-            var giving =
-                await _context.Givings
-                    .FirstOrDefaultAsync(
-                        g =>
+            try
+            {
+                if (request == null)
+                {
+                    return BadRequest(new
+                    {
+                        message =
+                            "Giving information is required."
+                    });
+                }
+
+                var access =
+                    await RequireChurchAccessAsync();
+
+                if (access.Error != null)
+                {
+                    return access.Error;
+                }
+
+                var customerId =
+                    access.CustomerId!.Value;
+
+                var giving =
+                    await CustomerGivings(customerId)
+                        .FirstOrDefaultAsync(g =>
                             g.GivingId == id);
 
-            if (giving == null)
-            {
-                return NotFound(new
+                if (giving == null)
                 {
-                    message =
-                        "Giving record not found."
-                });
-            }
+                    return NotFound(new
+                    {
+                        message =
+                            "Giving record not found.",
 
+                        givingId =
+                            id
+                    });
+                }
 
-            if (request == null)
-            {
-                return BadRequest(new
+                if (request.Amount <= 0)
                 {
-                    message =
-                        "Giving information is required."
-                });
-            }
+                    return BadRequest(new
+                    {
+                        message =
+                            "Giving amount must be greater than zero."
+                    });
+                }
 
+                var givingType =
+                    NormalizeGivingType(
+                        request.GivingType);
 
-            if (request.Amount <= 0)
-            {
-                return BadRequest(new
-                {
-                    message =
-                        "Giving amount must be greater than zero."
-                });
-            }
-
-
-            var allowedGivingTypes =
-                new[]
-                {
-                    "TITHE",
-                    "OFFERING",
-                    "MISSION",
-                    "SPECIAL OFFERING",
-                    "PLEDGE",
-                    "OTHER"
-                };
-
-            var givingType =
-                request.GivingType?
-                    .Trim()
-                    .ToUpper();
-
-            if (string.IsNullOrWhiteSpace(
-                givingType) ||
-                !allowedGivingTypes.Contains(
+                if (!AllowedGivingTypes.Contains(
                     givingType))
-            {
-                return BadRequest(new
                 {
-                    message =
-                        "Invalid giving type."
-                });
-            }
+                    return BadRequest(new
+                    {
+                        message =
+                            "Invalid giving type."
+                    });
+                }
 
+                var paymentMethod =
+                    NormalizePaymentMethod(
+                        request.PaymentMethod);
 
-            var allowedPaymentMethods =
-                new[]
-                {
-                    "CASH",
-                    "GCASH",
-                    "BANK TRANSFER",
-                    "CHECK",
-                    "OTHER"
-                };
-
-            var paymentMethod =
-                request.PaymentMethod?
-                    .Trim()
-                    .ToUpper();
-
-            if (string.IsNullOrWhiteSpace(
-                paymentMethod) ||
-                !allowedPaymentMethods.Contains(
+                if (!AllowedPaymentMethods.Contains(
                     paymentMethod))
-            {
-                return BadRequest(new
+                {
+                    return BadRequest(new
+                    {
+                        message =
+                            "Invalid payment method."
+                    });
+                }
+
+                // =================================================
+                // MEMBER VALIDATION
+                // =================================================
+
+                if (request.MemberId.HasValue)
+                {
+                    var memberExists =
+                        await _context.Members
+                            .AsNoTracking()
+                            .AnyAsync(m =>
+                                m.MemberId ==
+                                    request.MemberId.Value &&
+
+                                m.CustomerId ==
+                                    customerId);
+
+                    if (!memberExists)
+                    {
+                        return BadRequest(new
+                        {
+                            message =
+                                "The selected member does not exist for this customer."
+                        });
+                    }
+                }
+
+                // =================================================
+                // CHURCH SERVICE VALIDATION
+                // =================================================
+
+                if (request.ChurchServiceId.HasValue)
+                {
+                    var serviceExists =
+                        await _context.ChurchServices
+                            .AsNoTracking()
+                            .AnyAsync(s =>
+                                s.ChurchServiceId ==
+                                    request.ChurchServiceId.Value &&
+
+                                s.CustomerId ==
+                                    customerId);
+
+                    if (!serviceExists)
+                    {
+                        return BadRequest(new
+                        {
+                            message =
+                                "The selected church service does not exist for this customer."
+                        });
+                    }
+                }
+
+                // =================================================
+                // UPDATE
+                // =================================================
+
+                giving.MemberId =
+                    request.MemberId;
+
+                giving.ChurchServiceId =
+                    request.ChurchServiceId;
+
+                giving.GivingType =
+                    givingType;
+
+                giving.Amount =
+                    request.Amount;
+
+                if (request.GivingDate.HasValue)
+                {
+                    giving.GivingDate =
+                        request.GivingDate.Value.Date;
+                }
+
+                giving.PaymentMethod =
+                    paymentMethod;
+
+                giving.ReferenceNumber =
+                    request.ReferenceNumber?
+                        .Trim()
+                    ??
+                    string.Empty;
+
+                giving.Notes =
+                    request.Notes?
+                        .Trim()
+                    ??
+                    string.Empty;
+
+                await _context.SaveChangesAsync();
+
+                return Ok(new
                 {
                     message =
-                        "Invalid payment method."
+                        "Giving record updated successfully.",
+
+                    givingId =
+                        giving.GivingId,
+
+                    customerId =
+                        giving.CustomerId
                 });
             }
-
-
-            // =====================================================
-            // MEMBER
-            // =====================================================
-
-            if (request.MemberId.HasValue)
+            catch (DbUpdateException ex)
             {
-                var memberExists =
-                    await _context.Members
-                        .AnyAsync(m =>
-                            m.MemberId ==
-                            request.MemberId.Value);
-
-                if (!memberExists)
-                {
-                    return BadRequest(new
-                    {
-                        message =
-                            "The selected member does not exist."
-                    });
-                }
+                return DatabaseError(
+                    "Unable to update the giving record.",
+                    ex);
             }
-
-
-            // =====================================================
-            // CHURCH SERVICE
-            // =====================================================
-
-            if (request.ChurchServiceId.HasValue)
+            catch (Exception ex)
             {
-                var serviceExists =
-                    await _context.ChurchServices
-                        .AnyAsync(s =>
-                            s.ChurchServiceId ==
-                            request.ChurchServiceId.Value);
-
-                if (!serviceExists)
-                {
-                    return BadRequest(new
-                    {
-                        message =
-                            "The selected church service does not exist."
-                    });
-                }
+                return InternalServerError(
+                    "Unable to update the giving record.",
+                    ex);
             }
-
-
-            // =====================================================
-            // UPDATE
-            // =====================================================
-
-            giving.MemberId =
-                request.MemberId;
-
-            giving.ChurchServiceId =
-                request.ChurchServiceId;
-
-            giving.GivingType =
-                givingType;
-
-            giving.Amount =
-                request.Amount;
-
-            giving.GivingDate =
-                request.GivingDate?.Date
-                ?? giving.GivingDate;
-
-            giving.PaymentMethod =
-                paymentMethod;
-
-            giving.ReferenceNumber =
-                request.ReferenceNumber?
-                    .Trim() ?? "";
-
-            giving.Notes =
-                request.Notes?
-                    .Trim() ?? "";
-
-
-            await _context.SaveChangesAsync();
-
-            return Ok(new
-            {
-                message =
-                    "Giving record updated successfully.",
-
-                givingId =
-                    giving.GivingId
-            });
         }
-
 
         // =========================================================
         // DELETE GIVING
         //
-        // DELETE /api/Giving/{id}
+        // DELETE:
+        // api/Giving/{id}
         // =========================================================
 
         [HttpDelete("{id:int}")]
-        public async Task<IActionResult> DeleteGiving(
-            int id)
+        [Permission("Giving", "delete")]
+        public async Task<IActionResult>
+            DeleteGiving(int id)
         {
-            var giving =
-                await _context.Givings
-                    .FirstOrDefaultAsync(
-                        g =>
+            try
+            {
+                var access =
+                    await RequireChurchAccessAsync();
+
+                if (access.Error != null)
+                {
+                    return access.Error;
+                }
+
+                var customerId =
+                    access.CustomerId!.Value;
+
+                var giving =
+                    await CustomerGivings(customerId)
+                        .FirstOrDefaultAsync(g =>
                             g.GivingId == id);
 
-            if (giving == null)
-            {
-                return NotFound(new
+                if (giving == null)
+                {
+                    return NotFound(new
+                    {
+                        message =
+                            "Giving record not found.",
+
+                        givingId =
+                            id
+                    });
+                }
+
+                _context.Givings.Remove(
+                    giving);
+
+                await _context.SaveChangesAsync();
+
+                return Ok(new
                 {
                     message =
-                        "Giving record not found."
+                        "Giving record deleted successfully.",
+
+                    givingId =
+                        id
                 });
             }
-
-
-            _context.Givings.Remove(giving);
-
-            await _context.SaveChangesAsync();
-
-            return Ok(new
+            catch (DbUpdateException ex)
             {
-                message =
-                    "Giving record deleted successfully."
-            });
+                return DatabaseError(
+                    "Unable to delete the giving record.",
+                    ex);
+            }
+            catch (Exception ex)
+            {
+                return InternalServerError(
+                    "Unable to delete the giving record.",
+                    ex);
+            }
+        }
+
+        // =========================================================
+        // NORMALIZE GIVING TYPE
+        // =========================================================
+
+        private static string
+            NormalizeGivingType(
+                string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return "OFFERING";
+            }
+
+            return value
+                .Trim()
+                .ToUpperInvariant();
+        }
+
+        // =========================================================
+        // NORMALIZE PAYMENT METHOD
+        // =========================================================
+
+        private static string
+            NormalizePaymentMethod(
+                string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return "CASH";
+            }
+
+            return value
+                .Trim()
+                .ToUpperInvariant();
+        }
+
+        // =========================================================
+        // MEMBER NAME
+        // =========================================================
+
+        private static string
+            BuildMemberName(
+                Member member)
+        {
+            var firstName =
+                member.FirstName?.Trim()
+                ??
+                string.Empty;
+
+            var middleName =
+                member.MiddleName?.Trim()
+                ??
+                string.Empty;
+
+            var lastName =
+                member.LastName?.Trim()
+                ??
+                string.Empty;
+
+            var givenName =
+                string.Join(
+                    " ",
+                    new[]
+                    {
+                        firstName,
+                        middleName
+                    }
+                    .Where(x =>
+                        !string.IsNullOrWhiteSpace(x)));
+
+            if (string.IsNullOrWhiteSpace(
+                lastName))
+            {
+                return givenName;
+            }
+
+            return string.IsNullOrWhiteSpace(
+                givenName)
+                ? lastName
+                : $"{lastName}, {givenName}";
+        }
+
+        // =========================================================
+        // CURRENT USER NAME
+        // =========================================================
+
+        private string
+            GetCurrentUserName()
+        {
+            return
+                User.Identity?.Name
+                ??
+                User.FindFirst(
+                    ClaimTypes.Name)?.Value
+                ??
+                User.FindFirst(
+                    "name")?.Value
+                ??
+                User.FindFirst(
+                    "userName")?.Value
+                ??
+                User.FindFirst(
+                    "username")?.Value
+                ??
+                User.FindFirst(
+                    ClaimTypes.Email)?.Value
+                ??
+                User.FindFirst(
+                    "email")?.Value
+                ??
+                "SYSTEM";
+        }
+
+        // =========================================================
+        // INTERNAL SERVER ERROR
+        // =========================================================
+
+        private IActionResult
+            InternalServerError(
+                string message,
+                Exception ex)
+        {
+            Console.WriteLine(
+                "==========================================");
+
+            Console.WriteLine(
+                "EPIC GIVING API ERROR");
+
+            Console.WriteLine(
+                $"Message: {message}");
+
+            Console.WriteLine(
+                $"Type: {ex.GetType().FullName}");
+
+            Console.WriteLine(
+                $"Error: {ex.Message}");
+
+            Console.WriteLine(
+                $"Inner: {ex.InnerException?.Message}");
+
+            Console.WriteLine(
+                $"InnerInner: {ex.InnerException?.InnerException?.Message}");
+
+            Console.WriteLine(
+                $"Stack: {ex.StackTrace}");
+
+            Console.WriteLine(
+                "==========================================");
+
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                new
+                {
+                    message,
+
+                    exceptionType =
+                        ex.GetType().FullName,
+
+                    error =
+                        ex.Message,
+
+                    detail =
+                        ex.InnerException?.Message,
+
+                    innerException =
+                        ex.InnerException?
+                            .InnerException?
+                            .Message
+                });
+        }
+
+        // =========================================================
+        // DATABASE ERROR
+        // =========================================================
+
+        private IActionResult
+            DatabaseError(
+                string message,
+                DbUpdateException ex)
+        {
+            Console.WriteLine(
+                "==========================================");
+
+            Console.WriteLine(
+                "EPIC GIVING DATABASE ERROR");
+
+            Console.WriteLine(
+                $"Message: {message}");
+
+            Console.WriteLine(
+                $"Error: {ex.Message}");
+
+            Console.WriteLine(
+                $"Inner: {ex.InnerException?.Message}");
+
+            Console.WriteLine(
+                "==========================================");
+
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                new
+                {
+                    message,
+
+                    error =
+                        ex.Message,
+
+                    detail =
+                        ex.InnerException?.Message,
+
+                    exceptionType =
+                        ex.GetType().FullName
+                });
         }
     }
-
 
     // =============================================================
     // REQUEST MODEL
@@ -995,9 +1767,10 @@ namespace EPIC.Api.Controllers
             = "CASH";
 
         public string ReferenceNumber { get; set; }
-            = "";
+            = string.Empty;
 
         public string Notes { get; set; }
-            = "";
+            = string.Empty;
     }
 }
+

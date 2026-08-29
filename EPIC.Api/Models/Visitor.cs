@@ -15,6 +15,16 @@ namespace EPIC.Api.Models
         public int VisitorId { get; set; }
 
         // =========================================================
+        // CUSTOMER / TENANT
+        // =========================================================
+
+        [Required]
+        public int CustomerId { get; set; }
+
+        [ForeignKey(nameof(CustomerId))]
+        public virtual Customer? Customer { get; set; }
+
+        // =========================================================
         // VISITOR CODE
         // =========================================================
 
@@ -30,7 +40,6 @@ namespace EPIC.Api.Models
         [MaxLength(100)]
         public string FirstName { get; set; } = string.Empty;
 
-        [Required]
         [MaxLength(100)]
         public string MiddleName { get; set; } = string.Empty;
 
@@ -38,7 +47,6 @@ namespace EPIC.Api.Models
         [MaxLength(100)]
         public string LastName { get; set; } = string.Empty;
 
-        [Required]
         [MaxLength(20)]
         public string Gender { get; set; } = string.Empty;
 
@@ -48,11 +56,9 @@ namespace EPIC.Api.Models
         // CONTACT INFORMATION
         // =========================================================
 
-        [Required]
         [MaxLength(50)]
         public string ContactNumber { get; set; } = string.Empty;
 
-        [Required]
         [MaxLength(250)]
         public string Address { get; set; } = string.Empty;
 
@@ -63,11 +69,9 @@ namespace EPIC.Api.Models
         // VISITOR INFORMATION
         // =========================================================
 
-        [Required]
         [MaxLength(100)]
         public string InvitedBy { get; set; } = string.Empty;
 
-        [Required]
         [MaxLength(100)]
         public string Ministry { get; set; } = string.Empty;
 
@@ -103,8 +107,7 @@ namespace EPIC.Api.Models
         // NOTES
         // =========================================================
 
-        [Required]
-        [MaxLength(250)]
+        [MaxLength(500)]
         public string Notes { get; set; } = string.Empty;
 
         // =========================================================

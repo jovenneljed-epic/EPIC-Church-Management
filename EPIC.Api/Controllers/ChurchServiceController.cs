@@ -1,5 +1,9 @@
-﻿using EPIC.Api.Data;
+﻿
+using System.Security.Claims;
+
+using EPIC.Api.Data;
 using EPIC.Api.Models;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -7,66 +11,463 @@ using Microsoft.EntityFrameworkCore;
 namespace EPIC.Api.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/ChurchServices")]
     [Authorize]
-    public class ChurchServicesController : ControllerBase
+    public class ChurchServiceController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
 
-        public ChurchServicesController(ApplicationDbContext context)
+        public ChurchServiceController(
+            ApplicationDbContext context)
         {
             _context = context;
         }
 
         // =========================================================
-        // GET: api/ChurchServices
-        // GET ALL CHURCH SERVICES
+        // CURRENT USER ID
+        // =========================================================
+
+        private int? CurrentUserId
+        {
+            get
+            {
+                var userId =
+                    User.FindFirst("userId")?.Value
+                    ??
+                    User.FindFirst(
+                        ClaimTypes.NameIdentifier)?.Value;
+
+                return int.TryParse(
+                    userId,
+                    out var id) &&
+                    id > 0
+                        ? id
+                        : null;
+            }
+        }
+
+        // =========================================================
+        // CURRENT ROLE
+        // =========================================================
+
+        private string CurrentRole
+        {
+            get
+            {
+                var role =
+                    User.FindFirst(
+                        ClaimTypes.Role)?.Value
+                    ??
+                    User.FindFirst(
+                        "role")?.Value;
+
+                return string.IsNullOrWhiteSpace(role)
+                    ? string.Empty
+                    : role.Trim().ToUpperInvariant();
+            }
+        }
+
+        // =========================================================
+        // CLIENT ROLE FAMILY
+        //
+        // CLIENT
+        // CLIENT_ADMIN
+        // CLIENT_MANAGER
+        // CLIENT_STAFF
+        // CLIENT_*
+        // =========================================================
+
+        private bool IsClientRole
+        {
+            get
+            {
+                return
+                    CurrentRole == "CLIENT" ||
+                    CurrentRole.StartsWith("CLIENT_");
+            }
+        }
+
+        // =========================================================
+        // CURRENT CLIENT MEMBER ID
+        // =========================================================
+
+        private int? CurrentClientMemberId
+        {
+            get
+            {
+                var value =
+                    User.FindFirst(
+                        "clientMemberId")?.Value;
+
+                return int.TryParse(
+                    value,
+                    out var id) &&
+                    id > 0
+                        ? id
+                        : null;
+            }
+        }
+
+        // =========================================================
+        // JWT CUSTOMER ID
+        //
+        // ADMIN FALLBACK ONLY
+        // =========================================================
+
+        private int? GetCustomerIdFromToken()
+        {
+            var value =
+                User.FindFirst("customerId")?.Value
+                ??
+                User.FindFirst("CustomerId")?.Value
+                ??
+                User.FindFirst("tenantId")?.Value;
+
+            return int.TryParse(
+                value,
+                out var id) &&
+                id > 0
+                    ? id
+                    : null;
+        }
+
+        // =========================================================
+        // GET CURRENT CUSTOMER ID
+        // =========================================================
+
+        private async Task<int?>
+            GetCurrentCustomerIdAsync()
+        {
+            // =====================================================
+            // CLIENT / CLIENT_*
+            // =====================================================
+
+            if (IsClientRole)
+            {
+                var clientMemberId =
+                    CurrentClientMemberId;
+
+                if (!clientMemberId.HasValue)
+                {
+                    return null;
+                }
+
+                var client =
+                    await _context.ClientMembers
+                        .AsNoTracking()
+                        .Where(cm =>
+                            cm.ClientMemberId ==
+                                clientMemberId.Value &&
+
+                            cm.IsActive &&
+
+                            cm.Status != null &&
+
+                            cm.Status.Trim().ToUpper() ==
+                                "ACTIVE")
+                        .Select(cm => new
+                        {
+                            CustomerId =
+                                cm.CustomerId,
+
+                            CustomerStatus =
+                                cm.Customer != null
+                                    ? cm.Customer.Status
+                                    : null,
+
+                            MemberStatus =
+                                cm.Member != null
+                                    ? cm.Member.Status
+                                    : null,
+
+                            ClientRoleActive =
+                                cm.ClientRole != null &&
+                                cm.ClientRole.IsActive
+                        })
+                        .FirstOrDefaultAsync();
+
+                if (client == null)
+                {
+                    return null;
+                }
+
+                if (client.CustomerId <= 0)
+                {
+                    return null;
+                }
+
+                if (!string.Equals(
+                    client.CustomerStatus?.Trim(),
+                    "ACTIVE",
+                    StringComparison.OrdinalIgnoreCase))
+                {
+                    return null;
+                }
+
+                if (!string.Equals(
+                    client.MemberStatus?.Trim(),
+                    "ACTIVE",
+                    StringComparison.OrdinalIgnoreCase))
+                {
+                    return null;
+                }
+
+                if (!client.ClientRoleActive)
+                {
+                    return null;
+                }
+
+                return client.CustomerId;
+            }
+
+            // =====================================================
+            // ADMIN
+            // =====================================================
+
+            if (CurrentRole == "ADMIN")
+            {
+                var userId =
+                    CurrentUserId;
+
+                if (userId.HasValue)
+                {
+                    var customerId =
+                        await _context.Users
+                            .AsNoTracking()
+                            .Where(u =>
+                                u.UserId ==
+                                userId.Value)
+                            .Select(u =>
+                                u.CustomerId)
+                            .FirstOrDefaultAsync();
+
+                    if (customerId > 0)
+                    {
+                        return customerId;
+                    }
+                }
+
+                return GetCustomerIdFromToken();
+            }
+
+            return null;
+        }
+
+        // =========================================================
+        // REQUIRE CHURCH ACCESS
+        // =========================================================
+
+        private async Task<(
+            IActionResult? Error,
+            int? CustomerId)>
+            RequireChurchAccessAsync()
+        {
+            // =====================================================
+            // AUTHENTICATION
+            // =====================================================
+
+            if (User.Identity?.IsAuthenticated != true)
+            {
+                return (
+                    Unauthorized(new
+                    {
+                        message =
+                            "Authentication is required."
+                    }),
+                    null
+                );
+            }
+
+            // =====================================================
+            // ROLE
+            // =====================================================
+
+            var role =
+                CurrentRole;
+
+            if (role != "ADMIN" &&
+                !IsClientRole)
+            {
+                return (
+                    Forbid(),
+                    null
+                );
+            }
+
+            // =====================================================
+            // CLIENT IDENTITY
+            // =====================================================
+
+            if (IsClientRole &&
+                !CurrentClientMemberId.HasValue)
+            {
+                return (
+                    Unauthorized(new
+                    {
+                        message =
+                            "Client member identity could not be determined.",
+
+                        role,
+
+                        clientMemberId =
+                            CurrentClientMemberId
+                    }),
+                    null
+                );
+            }
+
+            // =====================================================
+            // CUSTOMER
+            // =====================================================
+
+            var customerId =
+                await GetCurrentCustomerIdAsync();
+
+            if (!customerId.HasValue ||
+                customerId.Value <= 0)
+            {
+                return (
+                    Unauthorized(new
+                    {
+                        message =
+                            "Customer identity could not be determined from the authenticated account.",
+
+                        role,
+
+                        userId =
+                            CurrentUserId,
+
+                        clientMemberId =
+                            CurrentClientMemberId,
+
+                        tokenCustomerId =
+                            GetCustomerIdFromToken()
+                    }),
+                    null
+                );
+            }
+
+            return (
+                null,
+                customerId.Value
+            );
+        }
+
+        // =========================================================
+        // CUSTOMER-SCOPED SERVICES
+        // =========================================================
+
+        private IQueryable<ChurchService>
+            CustomerServices(
+                int customerId)
+        {
+            return _context.ChurchServices
+                .Where(s =>
+                    s.CustomerId ==
+                    customerId);
+        }
+
+        // =========================================================
+        // GET ALL SERVICES
+        //
+        // GET:
+        // /api/ChurchServices
         // =========================================================
 
         [HttpGet]
-        public async Task<IActionResult> GetServices()
+        public async Task<IActionResult>
+            GetServices()
         {
             try
             {
-                var services = await _context.ChurchServices
-                    .AsNoTracking()
-                    .OrderByDescending(s => s.ServiceDate)
-                    .ThenBy(s => s.StartTime)
-                    .ToListAsync();
+                var access =
+                    await RequireChurchAccessAsync();
+
+                if (access.Error != null)
+                {
+                    return access.Error;
+                }
+
+                var customerId =
+                    access.CustomerId!.Value;
+
+                var services =
+                    await CustomerServices(
+                        customerId)
+                        .AsNoTracking()
+                        .OrderByDescending(
+                            s => s.ServiceDate)
+                        .ThenBy(
+                            s => s.StartTime)
+                        .ToListAsync();
 
                 return Ok(services);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new
-                {
-                    message = "Unable to load church services.",
-                    error = ex.Message
-                });
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    new
+                    {
+                        message =
+                            "Unable to load church services.",
+
+                        error =
+                            ex.Message,
+
+                        detail =
+                            ex.InnerException?.Message,
+
+                        exceptionType =
+                            ex.GetType().FullName
+                    });
             }
         }
 
-
         // =========================================================
-        // GET: api/ChurchServices/5
-        // GET SINGLE SERVICE
+        // GET SERVICE BY ID
+        //
+        // GET:
+        // /api/ChurchServices/{id}
         // =========================================================
 
         [HttpGet("{id:int}")]
-        public async Task<IActionResult> GetService(int id)
+        public async Task<IActionResult>
+            GetService(int id)
         {
             try
             {
-                var service = await _context.ChurchServices
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(s =>
-                        s.ChurchServiceId == id);
+                var access =
+                    await RequireChurchAccessAsync();
+
+                if (access.Error != null)
+                {
+                    return access.Error;
+                }
+
+                var customerId =
+                    access.CustomerId!.Value;
+
+                var service =
+                    await CustomerServices(
+                        customerId)
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(
+                            s =>
+                                s.ChurchServiceId ==
+                                id);
 
                 if (service == null)
                 {
                     return NotFound(new
                     {
-                        message = "Church service not found."
+                        message =
+                            "Church service not found.",
+
+                        churchServiceId =
+                            id,
+
+                        customerId
                     });
                 }
 
@@ -74,167 +475,264 @@ namespace EPIC.Api.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new
-                {
-                    message = "Unable to load church service.",
-                    error = ex.Message
-                });
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    new
+                    {
+                        message =
+                            "Unable to load church service.",
+
+                        error =
+                            ex.Message,
+
+                        detail =
+                            ex.InnerException?.Message,
+
+                        exceptionType =
+                            ex.GetType().FullName
+                    });
             }
         }
 
-
         // =========================================================
-        // GET: api/ChurchServices/upcoming
-        // UPCOMING SERVICES
+        // UPCOMING
+        //
+        // GET:
+        // /api/ChurchServices/upcoming
         // =========================================================
 
         [HttpGet("upcoming")]
-        public async Task<IActionResult> GetUpcomingServices()
+        public async Task<IActionResult>
+            GetUpcomingServices()
         {
             try
             {
-                var today = DateTime.Today;
+                var access =
+                    await RequireChurchAccessAsync();
 
-                var services = await _context.ChurchServices
-                    .AsNoTracking()
-                    .Where(s =>
-                        s.ServiceDate >= today &&
-                        s.Status != "CANCELLED")
-                    .OrderBy(s => s.ServiceDate)
-                    .ThenBy(s => s.StartTime)
-                    .Take(10)
-                    .ToListAsync();
+                if (access.Error != null)
+                {
+                    return access.Error;
+                }
+
+                var customerId =
+                    access.CustomerId!.Value;
+
+                var today =
+                    DateTime.Today;
+
+                var services =
+                    await CustomerServices(
+                        customerId)
+                        .AsNoTracking()
+                        .Where(s =>
+                            s.ServiceDate >= today &&
+                            (
+                                s.Status == null ||
+                                s.Status.Trim().ToUpper() !=
+                                    "CANCELLED"
+                            ))
+                        .OrderBy(
+                            s => s.ServiceDate)
+                        .ThenBy(
+                            s => s.StartTime)
+                        .Take(10)
+                        .ToListAsync();
 
                 return Ok(services);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new
-                {
-                    message = "Unable to load upcoming church services.",
-                    error = ex.Message
-                });
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    new
+                    {
+                        message =
+                            "Unable to load upcoming church services.",
+
+                        error =
+                            ex.Message,
+
+                        detail =
+                            ex.InnerException?.Message,
+
+                        exceptionType =
+                            ex.GetType().FullName
+                    });
             }
         }
 
-
         // =========================================================
-        // GET: api/ChurchServices/recent
-        // RECENT SERVICES
+        // RECENT
+        //
+        // GET:
+        // /api/ChurchServices/recent
         // =========================================================
 
         [HttpGet("recent")]
-        public async Task<IActionResult> GetRecentServices()
+        public async Task<IActionResult>
+            GetRecentServices()
         {
             try
             {
-                var today = DateTime.Today;
+                var access =
+                    await RequireChurchAccessAsync();
 
-                var services = await _context.ChurchServices
-                    .AsNoTracking()
-                    .Where(s =>
-                        s.ServiceDate < today)
-                    .OrderByDescending(s => s.ServiceDate)
-                    .ThenByDescending(s => s.StartTime)
-                    .Take(10)
-                    .ToListAsync();
+                if (access.Error != null)
+                {
+                    return access.Error;
+                }
+
+                var customerId =
+                    access.CustomerId!.Value;
+
+                var today =
+                    DateTime.Today;
+
+                var services =
+                    await CustomerServices(
+                        customerId)
+                        .AsNoTracking()
+                        .Where(s =>
+                            s.ServiceDate < today)
+                        .OrderByDescending(
+                            s => s.ServiceDate)
+                        .ThenByDescending(
+                            s => s.StartTime)
+                        .Take(10)
+                        .ToListAsync();
 
                 return Ok(services);
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new
-                {
-                    message = "Unable to load recent church services.",
-                    error = ex.Message
-                });
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    new
+                    {
+                        message =
+                            "Unable to load recent church services.",
+
+                        error =
+                            ex.Message,
+
+                        detail =
+                            ex.InnerException?.Message,
+
+                        exceptionType =
+                            ex.GetType().FullName
+                    });
             }
         }
 
-
         // =========================================================
-        // POST: api/ChurchServices
-        // CREATE SERVICE
+        // CREATE
+        //
+        // POST:
+        // /api/ChurchServices
         // =========================================================
 
         [HttpPost]
-        public async Task<IActionResult> CreateService(
-            [FromBody] ChurchService service)
+        public async Task<IActionResult>
+            CreateService(
+                [FromBody] ChurchService service)
         {
             try
             {
+                var access =
+                    await RequireChurchAccessAsync();
+
+                if (access.Error != null)
+                {
+                    return access.Error;
+                }
+
+                var customerId =
+                    access.CustomerId!.Value;
+
                 if (service == null)
                 {
                     return BadRequest(new
                     {
-                        message = "Invalid church service data."
+                        message =
+                            "Invalid church service data."
                     });
                 }
 
-                if (string.IsNullOrWhiteSpace(service.ServiceName))
+                if (string.IsNullOrWhiteSpace(
+                    service.ServiceName))
                 {
                     return BadRequest(new
                     {
-                        message = "Service name is required."
+                        message =
+                            "Service name is required."
                     });
                 }
 
-                if (service.ServiceDate == default)
+                if (service.ServiceDate ==
+                    default)
                 {
                     return BadRequest(new
                     {
-                        message = "Service date is required."
+                        message =
+                            "Service date is required."
                     });
                 }
 
-                // -------------------------------------------------
-                // DEFAULT VALUES
-                // -------------------------------------------------
+                // =================================================
+                // NEVER TRUST CUSTOMER ID FROM REQUEST
+                // =================================================
 
-                if (string.IsNullOrWhiteSpace(service.Status))
-                {
-                    service.Status = "SCHEDULED";
-                }
-
-                service.CreatedDate = DateTime.Now;
-                service.UpdatedDate = null;
-
-                // -------------------------------------------------
-                // CLEAN INPUT
-                // -------------------------------------------------
+                service.CustomerId =
+                    customerId;
 
                 service.ServiceName =
                     service.ServiceName.Trim();
 
                 service.ServiceType =
-                    service.ServiceType?.Trim() ?? "";
+                    service.ServiceType?.Trim()
+                    ?? string.Empty;
 
                 service.StartTime =
-                    service.StartTime?.Trim() ?? "";
+                    service.StartTime?.Trim()
+                    ?? string.Empty;
 
                 service.EndTime =
-                    service.EndTime?.Trim() ?? "";
+                    service.EndTime?.Trim()
+                    ?? string.Empty;
 
                 service.Location =
-                    service.Location?.Trim() ?? "";
+                    service.Location?.Trim()
+                    ?? string.Empty;
 
                 service.ServiceLeader =
-                    service.ServiceLeader?.Trim() ?? "";
+                    service.ServiceLeader?.Trim()
+                    ?? string.Empty;
 
                 service.Speaker =
-                    service.Speaker?.Trim() ?? "";
+                    service.Speaker?.Trim()
+                    ?? string.Empty;
 
                 service.Description =
-                    service.Description?.Trim() ?? "";
+                    service.Description?.Trim()
+                    ?? string.Empty;
 
                 service.Status =
-                    service.Status.Trim().ToUpper();
+                    string.IsNullOrWhiteSpace(
+                        service.Status)
+                        ? "SCHEDULED"
+                        : service.Status
+                            .Trim()
+                            .ToUpperInvariant();
 
-                // -------------------------------------------------
-                // SAVE
-                // -------------------------------------------------
+                service.CreatedDate =
+                    DateTime.Now;
 
-                _context.ChurchServices.Add(service);
+                service.UpdatedDate =
+                    null;
+
+                _context.ChurchServices.Add(
+                    service);
 
                 await _context.SaveChangesAsync();
 
@@ -242,52 +740,103 @@ namespace EPIC.Api.Controllers
                     nameof(GetService),
                     new
                     {
-                        id = service.ChurchServiceId
+                        id =
+                            service.ChurchServiceId
                     },
                     service);
             }
+            catch (DbUpdateException ex)
+            {
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    new
+                    {
+                        message =
+                            "Unable to create church service because the database rejected the operation.",
+
+                        error =
+                            ex.Message,
+
+                        detail =
+                            ex.InnerException?.Message,
+
+                        exceptionType =
+                            ex.GetType().FullName
+                    });
+            }
             catch (Exception ex)
             {
-                return StatusCode(500, new
-                {
-                    message = "Unable to create church service.",
-                    error = ex.Message,
-                    detail = ex.InnerException?.Message
-                });
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    new
+                    {
+                        message =
+                            "Unable to create church service.",
+
+                        error =
+                            ex.Message,
+
+                        detail =
+                            ex.InnerException?.Message,
+
+                        exceptionType =
+                            ex.GetType().FullName
+                    });
             }
         }
 
-
         // =========================================================
-        // PUT: api/ChurchServices/5
-        // UPDATE SERVICE
+        // UPDATE
+        //
+        // PUT:
+        // /api/ChurchServices/{id}
         // =========================================================
 
         [HttpPut("{id:int}")]
-        public async Task<IActionResult> UpdateService(
-            int id,
-            [FromBody] ChurchService updatedService)
+        public async Task<IActionResult>
+            UpdateService(
+                int id,
+                [FromBody] ChurchService updatedService)
         {
             try
             {
+                var access =
+                    await RequireChurchAccessAsync();
+
+                if (access.Error != null)
+                {
+                    return access.Error;
+                }
+
+                var customerId =
+                    access.CustomerId!.Value;
+
                 if (updatedService == null)
                 {
                     return BadRequest(new
                     {
-                        message = "Invalid church service data."
+                        message =
+                            "Invalid church service data."
                     });
                 }
 
                 var service =
-                    await _context.ChurchServices
-                        .FirstOrDefaultAsync(s =>
-                            s.ChurchServiceId == id);
+                    await CustomerServices(
+                        customerId)
+                        .FirstOrDefaultAsync(
+                            s =>
+                                s.ChurchServiceId ==
+                                id);
 
                 if (service == null)
                 {
                     return NotFound(new
                     {
-                        message = "Church service not found."
+                        message =
+                            "Church service not found.",
+
+                        churchServiceId =
+                            id
                     });
                 }
 
@@ -296,48 +845,54 @@ namespace EPIC.Api.Controllers
                 {
                     return BadRequest(new
                     {
-                        message = "Service name is required."
+                        message =
+                            "Service name is required."
                     });
                 }
 
-                if (updatedService.ServiceDate == default)
+                if (updatedService.ServiceDate ==
+                    default)
                 {
                     return BadRequest(new
                     {
-                        message = "Service date is required."
+                        message =
+                            "Service date is required."
                     });
                 }
-
-                // -------------------------------------------------
-                // UPDATE
-                // -------------------------------------------------
 
                 service.ServiceName =
                     updatedService.ServiceName.Trim();
 
                 service.ServiceType =
-                    updatedService.ServiceType?.Trim() ?? "";
+                    updatedService.ServiceType?.Trim()
+                    ?? string.Empty;
 
                 service.ServiceDate =
                     updatedService.ServiceDate;
 
                 service.StartTime =
-                    updatedService.StartTime?.Trim() ?? "";
+                    updatedService.StartTime?.Trim()
+                    ?? string.Empty;
 
                 service.EndTime =
-                    updatedService.EndTime?.Trim() ?? "";
+                    updatedService.EndTime?.Trim()
+                    ?? string.Empty;
 
                 service.Location =
-                    updatedService.Location?.Trim() ?? "";
+                    updatedService.Location?.Trim()
+                    ?? string.Empty;
 
                 service.ServiceLeader =
-                    updatedService.ServiceLeader?.Trim() ?? "";
+                    updatedService.ServiceLeader?.Trim()
+                    ?? string.Empty;
 
                 service.Speaker =
-                    updatedService.Speaker?.Trim() ?? "";
+                    updatedService.Speaker?.Trim()
+                    ?? string.Empty;
 
                 service.Description =
-                    updatedService.Description?.Trim() ?? "";
+                    updatedService.Description?.Trim()
+                    ?? string.Empty;
 
                 service.Status =
                     string.IsNullOrWhiteSpace(
@@ -345,7 +900,14 @@ namespace EPIC.Api.Controllers
                         ? "SCHEDULED"
                         : updatedService.Status
                             .Trim()
-                            .ToUpper();
+                            .ToUpperInvariant();
+
+                // =================================================
+                // TENANT CANNOT BE CHANGED
+                // =================================================
+
+                service.CustomerId =
+                    customerId;
 
                 service.UpdatedDate =
                     DateTime.Now;
@@ -354,55 +916,107 @@ namespace EPIC.Api.Controllers
 
                 return Ok(service);
             }
+            catch (DbUpdateException ex)
+            {
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    new
+                    {
+                        message =
+                            "Unable to update church service because the database rejected the operation.",
+
+                        error =
+                            ex.Message,
+
+                        detail =
+                            ex.InnerException?.Message,
+
+                        exceptionType =
+                            ex.GetType().FullName
+                    });
+            }
             catch (Exception ex)
             {
-                return StatusCode(500, new
-                {
-                    message = "Unable to update church service.",
-                    error = ex.Message,
-                    detail = ex.InnerException?.Message
-                });
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    new
+                    {
+                        message =
+                            "Unable to update church service.",
+
+                        error =
+                            ex.Message,
+
+                        detail =
+                            ex.InnerException?.Message,
+
+                        exceptionType =
+                            ex.GetType().FullName
+                    });
             }
         }
 
-
         // =========================================================
-        // PATCH: api/ChurchServices/5/status
-        // UPDATE STATUS ONLY
+        // UPDATE STATUS
+        //
+        // PATCH:
+        // /api/ChurchServices/{id}/status
         // =========================================================
 
         [HttpPatch("{id:int}/status")]
-        public async Task<IActionResult> UpdateStatus(
-            int id,
-            [FromBody] StatusRequest request)
+        public async Task<IActionResult>
+            UpdateStatus(
+                int id,
+                [FromBody] StatusRequest request)
         {
             try
             {
+                var access =
+                    await RequireChurchAccessAsync();
+
+                if (access.Error != null)
+                {
+                    return access.Error;
+                }
+
+                var customerId =
+                    access.CustomerId!.Value;
+
+                if (request == null ||
+                    string.IsNullOrWhiteSpace(
+                        request.Status))
+                {
+                    return BadRequest(new
+                    {
+                        message =
+                            "Status is required."
+                    });
+                }
+
                 var service =
-                    await _context.ChurchServices
-                        .FirstOrDefaultAsync(s =>
-                            s.ChurchServiceId == id);
+                    await CustomerServices(
+                        customerId)
+                        .FirstOrDefaultAsync(
+                            s =>
+                                s.ChurchServiceId ==
+                                id);
 
                 if (service == null)
                 {
                     return NotFound(new
                     {
-                        message = "Church service not found."
-                    });
-                }
+                        message =
+                            "Church service not found.",
 
-                if (string.IsNullOrWhiteSpace(request.Status))
-                {
-                    return BadRequest(new
-                    {
-                        message = "Status is required."
+                        churchServiceId =
+                            id
                     });
                 }
 
                 service.Status =
                     request.Status
                         .Trim()
-                        .ToUpper();
+                        .ToUpperInvariant();
 
                 service.UpdatedDate =
                     DateTime.Now;
@@ -411,60 +1025,202 @@ namespace EPIC.Api.Controllers
 
                 return Ok(service);
             }
+            catch (DbUpdateException ex)
+            {
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    new
+                    {
+                        message =
+                            "Unable to update service status because the database rejected the operation.",
+
+                        error =
+                            ex.Message,
+
+                        detail =
+                            ex.InnerException?.Message,
+
+                        exceptionType =
+                            ex.GetType().FullName
+                    });
+            }
             catch (Exception ex)
             {
-                return StatusCode(500, new
-                {
-                    message = "Unable to update service status.",
-                    error = ex.Message
-                });
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    new
+                    {
+                        message =
+                            "Unable to update service status.",
+
+                        error =
+                            ex.Message,
+
+                        detail =
+                            ex.InnerException?.Message,
+
+                        exceptionType =
+                            ex.GetType().FullName
+                    });
             }
         }
 
-
         // =========================================================
-        // DELETE: api/ChurchServices/5
-        // DELETE SERVICE
+        // DELETE
+        //
+        // DELETE:
+        // /api/ChurchServices/{id}
+        //
+        // IMPORTANT:
+        //
+        // Attendance records referencing this service are deleted
+        // FIRST to prevent FK constraint failures.
+        //
+        // Only attendance belonging to this ChurchServiceId is
+        // removed.
         // =========================================================
 
         [HttpDelete("{id:int}")]
-        public async Task<IActionResult> DeleteService(int id)
+        public async Task<IActionResult>
+            DeleteService(int id)
         {
             try
             {
+                // =================================================
+                // ACCESS
+                // =================================================
+
+                var access =
+                    await RequireChurchAccessAsync();
+
+                if (access.Error != null)
+                {
+                    return access.Error;
+                }
+
+                var customerId =
+                    access.CustomerId!.Value;
+
+                // =================================================
+                // FIND SERVICE
+                //
+                // CUSTOMER SCOPED
+                // =================================================
+
                 var service =
-                    await _context.ChurchServices
-                        .FirstOrDefaultAsync(s =>
-                            s.ChurchServiceId == id);
+                    await CustomerServices(
+                        customerId)
+                        .FirstOrDefaultAsync(
+                            s =>
+                                s.ChurchServiceId ==
+                                id);
 
                 if (service == null)
                 {
                     return NotFound(new
                     {
-                        message = "Church service not found."
+                        message =
+                            "Church service not found.",
+
+                        churchServiceId =
+                            id
                     });
                 }
 
-                _context.ChurchServices.Remove(service);
+                // =================================================
+                // FIND ATTENDANCE
+                //
+                // We only select Attendance records linked to
+                // this exact ChurchServiceId.
+                //
+                // =================================================
+
+                var attendanceRecords =
+                    await _context.Attendances
+                        .Where(a =>
+                            a.ChurchServiceId ==
+                            id)
+                        .ToListAsync();
+
+                // =================================================
+                // DELETE ATTENDANCE FIRST
+                // =================================================
+
+                if (attendanceRecords.Count > 0)
+                {
+                    _context.Attendances.RemoveRange(
+                        attendanceRecords);
+                }
+
+                // =================================================
+                // DELETE CHURCH SERVICE
+                // =================================================
+
+                _context.ChurchServices.Remove(
+                    service);
+
+                // =================================================
+                // SAVE IN ONE TRANSACTION
+                // =================================================
 
                 await _context.SaveChangesAsync();
 
+                // =================================================
+                // RESPONSE
+                // =================================================
+
                 return Ok(new
                 {
-                    message = "Church service deleted successfully."
+                    message =
+                        "Church service deleted successfully.",
+
+                    churchServiceId =
+                        id,
+
+                    deletedAttendanceRecords =
+                        attendanceRecords.Count
                 });
+            }
+            catch (DbUpdateException ex)
+            {
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    new
+                    {
+                        message =
+                            "The church service could not be deleted because it is still referenced by related database records.",
+
+                        error =
+                            ex.Message,
+
+                        detail =
+                            ex.InnerException?.Message,
+
+                        exceptionType =
+                            ex.GetType().FullName
+                    });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new
-                {
-                    message = "Unable to delete church service.",
-                    error = ex.Message
-                });
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    new
+                    {
+                        message =
+                            "Unable to delete church service.",
+
+                        error =
+                            ex.Message,
+
+                        detail =
+                            ex.InnerException?.Message,
+
+                        exceptionType =
+                            ex.GetType().FullName
+                    });
             }
         }
     }
-
 
     // =============================================================
     // STATUS REQUEST
@@ -472,6 +1228,8 @@ namespace EPIC.Api.Controllers
 
     public class StatusRequest
     {
-        public string Status { get; set; } = "";
+        public string Status { get; set; } =
+            string.Empty;
     }
 }
+

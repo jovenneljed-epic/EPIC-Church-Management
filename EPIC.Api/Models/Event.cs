@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace EPIC.Api.Models
 {
@@ -12,6 +13,16 @@ namespace EPIC.Api.Models
 
         [Key]
         public int EventId { get; set; }
+
+        // =========================================================
+        // CUSTOMER / TENANT
+        // =========================================================
+
+        [Required]
+        public int CustomerId { get; set; }
+
+        [ForeignKey(nameof(CustomerId))]
+        public virtual Customer? Customer { get; set; }
 
         // =========================================================
         // EVENT INFORMATION
@@ -54,6 +65,11 @@ namespace EPIC.Api.Models
         [MaxLength(50)]
         public string Status { get; set; } = "SCHEDULED";
 
+        // SCHEDULED
+        // ONGOING
+        // COMPLETED
+        // CANCELLED
+
         // =========================================================
         // DESCRIPTION / NOTES
         // =========================================================
@@ -72,24 +88,31 @@ namespace EPIC.Api.Models
         public DateTime? UpdatedAt { get; set; }
 
         // =========================================================
+        // EVENT DEPARTMENTS
+        // =========================================================
+
+        public virtual ICollection<EventDepartment> EventDepartments { get; set; }
+            = new List<EventDepartment>();
+
+        // =========================================================
         // EVENT ASSIGNMENTS
         // =========================================================
 
-        public ICollection<EventAssignment> EventAssignments { get; set; }
+        public virtual ICollection<EventAssignment> EventAssignments { get; set; }
             = new List<EventAssignment>();
 
         // =========================================================
         // EVENT NEEDS
         // =========================================================
 
-        public ICollection<EventNeed> EventNeeds { get; set; }
+        public virtual ICollection<EventNeed> EventNeeds { get; set; }
             = new List<EventNeed>();
 
         // =========================================================
         // EVENT CHECKLISTS
         // =========================================================
 
-        public ICollection<EventChecklist> EventChecklists { get; set; }
+        public virtual ICollection<EventChecklist> EventChecklists { get; set; }
             = new List<EventChecklist>();
     }
 }

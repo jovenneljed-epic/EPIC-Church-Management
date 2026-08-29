@@ -22,7 +22,7 @@ namespace EPIC.Api.Models
         public int EventDepartmentId { get; set; }
 
         [ForeignKey(nameof(EventDepartmentId))]
-        public EventDepartment? EventDepartment { get; set; }
+        public virtual EventDepartment? EventDepartment { get; set; }
 
         // =========================================================
         // ROLE INFORMATION
@@ -43,6 +43,11 @@ namespace EPIC.Api.Models
         [MaxLength(20)]
         public string Priority { get; set; } = "NORMAL";
 
+        // LOW
+        // NORMAL
+        // HIGH
+        // URGENT
+
         // =========================================================
         // STATUS
         // =========================================================
@@ -50,6 +55,9 @@ namespace EPIC.Api.Models
         [Required]
         [MaxLength(30)]
         public string Status { get; set; } = "ACTIVE";
+
+        // ACTIVE
+        // INACTIVE
 
         // =========================================================
         // AUDIT
@@ -64,7 +72,7 @@ namespace EPIC.Api.Models
         // EVENT ASSIGNMENTS
         // =========================================================
 
-        public ICollection<EventAssignment> EventAssignments { get; set; }
+        public virtual ICollection<EventAssignment> EventAssignments { get; set; }
             = new List<EventAssignment>();
     }
 }

@@ -21,7 +21,7 @@ namespace EPIC.Api.Models
         public int EventId { get; set; }
 
         [ForeignKey(nameof(EventId))]
-        public Event? Event { get; set; }
+        public virtual Event? Event { get; set; }
 
         // =========================================================
         // NEED INFORMATION
@@ -57,7 +57,7 @@ namespace EPIC.Api.Models
         public int? ResponsibleMemberId { get; set; }
 
         [ForeignKey(nameof(ResponsibleMemberId))]
-        public Member? ResponsibleMember { get; set; }
+        public virtual Member? ResponsibleMember { get; set; }
 
         // =========================================================
         // STATUS
@@ -96,6 +96,10 @@ namespace EPIC.Api.Models
         // =========================================================
 
         public DateTime? NeededBy { get; set; }
+
+        // =========================================================
+        // AUDIT
+        // =========================================================
 
         [Required]
         public DateTime CreatedAt { get; set; } = DateTime.Now;

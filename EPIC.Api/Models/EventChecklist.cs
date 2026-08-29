@@ -1,13 +1,17 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace EPIC.Api.Models
 {
     public class EventChecklist
     {
+        // =========================================================
+        // PRIMARY KEY
+        // =========================================================
+
         [Key]
         public int EventChecklistId { get; set; }
-
 
         // =========================================================
         // EVENT
@@ -17,8 +21,7 @@ namespace EPIC.Api.Models
         public int EventId { get; set; }
 
         [ForeignKey(nameof(EventId))]
-        public Event? Event { get; set; }
-
+        public virtual Event? Event { get; set; }
 
         // =========================================================
         // CHECKLIST ITEM
@@ -31,25 +34,12 @@ namespace EPIC.Api.Models
         [MaxLength(1000)]
         public string? Description { get; set; }
 
-
         // =========================================================
         // CHECKLIST CATEGORY
         // =========================================================
 
         [MaxLength(100)]
         public string? Category { get; set; }
-
-        // Examples:
-        // Preparation
-        // Venue
-        // Program
-        // Technical
-        // Registration
-        // Food
-        // Transportation
-        // Cleanup
-        // Post-Event
-
 
         // =========================================================
         // ASSIGNMENT
@@ -58,11 +48,10 @@ namespace EPIC.Api.Models
         public int? AssignedMemberId { get; set; }
 
         [ForeignKey(nameof(AssignedMemberId))]
-        public Member? AssignedMember { get; set; }
+        public virtual Member? AssignedMember { get; set; }
 
         [MaxLength(200)]
         public string? AssignedPerson { get; set; }
-
 
         // =========================================================
         // STATUS
@@ -77,7 +66,6 @@ namespace EPIC.Api.Models
         // COMPLETED
         // SKIPPED
 
-
         // =========================================================
         // PRIORITY
         // =========================================================
@@ -86,6 +74,10 @@ namespace EPIC.Api.Models
         [MaxLength(20)]
         public string Priority { get; set; } = "NORMAL";
 
+        // LOW
+        // NORMAL
+        // HIGH
+        // URGENT
 
         // =========================================================
         // ORDER
@@ -93,13 +85,11 @@ namespace EPIC.Api.Models
 
         public int SortOrder { get; set; } = 0;
 
-
         // =========================================================
         // DUE DATE
         // =========================================================
 
         public DateTime? DueDate { get; set; }
-
 
         // =========================================================
         // COMPLETION
@@ -110,8 +100,7 @@ namespace EPIC.Api.Models
         public int? CompletedByMemberId { get; set; }
 
         [ForeignKey(nameof(CompletedByMemberId))]
-        public Member? CompletedByMember { get; set; }
-
+        public virtual Member? CompletedByMember { get; set; }
 
         // =========================================================
         // NOTES
@@ -119,11 +108,11 @@ namespace EPIC.Api.Models
 
         public string? Notes { get; set; }
 
-
         // =========================================================
         // AUDIT
         // =========================================================
 
+        [Required]
         public DateTime CreatedAt { get; set; } = DateTime.Now;
 
         public DateTime? UpdatedAt { get; set; }
