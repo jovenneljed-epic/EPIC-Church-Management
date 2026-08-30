@@ -1,5 +1,7 @@
 import React, { useState } from "react";
+import PublicHeader from "../../components/PublicHeader";
 import "./ContactPage.css";
+import "./PublicUnisonTheme.css";
 import { API_BASE_URL } from "../../config";
 
 interface ContactPageProps {
@@ -156,119 +158,7 @@ const ContactPage: React.FC<ContactPageProps> = ({
 
     return (
         <div className="epic-contact-page">
-
-            {/* =====================================================
-                NAVIGATION
-            ===================================================== */}
-
-            <header className="epic-contact-navbar">
-
-                <div className="epic-contact-nav-inner">
-
-                    <button
-                        type="button"
-                        className="epic-contact-logo"
-                        onClick={() =>
-                            onNavigate("landing")
-                        }
-                    >
-                        <span className="epic-contact-logo-mark">
-                            EPIC
-                        </span>
-
-                        <span className="epic-contact-logo-text">
-                            <strong>
-                                EPIC CHURCH
-                            </strong>
-
-                            <small>
-                                Engaging People Into Christ
-                            </small>
-                        </span>
-                    </button>
-
-                    <nav className="epic-contact-nav-links">
-
-                        <button
-                            type="button"
-                            onClick={() =>
-                                onNavigate("landing")
-                            }
-                        >
-                            Home
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={() =>
-                                onNavigate("about")
-                            }
-                        >
-                            About
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={() =>
-                                onNavigate("ministries")
-                            }
-                        >
-                            Ministries
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={() =>
-                                onNavigate("system")
-                            }
-                        >
-                            EPIC System
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={() =>
-                                onNavigate("learning")
-                            }
-                        >
-                            Learning
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={() =>
-                                onNavigate("pricing")
-                            }
-                        >
-                            Pricing
-                        </button>
-
-                        <button
-                            type="button"
-                            className="active"
-                        >
-                            Contact
-                        </button>
-
-                    </nav>
-
-                    <button
-                        type="button"
-                        className="epic-contact-login"
-                        onClick={() =>
-                            onNavigate("login")
-                        }
-                    >
-                        Login
-                    </button>
-
-                </div>
-
-            </header>
-
-            {/* =====================================================
-                HERO
-            ===================================================== */}
+            <PublicHeader onNavigate={onNavigate} />
 
             <section className="epic-contact-hero">
 

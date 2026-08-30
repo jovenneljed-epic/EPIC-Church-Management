@@ -814,6 +814,8 @@ namespace EPIC.Api.Data
             });
         }
 
+    
+
         // =========================================================
         // ATTENDANCE
         // =========================================================
@@ -822,10 +824,38 @@ namespace EPIC.Api.Data
         {
             modelBuilder.Entity<Attendance>(entity =>
             {
+                entity.HasKey(e => e.AttendanceId);
+
+                // =====================================================
+                // MEMBER
+                // =====================================================
+
+                entity.HasOne(e => e.Member)
+                    .WithMany()
+                    .HasForeignKey(e => e.MemberId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // =====================================================
+                // CHURCH SERVICE
+                // =====================================================
+
+                entity.HasOne(e => e.ChurchService)
+                    .WithMany()
+                    .HasForeignKey(e => e.ChurchServiceId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                // =====================================================
+                // EVENT
+                // =====================================================
+
                 entity.HasOne(e => e.Event)
                     .WithMany()
                     .HasForeignKey(e => e.EventId)
                     .OnDelete(DeleteBehavior.SetNull);
+
+                // =====================================================
+                // UNIQUE MEMBER + CHURCH SERVICE
+                // =====================================================
 
                 entity.HasIndex(e => new
                 {
@@ -834,6 +864,10 @@ namespace EPIC.Api.Data
                 })
                 .HasFilter("[ChurchServiceId] IS NOT NULL")
                 .IsUnique();
+
+                // =====================================================
+                // UNIQUE MEMBER + EVENT
+                // =====================================================
 
                 entity.HasIndex(e => new
                 {
@@ -1779,6 +1813,8 @@ private static void ConfigureMinistryMembers(
 
                 entity.Property(e => e.IncludesMinistries)
                     .HasDefaultValue(true);
+                entity.Property(e => e.IncludesEvents)
+    .HasDefaultValue(true);
 
                 entity.Property(e => e.IncludesEPICLearning)
                     .HasDefaultValue(false);

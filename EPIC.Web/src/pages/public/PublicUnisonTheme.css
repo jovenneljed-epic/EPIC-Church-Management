@@ -1,0 +1,405 @@
+/* =========================================================
+   EPIC PUBLIC UNISON THEME
+   Shared visual language for Home, About, Ministries,
+   EPIC System, Learning and Contact.
+   ========================================================= */
+
+.epic-public-about,
+.epic-public-ministries,
+.epic-system-page,
+.epic-learning-public-page,
+.epic-contact-page {
+  --epic-bg: #07111f;
+  --epic-bg-2: #0b1728;
+  --epic-panel: rgba(14, 33, 56, .78);
+  --epic-panel-2: rgba(7, 17, 30, .88);
+  --epic-border: rgba(255,255,255,.09);
+  --epic-border-bright: rgba(56,167,255,.24);
+  --epic-text: #ffffff;
+  --epic-soft: #c8d5e6;
+  --epic-muted: #91a5bc;
+  --epic-blue: #168cff;
+  --epic-cyan: #35d8ff;
+  --epic-gradient: linear-gradient(135deg,#168cff,#35b9ff);
+  position: relative;
+  min-height: 100vh;
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at 85% 8%, rgba(22,140,255,.12), transparent 28%),
+    radial-gradient(circle at 8% 45%, rgba(53,216,255,.07), transparent 26%),
+    var(--epic-bg) !important;
+  color: var(--epic-text) !important;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.epic-public-about::before,
+.epic-public-ministries::before,
+.epic-system-page::before,
+.epic-learning-public-page::before,
+.epic-contact-page::before {
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:0;
+  opacity:.14;
+  background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);
+  background-size:55px 55px;
+  mask-image:linear-gradient(to bottom,black,transparent 90%);
+}
+
+.epic-public-about > *,
+.epic-public-ministries > *,
+.epic-system-page > *,
+.epic-learning-public-page > *,
+.epic-contact-page > * { position:relative; z-index:1; }
+
+/* Consistent hero treatment */
+.about-hero,
+.ministries-hero,
+.system-hero,
+.learning-public-hero,
+.epic-contact-hero {
+  position:relative !important;
+  overflow:hidden;
+  min-height:570px !important;
+  display:flex !important;
+  align-items:center !important;
+  background:
+    radial-gradient(circle at 72% 35%, rgba(53,216,255,.13), transparent 28%),
+    linear-gradient(135deg,#07111f 0%,#0b1c31 55%,#102a45 100%) !important;
+  color:#fff !important;
+}
+
+.about-hero::before,
+.ministries-hero::before,
+.system-hero::before,
+.learning-public-hero::before,
+.epic-contact-hero::before {
+  content:"";
+  position:absolute;
+  width:620px;
+  height:620px;
+  right:-260px;
+  top:-300px;
+  border:1px solid rgba(53,216,255,.14);
+  border-radius:50%;
+  box-shadow:0 0 100px rgba(22,140,255,.08);
+}
+
+.about-hero::after,
+.ministries-hero::after,
+.system-hero::after,
+.learning-public-hero::after,
+.epic-contact-hero::after {
+  content:"";
+  position:absolute;
+  width:420px;
+  height:420px;
+  left:-230px;
+  bottom:-260px;
+  border:1px solid rgba(22,140,255,.11);
+  border-radius:50%;
+}
+
+.about-hero-content,
+.ministries-hero-content,
+.system-hero > div,
+.learning-public-hero > div,
+.epic-contact-hero-content {
+  position:relative !important;
+  z-index:3 !important;
+}
+
+.about-eyebrow,
+.ministries-eyebrow,
+.system-hero > div > span,
+.learning-public-hero > div > span,
+.epic-contact-label {
+  display:inline-flex !important;
+  align-items:center;
+  gap:9px;
+  color:#58d8ff !important;
+  font-size:11px !important;
+  font-weight:850 !important;
+  letter-spacing:.18em !important;
+  text-transform:uppercase;
+}
+
+.about-eyebrow::before,
+.ministries-eyebrow::before,
+.system-hero > div > span::before,
+.learning-public-hero > div > span::before,
+.epic-contact-label::before {
+  content:"";
+  width:24px;
+  height:2px;
+  border-radius:99px;
+  background:linear-gradient(90deg,var(--epic-blue),var(--epic-cyan));
+}
+
+.about-hero h1,
+.ministries-hero h1,
+.system-hero h1,
+.learning-public-hero h1,
+.epic-contact-hero h1 {
+  color:#fff !important;
+  font-size:clamp(48px,6.5vw,78px) !important;
+  line-height:1 !important;
+  letter-spacing:-.055em !important;
+  font-weight:900 !important;
+  margin:20px 0 !important;
+}
+
+.about-hero h1 span,
+.ministries-hero h1 span,
+.system-hero h1 em,
+.learning-public-hero h1 em,
+.epic-contact-hero h1 span {
+  color:transparent !important;
+  background:linear-gradient(90deg,#fff 0%,#48baff 55%,#35d8ff 100%);
+  -webkit-background-clip:text;
+  background-clip:text;
+  font-style:normal;
+}
+
+.about-hero p,
+.ministries-hero p,
+.system-hero p,
+.learning-public-hero p,
+.epic-contact-hero p {
+  max-width:720px;
+  color:var(--epic-soft) !important;
+  font-size:18px !important;
+  line-height:1.8 !important;
+}
+
+.about-primary-button,
+.ministries-primary-button,
+.system-hero button,
+.learning-public-hero button,
+.epic-contact-primary-button,
+.system-final button,
+.learning-public-final button,
+.epic-contact-final button {
+  border:0 !important;
+  border-radius:12px !important;
+  padding:14px 21px !important;
+  color:#fff !important;
+  background:var(--epic-gradient) !important;
+  box-shadow:0 12px 30px rgba(22,140,255,.26) !important;
+  font-weight:800 !important;
+  cursor:pointer;
+  transition:.25s ease;
+}
+
+.about-primary-button:hover,
+.ministries-primary-button:hover,
+.system-hero button:hover,
+.learning-public-hero button:hover,
+.epic-contact-primary-button:hover { transform:translateY(-3px); }
+
+.about-secondary-button,
+.ministries-secondary-button,
+.epic-contact-secondary-button {
+  border:1px solid rgba(255,255,255,.14) !important;
+  border-radius:12px !important;
+  padding:14px 20px !important;
+  color:#e5eef9 !important;
+  background:rgba(255,255,255,.045) !important;
+  font-weight:750 !important;
+}
+
+/* Shared content surfaces */
+.about-introduction,
+.about-mission,
+.about-values,
+.about-story,
+.about-final,
+.ministries-introduction,
+.ministries-list,
+.ministries-final,
+.system-content,
+.system-final,
+.learning-public-content,
+.learning-public-final,
+.epic-contact-content,
+.epic-contact-final {
+  background:transparent !important;
+  color:var(--epic-text) !important;
+}
+
+.about-section-container,
+.ministries-section-container,
+.epic-contact-container,
+.learning-public-content {
+  width:min(1240px,calc(100% - 48px)) !important;
+}
+
+.about-section-heading h2,
+.ministries-section-heading h2,
+.system-heading h2,
+.learning-public-heading h2,
+.about-intro-content h2,
+.ministries-intro-content h2 {
+  color:#fff !important;
+  letter-spacing:-.045em !important;
+}
+
+.about-section-heading p,
+.ministries-section-heading p,
+.system-heading p,
+.learning-public-heading p,
+.about-intro-content p,
+.ministries-intro-content p,
+.system-content p,
+.learning-public-content p {
+  color:var(--epic-soft) !important;
+}
+
+.about-section-label,
+.ministries-section-label,
+.system-heading > span,
+.learning-public-heading > span {
+  color:#58d8ff !important;
+}
+
+.about-section-label::before,
+.ministries-section-label::before {
+  background:linear-gradient(90deg,var(--epic-blue),var(--epic-cyan)) !important;
+}
+
+.about-intro-card,
+.about-mission-card,
+.about-value-card,
+.about-story-card,
+.ministries-intro-card,
+.ministry-card,
+.system-feature,
+.system-window,
+.learning-steps article,
+.learning-preview,
+.epic-contact-card,
+.epic-contact-form-card,
+.epic-contact-info-card {
+  border:1px solid var(--epic-border) !important;
+  border-radius:18px !important;
+  background:linear-gradient(145deg,rgba(14,33,56,.88),rgba(7,17,30,.9)) !important;
+  color:#fff !important;
+  box-shadow:0 22px 65px rgba(0,0,0,.22) !important;
+}
+
+.about-mission-card.featured,
+.ministry-card.featured,
+.system-feature.featured {
+  border-color:var(--epic-border-bright) !important;
+  box-shadow:0 24px 70px rgba(22,140,255,.10) !important;
+}
+
+.about-card-icon,
+.about-intro-icon,
+.ministry-card-icon,
+.ministries-intro-icon,
+.system-icon,
+.course-icon {
+  background:rgba(22,140,255,.12) !important;
+  color:#58d8ff !important;
+  border:1px solid rgba(53,216,255,.12);
+}
+
+.about-mission-card p,
+.ministry-card p,
+.system-feature p,
+.learning-steps article p,
+.epic-contact-card p,
+.epic-contact-info-card p,
+.epic-contact-form-card label {
+  color:var(--epic-soft) !important;
+}
+
+.ministry-card button,
+.about-text-link,
+.about-story-link,
+.epic-contact-link {
+  color:#58d8ff !important;
+}
+
+.system-window,
+.learning-preview {
+  background:linear-gradient(145deg,rgba(19,38,63,.96),rgba(6,17,31,.97)) !important;
+  border-color:rgba(104,190,255,.22) !important;
+}
+
+.system-window-bar,
+.learning-preview-head {
+  color:#d7e7f8 !important;
+  border-bottom-color:rgba(255,255,255,.07) !important;
+}
+
+.system-stat-row,
+.learning-course {
+  color:#fff !important;
+  border-color:rgba(255,255,255,.07) !important;
+}
+
+.learning-bar { background:rgba(255,255,255,.08) !important; }
+.learning-bar span { background:linear-gradient(90deg,var(--epic-blue),var(--epic-cyan)) !important; }
+
+.epic-contact-form-card input,
+.epic-contact-form-card textarea,
+.epic-contact-form-card select {
+  background:rgba(255,255,255,.045) !important;
+  border:1px solid rgba(255,255,255,.10) !important;
+  color:#fff !important;
+}
+.epic-contact-form-card input::placeholder,
+.epic-contact-form-card textarea::placeholder { color:#71869e !important; }
+
+.about-final,
+.ministries-final,
+.system-final,
+.learning-public-final,
+.epic-contact-final {
+  position:relative;
+  margin-top:20px;
+  padding:90px 24px !important;
+  text-align:center;
+  background:linear-gradient(135deg,rgba(22,140,255,.11),rgba(53,216,255,.035)) !important;
+  border-top:1px solid rgba(255,255,255,.07);
+}
+
+.about-final h2,
+.ministries-final h2,
+.system-final h2,
+.learning-public-final h2,
+.epic-contact-final h2 { color:#fff !important; }
+
+.about-final p,
+.ministries-final p,
+.system-final p,
+.learning-public-final p,
+.epic-contact-final p { color:var(--epic-soft) !important; }
+
+/* Footer consistency */
+.epic-contact-footer,
+.epic-public-about footer,
+.epic-public-ministries footer,
+.epic-system-page footer,
+.epic-learning-public-page footer {
+  background:#050d18 !important;
+  color:#fff !important;
+  border-top:1px solid rgba(255,255,255,.08) !important;
+}
+
+@media (max-width:760px) {
+  .about-hero,
+  .ministries-hero,
+  .system-hero,
+  .learning-public-hero,
+  .epic-contact-hero { min-height:520px !important; }
+  .about-hero h1,
+  .ministries-hero h1,
+  .system-hero h1,
+  .learning-public-hero h1,
+  .epic-contact-hero h1 { font-size:clamp(42px,13vw,62px) !important; }
+}

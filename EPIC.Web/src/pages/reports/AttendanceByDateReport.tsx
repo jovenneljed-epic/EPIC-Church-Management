@@ -5,7 +5,7 @@ import React, {
     useState
 } from "react";
 
-import axios from "axios";
+import axios, { AxiosHeaders } from "axios";
 import "./AttendanceByDateReport.css";
 
 import { API_BASE_URL } from "../../config";
@@ -100,7 +100,7 @@ api.interceptors.request.use(
         const token = getToken();
 
         if (token) {
-            config.headers = config.headers || {};
+            config.headers = new AxiosHeaders(config.headers);
             config.headers.Authorization =
                 `Bearer ${token}`;
         }

@@ -1,6 +1,8 @@
 
 import React from "react";
+import PublicHeader from "../../components/PublicHeader";
 import "./MinistriesPage.css";
+import "./PublicUnisonTheme.css";
 
 interface MinistriesPageProps {
     onNavigate?: (page: string) => void;
@@ -17,6 +19,7 @@ const MinistriesPage: React.FC<MinistriesPageProps> = ({
 
     return (
         <div className="epic-public-page epic-public-ministries">
+            <PublicHeader onNavigate={onNavigate} />
 
             {/* =====================================================
                 HERO

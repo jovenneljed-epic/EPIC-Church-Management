@@ -1,3 +1,4 @@
+
 import React, {
     useCallback,
     useEffect,
@@ -11,9 +12,13 @@ import "./App.css";
 // PUBLIC
 // =========================================================
 
+import SalesLandingPage from "./pages/SalesLandingPage";
 import LandingPage from "./pages/LandingPage";
 import AboutPage from "./pages/public/AboutPage";
 import ContactPage from "./pages/public/ContactPage";
+import MinistriesPage from "./pages/public/MinistriesPage";
+import EpicSystemPage from "./pages/public/EpicSystemPage";
+import EpicLearningPage from "./pages/public/EpicLearningPage";
 
 // =========================================================
 // ADMIN AUTH
@@ -47,6 +52,7 @@ import Income from "./pages/Income";
 import Ministries from "./pages/Ministries";
 import Expenses from "./pages/Expenses";
 import Settings from "./pages/Settings";
+
 // =========================================================
 // BUSINESS
 // =========================================================
@@ -56,6 +62,11 @@ import SubscriptionManagement from "./pages/SubscriptionManagement";
 import DemoRequests from "./pages/DemoRequests";
 import Reports from "./pages/Reports";
 import WebsiteAnalyticsDashboard from "./pages/WebsiteAnalyticsDashboard";
+import OptInPage from "./pages/OptInPage";
+import OfferPage from "./pages/OfferPage";
+import CheckoutPage from "./pages/CheckoutPage";
+import PaymentPage from "./pages/PaymentPage";
+import ThankYouPage from "./pages/ThankYouPage";
 
 // =========================================================
 // REPORTS
@@ -110,8 +121,17 @@ type Page =
 
 type PublicPage =
     | "landing"
+    | "home"
     | "about"
-    | "contact";
+    | "ministries"
+    | "epic-system"
+    | "learning"
+    | "contact"
+    | "opt-in"
+    | "offer"
+    | "checkout"
+    | "payment"
+    | "thank-you";
 
 // =========================================================
 // ROUTES
@@ -130,9 +150,9 @@ const PAGE_ROUTES: Record<Page, string> = {
     "client-payment": "/client-payment",
     "website-analytics": "/website-analytics",
 
-    learning: "/learning",
-    "view-course": "/learning/course",
-    lesson: "/learning/lesson",
+    learning: "/cms/learning",
+    "view-course": "/cms/learning/course",
+    lesson: "/cms/learning/lesson",
 
     members: "/members",
     attendance: "/attendance",
@@ -140,7 +160,7 @@ const PAGE_ROUTES: Record<Page, string> = {
 
     services: "/services",
     events: "/events",
-    ministries: "/ministries",
+    ministries: "/cms/ministries",
     visitors: "/visitors",
     giving: "/giving",
     income: "/income",
@@ -149,8 +169,26 @@ const PAGE_ROUTES: Record<Page, string> = {
 };
 
 const PUBLIC_ROUTES: Record<PublicPage, string> = {
+    // =====================================================
+    // SALES FUNNEL
+    // =====================================================
+
     landing: "/",
+    "opt-in": "/opt-in",
+    offer: "/offer",
+    checkout: "/checkout",
+    payment: "/payment",
+    "thank-you": "/thank-you",
+
+    // =====================================================
+    // EXISTING PUBLIC WEBSITE
+    // =====================================================
+
+    home: "/home",
     about: "/about",
+    ministries: "/ministries",
+    "epic-system": "/epic-system",
+    learning: "/learning",
     contact: "/contact",
 };
 
@@ -164,33 +202,71 @@ const CLIENT_PORTAL_ROUTE = "/client-portal";
 
 const PAGE_TITLES: Record<Page, string> = {
     dashboard: "Dashboard",
+
     reports: "Reports & Documents",
-    "attendance-report": "Attendance Summary Report",
-    "attendance-by-date-report": "Attendance by Date",
 
-    "demo-requests": "Demo Requests",
-    "subscription-dashboard": "Subscription Dashboard",
-    subscriptions: "Subscription Management",
-    "client-payment": "EPIC CMS Payment",
-    "website-analytics": "Website Analytics",
+    "attendance-report":
+        "Attendance Summary Report",
 
-    services: "Church Services",
-    events: "Event Management",
-    "member-attendance-report": "Member Attendance Report",
+    "attendance-by-date-report":
+        "Attendance by Date",
 
-    members: "Members Management",
-    attendance: "Attendance Management",
-    ministries: "Ministries Management",
-    visitors: "Visitors Management",
-    giving: "Giving Management",
-    income: "Income Management",
-    expenses: "Expenses Management",
+    "demo-requests":
+        "Demo Requests",
 
-    learning: "EPIC Learning",
-    "view-course": "Course Details",
-    lesson: "Lesson",
+    "subscription-dashboard":
+        "Subscription Dashboard",
 
-    settings: "System Settings",
+    subscriptions:
+        "Subscription Management",
+
+    "client-payment":
+        "EPIC CMS Payment",
+
+    "website-analytics":
+        "Website Analytics",
+
+    services:
+        "Church Services",
+
+    events:
+        "Event Management",
+
+    "member-attendance-report":
+        "Member Attendance Report",
+
+    members:
+        "Members Management",
+
+    attendance:
+        "Attendance Management",
+
+    ministries:
+        "Ministries Management",
+
+    visitors:
+        "Visitors Management",
+
+    giving:
+        "Giving Management",
+
+    income:
+        "Income Management",
+
+    expenses:
+        "Expenses Management",
+
+    learning:
+        "EPIC Learning",
+
+    "view-course":
+        "Course Details",
+
+    lesson:
+        "Lesson",
+
+    settings:
+        "System Settings",
 };
 
 // =========================================================
@@ -198,7 +274,8 @@ const PAGE_TITLES: Record<Page, string> = {
 // =========================================================
 
 const PAGE_SUBTITLES: Record<Page, string> = {
-    dashboard: "Church management overview",
+    dashboard:
+        "Church management overview",
 
     reports:
         "Generate reports, forms and printable church documents",
@@ -276,7 +353,7 @@ const ADMIN_AUTH_KEYS = [
     "accessToken",
     "jwt",
     "authToken",
-"epicToken",
+    "epicToken",
 ] as const;
 
 const ADMIN_USER_KEYS = [
@@ -292,13 +369,6 @@ const ADMIN_USER_KEYS = [
 
 // =========================================================
 // CLIENT AUTH
-//
-// IMPORTANT
-//
-// ClientMemberId = individual client login account
-// CustomerId     = church/customer
-// MemberId       = church member
-// ClientRoleId   = client permission role
 // =========================================================
 
 const CLIENT_AUTH_KEYS = [
@@ -310,23 +380,13 @@ const CLIENT_AUTH_KEYS = [
 
 const CLIENT_USER_KEYS = [
     "clientUser",
-
-    // Individual client account
     "clientMemberId",
-
-    // Church/customer
     "customerId",
     "clientId",
-
-    // Church member
     "memberId",
     "memberCode",
-
-    // Client role
     "clientRoleId",
     "clientRoleName",
-
-    // Profile
     "clientName",
     "clientEmail",
     "clientChurchName",
@@ -340,9 +400,13 @@ const getStoredValue = (
     keys: readonly string[]
 ): string | null => {
     for (const key of keys) {
-        const value = localStorage.getItem(key);
+        const value =
+            localStorage.getItem(key);
 
-        if (value && value.trim()) {
+        if (
+            value &&
+            value.trim()
+        ) {
             return value.trim();
         }
     }
@@ -351,51 +415,51 @@ const getStoredValue = (
 };
 
 const getAuthToken = (): string | null =>
-    getStoredValue(ADMIN_AUTH_KEYS);
+    getStoredValue(
+        ADMIN_AUTH_KEYS
+    );
 
-const getClientAuthToken = (): string | null =>
-    getStoredValue(CLIENT_AUTH_KEYS);
+const getClientAuthToken =
+    (): string | null =>
+        getStoredValue(
+            CLIENT_AUTH_KEYS
+        );
 
 const isLoggedIn = (): boolean =>
-    Boolean(getAuthToken());
+    Boolean(
+        getAuthToken()
+    );
 
 const isClientLoggedIn = (): boolean =>
-    Boolean(getClientAuthToken());
+    Boolean(
+        getClientAuthToken()
+    );
 
 const clearAuthentication = (): void => {
     [
         ...ADMIN_AUTH_KEYS,
         ...ADMIN_USER_KEYS,
     ].forEach((key) => {
-        localStorage.removeItem(key);
+        localStorage.removeItem(
+            key
+        );
     });
 };
 
-const clearClientAuthentication = (): void => {
-    [
-        ...CLIENT_AUTH_KEYS,
-        ...CLIENT_USER_KEYS,
-    ].forEach((key) => {
-        localStorage.removeItem(key);
-    });
-};
+const clearClientAuthentication =
+    (): void => {
+        [
+            ...CLIENT_AUTH_KEYS,
+            ...CLIENT_USER_KEYS,
+        ].forEach((key) => {
+            localStorage.removeItem(
+                key
+            );
+        });
+    };
 
 // =========================================================
 // CLIENT JWT
-//
-// Reads the claims already generated by
-// ClientAuthController.GenerateJwtToken()
-//
-// Claims include:
-//
-// clientMemberId
-// customerId
-// memberId
-// clientRoleId
-// clientRoleName
-// memberCode
-// role
-// accountType
 // =========================================================
 
 interface ClientTokenIdentity {
@@ -410,7 +474,8 @@ interface ClientTokenIdentity {
     accountType: string | null;
 }
 
-const EMPTY_CLIENT_IDENTITY: ClientTokenIdentity = {
+const EMPTY_CLIENT_IDENTITY:
+    ClientTokenIdentity = {
     clientMemberId: null,
     customerId: null,
     memberId: null,
@@ -426,41 +491,69 @@ const parseJwtPayload = (
     token: string
 ): Record<string, unknown> | null => {
     try {
-        const parts = token.split(".");
+        const parts =
+            token.split(".");
 
-        if (parts.length !== 3) {
+        if (
+            parts.length !== 3
+        ) {
             return null;
         }
 
-        const base64Url = parts[1];
+        const base64Url =
+            parts[1];
 
-        const base64 = base64Url
-            .replace(/-/g, "+")
-            .replace(/_/g, "/");
+        const base64 =
+            base64Url
+                .replace(
+                    /-/g,
+                    "+"
+                )
+                .replace(
+                    /_/g,
+                    "/"
+                );
 
         const padded =
             base64 +
             "=".repeat(
-                (4 - (base64.length % 4)) % 4
+                (
+                    4 -
+                    (base64.length %
+                        4)
+                ) % 4
             );
 
-        const json = decodeURIComponent(
-            Array.prototype.map
-                .call(
-                    atob(padded),
-                    (character: string) =>
-                        "%" +
+        const json =
+            decodeURIComponent(
+                Array.prototype.map
+                    .call(
+                        atob(
+                            padded
+                        ),
                         (
-                            "00" +
-                            character
-                                .charCodeAt(0)
-                                .toString(16)
-                        ).slice(-2)
-                )
-                .join("")
-        );
+                            character: string
+                        ) =>
+                            "%" +
+                            (
+                                "00" +
+                                character
+                                    .charCodeAt(
+                                        0
+                                    )
+                                    .toString(
+                                        16
+                                    )
+                            ).slice(
+                                -2
+                            )
+                    )
+                    .join("")
+            );
 
-        return JSON.parse(json);
+        return JSON.parse(
+            json
+        );
     } catch {
         return null;
     }
@@ -470,17 +563,20 @@ const getJwtStringClaim = (
     payload: Record<string, unknown>,
     key: string
 ): string | null => {
-    const value = payload[key];
+    const value =
+        payload[key];
 
     if (
-        typeof value === "string" &&
+        typeof value ===
+            "string" &&
         value.trim()
     ) {
         return value.trim();
     }
 
     if (
-        typeof value === "number" &&
+        typeof value ===
+            "number" &&
         Number.isFinite(value)
     ) {
         return String(value);
@@ -503,97 +599,103 @@ const getJwtIntegerClaim = (
         return null;
     }
 
-    const number = Number(value);
+    const number =
+        Number(value);
 
-    return Number.isInteger(number) &&
+    return Number.isInteger(
+        number
+    ) &&
         number > 0
         ? number
         : null;
 };
 
-const getClientTokenIdentity = (): ClientTokenIdentity => {
-    const token =
-        getClientAuthToken();
+const getClientTokenIdentity =
+    (): ClientTokenIdentity => {
+        const token =
+            getClientAuthToken();
 
-    if (!token) {
-        return EMPTY_CLIENT_IDENTITY;
-    }
+        if (!token) {
+            return EMPTY_CLIENT_IDENTITY;
+        }
 
-    const payload =
-        parseJwtPayload(token);
+        const payload =
+            parseJwtPayload(
+                token
+            );
 
-    if (!payload) {
-        return EMPTY_CLIENT_IDENTITY;
-    }
+        if (!payload) {
+            return EMPTY_CLIENT_IDENTITY;
+        }
 
-    return {
-        clientMemberId:
-            getJwtIntegerClaim(
-                payload,
-                "clientMemberId"
-            ),
+        return {
+            clientMemberId:
+                getJwtIntegerClaim(
+                    payload,
+                    "clientMemberId"
+                ),
 
-        customerId:
-            getJwtIntegerClaim(
-                payload,
-                "customerId"
-            ),
+            customerId:
+                getJwtIntegerClaim(
+                    payload,
+                    "customerId"
+                ),
 
-        memberId:
-            getJwtIntegerClaim(
-                payload,
-                "memberId"
-            ) ??
-            getJwtIntegerClaim(
-                payload,
-                "MemberId"
-            ),
+            memberId:
+                getJwtIntegerClaim(
+                    payload,
+                    "memberId"
+                ) ??
+                getJwtIntegerClaim(
+                    payload,
+                    "MemberId"
+                ),
 
-        clientRoleId:
-            getJwtIntegerClaim(
-                payload,
-                "clientRoleId"
-            ),
+            clientRoleId:
+                getJwtIntegerClaim(
+                    payload,
+                    "clientRoleId"
+                ),
 
-        clientRoleName:
-            getJwtStringClaim(
-                payload,
-                "clientRoleName"
-            ),
+            clientRoleName:
+                getJwtStringClaim(
+                    payload,
+                    "clientRoleName"
+                ),
 
-        memberCode:
-            getJwtStringClaim(
-                payload,
-                "memberCode"
-            ),
+            memberCode:
+                getJwtStringClaim(
+                    payload,
+                    "memberCode"
+                ),
 
-        username:
-            getJwtStringClaim(
-                payload,
-                "unique_name"
-            ) ??
-            getJwtStringClaim(
-                payload,
-                "name"
-            ),
+            username:
+                getJwtStringClaim(
+                    payload,
+                    "unique_name"
+                ) ??
+                getJwtStringClaim(
+                    payload,
+                    "name"
+                ),
 
-        role:
-            getJwtStringClaim(
-                payload,
-                "role"
-            ) ??
-            getJwtStringClaim(
-                payload,
-                "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
-            ),
+            role:
+                getJwtStringClaim(
+                    payload,
+                    "role"
+                ) ??
+                getJwtStringClaim(
+                    payload,
+                    "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
+                ),
 
-        accountType:
-            getJwtStringClaim(
-                payload,
-                "accountType"
-            ),
+            accountType:
+                getJwtStringClaim(
+                    payload,
+                    "accountType"
+                ),
+        };
     };
-};
 
 // =========================================================
 // PATH HELPERS
@@ -606,11 +708,17 @@ const normalizePath = (
         return "/";
     }
 
-    const pathname = path
-        .split("?")[0]
-        .split("#")[0];
+    const pathname =
+        path
+            .split("?")[0]
+            .split("#")[0];
 
-    return pathname.replace(/\/+$/, "") || "/";
+    return (
+        pathname.replace(
+            /\/+$/,
+            ""
+        ) || "/"
+    );
 };
 
 const getCurrentPath = (): string =>
@@ -629,9 +737,12 @@ const parsePositiveInteger = (
         return null;
     }
 
-    const number = Number(value);
+    const number =
+        Number(value);
 
-    return Number.isInteger(number) &&
+    return Number.isInteger(
+        number
+    ) &&
         number > 0
         ? number
         : null;
@@ -647,7 +758,8 @@ interface LMSRouteState {
     lessonId: number | null;
 }
 
-const EMPTY_LMS_ROUTE: LMSRouteState = {
+const EMPTY_LMS_ROUTE:
+    LMSRouteState = {
     page: "learning",
     courseId: null,
     lessonId: null,
@@ -657,11 +769,13 @@ const getLMSRouteState = (
     pathname: string
 ): LMSRouteState => {
     const path =
-        normalizePath(pathname);
+        normalizePath(
+            pathname
+        );
 
     const lessonMatch =
         path.match(
-            /^\/learning\/course\/(\d+)\/lesson\/(\d+)$/
+            /^\/cms\/learning\/course\/(\d+)\/lesson\/(\d+)$/
         );
 
     if (lessonMatch) {
@@ -682,7 +796,7 @@ const getLMSRouteState = (
 
     const courseMatch =
         path.match(
-            /^\/learning\/course\/(\d+)$/
+            /^\/cms\/learning\/course\/(\d+)$/
         );
 
     if (courseMatch) {
@@ -700,7 +814,7 @@ const getLMSRouteState = (
 
     if (
         path ===
-        "/learning/course"
+        "/cms/learning/course"
     ) {
         return {
             page: "view-course",
@@ -711,7 +825,7 @@ const getLMSRouteState = (
 
     if (
         path ===
-        "/learning/lesson"
+        "/cms/learning/lesson"
     ) {
         return {
             page: "lesson",
@@ -739,7 +853,9 @@ const PAGE_BY_ROUTE: Record<
             [page, route]
         ) => {
             result[
-                normalizePath(route)
+                normalizePath(
+                    route
+                )
             ] =
                 page as Page;
 
@@ -755,11 +871,13 @@ const getPageFromPath = (
     path: string
 ): Page => {
     const normalized =
-        normalizePath(path);
+        normalizePath(
+            path
+        );
 
     if (
         normalized.startsWith(
-            "/learning"
+            "/cms/learning"
         )
     ) {
         return getLMSRouteState(
@@ -783,19 +901,30 @@ const isPublicPath = (
     path: string
 ): boolean => {
     const normalized =
-        normalizePath(path);
+        normalizePath(
+            path
+        );
 
-    return (
-        normalized ===
-            PUBLIC_ROUTES.landing ||
-        normalized ===
-            PUBLIC_ROUTES.about ||
-        normalized ===
-            PUBLIC_ROUTES.contact ||
-        normalized ===
-            PAGE_ROUTES[
-                "client-payment"
-            ]
+    return [
+        PUBLIC_ROUTES.landing,
+        PUBLIC_ROUTES.home,
+        PUBLIC_ROUTES.about,
+        PUBLIC_ROUTES.ministries,
+        PUBLIC_ROUTES["epic-system"],
+        PUBLIC_ROUTES.learning,
+        PUBLIC_ROUTES.contact,
+
+        PUBLIC_ROUTES["opt-in"],
+        PUBLIC_ROUTES.offer,
+        PUBLIC_ROUTES.checkout,
+        PUBLIC_ROUTES.payment,
+        PUBLIC_ROUTES["thank-you"],
+
+        PAGE_ROUTES[
+            "client-payment"
+        ],
+    ].includes(
+        normalized
     );
 };
 
@@ -1076,22 +1205,11 @@ const App: React.FC = () => {
         setClientAuthenticated,
     ] = useState(false);
 
-    // =====================================================
-    // CLIENT IDENTITY
-    //
-    // This is separate from admin authentication.
-    // =====================================================
-
-    // =====================================================
-    // CLIENT IDENTITY
-    //
-    // This is separate from admin authentication.
-    // =====================================================
-
     const [, setClientIdentity] =
         useState<ClientTokenIdentity>(
             EMPTY_CLIENT_IDENTITY
         );
+
     // =====================================================
     // ROUTING
     // =====================================================
@@ -1099,21 +1217,19 @@ const App: React.FC = () => {
     const [
         currentPath,
         setCurrentPath,
-    ] =
-        useState(
-            getCurrentPath
-        );
+    ] = useState(
+        getCurrentPath
+    );
 
     const [
         activePage,
         setActivePage,
-    ] =
-        useState<Page>(
-            () =>
-                getPageFromPath(
-                    window.location.pathname
-                )
-        );
+    ] = useState<Page>(
+        () =>
+            getPageFromPath(
+                window.location.pathname
+            )
+    );
 
     // =====================================================
     // SIDEBAR
@@ -1122,8 +1238,7 @@ const App: React.FC = () => {
     const [
         sidebarOpen,
         setSidebarOpen,
-    ] =
-        useState(true);
+    ] = useState(true);
 
     // =====================================================
     // LMS
@@ -1141,18 +1256,16 @@ const App: React.FC = () => {
     const [
         selectedCourseId,
         setSelectedCourseId,
-    ] =
-        useState<number | null>(
-            initialLMSState.courseId
-        );
+    ] = useState<number | null>(
+        initialLMSState.courseId
+    );
 
     const [
         selectedLessonId,
         setSelectedLessonId,
-    ] =
-        useState<number | null>(
-            initialLMSState.lessonId
-        );
+    ] = useState<number | null>(
+        initialLMSState.lessonId
+    );
 
     // =====================================================
     // PAYMENT
@@ -1161,10 +1274,9 @@ const App: React.FC = () => {
     const [
         paymentSubscriptionId,
         setPaymentSubscriptionId,
-    ] =
-        useState<number | null>(
-            getPaymentSubscriptionId()
-        );
+    ] = useState<number | null>(
+        getPaymentSubscriptionId()
+    );
 
     // =====================================================
     // USER
@@ -1190,9 +1302,7 @@ const App: React.FC = () => {
 
                 return {
                     fullName,
-
                     role,
-
                     avatarLetter:
                         fullName
                             .trim()
@@ -1223,9 +1333,45 @@ const App: React.FC = () => {
         normalizedPath ===
         PUBLIC_ROUTES.landing;
 
+    const isHomePage =
+        normalizedPath ===
+        PUBLIC_ROUTES.home;
+
+    const isOptInPage =
+        normalizedPath ===
+        PUBLIC_ROUTES["opt-in"];
+
+    const isOfferPage =
+        normalizedPath ===
+        PUBLIC_ROUTES.offer;
+
+    const isCheckoutPage =
+        normalizedPath ===
+        PUBLIC_ROUTES.checkout;
+
+    const isPaymentPage =
+        normalizedPath ===
+        PUBLIC_ROUTES.payment;
+
+    const isThankYouPage =
+        normalizedPath ===
+        PUBLIC_ROUTES["thank-you"];
+
     const isAboutPage =
         normalizedPath ===
         PUBLIC_ROUTES.about;
+
+    const isMinistriesPublicPage =
+        normalizedPath ===
+        PUBLIC_ROUTES.ministries;
+
+    const isEpicSystemPage =
+        normalizedPath ===
+        PUBLIC_ROUTES["epic-system"];
+
+    const isEpicLearningPage =
+        normalizedPath ===
+        PUBLIC_ROUTES.learning;
 
     const isContactPage =
         normalizedPath ===
@@ -1423,10 +1569,6 @@ const App: React.FC = () => {
             clientIsAuthenticated
         );
 
-        // -------------------------------------------------
-        // LOAD CLIENT JWT IDENTITY
-        // -------------------------------------------------
-
         if (
             clientIsAuthenticated
         ) {
@@ -1436,9 +1578,6 @@ const App: React.FC = () => {
             setClientIdentity(
                 identity
             );
-
-            // Keep the important client identifiers
-            // available to the application.
 
             if (
                 identity.clientMemberId
@@ -1460,9 +1599,6 @@ const App: React.FC = () => {
                         identity.customerId
                     )
                 );
-
-                // Backward compatibility
-                // with existing client code.
 
                 localStorage.setItem(
                     "clientId",
@@ -1636,9 +1772,6 @@ const App: React.FC = () => {
             return;
         }
 
-        // Public pages never require
-        // admin authentication.
-
         if (
             isPublicPath(
                 normalizedPath
@@ -1647,18 +1780,12 @@ const App: React.FC = () => {
             return;
         }
 
-        // Client routes use their
-        // own authentication.
-
         if (
             isClientLoginPage ||
             isClientPortalPage
         ) {
             return;
         }
-
-        // Already authenticated:
-        // /login -> /dashboard
 
         if (
             isLoginPage &&
@@ -1670,9 +1797,6 @@ const App: React.FC = () => {
 
             return;
         }
-
-        // Not authenticated:
-        // any CMS route -> /login
 
         if (
             !isAuthenticated &&
@@ -1766,9 +1890,14 @@ const App: React.FC = () => {
             (page: string) => {
                 switch (page) {
                     case "landing":
-                    case "home":
                         navigatePublic(
                             "landing"
+                        );
+                        break;
+
+                    case "home":
+                        navigatePublic(
+                            "home"
                         );
                         break;
 
@@ -1778,9 +1907,57 @@ const App: React.FC = () => {
                         );
                         break;
 
+                    case "ministries":
+                        navigatePublic(
+                            "ministries"
+                        );
+                        break;
+
+                    case "epic-system":
+                        navigatePublic(
+                            "epic-system"
+                        );
+                        break;
+
+                    case "learning":
+                        navigatePublic(
+                            "learning"
+                        );
+                        break;
+
                     case "contact":
                         navigatePublic(
                             "contact"
+                        );
+                        break;
+
+                    case "opt-in":
+                        navigatePublic(
+                            "opt-in"
+                        );
+                        break;
+
+                    case "offer":
+                        navigatePublic(
+                            "offer"
+                        );
+                        break;
+
+                    case "checkout":
+                        navigatePublic(
+                            "checkout"
+                        );
+                        break;
+
+                    case "payment":
+                        navigatePublic(
+                            "payment"
+                        );
+                        break;
+
+                    case "thank-you":
+                        navigatePublic(
+                            "thank-you"
                         );
                         break;
 
@@ -1797,15 +1974,13 @@ const App: React.FC = () => {
                         );
                         break;
 
-                    case "payment": {
+                    case "client-payment": {
                         const subscriptionId =
                             getPaymentSubscriptionId();
 
                         const url =
                             subscriptionId
-                                ? `${PAGE_ROUTES[
-                                      "client-payment"
-                                  ]}?subscriptionId=${subscriptionId}`
+                                ? `${PAGE_ROUTES["client-payment"]}?subscriptionId=${subscriptionId}`
                                 : PAGE_ROUTES[
                                       "client-payment"
                                   ];
@@ -1894,21 +2069,12 @@ const App: React.FC = () => {
                 return;
             }
 
-            // ---------------------------------------------
-            // Read the exact identity issued by
-            // ClientAuthController
-            // ---------------------------------------------
-
             const identity =
                 getClientTokenIdentity();
 
             setClientIdentity(
                 identity
             );
-
-            // ---------------------------------------------
-            // Persist client identity
-            // ---------------------------------------------
 
             if (
                 identity.clientMemberId
@@ -1930,10 +2096,6 @@ const App: React.FC = () => {
                         identity.customerId
                     )
                 );
-
-                // clientId remains an alias
-                // for CustomerId for compatibility
-                // with existing ClientPortal code.
 
                 localStorage.setItem(
                     "clientId",
@@ -1982,10 +2144,6 @@ const App: React.FC = () => {
                     identity.memberCode
                 );
             }
-
-            // ---------------------------------------------
-            // Make sure this is really a CLIENT token
-            // ---------------------------------------------
 
             if (
                 identity.role &&
@@ -2634,7 +2792,7 @@ const App: React.FC = () => {
         ]);
 
     // =====================================================
-    // AUTH INITIALIZATION SCREEN
+    // AUTH INITIALIZATION
     // =====================================================
 
     if (
@@ -2644,11 +2802,27 @@ const App: React.FC = () => {
     }
 
     // =====================================================
-    // PUBLIC LANDING
+    // SALES FUNNEL — ENTRY
     // =====================================================
 
     if (
         isLandingPage
+    ) {
+        return (
+            <SalesLandingPage
+                onNavigate={
+                    handlePublicNavigate
+                }
+            />
+        );
+    }
+
+    // =====================================================
+    // EXISTING EPIC WEBSITE
+    // =====================================================
+
+    if (
+        isHomePage
     ) {
         return (
             <LandingPage
@@ -2663,6 +2837,80 @@ const App: React.FC = () => {
     }
 
     // =====================================================
+    // SALES FUNNEL — OPT IN
+    // =====================================================
+
+    if (isOptInPage) {
+    return (
+        <OptInPage
+            onNavigate={handlePublicNavigate}
+        />
+    );
+}
+
+    // =====================================================
+    // SALES FUNNEL — OFFER
+    // =====================================================
+
+  if (isOfferPage) {
+    return (
+        <OfferPage
+            onNavigate={handlePublicNavigate}
+        />
+    );
+}
+ 
+// =====================================================
+// SALES FUNNEL — CHECKOUT
+// =====================================================
+
+if (isCheckoutPage) {
+    return (
+        <CheckoutPage
+            onNavigate={handlePublicNavigate}
+        />
+    );
+}
+    // =====================================================
+    // SALES FUNNEL — PAYMENT
+    //
+    // Existing ClientPayment remains
+    // available at /client-payment.
+    //
+    // /payment is reserved for the new
+    // sales funnel payment step.
+    // =====================================================
+
+  // =====================================================
+// SALES FUNNEL — PAYMENT
+// =====================================================
+
+if (isPaymentPage) {
+    return (
+        <PaymentPage
+            onNavigate={handlePublicNavigate}
+        />
+    );
+}
+
+    // =====================================================
+    // SALES FUNNEL — THANK YOU
+    // =====================================================
+
+
+if (isThankYouPage) {
+    return (
+        <ThankYouPage
+            onNavigate={
+                handlePublicNavigate
+            }
+        />
+    );
+}
+
+
+
+    // =====================================================
     // PUBLIC ABOUT
     // =====================================================
 
@@ -2674,6 +2922,42 @@ const App: React.FC = () => {
                 onNavigate={
                     handlePublicNavigate
                 }
+            />
+        );
+    }
+
+    // =====================================================
+    // PUBLIC MINISTRIES
+    // =====================================================
+
+    if (isMinistriesPublicPage) {
+        return (
+            <MinistriesPage
+                onNavigate={handlePublicNavigate}
+            />
+        );
+    }
+
+    // =====================================================
+    // PUBLIC EPIC SYSTEM
+    // =====================================================
+
+    if (isEpicSystemPage) {
+        return (
+            <EpicSystemPage
+                onNavigate={handlePublicNavigate}
+            />
+        );
+    }
+
+    // =====================================================
+    // PUBLIC EPIC LEARNING
+    // =====================================================
+
+    if (isEpicLearningPage) {
+        return (
+            <EpicLearningPage
+                onNavigate={handlePublicNavigate}
             />
         );
     }
@@ -2737,7 +3021,7 @@ const App: React.FC = () => {
     }
 
     // =====================================================
-    // PUBLIC PAYMENT
+    // EXISTING PUBLIC PAYMENT
     // =====================================================
 
     if (
@@ -3074,3 +3358,4 @@ const App: React.FC = () => {
 };
 
 export default App;
+

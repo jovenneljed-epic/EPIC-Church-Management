@@ -1,4 +1,5 @@
-﻿using System;
+﻿
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -59,6 +60,8 @@ namespace EPIC.Api.Models
 
         public bool IncludesMinistries { get; set; } = true;
 
+        public bool IncludesEvents { get; set; } = true;
+
         public bool IncludesEPICLearning { get; set; }
 
         public bool IncludesReports { get; set; } = true;
@@ -88,3 +91,4 @@ namespace EPIC.Api.Models
             = new List<Subscription>();
     }
 }
+

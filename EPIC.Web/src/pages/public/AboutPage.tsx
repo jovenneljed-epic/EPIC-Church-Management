@@ -1,6 +1,8 @@
 
 import React from "react";
+import PublicHeader from "../../components/PublicHeader";
 import "./AboutPage.css";
+import "./PublicUnisonTheme.css";
 
 interface AboutPageProps {
     onNavigate?: (page: string) => void;
@@ -17,6 +19,7 @@ const AboutPage: React.FC<AboutPageProps> = ({
 
     return (
         <div className="epic-public-about">
+            <PublicHeader onNavigate={onNavigate} />
 
             {/* =====================================================
                 HERO

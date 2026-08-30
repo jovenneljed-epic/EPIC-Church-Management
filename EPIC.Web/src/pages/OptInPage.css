@@ -1,0 +1,819 @@
+﻿
+/* =========================================================
+   EPIC OPT-IN PAGE
+   Premium / Modern / Readable / Responsive
+   ========================================================= */
+
+* {
+    box-sizing: border-box;
+}
+
+.optin-page {
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+    background:
+        radial-gradient(
+            circle at 10% 10%,
+            rgba(30, 144, 255, 0.12),
+            transparent 35%
+        ),
+        radial-gradient(
+            circle at 90% 80%,
+            rgba(0, 220, 255, 0.09),
+            transparent 35%
+        ),
+        #07111f;
+    color: #f8fbff;
+    font-family:
+        Inter,
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+}
+
+/* =========================================================
+   BACKGROUND
+   ========================================================= */
+
+.optin-bg-grid {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.16;
+    background-image:
+        linear-gradient(
+            rgba(255, 255, 255, 0.035) 1px,
+            transparent 1px
+        ),
+        linear-gradient(
+            90deg,
+            rgba(255, 255, 255, 0.035) 1px,
+            transparent 1px
+        );
+    background-size: 45px 45px;
+    mask-image: linear-gradient(
+        to bottom,
+        black,
+        transparent 90%
+    );
+}
+
+.optin-bg-glow {
+    position: fixed;
+    width: 420px;
+    height: 420px;
+    border-radius: 50%;
+    pointer-events: none;
+    filter: blur(100px);
+    opacity: 0.22;
+}
+
+.optin-glow-one {
+    top: -160px;
+    left: -120px;
+    background: #168cff;
+    animation: optinFloatOne 8s ease-in-out infinite;
+}
+
+.optin-glow-two {
+    right: -150px;
+    bottom: -160px;
+    background: #00d9ff;
+    animation: optinFloatTwo 10s ease-in-out infinite;
+}
+
+@keyframes optinFloatOne {
+    0%,
+    100% {
+        transform: translate(0, 0);
+    }
+
+    50% {
+        transform: translate(50px, 35px);
+    }
+}
+
+@keyframes optinFloatTwo {
+    0%,
+    100% {
+        transform: translate(0, 0);
+    }
+
+    50% {
+        transform: translate(-45px, -30px);
+    }
+}
+
+/* =========================================================
+   NAVBAR
+   ========================================================= */
+
+.optin-navbar {
+    width: min(1200px, calc(100% - 40px));
+    margin: 0 auto;
+    min-height: 86px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+    z-index: 20;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.optin-brand {
+    border: 0;
+    background: transparent;
+    color: inherit;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    padding: 0;
+    text-align: left;
+}
+
+.optin-brand-logo {
+    width: 46px;
+    height: 46px;
+    display: grid;
+    place-items: center;
+    border-radius: 13px;
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    color: white;
+    background:
+        linear-gradient(
+            135deg,
+            #168cff,
+            #00d9ff
+        );
+    box-shadow:
+        0 0 25px rgba(0, 174, 255, 0.28);
+}
+
+.optin-brand-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.optin-brand-text strong {
+    font-size: 13px;
+    letter-spacing: 1px;
+    color: #ffffff;
+}
+
+.optin-brand-text span {
+    font-size: 8px;
+    letter-spacing: 1.8px;
+    color: #9eb0c4;
+}
+
+.optin-nav {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+}
+
+.optin-nav button,
+.optin-nav a {
+    border: 0;
+    background: transparent;
+    color: #b9c7d8;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+        color 0.2s ease,
+        transform 0.2s ease;
+}
+
+.optin-nav button:hover,
+.optin-nav a:hover {
+    color: #ffffff;
+    transform: translateY(-1px);
+}
+
+.optin-login-button {
+    padding: 10px 17px !important;
+    border-radius: 9px !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.14) !important;
+    background: rgba(255, 255, 255, 0.055) !important;
+}
+
+.optin-mobile-menu {
+    display: none;
+    border: 0;
+    background: transparent;
+    color: white;
+    font-size: 27px;
+    cursor: pointer;
+}
+
+/* =========================================================
+   MAIN
+   ========================================================= */
+
+.optin-main {
+    width: min(1200px, calc(100% - 40px));
+    margin: 0 auto;
+    min-height: calc(100vh - 86px);
+    padding: 70px 0 60px;
+    display: grid;
+    grid-template-columns: 0.92fr 1.08fr;
+    align-items: center;
+    gap: 80px;
+    position: relative;
+    z-index: 5;
+}
+
+/* =========================================================
+   LEFT CONTENT
+   ========================================================= */
+
+.optin-content {
+    animation: optinContentIn 0.8s ease both;
+}
+
+@keyframes optinContentIn {
+    from {
+        opacity: 0;
+        transform: translateY(25px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.optin-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 13px;
+    border: 1px solid rgba(0, 190, 255, 0.22);
+    border-radius: 999px;
+    background: rgba(0, 175, 255, 0.07);
+    color: #7cddff;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.4px;
+}
+
+.optin-live-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #2ce6a6;
+    box-shadow:
+        0 0 0 5px rgba(44, 230, 166, 0.08),
+        0 0 12px rgba(44, 230, 166, 0.7);
+    animation: optinPulse 1.8s infinite;
+}
+
+@keyframes optinPulse {
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.55;
+        transform: scale(0.75);
+    }
+}
+
+.optin-content h1 {
+    margin: 25px 0 20px;
+    max-width: 610px;
+    font-size: clamp(42px, 5vw, 68px);
+    line-height: 0.98;
+    letter-spacing: -3px;
+    font-weight: 900;
+    color: #ffffff;
+}
+
+.optin-content h1 span {
+    display: block;
+    margin-top: 10px;
+    background:
+        linear-gradient(
+            90deg,
+            #ffffff,
+            #75dfff
+        );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.optin-intro {
+    max-width: 590px;
+    margin: 0;
+    color: #b7c5d5;
+    font-size: 17px;
+    line-height: 1.8;
+}
+
+.optin-benefits {
+    margin-top: 35px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.optin-benefit {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+}
+
+.optin-benefit-icon {
+    flex: 0 0 auto;
+    width: 29px;
+    height: 29px;
+    display: grid;
+    place-items: center;
+    border-radius: 9px;
+    background: rgba(0, 196, 255, 0.11);
+    border: 1px solid rgba(0, 196, 255, 0.2);
+    color: #5edfff;
+    font-weight: 900;
+}
+
+.optin-benefit strong {
+    display: block;
+    margin-bottom: 3px;
+    color: #ffffff;
+    font-size: 14px;
+}
+
+.optin-benefit span {
+    display: block;
+    color: #8fa3b8;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.optin-trust {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 35px;
+}
+
+.optin-trust span {
+    padding: 8px 11px;
+    border-radius: 7px;
+    background: rgba(255, 255, 255, 0.045);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    color: #9eb0c4;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+/* =========================================================
+   FORM
+   ========================================================= */
+
+.optin-form-wrapper {
+    position: relative;
+    animation: optinFormIn 0.9s 0.15s ease both;
+}
+
+@keyframes optinFormIn {
+    from {
+        opacity: 0;
+        transform: translateY(35px) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.optin-form-glow {
+    position: absolute;
+    inset: 20px;
+    border-radius: 35px;
+    background: rgba(0, 180, 255, 0.13);
+    filter: blur(45px);
+    pointer-events: none;
+}
+
+.optin-form-card {
+    position: relative;
+    padding: 38px;
+    border-radius: 25px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background:
+        linear-gradient(
+            145deg,
+            rgba(18, 34, 54, 0.96),
+            rgba(8, 20, 34, 0.96)
+        );
+    box-shadow:
+        0 30px 80px rgba(0, 0, 0, 0.38),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(20px);
+}
+
+.optin-form-header {
+    margin-bottom: 25px;
+}
+
+.optin-form-step {
+    margin-bottom: 10px;
+    color: #58dfff;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+}
+
+.optin-form-header h2 {
+    margin: 0;
+    color: #ffffff;
+    font-size: 31px;
+    line-height: 1.1;
+    letter-spacing: -1px;
+}
+
+.optin-form-header h2 span {
+    display: block;
+    color: #6cddff;
+}
+
+.optin-form-header p {
+    margin: 12px 0 0;
+    color: #9db0c5;
+    font-size: 13px;
+    line-height: 1.65;
+}
+
+/* =========================================================
+   FORM FIELDS
+   ========================================================= */
+
+.optin-form {
+    display: flex;
+    flex-direction: column;
+    gap: 17px;
+}
+
+.optin-field {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.optin-field label {
+    color: #dce7f2;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.optin-field input,
+.optin-field select {
+    width: 100%;
+    height: 48px;
+    padding: 0 14px;
+    border: 1px solid rgba(255, 255, 255, 0.11);
+    border-radius: 10px;
+    outline: none;
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.045);
+    font-family: inherit;
+    font-size: 13px;
+    transition:
+        border-color 0.2s ease,
+        background 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.optin-field input::placeholder {
+    color: #71869c;
+}
+
+.optin-field select {
+    appearance: none;
+    cursor: pointer;
+}
+
+.optin-field select option {
+    color: #101820;
+    background: #ffffff;
+}
+
+.optin-field input:focus,
+.optin-field select:focus {
+    border-color: rgba(69, 210, 255, 0.7);
+    background: rgba(0, 190, 255, 0.055);
+    box-shadow:
+        0 0 0 3px rgba(0, 190, 255, 0.08);
+}
+
+.optin-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+/* =========================================================
+   CONSENT
+   ========================================================= */
+
+.optin-consent {
+    display: flex;
+    gap: 9px;
+    align-items: flex-start;
+    margin-top: 2px;
+}
+
+.optin-check {
+    flex: 0 0 auto;
+    width: 17px;
+    height: 17px;
+    display: grid;
+    place-items: center;
+    border-radius: 5px;
+    background: rgba(0, 205, 255, 0.14);
+    color: #57ddff;
+    font-size: 10px;
+    font-weight: 900;
+}
+
+.optin-consent p {
+    margin: 0;
+    color: #7f94aa;
+    font-size: 10px;
+    line-height: 1.55;
+}
+
+/* =========================================================
+   SUBMIT
+   ========================================================= */
+
+.optin-submit {
+    width: 100%;
+    min-height: 54px;
+    margin-top: 4px;
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    border: 0;
+    border-radius: 12px;
+    cursor: pointer;
+    color: #ffffff;
+    background:
+        linear-gradient(
+            100deg,
+            #087cf2,
+            #00c7f5
+        );
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: 0.2px;
+    box-shadow:
+        0 15px 35px rgba(0, 155, 255, 0.2);
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        filter 0.2s ease;
+}
+
+.optin-submit:hover:not(:disabled) {
+    transform: translateY(-2px);
+    filter: brightness(1.08);
+    box-shadow:
+        0 20px 45px rgba(0, 155, 255, 0.3);
+}
+
+.optin-submit:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.optin-submit span {
+    font-size: 19px;
+}
+
+.optin-submitted {
+    cursor: wait;
+    background:
+        linear-gradient(
+            100deg,
+            #087cf2,
+            #00b8d8
+        );
+}
+
+.optin-security {
+    text-align: center;
+    color: #62788e;
+    font-size: 9px;
+}
+
+/* =========================================================
+   BOTTOM
+   ========================================================= */
+
+.optin-bottom {
+    width: min(1200px, calc(100% - 40px));
+    margin: 0 auto;
+    padding: 0 0 35px;
+    position: relative;
+    z-index: 5;
+    text-align: center;
+}
+
+.optin-bottom-line {
+    width: 100%;
+    height: 1px;
+    margin-bottom: 20px;
+    background:
+        linear-gradient(
+            90deg,
+            transparent,
+            rgba(255, 255, 255, 0.1),
+            transparent
+        );
+}
+
+.optin-bottom p {
+    margin: 0;
+    color: #8da0b4;
+    font-size: 11px;
+}
+
+.optin-bottom p strong {
+    color: #58dfff;
+}
+
+.optin-bottom span {
+    display: block;
+    margin-top: 6px;
+    color: #60758b;
+    font-size: 10px;
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 980px) {
+
+    .optin-main {
+        grid-template-columns: 1fr;
+        max-width: 720px;
+        gap: 55px;
+        padding-top: 55px;
+    }
+
+    .optin-content {
+        text-align: center;
+    }
+
+    .optin-eyebrow {
+        margin: 0 auto;
+    }
+
+    .optin-content h1 {
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .optin-intro {
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .optin-benefits {
+        max-width: 520px;
+        margin-left: auto;
+        margin-right: auto;
+        text-align: left;
+    }
+
+    .optin-trust {
+        justify-content: center;
+    }
+}
+
+@media (max-width: 720px) {
+
+    .optin-navbar {
+        width: min(100% - 28px, 1200px);
+        min-height: 74px;
+    }
+
+    .optin-mobile-menu {
+        display: block;
+    }
+
+    .optin-nav {
+        position: absolute;
+        top: 68px;
+        left: 0;
+        right: 0;
+        display: none;
+        padding: 18px;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 5px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 14px;
+        background: rgba(8, 21, 35, 0.98);
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+        backdrop-filter: blur(20px);
+    }
+
+    .optin-nav-open {
+        display: flex;
+    }
+
+    .optin-nav button,
+    .optin-nav a {
+        width: 100%;
+        padding: 12px;
+        text-align: left;
+    }
+
+    .optin-main {
+        width: min(100% - 28px, 720px);
+        padding: 45px 0 45px;
+    }
+
+    .optin-content h1 {
+        font-size: clamp(39px, 12vw, 55px);
+        letter-spacing: -2px;
+    }
+
+    .optin-intro {
+        font-size: 15px;
+        line-height: 1.7;
+    }
+
+    .optin-form-card {
+        padding: 25px 20px;
+        border-radius: 20px;
+    }
+
+    .optin-form-header h2 {
+        font-size: 27px;
+    }
+
+    .optin-row {
+        grid-template-columns: 1fr;
+    }
+
+    .optin-bottom {
+        width: min(100% - 28px, 1200px);
+    }
+}
+
+@media (max-width: 430px) {
+
+    .optin-brand-logo {
+        width: 41px;
+        height: 41px;
+        border-radius: 11px;
+    }
+
+    .optin-brand-text strong {
+        font-size: 11px;
+    }
+
+    .optin-brand-text span {
+        font-size: 7px;
+    }
+
+    .optin-content h1 {
+        font-size: 40px;
+    }
+
+    .optin-form-card {
+        padding: 22px 16px;
+    }
+
+    .optin-trust {
+        gap: 7px;
+    }
+
+    .optin-trust span {
+        font-size: 9px;
+    }
+}
+
