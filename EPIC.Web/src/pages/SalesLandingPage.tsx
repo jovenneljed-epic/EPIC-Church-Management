@@ -34,6 +34,15 @@ interface DemoFormData {
     message: string;
 }
 
+const INITIAL_FORM_DATA: DemoFormData = {
+    fullName: "",
+    email: "",
+    churchName: "",
+    phone: "",
+    position: "",
+    message: "",
+};
+
 const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
     onNavigate,
 }) => {
@@ -44,28 +53,14 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
     // =========================================================
 
     const [showDemoForm, setShowDemoForm] = useState(false);
-
-    const [submittingDemo, setSubmittingDemo] =
-        useState(false);
-
-    const [demoSuccess, setDemoSuccess] =
-        useState(false);
-
-    const [demoError, setDemoError] =
-        useState("");
-
+    const [submittingDemo, setSubmittingDemo] = useState(false);
+    const [demoSuccess, setDemoSuccess] = useState(false);
+    const [demoError, setDemoError] = useState("");
     const [demoRequestId, setDemoRequestId] =
         useState<number | null>(null);
 
     const [formData, setFormData] =
-        useState<DemoFormData>({
-            fullName: "",
-            email: "",
-            churchName: "",
-            phone: "",
-            position: "",
-            message: "",
-        });
+        useState<DemoFormData>(INITIAL_FORM_DATA);
 
     // =========================================================
     // PAGE REVEAL ANIMATION
@@ -75,49 +70,78 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
         const elements =
             document.querySelectorAll(".sales-reveal");
 
-        const observer =
-            new IntersectionObserver(
-                (entries) => {
-                    entries.forEach((entry) => {
-                        if (entry.isIntersecting) {
-                            entry.target.classList.add(
-                                "sales-visible"
-                            );
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add(
+                            "sales-visible"
+                        );
 
-                            observer.unobserve(
-                                entry.target
-                            );
-                        }
-                    });
-                },
-                {
-                    threshold: 0.12,
-                }
-            );
+                        observer.unobserve(entry.target);
+                    }
+                });
+            },
+            {
+                threshold: 0.12,
+            }
+        );
 
         elements.forEach((element) =>
             observer.observe(element)
         );
 
-        return () =>
-            observer.disconnect();
+        return () => observer.disconnect();
     }, []);
 
     // =========================================================
     // NAVIGATION
     // =========================================================
 
+    const closeMenu = () => {
+        setMenuOpen(false);
+    };
+
     const navigate = (
         page: string,
         fallback: string
     ) => {
-        setMenuOpen(false);
+        closeMenu();
 
         if (onNavigate) {
             onNavigate(page);
-        } else {
-            window.location.href = fallback;
+            return;
         }
+
+        window.location.href = fallback;
+    };
+
+    // =========================================================
+    // EPIC MAIN WEBSITE
+    // =========================================================
+
+    const goToEpicWebsite = () => {
+        closeMenu();
+
+        /*
+         * IMPORTANT:
+         * This is the EPIC MAIN CMS website.
+         *
+         * Change "/home" only if your main CMS route
+         * uses a different path.
+         */
+        navigate("home", "/home");
+    };
+
+    // =========================================================
+    // CLIENT LOGIN
+    // =========================================================
+
+    const goToClientLogin = () => {
+        navigate(
+            "client-login",
+            "/client-login"
+        );
     };
 
     // =========================================================
@@ -125,7 +149,8 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
     // =========================================================
 
     const openDemoForm = () => {
-        setMenuOpen(false);
+        closeMenu();
+
         setDemoError("");
         setDemoSuccess(false);
         setDemoRequestId(null);
@@ -157,10 +182,7 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
             HTMLInputElement | HTMLTextAreaElement
         >
     ) => {
-        const {
-            name,
-            value,
-        } = event.target;
+        const { name, value } = event.target;
 
         setFormData((current) => ({
             ...current,
@@ -188,7 +210,7 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
         setDemoError("");
 
         // -----------------------------------------------------
-        // BASIC CLIENT VALIDATION
+        // VALIDATION
         // -----------------------------------------------------
 
         if (
@@ -214,36 +236,24 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
         try {
             setSubmittingDemo(true);
 
-            // -------------------------------------------------
-            // PAYLOAD
-            //
-            // Matches the existing DemoRequest model used by
-            // DemoRequestsController.
-            // -------------------------------------------------
-
             const payload = {
-                fullName:
-                    formData.fullName.trim(),
+                fullName: formData.fullName.trim(),
 
-                email:
-                    formData.email
-                        .trim()
-                        .toLowerCase(),
+                email: formData.email
+                    .trim()
+                    .toLowerCase(),
 
                 churchName:
                     formData.churchName.trim(),
 
                 phone:
-                    formData.phone.trim() ||
-                    null,
+                    formData.phone.trim() || null,
 
                 position:
-                    formData.position.trim() ||
-                    null,
+                    formData.position.trim() || null,
 
                 message:
-                    formData.message.trim() ||
-                    null,
+                    formData.message.trim() || null,
             };
 
             console.log(
@@ -252,32 +262,27 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
             );
 
             // -------------------------------------------------
-            // EXISTING DATABASE API
+            // DATABASE API
             // POST /api/DemoRequests
             // -------------------------------------------------
 
-            const response =
-                await fetch(
-                    `${API_BASE_URL}/DemoRequests`,
-                    {
-                        method: "POST",
+            const response = await fetch(
+                `${API_BASE_URL}/DemoRequests`,
+                {
+                    method: "POST",
 
-                        headers: {
-                            "Content-Type":
-                                "application/json",
-                        },
+                    headers: {
+                        "Content-Type":
+                            "application/json",
+                    },
 
-                        body:
-                            JSON.stringify(
-                                payload
-                            ),
-                    }
-                );
+                    body: JSON.stringify(payload),
+                }
+            );
 
-            const data =
-                await response
-                    .json()
-                    .catch(() => ({}));
+            const data = await response
+                .json()
+                .catch(() => ({}));
 
             console.log(
                 "Demo request response:",
@@ -300,10 +305,7 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
                         Object.entries(
                             data.errors
                         ).flatMap(
-                            ([
-                                field,
-                                messages,
-                            ]) =>
+                            ([field, messages]) =>
                                 (
                                     messages as string[]
                                 ).map(
@@ -313,8 +315,7 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
                         );
 
                     if (
-                        validationErrors.length >
-                        0
+                        validationErrors.length > 0
                     ) {
                         errorMessage +=
                             " " +
@@ -324,9 +325,7 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
                     }
                 }
 
-                throw new Error(
-                    errorMessage
-                );
+                throw new Error(errorMessage);
             }
 
             // -------------------------------------------------
@@ -341,15 +340,7 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
 
             setDemoSuccess(true);
 
-            // Clear form after successful submission
-            setFormData({
-                fullName: "",
-                email: "",
-                churchName: "",
-                phone: "",
-                position: "",
-                message: "",
-            });
+            setFormData(INITIAL_FORM_DATA);
         } catch (error) {
             console.error(
                 "Sales Landing Page demo request error:",
@@ -364,17 +355,6 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
         } finally {
             setSubmittingDemo(false);
         }
-    };
-
-    // =========================================================
-    // CLIENT LOGIN
-    // =========================================================
-
-    const goToLogin = () => {
-        navigate(
-            "client-login",
-            "/client-login"
-        );
     };
 
     // =========================================================
@@ -495,9 +475,7 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
     return (
         <div className="sales-page">
 
-            {/* =================================================
-                BACKGROUND
-            ================================================= */}
+            {/* BACKGROUND */}
 
             <div className="sales-bg sales-bg-one" />
             <div className="sales-bg sales-bg-two" />
@@ -508,98 +486,110 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
                 NAVIGATION
             ================================================= */}
 
-            <header className="sales-navbar">
+         <header className="sales-navbar">
 
-                <div
-                    className="sales-brand"
-                    onClick={() =>
-                        window.scrollTo({
-                            top: 0,
-                            behavior: "smooth",
-                        })
-                    }
-                >
-                    <div className="sales-brand-logo">
-                        EPIC
-                    </div>
+    {/* BRAND */}
+    <div
+        className="sales-brand"
+        onClick={() =>
+            window.scrollTo({
+                top: 0,
+                behavior: "smooth",
+            })
+        }
+    >
+        <div className="sales-brand-logo">
+            EPIC
+        </div>
 
-                    <div className="sales-brand-text">
-                        <strong>
-                            EPIC CHURCH
-                        </strong>
+        <div className="sales-brand-text">
+            <strong>
+                EPIC CHURCH
+            </strong>
 
-                        <span>
-                            MANAGEMENT SYSTEM
-                        </span>
-                    </div>
-                </div>
+            <span>
+                MANAGEMENT SYSTEM
+            </span>
+        </div>
+    </div>
 
-                <button
-                    className="sales-mobile-menu"
-                    onClick={() =>
-                        setMenuOpen(
-                            (value) => !value
-                        )
-                    }
-                    aria-label="Toggle navigation"
-                >
-                    {menuOpen
-                        ? "×"
-                        : "☰"}
-                </button>
+    {/* MOBILE ACTIONS */}
+    <div className="sales-mobile-actions">
 
-                <nav
-                    className={`sales-nav ${
-                        menuOpen
-                            ? "sales-nav-open"
-                            : ""
-                    }`}
-                >
-                    <a
-                        href="#features"
-                        onClick={() =>
-                            setMenuOpen(false)
-                        }
-                    >
-                        Features
-                    </a>
+     
 
-                    <a
-                        href="#how-it-works"
-                        onClick={() =>
-                            setMenuOpen(false)
-                        }
-                    >
-                        How It Works
-                    </a>
+        <button
+            type="button"
+            className="sales-mobile-menu"
+            onClick={() =>
+                setMenuOpen((value) => !value)
+            }
+            aria-label="Toggle navigation"
+            aria-expanded={menuOpen}
+        >
+            {menuOpen ? "×" : "☰"}
+        </button>
 
-                    <a
-                        href="#learning"
-                        onClick={() =>
-                            setMenuOpen(false)
-                        }
-                    >
-                        EPIC Learning
-                    </a>
+    </div>
 
-                    <a
-                        href="#pricing"
-                        onClick={() =>
-                            setMenuOpen(false)
-                        }
-                    >
-                        Pricing
-                    </a>
+    {/* NAVIGATION */}
+    <nav
+        className={`sales-nav ${
+            menuOpen ? "sales-nav-open" : ""
+        }`}
+    >
 
-                    <button
-                        className="sales-login-button"
-                        onClick={goToLogin}
-                    >
-                        Client Login
-                    </button>
-                </nav>
-            </header>
+        <a
+            href="#features"
+            onClick={() => setMenuOpen(false)}
+        >
+            Features
+        </a>
 
+        <a
+            href="#how-it-works"
+            onClick={() => setMenuOpen(false)}
+        >
+            How It Works
+        </a>
+
+        <a
+            href="#learning"
+            onClick={() => setMenuOpen(false)}
+        >
+            EPIC Learning
+        </a>
+
+        <a
+            href="#pricing"
+            onClick={() => setMenuOpen(false)}
+        >
+            Pricing
+        </a>
+
+        {/* EPIC MAIN WEBSITE */}
+      <button
+    type="button"
+    className="sales-login-button"
+    onClick={() =>
+        navigate("home", "/")
+    }
+>
+    EPIC Website
+</button>
+
+        {/* CLIENT LOGIN */}
+        <button
+            type="button"
+            className="sales-login-button"
+            onClick={goToClientLogin}
+        >
+            Client Login
+        </button>
+
+    </nav>
+
+</header>
             {/* =================================================
                 HERO
             ================================================= */}
@@ -635,9 +625,7 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
 
                             <button
                                 className="sales-primary-button"
-                                onClick={
-                                    openDemoForm
-                                }
+                                onClick={openDemoForm}
                             >
                                 <span>
                                     Get Started
@@ -688,23 +676,13 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
                     <div className="sales-hero-visual sales-reveal">
 
                         <div className="sales-floating sales-floating-one">
-                            <strong>
-                                127
-                            </strong>
-
-                            <span>
-                                Members
-                            </span>
+                            <strong>127</strong>
+                            <span>Members</span>
                         </div>
 
                         <div className="sales-floating sales-floating-two">
-                            <strong>
-                                94%
-                            </strong>
-
-                            <span>
-                                Attendance
-                            </span>
+                            <strong>94%</strong>
+                            <span>Attendance</span>
                         </div>
 
                         <div className="sales-dashboard-shadow" />
@@ -715,7 +693,6 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
 
                                 <div className="sales-dashboard-title">
                                     <span className="sales-live-dot" />
-
                                     EPIC DASHBOARD
                                 </div>
 
@@ -811,7 +788,6 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
                                     <div className="sales-dashboard-chart">
 
                                         <div className="sales-chart-heading">
-
                                             <strong>
                                                 Church Growth
                                             </strong>
@@ -819,7 +795,6 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
                                             <span>
                                                 LAST 6 MONTHS
                                             </span>
-
                                         </div>
 
                                         <div className="sales-chart-area">
@@ -950,14 +925,9 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
                     <div className="sales-problem-grid">
 
                         {problems.map(
-                            (
-                                problem,
-                                index
-                            ) => (
+                            (problem, index) => (
                                 <div
-                                    key={
-                                        problem.title
-                                    }
+                                    key={problem.title}
                                     className="sales-problem-card sales-reveal"
                                     style={{
                                         transitionDelay:
@@ -966,21 +936,15 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
                                 >
 
                                     <div className="sales-card-icon">
-                                        {
-                                            problem.icon
-                                        }
+                                        {problem.icon}
                                     </div>
 
                                     <h3>
-                                        {
-                                            problem.title
-                                        }
+                                        {problem.title}
                                     </h3>
 
                                     <p>
-                                        {
-                                            problem.description
-                                        }
+                                        {problem.description}
                                     </p>
 
                                 </div>
@@ -1024,15 +988,10 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
                     <div className="sales-feature-grid">
 
                         {features.map(
-                            (
-                                feature,
-                                index
-                            ) => (
+                            (feature, index) => (
                                 <div
                                     className="sales-feature-card sales-reveal"
-                                    key={
-                                        feature.title
-                                    }
+                                    key={feature.title}
                                     style={{
                                         transitionDelay:
                                             `${index * 60}ms`,
@@ -1042,28 +1001,21 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
                                     <div className="sales-feature-top">
 
                                         <div className="sales-feature-icon">
-                                            {
-                                                feature.icon
-                                            }
+                                            {feature.icon}
                                         </div>
 
                                         <span className="sales-feature-number">
-                                            0
-                                            {index + 1}
+                                            0{index + 1}
                                         </span>
 
                                     </div>
 
                                     <h3>
-                                        {
-                                            feature.title
-                                        }
+                                        {feature.title}
                                     </h3>
 
                                     <p>
-                                        {
-                                            feature.description
-                                        }
+                                        {feature.description}
                                     </p>
 
                                     <div className="sales-feature-link">
@@ -1114,21 +1066,14 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
                     <div className="sales-steps">
 
                         {steps.map(
-                            (
-                                step,
-                                index
-                            ) => (
+                            (step, index) => (
                                 <div
                                     className="sales-step sales-reveal"
-                                    key={
-                                        step.number
-                                    }
+                                    key={step.number}
                                 >
 
                                     <div className="sales-step-number">
-                                        {
-                                            step.number
-                                        }
+                                        {step.number}
                                     </div>
 
                                     <div className="sales-step-content">
@@ -1139,22 +1084,17 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
                                         </span>
 
                                         <h3>
-                                            {
-                                                step.title
-                                            }
+                                            {step.title}
                                         </h3>
 
                                         <p>
-                                            {
-                                                step.description
-                                            }
+                                            {step.description}
                                         </p>
 
                                     </div>
 
                                     {index <
-                                        steps.length -
-                                            1 && (
+                                        steps.length - 1 && (
                                         <div className="sales-step-connector">
                                             →
                                         </div>
@@ -1222,9 +1162,7 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
 
                         <button
                             className="sales-primary-button"
-                            onClick={
-                                openDemoForm
-                            }
+                            onClick={openDemoForm}
                         >
                             Explore EPIC Learning
                             <b>
@@ -1279,34 +1217,22 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
                             <div className="sales-course-lessons">
 
                                 <div className="completed">
-                                    <i>
-                                        ✓
-                                    </i>
-
+                                    <i>✓</i>
                                     Introduction to Faith
                                 </div>
 
                                 <div className="completed">
-                                    <i>
-                                        ✓
-                                    </i>
-
+                                    <i>✓</i>
                                     Foundations of Faith
                                 </div>
 
                                 <div className="completed">
-                                    <i>
-                                        ✓
-                                    </i>
-
+                                    <i>✓</i>
                                     Understanding Faith
                                 </div>
 
                                 <div>
-                                    <i>
-                                        ○
-                                    </i>
-
+                                    <i>○</i>
                                     Spiritual Growth
                                 </div>
 
@@ -1354,9 +1280,7 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
 
                             <button
                                 className="sales-primary-button sales-large-button"
-                                onClick={
-                                    openDemoForm
-                                }
+                                onClick={openDemoForm}
                             >
                                 Start Your EPIC Journey
                                 <b>
@@ -1402,7 +1326,12 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
 
             <footer className="sales-footer">
 
-                <div className="sales-brand">
+                <div
+                    className="sales-brand"
+                    onClick={goToEpicWebsite}
+                    role="button"
+                    tabIndex={0}
+                >
 
                     <div className="sales-brand-logo">
                         EPIC
@@ -1438,11 +1367,7 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
 
             <div className="sales-mobile-cta">
 
-                <button
-                    onClick={
-                        openDemoForm
-                    }
-                >
+                <button onClick={openDemoForm}>
                     Get Started
                     <span>
                         →
@@ -1460,14 +1385,12 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
                 <div
                     className="sales-demo-overlay"
                     onMouseDown={(event) => {
-
                         if (
                             event.target ===
                             event.currentTarget
                         ) {
                             closeDemoForm();
                         }
-
                     }}
                 >
 
@@ -1507,12 +1430,8 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
                             <button
                                 type="button"
                                 className="sales-demo-close"
-                                onClick={
-                                    closeDemoForm
-                                }
-                                disabled={
-                                    submittingDemo
-                                }
+                                onClick={closeDemoForm}
+                                disabled={submittingDemo}
                                 aria-label="Close"
                             >
                                 ×
@@ -1559,9 +1478,7 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
                                 <button
                                     type="button"
                                     className="sales-primary-button sales-demo-done-button"
-                                    onClick={
-                                        closeDemoForm
-                                    }
+                                    onClick={closeDemoForm}
                                 >
                                     Done
                                     <b>
@@ -1573,21 +1490,15 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
 
                         ) : (
 
-                            /* FORM */
-
                             <form
                                 className="sales-demo-form"
-                                onSubmit={
-                                    handleDemoSubmit
-                                }
+                                onSubmit={handleDemoSubmit}
                             >
 
                                 {demoError && (
-
                                     <div className="sales-demo-error">
                                         {demoError}
                                     </div>
-
                                 )}
 
                                 <div className="sales-demo-form-grid">
@@ -1598,9 +1509,7 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
 
                                         <label htmlFor="fullName">
                                             Your Name
-                                            <span>
-                                                *
-                                            </span>
+                                            <span>*</span>
                                         </label>
 
                                         <input
@@ -1628,9 +1537,7 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
 
                                         <label htmlFor="email">
                                             Email Address
-                                            <span>
-                                                *
-                                            </span>
+                                            <span>*</span>
                                         </label>
 
                                         <input
@@ -1658,9 +1565,7 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
 
                                         <label htmlFor="churchName">
                                             Church / Organization Name
-                                            <span>
-                                                *
-                                            </span>
+                                            <span>*</span>
                                         </label>
 
                                         <input
@@ -1766,9 +1671,7 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
 
                                 <div className="sales-demo-agreement">
 
-                                    <span>
-                                        ✓
-                                    </span>
+                                    <span>✓</span>
 
                                     <p>
                                         By continuing,
@@ -1787,9 +1690,7 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
                                     <button
                                         type="button"
                                         className="sales-demo-cancel"
-                                        onClick={
-                                            closeDemoForm
-                                        }
+                                        onClick={closeDemoForm}
                                         disabled={
                                             submittingDemo
                                         }
