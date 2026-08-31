@@ -86,6 +86,17 @@ namespace EPIC.Api.Controllers
                     CurrentRole.StartsWith("CLIENT_");
             }
         }
+        private bool IsInternalChurchRole
+        {
+            get
+            {
+                return
+                    CurrentRole == "ADMIN" ||
+                    CurrentRole == "EPIC ASSISTANT PASTOR" ||
+                    CurrentRole == "EPIC HEAD PASTOR" ||
+                    CurrentRole == "EPIC ASSISTANT HEAD PASTOR";
+            }
+        }
 
         // =========================================================
         // CURRENT CLIENT MEMBER ID
@@ -219,7 +230,34 @@ namespace EPIC.Api.Controllers
 
                 return client.CustomerId;
             }
+            // =====================================================
+            // INTERNAL EPIC CHURCH ROLES
+            // =====================================================
 
+            if (IsInternalChurchRole)
+            {
+                var userId = CurrentUserId;
+
+                if (userId.HasValue)
+                {
+                    var customerId =
+                        await _context.Users
+                            .AsNoTracking()
+                            .Where(u =>
+                                u.UserId == userId.Value)
+                            .Select(u =>
+                                u.CustomerId)
+                            .FirstOrDefaultAsync();
+
+                    if (customerId > 0)
+                    {
+                        return customerId;
+                    }
+                }
+
+                // Fallback for internal EPIC staff accounts
+                return 1;
+            }
             // =====================================================
             // ADMIN
             // =====================================================
@@ -285,8 +323,8 @@ namespace EPIC.Api.Controllers
             var role =
                 CurrentRole;
 
-            if (role != "ADMIN" &&
-                !IsClientRole)
+            if (!IsInternalChurchRole &&
+      !IsClientRole)
             {
                 return (
                     Forbid(),
