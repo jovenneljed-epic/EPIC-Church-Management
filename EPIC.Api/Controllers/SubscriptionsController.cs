@@ -1,4 +1,4 @@
-﻿using EPIC.Api.Data;
+using EPIC.Api.Data;
 using EPIC.Api.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -17,6 +17,7 @@ namespace EPIC.Api.Controllers
 
         private static readonly string[] AllowedStatuses =
         {
+            "PENDING_PAYMENT",
             "TRIAL",
             "ACTIVE",
             "PAST_DUE",

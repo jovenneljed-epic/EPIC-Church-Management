@@ -136,6 +136,7 @@ type FilterStatus =
     | "CANCELLED";
 
 type SubscriptionStatus =
+    | "PENDING_PAYMENT"
     | "TRIAL"
     | "ACTIVE"
     | "PAST_DUE"

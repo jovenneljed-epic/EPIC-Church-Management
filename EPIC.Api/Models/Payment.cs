@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -117,6 +117,20 @@ namespace EPIC.Api.Models
 
         [MaxLength(2000)]
         public string? Notes { get; set; }
+
+        // =========================================================
+        // PAYMENT PROOF
+        // =========================================================
+
+        [MaxLength(255)]
+        public string? PaymentProofFileName { get; set; }
+
+        [MaxLength(100)]
+        public string? PaymentProofContentType { get; set; }
+
+        public byte[]? PaymentProofData { get; set; }
+
+        public DateTime? PaymentProofUploadedDate { get; set; }
 
         // =========================================================
         // AUDIT

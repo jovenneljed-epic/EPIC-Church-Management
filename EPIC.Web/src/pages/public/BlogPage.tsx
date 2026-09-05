@@ -1,16 +1,20 @@
 
-import React from "react";
+import {
+    useEffect,
+    useState
+} from "react";
+
+import {
+    getPublicBlogs
+} from "../../services/blogService";
+
+import type {
+    BlogPost as ApiBlogPost
+} from "../../services/blogService";
+
 import "./BlogPage.css";
 
-interface BlogPost {
-    id: number;
-    category: string;
-    date: string;
-    title: string;
-    excerpt: string;
-    icon: string;
-    featured?: boolean;
-}
+
 
 interface BlogPageProps {
     onNavigate?: (page: string) => void;
@@ -19,63 +23,48 @@ interface BlogPageProps {
 const BlogPage: React.FC<BlogPageProps> = ({
     onNavigate,
 }) => {
-    const posts: BlogPost[] = [
-        {
-            id: 1,
-            category: "FAITH",
-            date: "August 2026",
-            title: "Growing Deeper in Our Walk With Christ",
-            excerpt:
-                "Faith is not simply something we believe. It is a daily journey of knowing Christ, trusting His Word, and allowing Him to transform the way we live.",
-            icon: "✝",
-            featured: true,
-        },
-        {
-            id: 2,
-            category: "DISCIPLESHIP",
-            date: "August 2026",
-            title: "Why Discipleship Matters",
-            excerpt:
-                "Discover why intentional discipleship is essential for spiritual growth and how we can help one another become faithful followers of Jesus.",
-            icon: "📖",
-        },
-        {
-            id: 3,
-            category: "FAMILY",
-            date: "August 2026",
-            title: "Building Stronger Families",
-            excerpt:
-                "Strong families are built through faith, love, communication, forgiveness, and a shared commitment to follow God's purpose.",
-            icon: "❤️",
-        },
-        {
-            id: 4,
-            category: "LEADERSHIP",
-            date: "August 2026",
-            title: "Leading Through Servanthood",
-            excerpt:
-                "Christian leadership begins with a heart willing to serve. Learn how servant leadership reflects the character of Christ.",
-            icon: "🤝",
-        },
-        {
-            id: 5,
-            category: "COMMUNITY",
-            date: "August 2026",
-            title: "The Power of Christian Community",
-            excerpt:
-                "We were never designed to walk alone. Fellowship gives us opportunities to encourage, support, pray for, and grow with one another.",
-            icon: "👥",
-        },
-        {
-            id: 6,
-            category: "SPIRITUAL GROWTH",
-            date: "August 2026",
-            title: "Making Room for God Every Day",
-            excerpt:
-                "Small daily practices of prayer, Scripture, worship, and reflection can help us develop a deeper and more consistent relationship with God.",
-            icon: "🌱",
-        },
-    ];
+    const [
+    posts,
+    setPosts
+]
+=
+useState<ApiBlogPost[]>([]);
+
+
+
+useEffect(()=>{
+
+async function loadBlogs()
+{
+
+try
+{
+
+const data =
+await getPublicBlogs();
+
+
+setPosts(data);
+
+
+}
+catch(error)
+{
+
+console.error(
+    "Loading public blogs failed",
+    error
+);
+
+}
+
+}
+
+
+loadBlogs();
+
+
+},[]);
 
     const handleNavigate = (page: string) => {
         if (onNavigate) {
@@ -217,21 +206,21 @@ const BlogPage: React.FC<BlogPageProps> = ({
                             <div className="blog-post-meta">
 
                                 <span>
-                                    {posts[0].category}
+                                    {posts[0]?.category}
                                 </span>
 
                                 <span>
-                                    {posts[0].date}
+                                    {posts[0]?.publishDate}
                                 </span>
 
                             </div>
 
                             <h3>
-                                {posts[0].title}
+                              {posts[0]?.title}
                             </h3>
 
                             <p>
-                                {posts[0].excerpt}
+                              {posts[0]?.excerpt}
                             </p>
 
                             <button
@@ -283,16 +272,15 @@ const BlogPage: React.FC<BlogPageProps> = ({
                         {posts.slice(1).map((post) => (
 
                             <article
-                                key={post.id}
+                                key={post.blogPostId}
                                 className="blog-card"
                             >
 
                                 <div className="blog-card-image">
 
-                                    <div className="blog-card-icon">
-                                        {post.icon}
-                                    </div>
-
+                                   <div className="blog-card-icon">
+    {"✝"}
+</div>
                                     <span>
                                         {post.category}
                                     </span>
@@ -302,7 +290,7 @@ const BlogPage: React.FC<BlogPageProps> = ({
                                 <div className="blog-card-content">
 
                                     <div className="blog-card-date">
-                                        {post.date}
+                                        {post.publishDate}
                                     </div>
 
                                     <h3>

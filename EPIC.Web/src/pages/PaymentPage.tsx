@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import "./PaymentPage.css";
+import { API_BASE_URL } from "../config";
 
 interface PaymentPageProps {
     onNavigate: (page: string) => void;
@@ -30,65 +31,55 @@ const PaymentPage: React.FC<PaymentPageProps> = ({
     const handleFileChange = (
         event: ChangeEvent<HTMLInputElement>
     ) => {
-        const file =
-            event.target.files?.[0] ?? null;
-
+        const file = event.target.files?.[0] ?? null;
+        if (file && file.size > 5 * 1024 * 1024) {
+            setProofFile(null);
+            setErrorMessage("Payment proof must be 5 MB or smaller.");
+            return;
+        }
+        if (file && !["image/png", "image/jpeg", "image/webp", "application/pdf"].includes(file.type)) {
+            setProofFile(null);
+            setErrorMessage("Please upload a PNG, JPG, WEBP, or PDF payment proof.");
+            return;
+        }
         setProofFile(file);
         setErrorMessage("");
     };
 
-    const handleSubmit = (
-        event: FormEvent<HTMLFormElement>
-    ) => {
+    const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-
         setErrorMessage("");
 
-        if (!referenceNumber.trim()) {
-            setErrorMessage(
-                "Please enter your payment reference number."
-            );
-            return;
-        }
-
-        if (!proofFile) {
-            setErrorMessage(
-                "Please upload your payment screenshot or proof of payment."
-            );
-            return;
-        }
+        const subscriptionId = Number(localStorage.getItem("epicSubscriptionId"));
+        if (!subscriptionId) return setErrorMessage("Your subscription session is missing. Please return to checkout and try again.");
+        if (!referenceNumber.trim()) return setErrorMessage("Please enter your payment reference number.");
+        if (!proofFile) return setErrorMessage("Please upload your payment screenshot or proof of payment.");
 
         setIsSubmitting(true);
+        try {
+            const formData = new FormData();
+            formData.append("subscriptionId", String(subscriptionId));
+            formData.append("referenceNumber", referenceNumber.trim());
+            formData.append("paymentMethod", paymentMethod);
+            formData.append("proof", proofFile);
 
-        /*
-         * TEMPORARY PAYMENT FLOW
-         *
-         * This currently simulates a successful submission.
-         *
-         * Later we will connect this to the EPIC API so the
-         * payment record can be saved and verified by admin.
-         */
+            const response = await fetch(`${API_BASE_URL}/PublicCheckout/payment`, {
+                method: "POST",
+                body: formData,
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(data.message || "Unable to submit your payment.");
 
-        setTimeout(() => {
-            setIsSubmitting(false);
-
-            localStorage.setItem(
-                "epicPaymentMethod",
-                paymentMethod
-            );
-
-            localStorage.setItem(
-                "epicPaymentReference",
-                referenceNumber.trim()
-            );
-
-            localStorage.setItem(
-                "epicPaymentSubmitted",
-                "true"
-            );
-
+            localStorage.setItem("epicPaymentId", String(data.paymentId));
+            localStorage.setItem("epicPaymentMethod", paymentMethod);
+            localStorage.setItem("epicPaymentReference", referenceNumber.trim());
+            localStorage.setItem("epicPaymentSubmitted", "true");
             onNavigate("thank-you");
-        }, 800);
+        } catch (err) {
+            setErrorMessage(err instanceof Error ? err.message : "Unable to submit your payment.");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -470,14 +461,14 @@ const PaymentPage: React.FC<PaymentPageProps> = ({
                                         </strong>
 
                                         <small>
-                                            PNG, JPG or JPEG
+                                            PNG, JPG, WEBP or PDF • Max 5 MB
                                         </small>
                                     </label>
 
                                     <input
                                         id="paymentProof"
                                         type="file"
-                                        accept="image/png,image/jpeg,image/jpg"
+                                        accept="image/png,image/jpeg,image/webp,application/pdf"
                                         onChange={
                                             handleFileChange
                                         }

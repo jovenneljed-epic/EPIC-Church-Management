@@ -8,6 +8,8 @@ import React, {
     type FormEvent,
 } from "react";
 
+import "./ChurchServicesPage.css";
+
 import { API_BASE_URL } from "../config";
 
 // =========================================================

@@ -1,4 +1,5 @@
-﻿using EPIC.Api.Authorization;
+using EPIC.Api.Services;
+using EPIC.Api.Authorization;
 using EPIC.Api.Data;
 using EPIC.Api.Models;
 
@@ -16,6 +17,7 @@ namespace EPIC.Api.Controllers
     public class PaymentsController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly ResendEmailService _emailService;
 
         // =========================================================
         // CONSTANTS
@@ -44,9 +46,12 @@ namespace EPIC.Api.Controllers
         // CONSTRUCTOR
         // =========================================================
 
-        public PaymentsController(ApplicationDbContext context)
+        public PaymentsController(
+            ApplicationDbContext context,
+            ResendEmailService emailService)
         {
             _context = context;
+            _emailService = emailService;
         }
 
         // =========================================================
@@ -591,6 +596,7 @@ namespace EPIC.Api.Controllers
 
             var subscription =
                 await _context.Subscriptions
+                    .Include(s => s.SubscriptionPlan)
                     .FirstOrDefaultAsync(s =>
                         s.SubscriptionId ==
                         payment.SubscriptionId);
@@ -880,6 +886,19 @@ namespace EPIC.Api.Controllers
 
             await _context.SaveChangesAsync();
 
+            await _emailService.SendPaymentStatusNotificationAsync(
+                payment.PaymentId,
+                subscription.SubscriptionId,
+                subscription.ContactEmail,
+                subscription.ContactName,
+                subscription.ChurchName,
+                subscription.SubscriptionPlan?.PlanName ?? "EPIC Subscription",
+                subscription.BillingCycle,
+                payment.Amount,
+                payment.Currency,
+                payment.Status,
+                payment.ReferenceNumber);
+
             return Ok(new
             {
                 success = true,
@@ -1116,12 +1135,44 @@ namespace EPIC.Api.Controllers
                     Notes =
                         p.Notes,
 
+                    PaymentProofFileName = p.PaymentProofFileName,
+                    PaymentProofContentType = p.PaymentProofContentType,
+                    PaymentProofUploadedDate = p.PaymentProofUploadedDate,
+
                     CreatedDate =
                         p.CreatedDate,
 
                     UpdatedDate =
                         p.UpdatedDate
                 });
+        }
+
+        // =========================================================
+        // GET PAYMENT PROOF
+        // GET: api/Payments/{id}/proof
+        // =========================================================
+
+        [HttpGet("{id:int}/proof")]
+        [Permission("Payments", "view")]
+        public async Task<IActionResult> GetPaymentProof(int id)
+        {
+            if (id <= 0)
+                return BadRequest(new { message = "Invalid payment ID." });
+
+            var payment = await _context.Payments
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.PaymentId == id);
+
+            if (payment == null)
+                return NotFound(new { message = "Payment not found." });
+
+            if (payment.PaymentProofData == null || payment.PaymentProofData.Length == 0)
+                return NotFound(new { message = "Payment proof has not been uploaded." });
+
+            return File(
+                payment.PaymentProofData,
+                payment.PaymentProofContentType ?? "application/octet-stream",
+                payment.PaymentProofFileName ?? $"payment-{id}-proof");
         }
 
         // =========================================================
@@ -1239,6 +1290,10 @@ namespace EPIC.Api.Controllers
         public string? FailureReason { get; set; }
 
         public string? Notes { get; set; }
+
+        public string? PaymentProofFileName { get; set; }
+        public string? PaymentProofContentType { get; set; }
+        public DateTime? PaymentProofUploadedDate { get; set; }
 
         public DateTime CreatedDate { get; set; }
 

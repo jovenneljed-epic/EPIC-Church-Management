@@ -1,4 +1,4 @@
-﻿
+
 using EPIC.Api.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -76,6 +76,10 @@ namespace EPIC.Api.Data
         public DbSet<SubscriptionPlan> SubscriptionPlans => Set<SubscriptionPlan>();
         public DbSet<Subscription> Subscriptions => Set<Subscription>();
         public DbSet<Payment> Payments => Set<Payment>();
+
+        public DbSet<Announcement> Announcements { get; set; }
+        public DbSet<BlogPost> BlogPosts { get; set; }
+
 
         // =========================================================
         // EPIC LEARNING
@@ -1958,6 +1962,12 @@ private static void ConfigureMinistryMembers(
 
                 entity.Property(e => e.FailureReason)
                     .HasMaxLength(1000);
+
+                entity.Property(e => e.PaymentProofFileName)
+                    .HasMaxLength(255);
+
+                entity.Property(e => e.PaymentProofContentType)
+                    .HasMaxLength(100);
 
                 entity.Property(e => e.Notes)
                     .HasMaxLength(2000);

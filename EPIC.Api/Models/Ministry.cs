@@ -44,6 +44,9 @@ namespace EPIC.Api.Models
         [MaxLength(500)]
         public string? Description { get; set; }
 
+        [MaxLength(100)]
+        public string? ServiceTypeMapping { get; set; }
+
         // =========================================================
         // MEETING INFORMATION
         // =========================================================

@@ -124,6 +124,9 @@ const ClientPortal: React.FC<ClientPortalProps> = ({
     const [activePage, setActivePage] =
         useState<string>("dashboard");
 
+const [mobileSidebarOpen, setMobileSidebarOpen] =
+    useState<boolean>(false);
+
     // =========================================================
     // GET CLIENT TOKEN
     // =========================================================
@@ -781,37 +784,44 @@ const ClientPortal: React.FC<ClientPortalProps> = ({
                 SIDEBAR
             ============================================= */}
 
-            <ClientSidebar
-                activePage={
-                    activePage
-                }
-
-                onNavigate={
-                    handleNavigate
-                }
-
-                onLogout={
-                    handleLogout
-                }
-
-                clientName={
-                    client.client
-                        ?.clientName ||
-                    client.member
-                        ?.fullName ||
-                    client.username ||
-                    "Client"
-                }
-
-                permissions={
-                    permissions
-                }
-            />
+           <div
+    className={
+        mobileSidebarOpen
+            ? "epic-sidebar-wrapper open"
+            : "epic-sidebar-wrapper"
+    }
+>
+    <ClientSidebar
+        activePage={activePage}
+        onNavigate={(page) => {
+            handleNavigate(page);
+            setMobileSidebarOpen(false);
+        }}
+        onLogout={handleLogout}
+        clientName={
+            client.client?.clientName ||
+            client.member?.fullName ||
+            client.username ||
+            "Client"
+        }
+        permissions={permissions}
+    />
+</div>
 
             {/* =============================================
                 MAIN
             ============================================= */}
-
+             {
+    mobileSidebarOpen && (
+        <div
+            className="epic-sidebar-overlay"
+            onClick={() =>
+                setMobileSidebarOpen(false)
+            }
+        />
+    )
+}
+ 
             <div className="epic-client-main">
 
                 {/* =============================================
@@ -819,6 +829,17 @@ const ClientPortal: React.FC<ClientPortalProps> = ({
                 ============================================= */}
 
                 <header className="epic-client-header">
+
+<button
+    type="button"
+    className="epic-mobile-menu-button"
+    onClick={() =>
+        setMobileSidebarOpen(true)
+    }
+    aria-label="Open navigation"
+>
+    ☰
+</button>
 
                     <div className="epic-client-header-title">
 

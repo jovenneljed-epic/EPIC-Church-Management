@@ -1,4 +1,4 @@
-﻿using Resend;
+using Resend;
 
 namespace EPIC.Api.Services
 {
@@ -571,6 +571,135 @@ namespace EPIC.Api.Services
             }
         }
 
+
+        // =====================================================
+        // SUBSCRIPTION / PAYMENT NOTIFICATIONS
+        // =====================================================
+
+        public async Task SendSubscriptionCreatedAsync(
+            string email, string contactName, string churchName,
+            string planName, string billingCycle, decimal amount,
+            int subscriptionId, string status)
+        {
+            var safeName = System.Net.WebUtility.HtmlEncode(contactName);
+            var safeChurch = System.Net.WebUtility.HtmlEncode(churchName);
+            var safePlan = System.Net.WebUtility.HtmlEncode(planName);
+            var safeStatus = System.Net.WebUtility.HtmlEncode(status);
+            var html = BuildTransactionEmail(
+                "EPIC Subscription Received",
+                $"Hello {safeName},",
+                $"We received your EPIC subscription request for <strong>{safeChurch}</strong>.",
+                $"Subscription #{subscriptionId} is currently <strong>{safeStatus}</strong> while payment is being reviewed.",
+                $"Plan: <strong>{safePlan}</strong><br/>Billing: <strong>{billingCycle}</strong><br/>Amount: <strong>PHP {amount:N2}</strong>");
+            await SafeSendAsync(email, "EPIC Subscription Request Received", html);
+        }
+
+        public async Task SendPaymentSubmittedAsync(
+            string email, string contactName, string churchName,
+            string planName, decimal amount, string currency,
+            int paymentId, int subscriptionId, string paymentMethod, string? reference)
+        {
+            var safeName = System.Net.WebUtility.HtmlEncode(contactName);
+            var safeChurch = System.Net.WebUtility.HtmlEncode(churchName);
+            var safePlan = System.Net.WebUtility.HtmlEncode(planName);
+            var safeMethod = System.Net.WebUtility.HtmlEncode(paymentMethod);
+            var safeRef = System.Net.WebUtility.HtmlEncode(reference ?? "Not provided");
+            var html = BuildTransactionEmail(
+                "EPIC Payment Submitted",
+                $"Hello {safeName},",
+                $"Your payment submission for <strong>{safeChurch}</strong> has been received.",
+                $"Payment #{paymentId} is <strong>PENDING</strong>. Our administration team will verify your payment before activation.",
+                $"Subscription: <strong>#{subscriptionId}</strong><br/>Plan: <strong>{safePlan}</strong><br/>Amount: <strong>{currency} {amount:N2}</strong><br/>Method: <strong>{safeMethod}</strong><br/>Reference: <strong>{safeRef}</strong>");
+            await SafeSendAsync(email, "EPIC Payment Submitted – Pending Verification", html);
+        }
+
+        public async Task SendPaymentStatusNotificationAsync(
+            int paymentId, int subscriptionId, string email, string contactName,
+            string churchName, string planName, string billingCycle, decimal amount,
+            string currency, string status, string? reference)
+        {
+            var safeStatus = System.Net.WebUtility.HtmlEncode(status);
+            var subject = status switch
+            {
+                "PAID" => "EPIC Payment Verified – Subscription Activated",
+                "FAILED" => "EPIC Payment Update – Action Required",
+                "REFUNDED" => "EPIC Payment Refunded – Subscription Update",
+                _ => $"EPIC Payment Update – {safeStatus}"
+            };
+            var message = status == "PAID"
+                ? "Your payment has been verified. Your EPIC subscription is now active."
+                : status == "FAILED"
+                    ? "Your payment could not be approved. Please contact EPIC administration or submit a new payment."
+                    : status == "REFUNDED"
+                        ? "Your payment was refunded and your subscription has been moved to past due."
+                        : $"Your payment status is now <strong>{safeStatus}</strong>.";
+            var safeName = System.Net.WebUtility.HtmlEncode(contactName);
+            var safeChurch = System.Net.WebUtility.HtmlEncode(churchName);
+            var safePlan = System.Net.WebUtility.HtmlEncode(planName);
+            var safeRef = System.Net.WebUtility.HtmlEncode(reference ?? "Not provided");
+            var html = BuildTransactionEmail(
+                "EPIC Payment Status Update",
+                $"Hello {safeName},",
+                $"This is an update for <strong>{safeChurch}</strong>.",
+                message,
+                $"Payment: <strong>#{paymentId}</strong><br/>Subscription: <strong>#{subscriptionId}</strong><br/>Plan: <strong>{safePlan}</strong><br/>Billing: <strong>{billingCycle}</strong><br/>Amount: <strong>{currency} {amount:N2}</strong><br/>Reference: <strong>{safeRef}</strong>");
+            await SafeSendAsync(email, subject, html);
+        }
+
+        private async Task SafeSendAsync(string email, string subject, string html)
+        {
+            try { await SendEmailAsync(email, subject, html); }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"EPIC email notification failed: {ex.Message}");
+            }
+        }
+
+        private static string BuildTransactionEmail(string title, string greeting, string intro, string message, string details)
+        {
+            return $@"<!DOCTYPE html><html><body style='margin:0;padding:30px;background:#f5f7fb;font-family:Arial,sans-serif;'>
+<div style='max-width:620px;margin:auto;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 4px 15px rgba(0,0,0,.08);'>
+<div style='background:#0f172a;color:#fff;padding:26px 30px;'><h1 style='margin:0;color:#38bdf8;'>EPIC</h1><p style='margin:6px 0 0;opacity:.9;'>Engaging People Into Christ</p></div>
+<div style='padding:30px;'><h2 style='color:#1e3a8a;'>{title}</h2><p>{greeting}</p><p>{intro}</p><div style='padding:18px;background:#f1f5f9;border-radius:10px;line-height:1.8;'>{details}</div><p style='margin-top:22px;'>{message}</p><p>God bless your ministry!</p><p><strong>EPIC Team</strong><br/>EPIC Church Management System</p><hr style='border:0;border-top:1px solid #e5e7eb;margin:28px 0;'><small style='color:#64748b;'>This is an automatic email from the EPIC Church Management System.</small></div></div></body></html>";
+        }
+
+        public async Task SendNewSubscriptionAdminNotificationAsync(
+            string churchName, string contactName, string email, string phone,
+            string planName, string billingCycle, decimal amount, int subscriptionId)
+        {
+            try
+            {
+                var admin = _configuration["Resend:AdminEmail"];
+                if (string.IsNullOrWhiteSpace(admin)) return;
+                var html = BuildTransactionEmail(
+                    "New EPIC Subscription",
+                    "A new subscription checkout was completed.",
+                    $"<strong>{System.Net.WebUtility.HtmlEncode(churchName)}</strong> submitted an EPIC subscription request.",
+                    "The subscription is waiting for payment verification.",
+                    $"Subscription: <strong>#{subscriptionId}</strong><br/>Contact: <strong>{System.Net.WebUtility.HtmlEncode(contactName)}</strong><br/>Email: <strong>{System.Net.WebUtility.HtmlEncode(email)}</strong><br/>Phone: <strong>{System.Net.WebUtility.HtmlEncode(phone)}</strong><br/>Plan: <strong>{System.Net.WebUtility.HtmlEncode(planName)}</strong><br/>Billing: <strong>{System.Net.WebUtility.HtmlEncode(billingCycle)}</strong><br/>Amount: <strong>PHP {amount:N2}</strong>");
+                await SafeSendAsync(admin, $"New EPIC Subscription #{subscriptionId}", html);
+            }
+            catch (Exception ex) { Console.WriteLine($"Admin subscription email failed: {ex.Message}"); }
+        }
+
+        public async Task SendNewPaymentAdminNotificationAsync(
+            int paymentId, int subscriptionId, string churchName, string planName,
+            decimal amount, string currency, string paymentMethod, string? reference)
+        {
+            try
+            {
+                var admin = _configuration["Resend:AdminEmail"];
+                if (string.IsNullOrWhiteSpace(admin)) return;
+                var html = BuildTransactionEmail(
+                    "New EPIC Payment Awaiting Verification",
+                    "A new payment proof has been submitted.",
+                    $"<strong>{System.Net.WebUtility.HtmlEncode(churchName)}</strong> submitted a payment for review.",
+                    "Open EPIC Payment Management to review the proof and mark the payment as paid or failed.",
+                    $"Payment: <strong>#{paymentId}</strong><br/>Subscription: <strong>#{subscriptionId}</strong><br/>Plan: <strong>{System.Net.WebUtility.HtmlEncode(planName)}</strong><br/>Amount: <strong>{currency} {amount:N2}</strong><br/>Method: <strong>{System.Net.WebUtility.HtmlEncode(paymentMethod)}</strong><br/>Reference: <strong>{System.Net.WebUtility.HtmlEncode(reference ?? "Not provided")}</strong>");
+                await SafeSendAsync(admin, $"Payment Verification Required #{paymentId}", html);
+            }
+            catch (Exception ex) { Console.WriteLine($"Admin payment email failed: {ex.Message}"); }
+        }
 
         // =====================================================
         // STATUS EMAIL TEMPLATE

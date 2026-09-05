@@ -19,6 +19,13 @@ import ContactPage from "./pages/public/ContactPage";
 import MinistriesPage from "./pages/public/MinistriesPage";
 import EpicSystemPage from "./pages/public/EpicSystemPage";
 import EpicLearningPage from "./pages/public/EpicLearningPage";
+import EPICBusinessHomePage from "./pages/public/EPICBusinessHomePage";
+import PlatformPage from "./pages/public/business/PlatformPage";
+import AcademyPage from "./pages/public/business/AcademyPage";
+import StorePage from "./pages/public/business/StorePage";
+import WhatsNewPage from "./pages/public/business/WhatsNewPage";
+import ResourcesPage from "./pages/public/business/ResourcesPage";
+import DemoPage from "./pages/public/business/DemoPage";
 
 // =========================================================
 // ADMIN AUTH
@@ -67,7 +74,11 @@ import OfferPage from "./pages/OfferPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import PaymentPage from "./pages/PaymentPage";
 import ThankYouPage from "./pages/ThankYouPage";
-
+import MinistryEvaluationPage
+from "./pages/public/business/MinistryEvaluationPage";
+import BlogDetailPage from "./pages/public/business/BlogDetailPage";
+import BlogManagement from "./pages/admin/BlogManagement";
+import BlogPage from "./pages/public/BlogPage";
 // =========================================================
 // REPORTS
 // =========================================================
@@ -95,48 +106,75 @@ import PermissionFilter from "./PermissionFilter";
 // =========================================================
 
 type Page =
-    | "dashboard"
-    | "reports"
-    | "attendance-report"
-    | "attendance-by-date-report"
-    | "demo-requests"
-    | "subscription-dashboard"
-    | "subscriptions"
-    | "client-payment"
-    | "website-analytics"
-    | "learning"
-    | "view-course"
-    | "lesson"
-    | "members"
-    | "attendance"
-    | "member-attendance-report"
-    | "services"
-    | "events"
-    | "ministries"
-    | "visitors"
-    | "giving"
-    | "income"
-    | "expenses"
-    | "settings";
+  | "dashboard"
+  | "reports"
+  | "attendance-report"
+  | "attendance-by-date-report"
+  | "demo-requests"
+  | "subscription-dashboard"
+  | "subscriptions"
+  | "client-payment"
+  | "website-analytics"
+  | "learning"
+  | "view-course"
+  | "lesson"
+  | "members"
+  | "attendance"
+  | "member-attendance-report"
+  | "services"
+  | "events"
+  | "ministries"
+  | "visitors"
+  | "giving"
+  | "income"
+  | "expenses"
+  | "settings"
+  | "blog-management"
+  | "whats-new"
+  | "blog-detail"
+  | "resources";
+
+// =========================================================
+// PUBLIC WEBSITE PAGE TYPES
+// =========================================================
 
 type PublicPage =
-    | "landing"
-    | "home"
-    | "about"
-    | "ministries"
-    | "epic-system"
-    | "learning"
-    | "contact"
-    | "opt-in"
-    | "offer"
-    | "checkout"
-    | "payment"
-    | "thank-you";
+  | "landing"
+  | "home"
+  | "about"
+  | "blog"
+  | "blog-detail"
+  | "ministries"
+  | "epic-system"
+  | "learning"
+  | "contact"
+  | "business-home"
+  | "platform"
+  | "academy"
+  | "store"
+  | "resources"
+  | "demo"
+  | "whats-new"
+  | "opt-in"
+  | "offer"
+  | "checkout"
+  | "payment"
+  | "thank-you";
+
+// =========================================================
+// DYNAMIC PUBLIC ROUTES
+// =========================================================
+
+interface DynamicPublicRoute {
+    type:
+        | "ministry-evaluation";
+
+    id: number;
+}
 
 // =========================================================
 // ROUTES
 // =========================================================
-
 const PAGE_ROUTES: Record<Page, string> = {
     dashboard: "/dashboard",
 
@@ -153,6 +191,12 @@ const PAGE_ROUTES: Record<Page, string> = {
     learning: "/cms/learning",
     "view-course": "/cms/learning/course",
     lesson: "/cms/learning/lesson",
+     
+   "blog-management":
+   "/blog-management",
+   "blog-detail": "/blog-detail",
+   "whats-new": "/whats-new",
+   "resources": "/resources",
 
     members: "/members",
     attendance: "/attendance",
@@ -161,35 +205,37 @@ const PAGE_ROUTES: Record<Page, string> = {
     services: "/services",
     events: "/events",
     ministries: "/cms/ministries",
-    visitors: "/visitors",
+ visitors: "/visitors",
     giving: "/giving",
     income: "/income",
     expenses: "/expenses",
     settings: "/settings",
+    
 };
 
-const PUBLIC_ROUTES: Record<PublicPage, string> = {
-    // =====================================================
-    // SALES FUNNEL
-    // =====================================================
 
-    landing: "/",
-    "opt-in": "/opt-in",
-    offer: "/offer",
-    checkout: "/checkout",
-    payment: "/payment",
-    "thank-you": "/thank-you",
-
-    // =====================================================
-    // EXISTING PUBLIC WEBSITE
-    // =====================================================
-
-    home: "/home",
-    about: "/about",
-    ministries: "/ministries",
-    "epic-system": "/epic-system",
-    learning: "/learning",
-    contact: "/contact",
+   const PUBLIC_ROUTES: Record<PublicPage, string> = {
+  landing: "/",
+  "opt-in": "/opt-in",
+  offer: "/offer",
+  checkout: "/checkout",
+  payment: "/payment",
+  "thank-you": "/thank-you",
+  "business-home": "/business-home",
+  home: "/home",
+  about: "/about",
+  blog: "/blog",
+  ministries: "/ministries",
+  "epic-system": "/epic-system",
+  learning: "/learning",
+  contact: "/contact",
+  platform: "/platform",
+  academy: "/academy",
+  store: "/store",
+  resources: "/resources",
+  demo: "/demo",
+  "whats-new": "/whats-new",
+  "blog-detail": "/blog-detail",
 };
 
 const ADMIN_LOGIN_ROUTE = "/login";
@@ -267,6 +313,12 @@ const PAGE_TITLES: Record<Page, string> = {
 
     settings:
         "System Settings",
+    "blog-management":
+        "Blog Management",
+    "blog-detail": "Blog Detail",
+    "whats-new": "What's New",
+    "resources": "Resources",
+
 };
 
 // =========================================================
@@ -342,6 +394,12 @@ const PAGE_SUBTITLES: Record<Page, string> = {
 
     settings:
         "Manage system configuration",
+  "blog-management":
+        "Manage EPIC blog articles",
+  "blog-detail": "View blog post details",
+  "whats-new": "Latest updates and announcements",
+  "resources": "Church resources and materials",
+
 };
 
 // =========================================================
@@ -726,6 +784,42 @@ const getCurrentPath = (): string =>
         window.location.pathname
     );
 
+const getDynamicPublicRoute = (
+    pathname:string
+)
+:
+DynamicPublicRoute | null =>
+{
+
+    const path =
+    normalizePath(pathname);
+
+
+    const ministryMatch =
+    path.match(
+        /^\/ministry-evaluation\/(\d+)$/
+    );
+
+
+    if(ministryMatch)
+    {
+        return {
+
+            type:
+            "ministry-evaluation",
+
+            id:
+            Number(
+                ministryMatch[1]
+            )
+
+        };
+    }
+
+
+    return null;
+
+};
 // =========================================================
 // NUMBER
 // =========================================================
@@ -896,38 +990,80 @@ const getPageFromPath = (
 // =========================================================
 // PUBLIC ROUTES
 // =========================================================
-
 const isPublicPath = (
-    path: string
-): boolean => {
+    path:string
+):boolean => {
+
+
     const normalized =
-        normalizePath(
-            path
+        normalizePath(path);
+
+
+
+    // Dynamic public pages
+    const dynamicRoute =
+        getDynamicPublicRoute(
+            normalized
         );
 
+
+    if(dynamicRoute)
+    {
+        return true;
+    }
+
+
+
     return [
+
         PUBLIC_ROUTES.landing,
+
         PUBLIC_ROUTES.home,
+
         PUBLIC_ROUTES.about,
+
         PUBLIC_ROUTES.ministries,
+
         PUBLIC_ROUTES["epic-system"],
+
         PUBLIC_ROUTES.learning,
+
         PUBLIC_ROUTES.contact,
 
+
+        PUBLIC_ROUTES["business-home"],
+
+        PUBLIC_ROUTES.platform,
+
+        PUBLIC_ROUTES.academy,
+
+        PUBLIC_ROUTES.store,
+
+        PUBLIC_ROUTES["whats-new"],
+
+        PUBLIC_ROUTES.resources,
+
+        PUBLIC_ROUTES.demo,
+        PUBLIC_ROUTES.blog,
+
+
         PUBLIC_ROUTES["opt-in"],
+
         PUBLIC_ROUTES.offer,
+
         PUBLIC_ROUTES.checkout,
+
         PUBLIC_ROUTES.payment,
+
         PUBLIC_ROUTES["thank-you"],
 
-        PAGE_ROUTES[
-            "client-payment"
-        ],
-    ].includes(
-        normalized
-    );
-};
 
+        PAGE_ROUTES["client-payment"],
+
+
+    ].includes(normalized);
+
+};
 // =========================================================
 // PAYMENT
 // =========================================================
@@ -1088,62 +1224,111 @@ const NAVIGATION_SECTIONS:
         ],
     },
 
-    {
-        title: "BUSINESS / SALES",
+ {
+    title: "BUSINESS / SALES",
 
-        items: [
-            {
-                page:
-                    "subscription-dashboard",
-                label:
-                    "Subscription Dashboard",
-                icon: "📈",
-                permission:
-                    "Subscriptions",
-            },
-            {
-                page: "subscriptions",
-                label: "Subscriptions",
-                icon: "💳",
-                permission:
-                    "Subscriptions",
-            },
-            {
-                page:
-                    "demo-requests",
-                label:
-                    "Demo Requests",
-                icon: "🎯",
-                permission:
-                    "Demo Requests",
-            },
-            {
-                page:
-                    "website-analytics",
-                label:
-                    "Website Analytics",
-                icon: "📊",
-                permission:
-                    "Website Analytics",
-            },
-        ],
-    },
+    items: [
 
-    {
-        title: "SYSTEM",
+        {
+            page:
+                "subscription-dashboard",
 
-        items: [
-            {
-                page: "settings",
-                label: "Settings",
-                icon: "⚙",
-                permission:
-                    "Settings",
-            },
-        ],
-    },
-];
+            label:
+                "Subscription Dashboard",
 
+            icon:
+                "📈",
+
+            permission:
+                "Subscriptions",
+        },
+
+
+        {
+            page:
+                "subscriptions",
+
+            label:
+                "Subscriptions",
+
+            icon:
+                "💳",
+
+            permission:
+                "Subscriptions",
+        },
+
+
+        {
+            page:
+                "demo-requests",
+
+            label:
+                "Demo Requests",
+
+            icon:
+                "🎯",
+
+            permission:
+                "Demo Requests",
+        },
+
+    ],
+},
+
+
+
+{
+    title: "SYSTEM",
+
+    items: [
+
+        {
+            page:
+                "website-analytics",
+
+            label:
+                "Website Analytics",
+
+            icon:
+                "📊",
+
+            permission:
+                "Website Analytics",
+        },
+
+
+        {
+            page:
+                "settings",
+
+            label:
+                "Settings",
+
+            icon:
+                "⚙",
+
+            permission:
+                "Settings",
+        },
+
+
+     {
+    page:
+        "blog-management",
+
+    label:
+        "Blog Management",
+
+    icon:
+        "📝",
+
+    permission:
+        "Blog Management",
+}
+    ],
+},
+];  
 // =========================================================
 // ACTIVE NAVIGATION
 // =========================================================
@@ -1337,6 +1522,10 @@ const App: React.FC = () => {
         normalizedPath ===
         PUBLIC_ROUTES.home;
 
+    const isBusinessHomePage =
+        normalizedPath ===
+        PUBLIC_ROUTES["business-home"];
+
     const isOptInPage =
         normalizedPath ===
         PUBLIC_ROUTES["opt-in"];
@@ -1516,39 +1705,38 @@ const App: React.FC = () => {
             },
             [syncRouteState]
         );
+const navigate =
+    useCallback(
+        (page: Page) => {
 
-    const navigate =
-        useCallback(
-            (page: Page) => {
-                navigateToUrl(
-                    PAGE_ROUTES[
-                        page
-                    ]
-                );
+            navigateToUrl(
+                PAGE_ROUTES[page]
+            );
 
-                if (
-                    window.innerWidth <=
-                    900
-                ) {
-                    setSidebarOpen(
-                        false
-                    );
-                }
-            },
-            [navigateToUrl]
-        );
 
-    const navigatePublic =
-        useCallback(
-            (page: PublicPage) => {
-                navigateToUrl(
-                    PUBLIC_ROUTES[
-                        page
-                    ]
-                );
-            },
-            [navigateToUrl]
-        );
+            if (
+                window.innerWidth <= 900
+            ) {
+                setSidebarOpen(false);
+            }
+
+        },
+        [navigateToUrl]
+    );
+
+
+
+const navigatePublic =
+    useCallback(
+        (page: PublicPage) => {
+
+            navigateToUrl(
+                PUBLIC_ROUTES[page]
+            );
+
+        },
+        [navigateToUrl]
+    );
 
     // =====================================================
     // INITIAL AUTH CHECK
@@ -1881,128 +2069,213 @@ const App: React.FC = () => {
             navigateToUrl,
         ]);
 
-    // =====================================================
-    // PUBLIC NAVIGATION
-    // =====================================================
+ // =====================================================
+// PUBLIC NAVIGATION
+// =====================================================
 
-    const handlePublicNavigate =
-        useCallback(
-            (page: string) => {
-                switch (page) {
-                    case "landing":
-                        navigatePublic(
-                            "landing"
-                        );
-                        break;
+const handlePublicNavigate =
+useCallback(
+    (page:string)=>{
 
-                    case "home":
-                        navigatePublic(
-                            "home"
-                        );
-                        break;
 
-                    case "about":
-                        navigatePublic(
-                            "about"
-                        );
-                        break;
+        // Dynamic ministry evaluation route
 
-                    case "ministries":
-                        navigatePublic(
-                            "ministries"
-                        );
-                        break;
+        if(
+            page.startsWith(
+                "/ministry-evaluation/"
+            )
+        )
+        {
 
-                    case "epic-system":
-                        navigatePublic(
-                            "epic-system"
-                        );
-                        break;
+            navigateToUrl(page);
 
-                    case "learning":
-                        navigatePublic(
-                            "learning"
-                        );
-                        break;
+            return;
 
-                    case "contact":
-                        navigatePublic(
-                            "contact"
-                        );
-                        break;
+        }
 
-                    case "opt-in":
-                        navigatePublic(
-                            "opt-in"
-                        );
-                        break;
 
-                    case "offer":
-                        navigatePublic(
-                            "offer"
-                        );
-                        break;
 
-                    case "checkout":
-                        navigatePublic(
-                            "checkout"
-                        );
-                        break;
+        switch(page)
+        {
 
-                    case "payment":
-                        navigatePublic(
-                            "payment"
-                        );
-                        break;
 
-                    case "thank-you":
-                        navigatePublic(
-                            "thank-you"
-                        );
-                        break;
+            case "landing":
 
-                    case "login":
-                    case "admin-login":
-                        navigateToUrl(
-                            ADMIN_LOGIN_ROUTE
-                        );
-                        break;
+                navigatePublic("landing");
 
-                    case "client-login":
-                        navigateToUrl(
-                            CLIENT_LOGIN_ROUTE
-                        );
-                        break;
+                break;
 
-                    case "client-payment": {
-                        const subscriptionId =
-                            getPaymentSubscriptionId();
 
-                        const url =
-                            subscriptionId
-                                ? `${PAGE_ROUTES["client-payment"]}?subscriptionId=${subscriptionId}`
-                                : PAGE_ROUTES[
-                                      "client-payment"
-                                  ];
 
-                        navigateToUrl(
-                            url
-                        );
+            case "home":
 
-                        break;
-                    }
+                navigatePublic("home");
 
-                    default:
-                        navigatePublic(
-                            "landing"
-                        );
-                }
-            },
-            [
-                navigatePublic,
-                navigateToUrl,
-            ]
-        );
+                break;
+
+
+
+            case "about":
+
+                navigatePublic("about");
+
+                break;
+
+
+
+            case "ministries":
+
+                navigatePublic("ministries");
+
+                break;
+
+
+
+            case "epic-system":
+
+                navigatePublic("epic-system");
+
+                break;
+
+
+
+            case "learning":
+
+                navigatePublic("learning");
+
+                break;
+
+
+
+            case "contact":
+
+                navigatePublic("contact");
+
+                break;
+
+
+
+            case "academy":
+
+                navigatePublic("academy");
+
+                break;
+
+
+
+            case "whats-new":
+
+                navigatePublic("whats-new");
+
+                break;
+
+
+
+            case "opt-in":
+
+                navigatePublic("opt-in");
+
+                break;
+
+
+
+            case "offer":
+
+                navigatePublic("offer");
+
+                break;
+
+
+
+            case "checkout":
+
+                navigatePublic("checkout");
+
+                break;
+
+
+
+            case "payment":
+
+                navigatePublic("payment");
+
+                break;
+
+
+
+            case "thank-you":
+
+                navigatePublic("thank-you");
+
+                break;
+
+
+
+            case "login":
+            case "admin-login":
+
+                navigateToUrl(
+                    ADMIN_LOGIN_ROUTE
+                );
+
+                break;
+
+
+
+            case "client-login":
+
+                navigateToUrl(
+                    CLIENT_LOGIN_ROUTE
+                );
+
+                break;
+
+
+
+            case "client-payment":
+            {
+
+                const subscriptionId =
+                getPaymentSubscriptionId();
+
+
+                const url =
+                subscriptionId
+
+                ?
+
+                `${PAGE_ROUTES["client-payment"]}?subscriptionId=${subscriptionId}`
+
+                :
+
+                PAGE_ROUTES["client-payment"];
+
+
+
+                navigateToUrl(url);
+
+
+                break;
+
+            }
+
+
+
+            default:
+
+                navigatePublic(
+                    "landing"
+                );
+
+        }
+
+
+    },
+    [
+        navigatePublic,
+        navigateToUrl
+    ]
+);
 
     // =====================================================
     // ADMIN LOGIN SUCCESS
@@ -2265,9 +2538,9 @@ const App: React.FC = () => {
                     return;
                 }
 
-                navigateToUrl(
-                    `/learning/course/${courseId}`
-                );
+              navigateToUrl(
+    `/cms/learning/course/${courseId}`
+);
             },
             [
                 navigateToUrl,
@@ -2290,9 +2563,9 @@ const App: React.FC = () => {
                     return;
                 }
 
-                navigateToUrl(
-                    `/learning/course/${courseId}/lesson/${lessonId}`
-                );
+               navigateToUrl(
+    `/cms/learning/course/${courseId}/lesson/${lessonId}`
+);
             },
             [
                 navigateToUrl,
@@ -2541,256 +2814,495 @@ const App: React.FC = () => {
             ]
         );
 
-    // =====================================================
-    // PAGE RENDERER
-    // =====================================================
 
-    const renderPage =
-        useCallback(() => {
-            switch (
-                activePage
-            ) {
-                case "dashboard":
-                    return renderProtectedPage(
-                        "Dashboard",
-                        <Dashboard />
-                    );
 
-                case "reports":
-                    return renderProtectedPage(
-                        "Reports",
-                        <Reports
-                            onOpenAttendanceReport={() =>
-                                navigate(
-                                    "attendance-report"
-                                )
-                            }
-                            onOpenAttendanceByDate={() =>
-                                navigate(
-                                    "attendance-by-date-report"
-                                )
-                            }
-                        />
-                    );
+// =====================================================
+// PAGE RENDERER
+// =====================================================
+const renderPage = useCallback(() => {
 
-                case "attendance-report":
-                    return renderProtectedPage(
-                        "Attendance",
-                        <AttendanceReportBuilder />
-                    );
 
-                case "attendance-by-date-report":
-                    return renderProtectedPage(
-                        "Attendance",
-                        <AttendanceByDateReport />
-                    );
+console.log(
+    "RENDER PAGE RUNNING",
+    currentPath
+);
 
-                case "demo-requests":
-                    return renderProtectedPage(
-                        "Demo Requests",
-                        <DemoRequests />
-                    );
+const dynamicRoute =
+getDynamicPublicRoute(
+    currentPath
+);
 
-                case "subscription-dashboard":
-                    return renderProtectedPage(
-                        "Subscriptions",
-                        <SubscriptionDashboard />
-                    );
 
-                case "subscriptions":
-                    return renderProtectedPage(
-                        "Subscriptions",
-                        <SubscriptionManagement />
-                    );
+console.log(
+    "CURRENT PATH:",
+    currentPath
+);
 
-                case "website-analytics":
-                    return renderProtectedPage(
-                        "Website Analytics",
-                        <WebsiteAnalyticsDashboard />
-                    );
 
-                case "client-payment":
-                    return (
-                        <ClientPayment
-                            subscriptionId={
-                                paymentSubscriptionId ??
-                                undefined
-                            }
-                        />
-                    );
+console.log(
+    "DYNAMIC ROUTE:",
+    dynamicRoute
+);
 
-                case "services":
-                    return renderProtectedPage(
-                        "Church Services",
-                        <ChurchServicesPage />
-                    );
+console.log(
+    "DYNAMIC ROUTE RESULT",
+    dynamicRoute
+);
 
-                case "events":
-                    return renderProtectedPage(
-                        "Event Management",
-                        <EventManagementPage />
-                    );
 
-                case "members":
-                    return renderProtectedPage(
-                        "Members",
-                        <Members />
-                    );
 
-                case "attendance":
-                    return renderProtectedPage(
-                        "Attendance",
-                        <Attendance />
-                    );
+if(
+    dynamicRoute?.type === "ministry-evaluation"
+)
+{
 
-                case "member-attendance-report":
-                    return renderProtectedPage(
-                        "Attendance",
-                        <MemberAttendanceReport />
-                    );
+    return (
 
-                case "ministries":
-                    return renderProtectedPage(
-                        "Ministries",
-                        <Ministries />
-                    );
+        <MinistryEvaluationPage
 
-                case "visitors":
-                    return renderProtectedPage(
-                        "Visitors",
-                        <Visitors />
-                    );
-
-                case "giving":
-                    return renderProtectedPage(
-                        "Giving",
-                        <Giving />
-                    );
-
-                case "income":
-                    return renderProtectedPage(
-                        "Income",
-                        <Income />
-                    );
-
-                case "expenses":
-                    return renderProtectedPage(
-                        "Expenses",
-                        <Expenses />
-                    );
-
-                case "learning":
-                    return renderProtectedPage(
-                        "EPIC Learning",
-                        <LearningPage
-                            onViewCourse={
-                                handleViewCourse
-                            }
-                        />
-                    );
-
-                case "view-course":
-                    if (
-                        !canView(
-                            "EPIC Learning"
-                        )
-                    ) {
-                        return renderAccessDenied(
-                            "EPIC Learning"
-                        );
-                    }
-
-                    if (
-                        !selectedCourseId
-                    ) {
-                        return renderLearningEmptyState(
-                            "Course Not Selected",
-                            "Please select a course from EPIC Learning."
-                        );
-                    }
-
-                    return (
-                        <ViewCourse
-                            courseId={
-                                selectedCourseId
-                            }
-                            onBack={
-                                handleBackToLearning
-                            }
-                            onLessonSelect={(
-                                lessonId
-                            ) =>
-                                handleViewLesson(
-                                    selectedCourseId,
-                                    lessonId
-                                )
-                            }
-                        />
-                    );
-
-                case "lesson":
-                    if (
-                        !canView(
-                            "EPIC Learning"
-                        )
-                    ) {
-                        return renderAccessDenied(
-                            "EPIC Learning"
-                        );
-                    }
-
-                    if (
-                        !selectedCourseId ||
-                        !selectedLessonId
-                    ) {
-                        return renderLearningEmptyState(
-                            "Lesson Not Selected",
-                            "Please select a lesson from the course."
-                        );
-                    }
-
-                    return (
-                        <LessonPage
-                            courseId={
-                                selectedCourseId
-                            }
-                            lessonId={
-                                selectedLessonId
-                            }
-                            onBack={
-                                handleBackToCourse
-                            }
-                        />
-                    );
-
-                case "settings":
-                    return renderProtectedPage(
-                        "Settings",
-                        <Settings />
-                    );
-
-                default:
-                    return renderProtectedPage(
-                        "Dashboard",
-                        <Dashboard />
-                    );
+            ministryId={
+                dynamicRoute.id
             }
-        }, [
-            activePage,
-            navigate,
-            renderProtectedPage,
-            paymentSubscriptionId,
-            selectedCourseId,
-            selectedLessonId,
-            handleViewCourse,
-            handleViewLesson,
-            handleBackToCourse,
-            handleBackToLearning,
-            canView,
-            renderAccessDenied,
-            renderLearningEmptyState,
-        ]);
 
+        />
+
+    );
+
+}
+if (
+    normalizedPath === "/blog"
+)
+{
+    return (
+        <BlogPage />
+    );
+}
+
+    switch(activePage)
+    {
+
+        case "whats-new":
+
+            return (
+
+                <WhatsNewPage
+
+                    onNavigate={
+                        handlePublicNavigate
+                    }
+
+                />
+
+            );
+
+
+
+
+
+        case "dashboard":
+
+            return renderProtectedPage(
+
+                "Dashboard",
+
+                <Dashboard />
+
+            );
+
+
+
+
+
+        case "reports":
+
+            return renderProtectedPage(
+
+                "Reports",
+
+                <Reports
+
+                    onOpenAttendanceReport={() =>
+                        navigate(
+                            "attendance-report"
+                        )
+                    }
+
+
+                    onOpenAttendanceByDate={() =>
+                        navigate(
+                            "attendance-by-date-report"
+                        )
+                    }
+
+                />
+
+            );
+
+
+case "blog-management":
+
+    return (
+
+        <BlogManagement />
+
+    );
+
+
+
+        case "services":
+
+            return renderProtectedPage(
+
+                "Church Services",
+
+                <ChurchServicesPage />
+
+            );
+
+
+
+
+
+        case "events":
+
+            return renderProtectedPage(
+
+                "Event Management",
+
+                <EventManagementPage />
+
+            );
+
+
+
+
+
+        case "ministries":
+
+            return renderProtectedPage(
+
+                "Ministries",
+
+                <Ministries />
+
+            );
+
+
+
+
+
+
+        case "learning":
+
+            return renderProtectedPage(
+
+                "EPIC Learning",
+
+                <LearningPage
+
+                    onViewCourse={
+                        handleViewCourse
+                    }
+
+                />
+
+            );
+
+
+
+
+
+
+
+        case "view-course":
+
+
+            if(
+                !selectedCourseId
+            ){
+
+                return renderLearningEmptyState(
+
+                    "Course Not Selected",
+
+                    "Please select a course."
+
+                );
+
+            }
+
+
+
+            return (
+
+                <ViewCourse
+
+                    courseId={
+                        selectedCourseId
+                    }
+
+
+                    onBack={
+                        handleBackToLearning
+                    }
+
+
+                    onLessonSelect={
+                        (lessonId)=>
+
+                            handleViewLesson(
+
+                                selectedCourseId,
+
+                                lessonId
+
+                            )
+
+                    }
+
+                />
+
+            );
+
+
+
+
+
+
+
+        case "lesson":
+
+
+            if(
+                !selectedCourseId ||
+                !selectedLessonId
+            ){
+
+                return renderLearningEmptyState(
+
+                    "Lesson Not Selected",
+
+                    "Please select a lesson."
+
+                );
+
+            }
+
+
+
+
+            return (
+
+                <LessonPage
+
+                    courseId={
+                        selectedCourseId
+                    }
+
+
+                    lessonId={
+                        selectedLessonId
+                    }
+
+
+                    onBack={
+                        handleBackToCourse
+                    }
+
+                />
+
+            );
+
+            case "blog-detail":
+
+return (
+
+<BlogDetailPage
+
+onBack={()=>
+navigate(
+"resources"
+)
+}
+
+/>
+
+);
+
+case "blog-management":
+
+return (
+
+<BlogManagement />
+
+);
+
+
+case "member-attendance-report":
+
+    return renderProtectedPage(
+        "Attendance",
+        <MemberAttendanceReport />
+    );
+
+        case "settings":
+
+            return renderProtectedPage(
+
+                "Settings",
+
+                <Settings />
+
+            );
+
+
+case "demo-requests":
+
+    return renderProtectedPage(
+        "Demo Requests",
+        <DemoRequests />
+    );
+
+
+case "subscription-dashboard":
+
+    return renderProtectedPage(
+        "Subscriptions",
+        <SubscriptionDashboard />
+    );
+
+
+case "subscriptions":
+
+    return renderProtectedPage(
+        "Subscriptions",
+        <SubscriptionManagement />
+    );
+
+
+case "website-analytics":
+
+    return renderProtectedPage(
+        "Website Analytics",
+        <WebsiteAnalyticsDashboard />
+    );
+
+
+case "members":
+
+    return renderProtectedPage(
+        "Members",
+        <Members />
+    );
+
+
+case "attendance":
+
+    return renderProtectedPage(
+        "Attendance",
+        <Attendance />
+    );
+
+
+case "visitors":
+
+    return renderProtectedPage(
+        "Visitors",
+        <Visitors />
+    );
+
+
+case "giving":
+
+    return renderProtectedPage(
+        "Giving",
+        <Giving />
+    );
+
+
+case "income":
+
+    return renderProtectedPage(
+        "Income",
+        <Income />
+    );
+
+
+case "expenses":
+
+    return renderProtectedPage(
+        "Expenses",
+        <Expenses />
+    );
+
+
+case "attendance-report":
+
+    return renderProtectedPage(
+        "Attendance Report",
+        <AttendanceReportBuilder />
+    );
+
+
+case "attendance-by-date-report":
+
+    return renderProtectedPage(
+        "Attendance Date Report",
+        <AttendanceByDateReport />
+    );
+
+
+
+        default:
+
+
+            return renderProtectedPage(
+
+                "Dashboard",
+
+                <Dashboard />
+
+            );
+
+
+    }
+
+
+},[
+
+    currentPath,
+
+    activePage,
+
+
+    handlePublicNavigate,
+
+
+    renderProtectedPage,
+
+
+    navigate,
+
+
+    selectedCourseId,
+
+    selectedLessonId,
+
+
+    handleViewCourse,
+
+    handleViewLesson,
+
+
+    handleBackToCourse,
+
+    handleBackToLearning,
+
+
+    renderLearningEmptyState
+
+
+]);
     // =====================================================
     // AUTH INITIALIZATION
     // =====================================================
@@ -2836,6 +3348,55 @@ const App: React.FC = () => {
         );
     }
 
+    // =====================================================
+    // EPIC BUSINESS WEBSITE
+    // =====================================================
+
+    if (isBusinessHomePage) {
+        return <EPICBusinessHomePage />;
+    }
+if (normalizedPath === "/platform") {
+    return (
+        <PlatformPage
+            onNavigate={handlePublicNavigate}
+        />
+    );
+}
+if (normalizedPath === "/academy") {
+    return (
+        <AcademyPage
+            onNavigate={handlePublicNavigate}
+        />
+    );
+}
+if (normalizedPath === "/store") {
+    return (
+        <StorePage
+            onNavigate={handlePublicNavigate}
+        />
+    );
+}
+if (normalizedPath === "/whats-new") {
+    return (
+        <WhatsNewPage
+            onNavigate={handlePublicNavigate}
+        />
+    );
+}
+if (normalizedPath === "/resources") {
+    return (
+        <ResourcesPage
+            onNavigate={handlePublicNavigate}
+        />
+    );
+}
+if (normalizedPath === "/demo") {
+    return (
+        <DemoPage
+            onNavigate={handlePublicNavigate}
+        />
+    );
+}
     // =====================================================
     // SALES FUNNEL — OPT IN
     // =====================================================
@@ -3056,6 +3617,35 @@ if (isThankYouPage) {
             </div>
         );
     }
+
+// =====================================================
+// PUBLIC MINISTRY EVALUATION
+// =====================================================
+
+const dynamicRoute =
+    getDynamicPublicRoute(
+        normalizedPath
+    );
+
+
+if(
+    dynamicRoute?.type === "ministry-evaluation"
+)
+{
+
+    return (
+
+        <MinistryEvaluationPage
+
+            ministryId={
+                dynamicRoute.id
+            }
+
+        />
+
+    );
+
+}
 
     // =====================================================
     // ADMIN PROTECTION

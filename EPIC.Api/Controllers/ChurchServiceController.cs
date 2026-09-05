@@ -533,6 +533,104 @@ namespace EPIC.Api.Controllers
         }
 
         // =========================================================
+        // PUBLIC UPCOMING CHURCH SERVICES
+        //
+        // GET:
+        // /api/ChurchServices/public/upcoming
+        //
+        // PUBLIC WEBSITE ONLY
+        // =========================================================
+
+        [AllowAnonymous]
+        [HttpGet("public/upcoming")]
+        public async Task<IActionResult>
+            GetPublicUpcomingServices()
+        {
+            try
+            {
+                // Main EPIC church / public website tenant
+                const int publicCustomerId = 1;
+
+                var today =
+                    DateTime.Today;
+
+                var services =
+                    await _context.ChurchServices
+                        .AsNoTracking()
+                        .Where(s =>
+                            s.CustomerId == publicCustomerId &&
+
+                            s.ServiceDate >= today &&
+
+                            (
+                                s.Status == null ||
+
+                                s.Status.Trim().ToUpper() !=
+                                "CANCELLED"
+                            )
+                        )
+                        .OrderBy(s =>
+                            s.ServiceDate)
+                        .ThenBy(s =>
+                            s.StartTime)
+                        .Take(10)
+                        .Select(s => new
+                        {
+                            churchServiceId =
+                                s.ChurchServiceId,
+
+                            serviceName =
+                                s.ServiceName,
+
+                            serviceType =
+                                s.ServiceType,
+
+                            serviceDate =
+                                s.ServiceDate,
+
+                            startTime =
+                                s.StartTime,
+
+                            endTime =
+                                s.EndTime,
+
+                            location =
+                                s.Location,
+
+                            serviceLeader =
+                                s.ServiceLeader,
+
+                            speaker =
+                                s.Speaker,
+
+                            description =
+                                s.Description,
+
+                            status =
+                                s.Status
+                        })
+                        .ToListAsync();
+
+
+                return Ok(services);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    new
+                    {
+                        message =
+                            "Unable to load public upcoming church services.",
+
+                        error =
+                            ex.Message
+                    }
+                );
+            }
+        }
+
+        // =========================================================
         // UPCOMING
         //
         // GET:

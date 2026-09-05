@@ -508,41 +508,51 @@
 }
 
 /* =========================================================
-   RESPONSIVE
-   ========================================================= */
+RESPONSIVE
+========================================================= */
 
 @media (max-width: 900px) {
-
     .epic-client-sidebar {
         width: 235px;
+    }
+}
+
+@media (max-width:700px) {
+
+    .epic-client-sidebar {
+
+        position: fixed;
+
+        left:0;
+        top:0;
+        bottom:0;
+
+        width:270px;
+
+        height:100vh;
+
+        transform:translateX(-100%);
+
+        transition:
+            transform .3s ease;
+
+        z-index:1000;
+
     }
 
 }
 
-@media (max-width: 700px) {
+.epic-sidebar-section {
+    flex: none;
+}
 
-    .epic-client-sidebar {
-        position: relative;
+.epic-sidebar-nav {
+    display: grid;
 
-        width: 100%;
-        height: auto;
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+}
 
-        min-height: auto;
-    }
-
-    .epic-sidebar-section {
-        flex: none;
-    }
-
-    .epic-sidebar-nav {
-        display: grid;
-
-        grid-template-columns:
-            repeat(2, minmax(0, 1fr));
-    }
-
-    .epic-sidebar-security {
-        display: none;
-    }
-
+.epic-sidebar-security {
+    display: none;
 }

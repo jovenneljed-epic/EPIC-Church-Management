@@ -1,6 +1,7 @@
 
 import React, { useMemo, useState } from "react";
 import "./CheckoutPage.css";
+import { API_BASE_URL } from "../config";
 
 interface CheckoutPageProps {
     onNavigate: (page: string) => void;
@@ -109,100 +110,51 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({
         onNavigate("offer");
     };
 
-    const handleSubmit = (
+    const handleSubmit = async (
         event: React.FormEvent<HTMLFormElement>
     ) => {
         event.preventDefault();
-
         setError("");
 
-        if (!churchName.trim()) {
-            setError("Please enter your church name.");
-            return;
-        }
-
-        if (!contactPerson.trim()) {
-            setError("Please enter the primary contact person.");
-            return;
-        }
-
-        if (!email.trim()) {
-            setError("Please enter your email address.");
-            return;
-        }
-
-        if (!phone.trim()) {
-            setError("Please enter your phone number.");
-            return;
-        }
-
-        if (password.length < 8) {
-            setError(
-                "Your password must contain at least 8 characters."
-            );
-            return;
-        }
-
-        if (password !== confirmPassword) {
-            setError("Passwords do not match.");
-            return;
-        }
-
-        if (!agreeTerms) {
-            setError(
-                "Please agree to the Terms and Conditions before continuing."
-            );
-            return;
-        }
+        if (!churchName.trim()) return setError("Please enter your church name.");
+        if (!contactPerson.trim()) return setError("Please enter the primary contact person.");
+        if (!email.trim()) return setError("Please enter your email address.");
+        if (!phone.trim()) return setError("Please enter your phone number.");
+        if (password.length < 8) return setError("Your password must contain at least 8 characters.");
+        if (password !== confirmPassword) return setError("Passwords do not match.");
+        if (!agreeTerms) return setError("Please agree to the Terms and Conditions before continuing.");
 
         setIsSubmitting(true);
+        try {
+            const response = await fetch(`${API_BASE_URL}/PublicCheckout/subscribe`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    churchName: churchName.trim(),
+                    contactPerson: contactPerson.trim(),
+                    email: email.trim(),
+                    phone: phone.trim(),
+                    planId: selectedPlan.id,
+                    billingCycle,
+                }),
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(data.message || "Unable to create your subscription.");
 
-        /*
-         * ---------------------------------------------------------
-         * PAYMENT / CUSTOMER REGISTRATION
-         * ---------------------------------------------------------
-         *
-         * We are intentionally NOT calling the API yet.
-         *
-         * For now, preserve the checkout information so the next
-         * payment page can receive it.
-         *
-         * Once your backend customer/subscription endpoint is ready,
-         * this is where the axios POST request will be added.
-         */
-
-        localStorage.setItem(
-            "epicCheckoutChurchName",
-            churchName.trim()
-        );
-
-        localStorage.setItem(
-            "epicCheckoutContactPerson",
-            contactPerson.trim()
-        );
-
-        localStorage.setItem(
-            "epicCheckoutEmail",
-            email.trim()
-        );
-
-        localStorage.setItem(
-            "epicCheckoutPhone",
-            phone.trim()
-        );
-
-        /*
-         * Do not store the password in localStorage.
-         *
-         * The password will eventually be sent securely to the
-         * backend over HTTPS when the registration endpoint is
-         * connected.
-         */
-
-        setTimeout(() => {
-            setIsSubmitting(false);
+            localStorage.setItem("epicSubscriptionId", String(data.subscriptionId));
+            localStorage.setItem("epicCheckoutChurchName", churchName.trim());
+            localStorage.setItem("epicCheckoutContactPerson", contactPerson.trim());
+            localStorage.setItem("epicCheckoutEmail", email.trim());
+            localStorage.setItem("epicCheckoutPhone", phone.trim());
+            localStorage.setItem("epicCheckoutPlanName", data.planName || selectedPlan.name);
+            localStorage.setItem("epicCheckoutAmount", String(data.amount ?? price));
+            localStorage.setItem("epicCheckoutBillingCycle", data.billingCycle || billingCycle);
             onNavigate("payment");
-        }, 400);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Unable to continue checkout.");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (

@@ -769,6 +769,13 @@ static async Task SeedDatabaseAsync(
 
         await ClientPermissionSeeder.SeedAsync(
             context);
+
+        // --------------------------------------------------------
+        // SUBSCRIPTION PLANS
+        // --------------------------------------------------------
+
+        await DatabaseSeeder.SeedSubscriptionPlansAsync(
+            context);
     }
     catch (Exception ex)
     {

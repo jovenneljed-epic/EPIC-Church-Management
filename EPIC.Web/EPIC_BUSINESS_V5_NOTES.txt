@@ -1,0 +1,3 @@
+EPIC Business Website v5 package foundation.
+Baseline: EPICChurchManagement_EPICBusinessWebsite_v4.
+Prepared for next UI/business feature integration.

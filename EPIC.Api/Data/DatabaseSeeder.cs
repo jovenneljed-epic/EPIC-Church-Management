@@ -1,10 +1,105 @@
-﻿using EPIC.Api.Models;
+﻿﻿using EPIC.Api.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace EPIC.Api.Data
 {
     public static class DatabaseSeeder
     {
+
+
+        // =============================================================
+        // SUBSCRIPTION PLANS
+        // =============================================================
+
+        public static async Task SeedSubscriptionPlansAsync(
+            ApplicationDbContext context)
+        {
+            var plans = new[]
+            {
+                new SubscriptionPlan
+                {
+                    PlanName = "EPIC Starter",
+                    Description = "Essential church management tools for growing churches.",
+                    MonthlyPrice = 999m,
+                    AnnualPrice = 9990m,
+                    TrialDays = 0,
+                    MaxUsers = 5,
+                    MaxMembers = 500,
+                    IncludesChurchManagement = true,
+                    IncludesAttendance = true,
+                    IncludesGiving = true,
+                    IncludesFinance = true,
+                    IncludesMinistries = true,
+                    IncludesEvents = true,
+                    IncludesEPICLearning = false,
+                    IncludesReports = true,
+                    IsActive = true,
+                    SortOrder = 1
+                },
+                new SubscriptionPlan
+                {
+                    PlanName = "EPIC Growth",
+                    Description = "The complete church management solution for active ministries.",
+                    MonthlyPrice = 1999m,
+                    AnnualPrice = 19990m,
+                    TrialDays = 0,
+                    MaxUsers = 10,
+                    MaxMembers = 2000,
+                    IncludesChurchManagement = true,
+                    IncludesAttendance = true,
+                    IncludesGiving = true,
+                    IncludesFinance = true,
+                    IncludesMinistries = true,
+                    IncludesEvents = true,
+                    IncludesEPICLearning = true,
+                    IncludesReports = true,
+                    IsActive = true,
+                    SortOrder = 2
+                },
+                new SubscriptionPlan
+                {
+                    PlanName = "EPIC Complete",
+                    Description = "The full digital church ecosystem with discipleship and advanced tools.",
+                    MonthlyPrice = 2999m,
+                    AnnualPrice = 29990m,
+                    TrialDays = 0,
+                    MaxUsers = 25,
+                    MaxMembers = 5000,
+                    IncludesChurchManagement = true,
+                    IncludesAttendance = true,
+                    IncludesGiving = true,
+                    IncludesFinance = true,
+                    IncludesMinistries = true,
+                    IncludesEvents = true,
+                    IncludesEPICLearning = true,
+                    IncludesReports = true,
+                    IsActive = true,
+                    SortOrder = 3
+                }
+            };
+
+            foreach (var seed in plans)
+            {
+                var existing = await context.SubscriptionPlans
+                    .FirstOrDefaultAsync(p =>
+                        p.PlanName.ToLower() == seed.PlanName.ToLower());
+
+                if (existing == null)
+                {
+                    seed.CreatedDate = DateTime.UtcNow;
+                    context.SubscriptionPlans.Add(seed);
+                    Console.WriteLine($"Created subscription plan: {seed.PlanName}");
+                }
+                else
+                {
+                    // Keep existing production pricing/configuration intact.
+                    Console.WriteLine($"Subscription plan already exists: {existing.PlanName}");
+                }
+            }
+
+            await context.SaveChangesAsync();
+        }
+
         public static async Task SeedCourse1Async(
             ApplicationDbContext context)
         {
