@@ -1,3 +1,4 @@
+using EPIC.Api.Services;
 ﻿using EPIC.Api.Authorization;
 using EPIC.Api.Data;
 using EPIC.Api.Models;
@@ -15,10 +16,14 @@ namespace EPIC.Api.Controllers
     public class CRBreakPassController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IMemberQrService _memberQrService;
+        private readonly CRBreakScanService _scanService;
 
-        public CRBreakPassController(ApplicationDbContext context)
+        public CRBreakPassController(ApplicationDbContext context, IMemberQrService memberQrService, CRBreakScanService scanService)
         {
             _context = context;
+            _memberQrService = memberQrService;
+            _scanService = scanService;
         }
 
         // =========================================================
@@ -44,7 +49,9 @@ namespace EPIC.Api.Controllers
                     middleName = p.Member.MiddleName,
                     lastName = p.Member.LastName,
                     passCode = p.PassCode,
-                    qrToken = p.QrToken,
+                    qrToken = _context.MemberQrIdentities
+                        .Where(q => q.MemberId == p.MemberId && q.IsActive)
+                        .Select(q => q.QrToken).FirstOrDefault(),
                     status = p.Status,
                     issuedAt = p.IssuedAt,
                     timeOut = p.TimeOut,
@@ -152,6 +159,8 @@ public async Task<IActionResult> GetMyPass()
         {
             hasPass = false,
 
+            qrToken = await GetUniversalTokenAsync(memberId),
+
             memberId = user.Member.MemberId,
 
             memberCode = user.Member.MemberCode,
@@ -200,7 +209,7 @@ public async Task<IActionResult> GetMyPass()
 
         passCode = pass.PassCode,
 
-        qrToken = pass.QrToken,
+        qrToken = await GetUniversalTokenAsync(pass.MemberId),
 
         status = pass.Status,
 
@@ -263,7 +272,7 @@ public async Task<IActionResult> GetMyPass()
                 middleName = member.MiddleName,
                 lastName = member.LastName,
                 passCode = pass.PassCode,
-                qrToken = pass.QrToken,
+                qrToken = await GetUniversalTokenAsync(pass.MemberId),
                 status = pass.Status,
                 issuedAt = pass.IssuedAt,
                 timeOut = pass.TimeOut,
@@ -318,7 +327,7 @@ public async Task<IActionResult> GetMyPass()
                     middleName = member.MiddleName,
                     lastName = member.LastName,
                     passCode = existingPass.PassCode,
-                    qrToken = existingPass.QrToken,
+                    qrToken = await GetUniversalTokenAsync(memberId),
                     status = existingPass.Status,
                     issuedAt = existingPass.IssuedAt,
                     timeOut = existingPass.TimeOut,
@@ -327,13 +336,16 @@ public async Task<IActionResult> GetMyPass()
             }
 
             var passCode = await GenerateUniquePassCode();
-            var qrToken = GenerateQrToken();
+            var memberQrToken = await GetUniversalTokenAsync(memberId);
+            if (memberQrToken == null)
+                return BadRequest(new { message = "The member QR identity is inactive." });
 
             var pass = new CRBreakPass
             {
                 MemberId = memberId,
                 PassCode = passCode,
-                QrToken = qrToken,
+                // Compatibility column only; scanning resolves MemberQrIdentity.
+                QrToken = memberQrToken,
                 Status = "ACTIVE",
                 IssuedAt = DateTime.Now,
                 CreatedBy =
@@ -360,7 +372,7 @@ public async Task<IActionResult> GetMyPass()
                 lastName = member.LastName,
 
                 passCode = pass.PassCode,
-                qrToken = pass.QrToken,
+                qrToken = await GetUniversalTokenAsync(pass.MemberId),
 
                 status = pass.Status,
                 issuedAt = pass.IssuedAt
@@ -381,122 +393,9 @@ public async Task<IActionResult> GetMyPass()
         public async Task<IActionResult> Scan(
             [FromBody] ScanQrRequest request)
         {
-            if (request == null ||
-                string.IsNullOrWhiteSpace(request.QrToken))
-            {
-                return BadRequest(new
-                {
-                    message = "QR token is required."
-                });
-            }
-
-            var pass = await _context.CRBreakPasses
-                .Include(p => p.Member)
-                .FirstOrDefaultAsync(p =>
-                    p.QrToken == request.QrToken &&
-                    p.Status == "ACTIVE");
-
-            if (pass == null)
-            {
-                return NotFound(new
-                {
-                    success = false,
-                    message = "Invalid or inactive CR Break Pass."
-                });
-            }
-
-            if (pass.ExpiresAt.HasValue &&
-                DateTime.Now > pass.ExpiresAt.Value)
-            {
-                return BadRequest(new
-                {
-                    success = false,
-                    message = "This CR Break Pass has expired."
-                });
-            }
-
-            // =====================================================
-            // FIRST SCAN → TIME OUT
-            // =====================================================
-
-            if (!pass.TimeOut.HasValue)
-            {
-                pass.TimeOut = DateTime.Now;
-
-                await _context.SaveChangesAsync();
-
-                return Ok(new
-                {
-                    success = true,
-                    action = "TIME_OUT",
-
-                    message =
-                        $"{pass.Member!.FirstName} {pass.Member.LastName} is now OUT.",
-
-                    memberId = pass.MemberId,
-                    memberCode = pass.Member.MemberCode,
-
-                    firstName = pass.Member.FirstName,
-                    middleName = pass.Member.MiddleName,
-                    lastName = pass.Member.LastName,
-
-                    timeOut = pass.TimeOut,
-                    timeIn = pass.TimeIn
-                });
-            }
-
-            // =====================================================
-            // SECOND SCAN → TIME IN
-            // =====================================================
-
-            if (!pass.TimeIn.HasValue)
-            {
-                pass.TimeIn = DateTime.Now;
-
-                await _context.SaveChangesAsync();
-
-                return Ok(new
-                {
-                    success = true,
-                    action = "TIME_IN",
-
-                    message =
-                        $"{pass.Member!.FirstName} {pass.Member.LastName} is now IN.",
-
-                    memberId = pass.MemberId,
-                    memberCode = pass.Member.MemberCode,
-
-                    firstName = pass.Member.FirstName,
-                    middleName = pass.Member.MiddleName,
-                    lastName = pass.Member.LastName,
-
-                    timeOut = pass.TimeOut,
-                    timeIn = pass.TimeIn
-                });
-            }
-
-            // =====================================================
-            // ALREADY COMPLETED
-            // =====================================================
-
-            return Ok(new
-            {
-                success = true,
-                action = "COMPLETED",
-
-                message =
-                    $"{pass.Member!.FirstName} {pass.Member.LastName} has already completed the CR break.",
-
-                memberId = pass.MemberId,
-                memberCode = pass.Member.MemberCode,
-
-                firstName = pass.Member.FirstName,
-                middleName = pass.Member.MiddleName,
-                lastName = pass.Member.LastName,
-
-                timeOut = pass.TimeOut,
-                timeIn = pass.TimeIn
-            });
+            var (status, result) = await _scanService.ScanAsync(
+                request?.QrToken ?? "", null, HttpContext.RequestAborted);
+            return StatusCode(status, result);
         }
 
 
@@ -572,6 +471,16 @@ public async Task<IActionResult> GetMyPass()
         // GENERATE UNIQUE PASS CODE
         // =========================================================
 
+        private async Task<string?> GetUniversalTokenAsync(int memberId)
+        {
+            var identities = _context.MemberQrIdentities.AsNoTracking().Where(q => q.MemberId == memberId);
+            var activeToken = await identities.Where(q => q.IsActive).Select(q => q.QrToken).FirstOrDefaultAsync();
+            if (activeToken != null) return activeToken;
+            // Provision legacy members once, without reviving an explicitly deactivated identity.
+            if (await identities.AnyAsync()) return null;
+            return (await _memberQrService.GetOrCreateQr(memberId)).QrToken;
+        }
+
         private async Task<string> GenerateUniquePassCode()
         {
             while (true)
@@ -594,21 +503,7 @@ public async Task<IActionResult> GetMyPass()
         }
 
 
-        // =========================================================
-        // GENERATE SECURE QR TOKEN
-        // =========================================================
 
-        private static string GenerateQrToken()
-        {
-            var bytes = new byte[32];
-
-            RandomNumberGenerator.Fill(bytes);
-
-            return Convert.ToBase64String(bytes)
-                .Replace("+", "")
-                .Replace("/", "")
-                .Replace("=", "");
-        }
     }
 
 

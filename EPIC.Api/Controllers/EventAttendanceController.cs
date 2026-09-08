@@ -96,11 +96,11 @@ namespace EPIC.Api.Controllers
                     .ToListAsync();
 
             var records =
-                await _context.Attendances
-                    .AsNoTracking()
-                    .Where(a =>
-                        a.EventId == eventId)
-                    .ToListAsync();
+     await _context.EventAttendances
+         .AsNoTracking()
+         .Where(a =>
+             a.EventId == eventId)
+         .ToListAsync();
 
             var attendance =
                 members.Select(member =>
@@ -129,11 +129,12 @@ namespace EPIC.Api.Controllers
                             member.lastName,
 
                         status =
-                            NormalizeStatus(
-                                record?.Status),
+    record == null
+        ? "ABSENT"
+        : NormalizeStatus(record.Status),
 
                         attendanceId =
-                            record?.AttendanceId,
+    record?.EventAttendanceId,
 
                         attendanceDate =
                             record?.AttendanceDate
@@ -429,6 +430,83 @@ namespace EPIC.Api.Controllers
             });
         }
 
+        [HttpPut("event/{eventId:int}/member/{memberId:int}")]
+        [Permission("Attendance", "edit")]
+        public async Task<IActionResult> UpdateEventAttendance(
+    int eventId,
+    int memberId,
+    [FromBody] UpdateEventAttendanceRequest request)
+        {
+            if (request == null ||
+                string.IsNullOrWhiteSpace(request.Status))
+            {
+                return BadRequest(new
+                {
+                    message = "Attendance status is required."
+                });
+            }
+
+
+            var status =
+                NormalizeStatus(request.Status);
+
+
+            if (!AllowedStatuses.Contains(status))
+            {
+                return BadRequest(new
+                {
+                    message = "Invalid attendance status.",
+                    allowedStatuses = AllowedStatuses
+                });
+            }
+
+
+            var attendance =
+                await _context.EventAttendances
+                    .Include(x => x.Member)
+                    .FirstOrDefaultAsync(x =>
+                        x.EventId == eventId &&
+                        x.MemberId == memberId);
+
+
+            if (attendance == null)
+            {
+                return NotFound(new
+                {
+                    message = "Event attendance record not found."
+                });
+            }
+
+
+            var oldStatus = attendance.Status;
+
+
+            attendance.Status = status;
+            attendance.RecordedDate = DateTime.Now;
+            attendance.RecordedBy = GetCurrentUserName();
+
+
+            await _context.SaveChangesAsync();
+
+
+            return Ok(new
+            {
+                success = true,
+
+                member =
+                    attendance.Member != null
+                    ? attendance.Member.FirstName + " " +
+                      attendance.Member.LastName
+                    : memberId.ToString(),
+
+                oldStatus,
+
+                newStatus = status,
+
+                message =
+                    "Event attendance updated successfully."
+            });
+        }
 
         // =========================================================
         // HELPERS
@@ -533,5 +611,10 @@ namespace EPIC.Api.Controllers
 
         public string Status { get; set; }
             = "PRESENT";
+    }
+
+    public class UpdateEventAttendanceRequest
+    {
+        public string Status { get; set; } = "PRESENT";
     }
 }

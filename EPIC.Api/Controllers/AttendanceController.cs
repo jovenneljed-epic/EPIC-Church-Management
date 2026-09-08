@@ -15,7 +15,7 @@ namespace EPIC.Api.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    public class AttendanceController : ControllerBase
+    public partial class AttendanceController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
         private readonly IPermissionService _permissionService;
@@ -1388,12 +1388,14 @@ namespace EPIC.Api.Controllers
         // GET:
         // /api/Attendance/me
         //
-        // This endpoint is specifically for CLIENT accounts.
+        // Supports:
+        // - EPIC Mobile Members
+        // - CLIENT accounts
+        // - Staff/Admin linked members
         // =========================================================
 
         [HttpGet("me")]
-        public async Task<IActionResult>
-            GetMyAttendance()
+        public async Task<IActionResult> GetMyAttendance()
         {
             try
             {
@@ -1405,32 +1407,94 @@ namespace EPIC.Api.Controllers
                 {
                     return Unauthorized(new
                     {
-                        message =
-                            "Authentication is required."
+                        message = "Authentication is required."
                     });
                 }
 
+
                 // -------------------------------------------------
-                // CLIENT VALIDATION
+                // RESOLVE MEMBER ID
                 // -------------------------------------------------
 
-                if (!IsClientRole)
+                int? memberId = null;
+
+
+                // -------------------------------------------------
+                // CLIENT ACCOUNT
+                //
+                // CLIENT
+                // CLIENT_ADMIN
+                // CLIENT_MANAGER
+                // CLIENT_STAFF
+                // -------------------------------------------------
+
+                if (IsClientRole)
                 {
-                    return Forbid();
+                    var clientMemberId =
+                        CurrentClientMemberId;
+
+
+                    if (clientMemberId.HasValue)
+                    {
+                        memberId =
+                            await _context.ClientMembers
+                                .AsNoTracking()
+                                .Where(cm =>
+                                    cm.ClientMemberId ==
+                                    clientMemberId.Value &&
+
+                                    cm.IsActive)
+                                .Select(cm =>
+                                    cm.MemberId)
+                                .FirstOrDefaultAsync();
+                    }
                 }
 
+
                 // -------------------------------------------------
-                // VIEW PERMISSION
+                // NORMAL EPIC MOBILE MEMBER
+                //
+                // UserId
+                //    |
+                // Users
+                //    |
+                // MemberId
                 // -------------------------------------------------
 
-                var permission =
-                    await RequirePermissionAsync(
-                        "view");
-
-                if (permission != null)
+                if (!memberId.HasValue)
                 {
-                    return permission;
+                    var userId =
+                        CurrentUserId;
+
+
+                    if (userId.HasValue)
+                    {
+                        memberId =
+                            await _context.Users
+                                .AsNoTracking()
+                                .Where(u =>
+                                    u.UserId ==
+                                    userId.Value &&
+
+                                    u.IsActive)
+                                .Select(u =>
+                                    u.MemberId)
+                                .FirstOrDefaultAsync();
+                    }
                 }
+
+
+                if (!memberId.HasValue ||
+                    memberId.Value <= 0)
+                {
+                    return Unauthorized(new
+                    {
+                        message =
+                            "Member identity could not be determined."
+                    });
+                }
+
+
 
                 // -------------------------------------------------
                 // ACCESS
@@ -1439,73 +1503,28 @@ namespace EPIC.Api.Controllers
                 var access =
                     await RequireChurchAccessAsync();
 
+
                 if (access.Error != null)
                 {
                     return access.Error;
                 }
 
+
                 var customerId =
                     access.CustomerId!.Value;
 
-                var clientMemberId =
-                    CurrentClientMemberId;
 
-                if (!clientMemberId.HasValue)
-                {
-                    return Unauthorized(new
-                    {
-                        message =
-                            "Your client member identity could not be determined."
-                    });
-                }
 
                 // -------------------------------------------------
-                // CLIENT MEMBER
-                // -------------------------------------------------
-
-                var clientMember =
-                    await _context.ClientMembers
-                        .AsNoTracking()
-                        .Where(cm =>
-                            cm.ClientMemberId ==
-                                clientMemberId.Value &&
-
-                            cm.CustomerId ==
-                                customerId &&
-
-                            cm.IsActive &&
-
-                            cm.Status != null &&
-
-                            cm.Status.Trim().ToUpper() ==
-                                "ACTIVE")
-                        .Select(cm => new
-                        {
-                            cm.MemberId,
-                            cm.CustomerId
-                        })
-                        .FirstOrDefaultAsync();
-
-                if (clientMember == null)
-                {
-                    return Unauthorized(new
-                    {
-                        message =
-                            "Your client member account is not valid for this customer."
-                    });
-                }
-
-                // -------------------------------------------------
-                // MEMBER
+                // GET MEMBER
                 // -------------------------------------------------
 
                 var member =
-                    await CustomerMembers(
-                            customerId)
+                    await CustomerMembers(customerId)
                         .AsNoTracking()
                         .Where(m =>
                             m.MemberId ==
-                                clientMember.MemberId)
+                            memberId.Value)
                         .Select(m => new
                         {
                             m.MemberId,
@@ -1513,46 +1532,55 @@ namespace EPIC.Api.Controllers
                             m.MemberCode,
                             m.FirstName,
                             m.MiddleName,
-                            m.LastName
+                            m.LastName,
+                            m.Status
                         })
                         .FirstOrDefaultAsync();
+
 
                 if (member == null)
                 {
                     return NotFound(new
                     {
                         message =
-                            "The member associated with your client account could not be found."
+                            "Member record was not found."
                     });
                 }
 
+
+
                 // -------------------------------------------------
-                // ATTENDANCE
+                // LOAD ATTENDANCE
                 // -------------------------------------------------
 
                 var records =
                     await _context.Attendances
                         .AsNoTracking()
+
                         .Include(a =>
                             a.ChurchService)
+
                         .Where(a =>
                             a.MemberId ==
-                                member.MemberId &&
+                            member.MemberId &&
 
                             a.ChurchService != null &&
 
                             a.ChurchService.CustomerId ==
-                                customerId)
-                        .OrderByDescending(
-                            a =>
-                                a.AttendanceDate)
-                        .ThenByDescending(
-                            a =>
-                                a.AttendanceId)
+                            customerId)
+
+                        .OrderByDescending(a =>
+                            a.AttendanceDate)
+
+                        .ThenByDescending(a =>
+                            a.AttendanceId)
+
                         .ToListAsync();
 
+
+
                 // -------------------------------------------------
-                // RESPONSE
+                // FORMAT RESPONSE
                 // -------------------------------------------------
 
                 var attendance =
@@ -1561,57 +1589,74 @@ namespace EPIC.Api.Controllers
                         attendanceId =
                             a.AttendanceId,
 
+
                         memberId =
                             a.MemberId,
+
 
                         churchServiceId =
                             a.ChurchServiceId,
 
+
                         eventId =
                             a.EventId,
+
 
                         attendanceDate =
                             a.AttendanceDate,
 
+
                         service =
                             a.Service,
+
 
                         status =
                             NormalizeAttendanceStatus(
                                 a.Status),
 
+
                         recordedBy =
                             a.RecordedBy,
 
+
                         recordedDate =
                             a.RecordedDate,
+
 
                         serviceName =
                             a.ChurchService != null
                                 ? a.ChurchService.ServiceName
                                 : a.Service,
 
+
                         location =
                             a.ChurchService != null
                                 ? a.ChurchService.Location
                                 : null,
+
 
                         startTime =
                             a.ChurchService != null
                                 ? a.ChurchService.StartTime
                                 : null,
 
+
                         endTime =
                             a.ChurchService != null
                                 ? a.ChurchService.EndTime
                                 : null
+
                     })
                     .ToList();
 
+
+
                 var summary =
                     BuildAttendanceSummary(
-                        attendance.Select(
-                            x => x.status));
+                        attendance.Select(x =>
+                            x.status));
+
+
 
                 return Ok(new
                 {
@@ -1621,6 +1666,7 @@ namespace EPIC.Api.Controllers
 
                     attendance
                 });
+
             }
             catch (Exception ex)
             {
@@ -1628,6 +1674,31 @@ namespace EPIC.Api.Controllers
                     "Unable to load your attendance.",
                     ex);
             }
+        }
+        // =========================================================
+        // QR SCAN ATTENDANCE
+        //
+        // POST:
+        // /api/Attendance/scan
+        //
+        // Used by:
+        // - EPIC Mobile QR Scanner
+        // - Church Kiosk
+        // - Attendance Scanner
+        // =========================================================
+
+        [HttpPost("scan")]
+        public async Task<IActionResult> ScanAttendance(
+            [FromBody] AttendanceScanRequest request)
+        {
+            if (request == null) return BadRequest(new { message = "Scan request is required." });
+            var controller = new QrController(_context) { ControllerContext = ControllerContext };
+            return await controller.Scan(new QrScanRequest {
+                QrToken = request.QrToken, ScanType = "CHURCH_SERVICE", ReferenceId = request.ChurchServiceId
+            }, HttpContext.RequestServices.GetRequiredService<EPIC.Api.Services.AttendanceStatusService>(),
+               HttpContext.RequestServices.GetRequiredService<EPIC.Api.Services.CRBreakScanService>(),
+               HttpContext.RequestServices.GetRequiredService<EPIC.Api.Services.FoodReservationService>(),
+               HttpContext.RequestServices.GetRequiredService<EPIC.Core.Interfaces.IPermissionService>());
         }
 
         // =========================================================
@@ -2055,5 +2126,10 @@ namespace EPIC.Api.Controllers
         public string Status { get; set; } =
             "PRESENT";
     }
-}
+    public class AttendanceScanRequest
+    {
+        public string QrToken { get; set; } = string.Empty;
 
+        public int ChurchServiceId { get; set; }
+    }
+}

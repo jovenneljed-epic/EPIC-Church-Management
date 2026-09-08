@@ -33,6 +33,7 @@ namespace EPIC.Api.Models
 
         [Required]
         [MaxLength(200)]
+        // Legacy storage retained for database compatibility. Identity comes from MemberQrIdentity.
         public string QrToken { get; set; } = string.Empty;
 
         [Required]

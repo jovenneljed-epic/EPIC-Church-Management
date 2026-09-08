@@ -71,6 +71,17 @@ ConfigureSwagger(
 builder.Services.AddControllers();
 builder.Services.AddMemoryCache();
 
+builder.Services.AddScoped<AttendanceStatusService>();
+builder.Services.AddHttpClient("ExpoPush", client => {
+    client.BaseAddress = new Uri("https://exp.host/--/api/v2/push/");
+    client.Timeout = TimeSpan.FromSeconds(20);
+});
+builder.Services.AddHostedService<MemberNotificationWorker>();
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<Microsoft.AspNetCore.SignalR.IUserIdProvider, ChatUserIdProvider>();
+builder.Services.AddSingleton<NotificationWakeSignal>();
+builder.Services.AddHostedService<AutomaticAttendanceWorker>();
+
 // ============================================================
 // AUTHORIZATION
 // ============================================================
@@ -187,6 +198,7 @@ app.UseAuthorization();
 // ============================================================
 
 app.MapControllers();
+app.MapHub<ChatHub>("/hubs/chat", options => options.CloseOnAuthenticationExpiration = true);
 
 
 // ============================================================
@@ -226,7 +238,9 @@ static void ConfigureApplicationServices(
     builder.Services.AddScoped<
         MemberAccountProvisioningService>();
 
-
+    builder.Services.AddScoped<IMemberQrService, MemberQrService>();
+    builder.Services.AddScoped<CRBreakScanService>();
+    builder.Services.AddScoped<FoodReservationService>();
     // --------------------------------------------------------
     // CLIENT PERMISSIONS
     // --------------------------------------------------------
@@ -512,6 +526,12 @@ static void ConfigureJwtAuthentication(
                 options.Events =
                     new JwtBearerEvents
                     {
+                        OnMessageReceived = context =>
+                        {
+                            if (context.Request.Path.StartsWithSegments("/hubs/chat"))
+                                context.Token = context.Request.Query["access_token"];
+                            return Task.CompletedTask;
+                        },
                         // ============================================
                         // AUTHENTICATION FAILED
                         // ============================================
@@ -839,4 +859,3 @@ static bool IsAllowedOrigin(
 
     return false;
 }
-

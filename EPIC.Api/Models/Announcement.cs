@@ -2,6 +2,9 @@
 
 public class Announcement
 {
+    [System.Text.Json.Serialization.JsonIgnore]
+    public DateTime? PushQueuedAt { get; set; }
+
     public int Id { get; set; }
 
     public string Title { get; set; } = "";

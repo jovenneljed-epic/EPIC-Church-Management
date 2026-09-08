@@ -25,7 +25,7 @@ public class AnnouncementsController : ControllerBase
     public async Task<ActionResult<IEnumerable<Announcement>>> GetAnnouncements()
     {
         var announcements = await _context.Announcements
-            .Where(x => x.IsPublished)
+            .Where(x => x.IsPublished && x.PublishDate <= DateTime.UtcNow)
             .OrderByDescending(x => x.PublishDate)
             .ToListAsync();
 
@@ -39,7 +39,7 @@ public class AnnouncementsController : ControllerBase
     public async Task<ActionResult<Announcement>> GetAnnouncement(int id)
     {
         var announcement = await _context.Announcements
-            .FirstOrDefaultAsync(x => x.Id == id);
+            .FirstOrDefaultAsync(x => x.Id == id && (User.IsInRole("ADMIN") || (x.IsPublished && x.PublishDate <= DateTime.UtcNow)));
 
         if (announcement == null)
         {
@@ -53,11 +53,13 @@ public class AnnouncementsController : ControllerBase
 
     // POST: api/announcements
     // Admin only
-    [Authorize]
+    [Authorize(Roles = "ADMIN")]
     [HttpPost]
     public async Task<ActionResult<Announcement>> CreateAnnouncement(
         Announcement announcement)
     {
+        announcement.Id = 0;
+        announcement.PushQueuedAt = null;
         announcement.CreatedDate = DateTime.UtcNow;
 
         _context.Announcements.Add(announcement);
@@ -75,7 +77,7 @@ public class AnnouncementsController : ControllerBase
 
     // PUT: api/announcements/5
     // Admin only
-    [Authorize]
+    [Authorize(Roles = "ADMIN")]
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateAnnouncement(
         int id,
@@ -115,7 +117,7 @@ public class AnnouncementsController : ControllerBase
 
     // DELETE: api/announcements/5
     // Admin only
-    [Authorize]
+    [Authorize(Roles = "ADMIN")]
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteAnnouncement(int id)
     {

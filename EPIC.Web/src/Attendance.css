@@ -7,6 +7,9 @@
    PAGE
    ============================================================ */
 
+.attendance-state-banner.automatic-attendance-help { display: block; line-height: 1.7; }
+.attendance-status.status-pending { background: #f1f5f9; color: #475569; border-color: #cbd5e1; }
+
 .attendance-page {
     width: 100%;
     min-height: 100vh;

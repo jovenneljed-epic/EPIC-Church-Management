@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace EPIC.Api.Data
 {
-    public class ApplicationDbContext : DbContext
+    public partial class ApplicationDbContext : DbContext
     {
         public ApplicationDbContext(
             DbContextOptions<ApplicationDbContext> options)
@@ -40,11 +40,15 @@ namespace EPIC.Api.Data
         // =========================================================
 
         public DbSet<Event> Events => Set<Event>();
+        public DbSet<FoodReservation> FoodReservations => Set<FoodReservation>();
         public DbSet<EventDepartment> EventDepartments => Set<EventDepartment>();
         public DbSet<EventRole> EventRoles => Set<EventRole>();
         public DbSet<EventAssignment> EventAssignments => Set<EventAssignment>();
         public DbSet<EventNeed> EventNeeds => Set<EventNeed>();
         public DbSet<EventChecklist> EventChecklists => Set<EventChecklist>();
+
+        public DbSet<EventAttendance> EventAttendances
+    => Set<EventAttendance>();
 
         // =========================================================
         // SECURITY
@@ -91,6 +95,8 @@ namespace EPIC.Api.Data
         public DbSet<CourseEnrollment> CourseEnrollments => Set<CourseEnrollment>();
         public DbSet<LessonProgress> LessonProgresses => Set<LessonProgress>();
         public DbSet<Certificate> Certificates => Set<Certificate>();
+        public DbSet<MemberQrIdentity> MemberQrIdentities { get; set; }
+        public DbSet<QrScanLog> QrScanLogs => Set<QrScanLog>();
 
         // =========================================================
         // MODEL CREATION
@@ -99,6 +105,12 @@ namespace EPIC.Api.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<FoodReservation>().HasOne(r => r.Event).WithMany()
+                .HasForeignKey(r => r.EventId).OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<FoodReservation>().HasOne(r => r.Member).WithMany()
+                .HasForeignKey(r => r.MemberId).OnDelete(DeleteBehavior.Restrict);
+
+            ConfigureQrScanLogs(modelBuilder);
 
             ConfigureUsers(modelBuilder);
             ConfigureMembers(modelBuilder);
@@ -139,6 +151,32 @@ namespace EPIC.Api.Data
             ConfigureLearning(modelBuilder);
         }
 
+
+        private static void ConfigureQrScanLogs(
+    ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<QrScanLog>(entity =>
+            {
+                entity.HasKey(e => e.QrScanLogId);
+
+                entity.HasOne(e => e.Member)
+                    .WithMany()
+                    .HasForeignKey(e => e.MemberId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.Property(e => e.ScanType)
+                    .HasMaxLength(50)
+                    .IsRequired();
+
+                entity.Property(e => e.Result)
+                    .HasMaxLength(50)
+                    .IsRequired();
+
+                entity.HasIndex(e => e.MemberId);
+                entity.HasIndex(e => e.ScanDate);
+                entity.HasIndex(e => e.ScanType);
+            });
+        }
         // =========================================================
         // USERS
         // =========================================================

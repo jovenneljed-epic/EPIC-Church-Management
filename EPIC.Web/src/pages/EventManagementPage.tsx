@@ -2789,6 +2789,9 @@ const EventManagementPage: React.FC = () => {
                                             )
                                         }
                                     >
+                                        <option value="Evangelism">Evangelism</option>
+                                        <option value="Leadership Meeting">Leadership Meeting</option>
+                                        <option value="Food Reservation">Food Reservation</option>
                                         <option value="Conference">
                                             Conference
                                         </option>
