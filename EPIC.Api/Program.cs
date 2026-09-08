@@ -847,6 +847,9 @@ static bool IsAllowedOrigin(
 
     if (origin.Equals(
         "https://epic-cms.vercel.app",
+        StringComparison.OrdinalIgnoreCase) ||
+    origin.Equals(
+        "https://epic-member-portal.vercel.app",
         StringComparison.OrdinalIgnoreCase))
     {
         return true;
