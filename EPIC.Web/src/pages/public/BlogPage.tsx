@@ -387,7 +387,7 @@ export default function BlogPage({ onNavigate, initialSlug, initialSubpath }: Bl
         const baseUrl = window.location.origin.includes("localhost")
             ? "https://epic-cms.vercel.app"
             : window.location.origin;
-        const articleUrl = `${baseUrl}/blog?article=${encodeURIComponent(article.slug)}`;
+        const articleUrl = `${baseUrl}/blog/${encodeURIComponent(article.slug)}`;
         const shareText = `"${article.title}" — ${article.subtitle}`;
 
         if (platform === "copy") {
@@ -398,7 +398,7 @@ export default function BlogPage({ onNavigate, initialSlug, initialSubpath }: Bl
 
         if (platform === "messenger") {
             navigator.clipboard.writeText(articleUrl);
-            const messengerUrl = `https://www.facebook.com/dialog/send?link=${encodeURIComponent(articleUrl)}&app_id=291494419197992&redirect_uri=${encodeURIComponent(articleUrl)}`;
+            const messengerUrl = `https://www.facebook.com/dialog/send?link=${encodeURIComponent(articleUrl)}&app_id=966242223397117&redirect_uri=${encodeURIComponent(articleUrl)}`;
             const win = window.open(messengerUrl, "_blank", "noopener,noreferrer,width=600,height=500");
             if (!win) {
                 showToast("Messenger link copied to clipboard! Paste directly into your chat.");

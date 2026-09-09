@@ -39,7 +39,7 @@ for (const article of articles) {
   const image = article.ogImage.startsWith('http') 
     ? article.ogImage 
     : `${BASE_URL}${article.ogImage.startsWith('/') ? '' : '/'}${article.ogImage}`;
-  const canonicalUrl = `${BASE_URL}/blog?article=${encodeURIComponent(article.slug)}`;
+  const canonicalUrl = `${BASE_URL}/blog/${encodeURIComponent(article.slug)}`;
 
   let html = template;
 

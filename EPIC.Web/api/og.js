@@ -37,7 +37,7 @@ export default async function handler(req, res) {
       image = article.ogImage.startsWith('http') 
         ? article.ogImage 
         : `${BASE_URL}${article.ogImage.startsWith('/') ? '' : '/'}${article.ogImage}`;
-      targetUrl = `${BASE_URL}/blog?article=${encodeURIComponent(article.slug)}`;
+      targetUrl = `${BASE_URL}/blog/${encodeURIComponent(article.slug)}`;
     } else if (slug) {
       // Future article created via CMS: synthesize title and use default/custom imagery
       const formattedTitle = slug
@@ -46,7 +46,7 @@ export default async function handler(req, res) {
       title = `${formattedTitle} | EPIC Church Journal`;
       subtitle = "Read this biblical insight, church leadership reflection, and spiritual encouragement on EPIC Church.";
       image = req.query?.img || DEFAULT_IMAGE;
-      targetUrl = `${BASE_URL}/blog?article=${encodeURIComponent(slug)}`;
+      targetUrl = `${BASE_URL}/blog/${encodeURIComponent(slug)}`;
     } else {
       // Main site root
       title = "EPIC Church Management System | Modern Ministry & Christian Growth";
