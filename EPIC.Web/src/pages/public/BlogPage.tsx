@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import PublicHeader from "../../components/PublicHeader";
 import {
     Heart,
@@ -23,12 +23,24 @@ import {
 } from "lucide-react";
 import {
     CHURCH_ARTICLES,
-    INITIAL_COMMENTS,
     type ChurchArticle,
-    type BlogComment,
-    type BlogCommentReply,
     type ContentBlock,
 } from "./churchArticles";
+import {
+    getArticleReactions,
+    setArticleReaction,
+    recordArticleShare,
+    getTotalReactions,
+    getArticleComments,
+    addArticleComment,
+    addCommentReply,
+    toggleCommentLike,
+    type ReactionType,
+    type ArticleReactions,
+    type BlogComment,
+} from "../../services/blogEngagementService";
+import { getAdminBlogs } from "../../services/blogService";
+import type { BlogPost } from "../../services/blogService";
 import "./BlogPage.css";
 
 interface BlogPageProps {
@@ -42,8 +54,17 @@ export default function BlogPage({ onNavigate, initialSlug, initialSubpath }: Bl
     const [searchQuery, setSearchQuery] = useState<string>("");
     const [selectedTag, setSelectedTag] = useState<string | null>(null);
     const [activeArticle, setActiveArticle] = useState<ChurchArticle | null>(null);
-    const [likesMap, setLikesMap] = useState<Record<string, { count: number; userLiked: boolean }>>({});
+    
+    // CMS Published Articles
+    const [cmsBlogs, setCmsBlogs] = useState<BlogPost[]>([]);
+
+    // Facebook Reactions & Real-Time Engagement
+    const [reactionsMap, setReactionsMap] = useState<Record<string, ArticleReactions>>({});
     const [commentsMap, setCommentsMap] = useState<Record<string, BlogComment[]>>({});
+    const [activeDockArticleId, setActiveDockArticleId] = useState<string | null>(null);
+    const [particles, setParticles] = useState<{ id: number; emoji: string; x: number; y: number }[]>([]);
+    const [shareModalArticle, setShareModalArticle] = useState<ChurchArticle | null>(null);
+    const [newlyAddedCommentId, setNewlyAddedCommentId] = useState<string | null>(null);
     
     // Comment Form State
     const [commentName, setCommentName] = useState("");
@@ -61,6 +82,10 @@ export default function BlogPage({ onNavigate, initialSlug, initialSubpath }: Bl
     // Toast Notification
     const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+    // Refs
+    const commentTextareaRef = useRef<HTMLTextAreaElement>(null);
+    const commentsSectionRef = useRef<HTMLElement>(null);
+
     const categories = [
         { id: "all", label: "All Topics" },
         { id: "faith-life", label: "Faith & Life" },
@@ -76,6 +101,62 @@ export default function BlogPage({ onNavigate, initialSlug, initialSubpath }: Bl
         { id: "church-news", label: "Church News & Investigations" },
         { id: "technology", label: "Technology" },
     ];
+
+    // Convert CMS BlogPost into ChurchArticle
+    const convertCmsBlogToChurchArticle = (b: BlogPost): ChurchArticle => ({
+        id: String(b.blogPostId),
+        title: b.title,
+        slug: b.slug,
+        category: "faith-life",
+        categoryLabel: b.category || "Faith & Life",
+        subtitle: b.subtitle || b.excerpt || "",
+        author: {
+            id: "pastor-ronnel",
+            name: b.author || "Pastor Ronnel M. Aviguetero",
+            position: "Lead Pastor & Founder",
+            avatarText: (b.author || "PR").split(" ").map((w) => w[0]).slice(0, 2).join(""),
+            avatarColor: "#0284c7",
+            bio: "Equipping the global body of Christ with apostolic vision, pastoral truth, and church management intelligence.",
+            social: { facebook: "https://facebook.com/epicchurch" }
+        },
+        publishDate: b.publishDate
+            ? new Date(b.publishDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+            : "Recently Published",
+        updatedDate: "Recently",
+        readTime: `${Math.max(1, Math.ceil((b.content.length / 500)))} min read`,
+        featuredImage: b.coverImage || "/images/og/epic-main-tagline.jpg",
+        ogImage: b.coverImage || "/images/og/epic-main-tagline.jpg",
+        featuredImageCaption: b.subtitle || b.title,
+        featuredScripture: {
+            verse: "Your word is a lamp to my feet and a light to my path.",
+            reference: "Psalm 119:105"
+        },
+        tags: ["BiblicalTruth", "ChurchLeadership", "Discipleship"],
+        defaultLikes: 68,
+        allowComments: true,
+        seo: {
+            metaTitle: `${b.title} | EPIC Church`,
+            metaDescription: b.subtitle || b.excerpt || b.title,
+            canonicalUrl: `https://epic-cms.vercel.app/blog/${b.slug}`,
+            keywords: ["Faith", "Church", "Leadership", "Discipleship"],
+        },
+        blocks: [
+            { type: "paragraph", text: b.content }
+        ]
+    });
+
+    // Merge standard articles and custom CMS articles
+    const allArticles = useMemo(() => {
+        const map = new Map<string, ChurchArticle>();
+        CHURCH_ARTICLES.forEach((a) => map.set(a.slug, a));
+        cmsBlogs.filter((b) => b.isPublished).forEach((b) => {
+            const converted = convertCmsBlogToChurchArticle(b);
+            if (!map.has(converted.slug)) {
+                map.set(converted.slug, converted);
+            }
+        });
+        return Array.from(map.values());
+    }, [cmsBlogs]);
 
     // Read URL param or initialSlug or subpath on mount
     useEffect(() => {
@@ -102,7 +183,7 @@ export default function BlogPage({ onNavigate, initialSlug, initialSubpath }: Bl
         }
 
         if (slug) {
-            const found = CHURCH_ARTICLES.find(
+            const found = allArticles.find(
                 (a) => a.slug === slug || a.id === slug
             );
             if (found) {
@@ -122,7 +203,7 @@ export default function BlogPage({ onNavigate, initialSlug, initialSubpath }: Bl
         if (tagParam) {
             setSelectedTag(tagParam);
         }
-    }, [initialSlug, initialSubpath]);
+    }, [initialSlug, initialSubpath, allArticles]);
 
     // Dynamically update document title and meta tags when activeArticle changes
     useEffect(() => {
@@ -204,48 +285,47 @@ export default function BlogPage({ onNavigate, initialSlug, initialSubpath }: Bl
         } catch {}
     };
 
-    // Initialize Likes & Comments from LocalStorage
+    // Initialize Likes & Comments from Engagement Service & listen to real-time events
     useEffect(() => {
-        try {
-            const savedLikes = localStorage.getItem("epic_blog_likes");
-            if (savedLikes) {
-                setLikesMap(JSON.parse(savedLikes));
-            } else {
-                const initialMap: Record<string, { count: number; userLiked: boolean }> = {};
-                CHURCH_ARTICLES.forEach((art) => {
-                    initialMap[art.id] = { count: art.defaultLikes, userLiked: false };
-                });
-                setLikesMap(initialMap);
-            }
-        } catch {
-            const initialMap: Record<string, { count: number; userLiked: boolean }> = {};
-            CHURCH_ARTICLES.forEach((art) => {
-                initialMap[art.id] = { count: art.defaultLikes, userLiked: false };
-            });
-            setLikesMap(initialMap);
-        }
-
-        try {
-            const savedComments = localStorage.getItem("epic_blog_comments");
-            if (savedComments) {
-                setCommentsMap(JSON.parse(savedComments));
-            } else {
-                setCommentsMap(INITIAL_COMMENTS);
-            }
-        } catch {
-            setCommentsMap(INITIAL_COMMENTS);
-        }
+        // Load custom CMS articles
+        getAdminBlogs()
+            .then(setCmsBlogs)
+            .catch(() => {});
 
         const savedName = localStorage.getItem("epic_blog_user_name");
         if (savedName) {
             setCommentName(savedName);
             setReplyName(savedName);
         }
+
+        // Live Real-Time Updates Listener across tabs and components
+        const handleEngagementUpdate = (e: Event) => {
+            const customEvent = e as CustomEvent;
+            if (customEvent.detail) {
+                const { type, articleId, payload } = customEvent.detail;
+                if (type === "reactions") {
+                    setReactionsMap((prev) => ({
+                        ...prev,
+                        [articleId]: payload as ArticleReactions,
+                    }));
+                } else if (type === "comments") {
+                    setCommentsMap((prev) => ({
+                        ...prev,
+                        [articleId]: payload as BlogComment[],
+                    }));
+                }
+            }
+        };
+
+        window.addEventListener("epic:blog-engagement-update", handleEngagementUpdate);
+        return () => {
+            window.removeEventListener("epic:blog-engagement-update", handleEngagementUpdate);
+        };
     }, []);
 
     // Filter Articles for Magazine view
     const filteredArticles = useMemo(() => {
-        return CHURCH_ARTICLES.filter((art) => {
+        return allArticles.filter((art) => {
             const matchesCat =
                 selectedCategory === "all" || art.category === selectedCategory;
 
@@ -265,46 +345,84 @@ export default function BlogPage({ onNavigate, initialSlug, initialSubpath }: Bl
 
             return matchesCat && matchesTag && matchesSearch;
         });
-    }, [selectedCategory, selectedTag, searchQuery]);
+    }, [allArticles, selectedCategory, selectedTag, searchQuery]);
 
-    const featuredArticle = CHURCH_ARTICLES[0]; // Lead article: 5 Ways to Strengthen Your Family's Faith at Home
+    const featuredArticle = allArticles[0]; // Lead article
 
-    // Like Toggle Handler
-    const handleToggleLike = (articleId: string, e?: React.MouseEvent) => {
+    const REACTION_OPTIONS: {
+        type: ReactionType;
+        emoji: string;
+        label: string;
+        color: string;
+        badgeClass: string;
+    }[] = [
+        { type: "like", emoji: "👍", label: "Like", color: "#38bdf8", badgeClass: "like" },
+        { type: "heart", emoji: "❤️", label: "Love", color: "#f43f5e", badgeClass: "heart" },
+        { type: "amen", emoji: "🙏", label: "Amen", color: "#fbbf24", badgeClass: "amen" },
+        { type: "insight", emoji: "💡", label: "Insight", color: "#34d399", badgeClass: "insight" },
+        { type: "blessed", emoji: "🕊️", label: "Blessed", color: "#c084fc", badgeClass: "blessed" },
+    ];
+
+    // Facebook Reaction Handler (Like, Heart, Amen, Insight, Blessed)
+    const handleReact = (articleId: string, type: ReactionType, e?: React.MouseEvent) => {
         e?.stopPropagation();
-        setLikesMap((prev) => {
-            const current = prev[articleId] || {
-                count: CHURCH_ARTICLES.find((a) => a.id === articleId)?.defaultLikes || 50,
-                userLiked: false,
-            };
+        const res = setArticleReaction(articleId, type);
+        setReactionsMap((prev) => ({ ...prev, [articleId]: res.reactions }));
+        setActiveDockArticleId(null);
 
-            const updated = {
-                count: current.userLiked ? current.count - 1 : current.count + 1,
-                userLiked: !current.userLiked,
+        // Spawn floating particle animation
+        if (res.current) {
+            const targetEmoji = REACTION_OPTIONS.find((r) => r.type === res.current)?.emoji || "👍";
+            const newParticle = {
+                id: Date.now() + Math.random(),
+                emoji: targetEmoji,
+                x: e ? e.clientX - 15 : window.innerWidth / 2,
+                y: e ? e.clientY - 40 : window.innerHeight / 2,
             };
+            setParticles((prev) => [...prev, newParticle]);
+            setTimeout(() => {
+                setParticles((prev) => prev.filter((p) => p.id !== newParticle.id));
+            }, 1200);
 
-            const newMap = { ...prev, [articleId]: updated };
-            localStorage.setItem("epic_blog_likes", JSON.stringify(newMap));
-            return newMap;
-        });
+            const toastMessages: Record<ReactionType, string> = {
+                like: "Liked reflection! 👍",
+                heart: "Loved reflection! ❤️",
+                amen: "Amen! May the Lord bless you! 🙏",
+                insight: "Marked as insightful reflection! 💡",
+                blessed: "Praise God! Blessed by this teaching! 🕊️",
+            };
+            showToast(toastMessages[res.current]);
+        } else {
+            showToast("Reaction removed.");
+        }
     };
 
     // Like Comment Handler
     const handleToggleCommentLike = (commentId: string) => {
         if (!activeArticle) return;
+        const res = toggleCommentLike(activeArticle.id, commentId);
         setCommentsMap((prev) => {
-            const currentList = prev[activeArticle.id] || [];
-            const updated = currentList.map((c) => {
-                if (c.id === commentId) {
-                    return { ...c, likes: c.likes + 1 };
-                }
-                return c;
-            });
-            const newMap = { ...prev, [activeArticle.id]: updated };
-            localStorage.setItem("epic_blog_comments", JSON.stringify(newMap));
-            return newMap;
+            const currentList = prev[activeArticle.id] || getArticleComments(activeArticle.id);
+            const updated = currentList.map((c) => (c.id === commentId ? { ...c, likes: res.likes, userLiked: res.userLiked } : c));
+            return { ...prev, [activeArticle.id]: updated };
         });
-        showToast("Amen! Liked reflection.");
+        showToast(res.userLiked ? "Amen! Liked reflection." : "Reaction removed.");
+    };
+
+    // Smooth scroll down to comment box and focus
+    const handleScrollToComments = () => {
+        if (commentsSectionRef.current) {
+            commentsSectionRef.current.scrollIntoView({ behavior: "smooth" });
+            setTimeout(() => {
+                commentTextareaRef.current?.focus();
+            }, 450);
+        }
+    };
+
+    // Quick reflection insertion
+    const handleInsertQuickReflection = (snippet: string) => {
+        setCommentText((prev) => (prev ? `${prev} ${snippet}` : snippet));
+        commentTextareaRef.current?.focus();
     };
 
     // Post New Comment Handler
@@ -315,31 +433,21 @@ export default function BlogPage({ onNavigate, initialSlug, initialSubpath }: Bl
         const author = commentName.trim() || "Faithful Believer";
         localStorage.setItem("epic_blog_user_name", author);
 
-        const colors = ["#1877f2", "#1e8e3e", "#e37400", "#8e24aa", "#c2185b", "#0077b6"];
-        const randomColor = colors[Math.floor(Math.random() * colors.length)];
-
-        const newComment: BlogComment = {
-            id: `comm-${Date.now()}`,
-            articleId: activeArticle.id,
+        const newComment = addArticleComment(activeArticle.id, {
             authorName: author,
             authorRole: commentRole,
-            avatarBg: randomColor,
-            timestamp: "Just now",
             content: commentText.trim(),
-            likes: 1,
-            replies: [],
-        };
-
-        setCommentsMap((prev) => {
-            const currentList = prev[activeArticle.id] || [];
-            const updated = [newComment, ...currentList];
-            const newMap = { ...prev, [activeArticle.id]: updated };
-            localStorage.setItem("epic_blog_comments", JSON.stringify(newMap));
-            return newMap;
         });
 
+        setCommentsMap((prev) => {
+            const currentList = prev[activeArticle.id] || getArticleComments(activeArticle.id);
+            return { ...prev, [activeArticle.id]: [newComment, ...currentList] };
+        });
+
+        setNewlyAddedCommentId(newComment.id);
         setCommentText("");
-        showToast("Reflection posted! Thank you for encouraging the body of Christ.");
+        setTimeout(() => setNewlyAddedCommentId(null), 3000);
+        showToast("Reflection posted directly to the article! Thank you for encouraging the body of Christ. ✝️");
     };
 
     // Post Reply to Comment Handler
@@ -349,34 +457,41 @@ export default function BlogPage({ onNavigate, initialSlug, initialSubpath }: Bl
         const author = replyName.trim() || "Fellow Disciple";
         localStorage.setItem("epic_blog_user_name", author);
 
-        const colors = ["#1877f2", "#1e8e3e", "#e37400", "#8e24aa", "#c2185b"];
-        const randomColor = colors[Math.floor(Math.random() * colors.length)];
-
-        const newReply: BlogCommentReply = {
-            id: `rep-${Date.now()}`,
+        const newReply = addCommentReply(activeArticle.id, commentId, {
             authorName: author,
-            authorRole: "Church Member",
-            avatarBg: randomColor,
-            timestamp: "Just now",
             content: replyText.trim(),
-        };
-
-        setCommentsMap((prev) => {
-            const currentList = prev[activeArticle.id] || [];
-            const updated = currentList.map((c) => {
-                if (c.id === commentId) {
-                    return { ...c, replies: [...c.replies, newReply] };
-                }
-                return c;
-            });
-            const newMap = { ...prev, [activeArticle.id]: updated };
-            localStorage.setItem("epic_blog_comments", JSON.stringify(newMap));
-            return newMap;
         });
+
+        if (newReply) {
+            setCommentsMap((prev) => {
+                const currentList = prev[activeArticle.id] || getArticleComments(activeArticle.id);
+                const updated = currentList.map((c) =>
+                    c.id === commentId ? { ...c, replies: [...c.replies, newReply] } : c
+                );
+                return { ...prev, [activeArticle.id]: updated };
+            });
+        }
 
         setReplyText("");
         setReplyingToId(null);
         showToast("Reply posted successfully!");
+    };
+
+    // Open Facebook Share Modal
+    const handleShareModalOpen = (article: ChurchArticle, e?: React.MouseEvent) => {
+        e?.stopPropagation();
+        setShareModalArticle(article);
+    };
+
+    // Execute Share Action
+    const handleShareAction = (platform: "facebook" | "messenger" | "twitter" | "copy") => {
+        if (!shareModalArticle) return;
+        const updated = recordArticleShare(shareModalArticle.id);
+        setReactionsMap((prev) => ({ ...prev, [shareModalArticle.id]: updated }));
+        handleSocialShare(platform, shareModalArticle);
+        if (platform !== "copy") {
+            setShareModalArticle(null);
+        }
     };
 
     // Social Sharing Handler (Facebook, Messenger, X, LinkedIn, Copy)
@@ -453,35 +568,159 @@ export default function BlogPage({ onNavigate, initialSlug, initialSubpath }: Bl
         setTimeout(() => setToastMessage(null), 4000);
     };
 
-    const getArticleComments = (articleId: string): BlogComment[] => {
-        return commentsMap[articleId] || [];
+    const getCommentsForArticle = (articleId: string): BlogComment[] => {
+        return commentsMap[articleId] || getArticleComments(articleId);
     };
 
-    const getArticleLikes = (articleId: string) => {
-        return likesMap[articleId] || {
-            count: CHURCH_ARTICLES.find((a) => a.id === articleId)?.defaultLikes || 50,
-            userLiked: false,
-        };
+    const getReactionsForArticle = (articleId: string): ArticleReactions => {
+        return reactionsMap[articleId] || getArticleReactions(articleId);
+    };
+
+    // Render Reusable Facebook Reaction Bar
+    const renderFacebookReactionBar = (article: ChurchArticle, placement: "top" | "bottom" = "top") => {
+        const reactions = getReactionsForArticle(article.id);
+        const articleComments = getCommentsForArticle(article.id);
+        const totalReactions = getTotalReactions(reactions);
+
+        const activeReaction = REACTION_OPTIONS.find((r) => r.type === reactions.userReaction);
+
+        const activeStack: { type: ReactionType; emoji: string }[] = [];
+        if (reactions.likes > 0) activeStack.push({ type: "like", emoji: "👍" });
+        if (reactions.hearts > 0) activeStack.push({ type: "heart", emoji: "❤️" });
+        if (reactions.amens > 0) activeStack.push({ type: "amen", emoji: "🙏" });
+        if (reactions.insights > 0 && activeStack.length < 3) activeStack.push({ type: "insight", emoji: "💡" });
+        if (reactions.blesseds > 0 && activeStack.length < 3) activeStack.push({ type: "blessed", emoji: "🕊️" });
+        if (activeStack.length === 0) activeStack.push({ type: "like", emoji: "👍" });
+
+        const isDockOpen = activeDockArticleId === `${article.id}-${placement}`;
+
+        return (
+            <div className="fb-reaction-bar-wrap">
+                {/* 1. TOP SUMMARY ROW */}
+                <div className="fb-summary-row">
+                    <div
+                        className="fb-reactions-stack-wrap"
+                        onClick={() => handleReact(article.id, reactions.userReaction || "like")}
+                        title="Click to react"
+                    >
+                        <div className="fb-reactions-stack">
+                            {activeStack.slice(0, 3).map((item) => (
+                                <span key={item.type} className={`fb-stack-icon ${item.type}`}>
+                                    {item.emoji}
+                                </span>
+                            ))}
+                        </div>
+                        <span className="fb-reactions-count-text">
+                            {totalReactions > 0 ? `${totalReactions.toLocaleString()} reactions` : "Be the first to react"}
+                        </span>
+                    </div>
+
+                    <div className="fb-counts-right">
+                        <span className="fb-count-link" onClick={handleScrollToComments}>
+                            {articleComments.length} {articleComments.length === 1 ? "reflection" : "reflections"}
+                        </span>
+                        <span>•</span>
+                        <span className="fb-count-link" onClick={(e) => handleShareModalOpen(article, e)}>
+                            {reactions.shares} {reactions.shares === 1 ? "share" : "shares"}
+                        </span>
+                    </div>
+                </div>
+
+                {/* 2. ACTION BUTTONS ROW */}
+                <div className="fb-actions-row">
+                    {/* BUTTON 1: REACT / LIKE */}
+                    <div
+                        className="fb-action-btn-wrap"
+                        onMouseEnter={() => setActiveDockArticleId(`${article.id}-${placement}`)}
+                        onMouseLeave={() => setActiveDockArticleId(null)}
+                    >
+                        {/* FLOATING REACTION DOCK */}
+                        {isDockOpen && (
+                            <div className="fb-reaction-dock">
+                                {REACTION_OPTIONS.map((opt) => (
+                                    <div
+                                        key={opt.type}
+                                        className="fb-dock-item"
+                                        onClick={(e) => handleReact(article.id, opt.type, e)}
+                                    >
+                                        <span>{opt.emoji}</span>
+                                        <span className="fb-dock-tooltip">{opt.label}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        <button
+                            type="button"
+                            className={`fb-action-btn ${activeReaction ? `active-${activeReaction.type}` : ""}`}
+                            onClick={(e) => {
+                                if (reactions.userReaction) {
+                                    handleReact(article.id, reactions.userReaction, e);
+                                } else {
+                                    handleReact(article.id, "like", e);
+                                }
+                            }}
+                            onContextMenu={(e) => {
+                                e.preventDefault();
+                                setActiveDockArticleId(isDockOpen ? null : `${article.id}-${placement}`);
+                            }}
+                        >
+                            {activeReaction ? (
+                                <>
+                                    <span style={{ fontSize: "1.15rem" }}>{activeReaction.emoji}</span>
+                                    <span style={{ color: activeReaction.color }}>{activeReaction.label}</span>
+                                </>
+                            ) : (
+                                <>
+                                    <ThumbsUp size={18} />
+                                    <span>Like</span>
+                                </>
+                            )}
+                        </button>
+                    </div>
+
+                    {/* BUTTON 2: COMMENT */}
+                    <button
+                        type="button"
+                        className="fb-action-btn"
+                        onClick={handleScrollToComments}
+                    >
+                        <MessageSquare size={18} />
+                        <span>Comment</span>
+                    </button>
+
+                    {/* BUTTON 3: SHARE */}
+                    <button
+                        type="button"
+                        className="fb-action-btn"
+                        onClick={(e) => handleShareModalOpen(article, e)}
+                    >
+                        <Share2 size={18} />
+                        <span>Share</span>
+                    </button>
+                </div>
+            </div>
+        );
     };
 
     // Compute Previous / Next article in reading view
     const currentArticleIndex = activeArticle
-        ? CHURCH_ARTICLES.findIndex((a) => a.id === activeArticle.id)
+        ? allArticles.findIndex((a) => a.id === activeArticle.id)
         : -1;
     const prevArticle =
-        currentArticleIndex > 0 ? CHURCH_ARTICLES[currentArticleIndex - 1] : null;
+        currentArticleIndex > 0 ? allArticles[currentArticleIndex - 1] : null;
     const nextArticle =
-        currentArticleIndex >= 0 && currentArticleIndex < CHURCH_ARTICLES.length - 1
-            ? CHURCH_ARTICLES[currentArticleIndex + 1]
+        currentArticleIndex >= 0 && currentArticleIndex < allArticles.length - 1
+            ? allArticles[currentArticleIndex + 1]
             : null;
 
     // Related Articles (same category or common tags, excluding current)
     const relatedArticles = useMemo(() => {
         if (!activeArticle) return [];
-        return CHURCH_ARTICLES.filter(
+        return allArticles.filter(
             (a) => a.id !== activeArticle.id && (a.category === activeArticle.category || a.tags.some((t) => activeArticle.tags.includes(t)))
         ).slice(0, 3);
-    }, [activeArticle]);
+    }, [activeArticle, allArticles]);
 
     // Render Content Block Helper
     const renderBlock = (block: ContentBlock, index: number) => {
@@ -716,72 +955,8 @@ export default function BlogPage({ onNavigate, initialSlug, initialSubpath }: Bl
                         )}
                     </header>
 
-                    {/* 3. SOCIAL SHARING (FACEBOOK, MESSENGER, X, LINKEDIN, COPY) */}
-                    <aside className="social-share-bar">
-                        <div className="social-share-label">
-                            <Share2 size={16} />
-                            <span>Share Reflection</span>
-                        </div>
-                        <div className="social-share-buttons">
-                            <button
-                                type="button"
-                                className="share-pill-btn facebook"
-                                onClick={() => handleSocialShare("facebook", activeArticle)}
-                                title="Share on Facebook"
-                            >
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-                                </svg>
-                                <span>Facebook</span>
-                            </button>
-
-                            <button
-                                type="button"
-                                className="share-pill-btn messenger"
-                                onClick={() => handleSocialShare("messenger", activeArticle)}
-                                title="Send via Messenger"
-                            >
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M12 0C5.373 0 0 4.974 0 11.111c0 3.498 1.744 6.614 4.469 8.654V24l4.088-2.242c1.082.3 2.235.464 3.443.464 6.627 0 12-4.975 12-11.111C24 4.974 18.627 0 12 0zm1.196 14.93l-3.064-3.268-5.981 3.268 6.577-6.98 3.136 3.268 5.908-3.268-6.576 6.98z" />
-                                </svg>
-                                <span>Messenger</span>
-                            </button>
-
-                            <button
-                                type="button"
-                                className="share-pill-btn twitter"
-                                onClick={() => handleSocialShare("twitter", activeArticle)}
-                                title="Share on X"
-                            >
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                                </svg>
-                                <span>X</span>
-                            </button>
-
-                            <button
-                                type="button"
-                                className="share-pill-btn linkedin"
-                                onClick={() => handleSocialShare("linkedin", activeArticle)}
-                                title="Share on LinkedIn"
-                            >
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
-                                </svg>
-                                <span>LinkedIn</span>
-                            </button>
-
-                            <button
-                                type="button"
-                                className="share-pill-btn copy"
-                                onClick={() => handleSocialShare("copy", activeArticle)}
-                                title="Copy Article Link"
-                            >
-                                <Copy size={14} />
-                                <span>Copy Link</span>
-                            </button>
-                        </div>
-                    </aside>
+                    {/* 3. FACEBOOK-STYLE REACTION BAR & ENGAGEMENT (TOP) */}
+                    {renderFacebookReactionBar(activeArticle, "top")}
 
                     {/* 4. ARTICLE BODY & CONTENT BLOCKS */}
                     <article className="article-content-wrapper">
@@ -864,6 +1039,9 @@ export default function BlogPage({ onNavigate, initialSlug, initialSubpath }: Bl
                             </div>
                         </div>
                     </section>
+
+                    {/* FACEBOOK-STYLE REACTION BAR (BOTTOM) */}
+                    {renderFacebookReactionBar(activeArticle, "bottom")}
 
                     {/* 7. PREVIOUS / NEXT ARTICLE NAVIGATION */}
                     <nav className="prev-next-nav-grid" aria-label="Previous and Next Articles">
@@ -970,14 +1148,14 @@ export default function BlogPage({ onNavigate, initialSlug, initialSubpath }: Bl
 
                     {/* 11. COMMENTS / DISCUSSION SYSTEM */}
                     {activeArticle.allowComments && (
-                        <section className="comments-section-wrap">
+                        <section className="comments-section-wrap" ref={commentsSectionRef}>
                             <div className="comments-section-header">
                                 <h3>
                                     <MessageSquare size={22} style={{ color: "#38bdf8" }} />
                                     <span>Community Reflections &amp; Discussion</span>
                                 </h3>
                                 <span className="comments-badge-count">
-                                    {getArticleComments(activeArticle.id).length} Reflections
+                                    {getCommentsForArticle(activeArticle.id).length} Reflections
                                 </span>
                             </div>
 
@@ -1005,7 +1183,33 @@ export default function BlogPage({ onNavigate, initialSlug, initialSubpath }: Bl
                                         <option value="Guest / Visitor">Guest / Visitor</option>
                                     </select>
                                 </div>
+
+                                {/* QUICK ENCOURAGEMENT PILLS */}
+                                <div className="quick-reflection-pills">
+                                    <span style={{ fontSize: "0.78rem", color: "#64748b", alignSelf: "center", marginRight: 4 }}>
+                                        Quick reflection:
+                                    </span>
+                                    {[
+                                        "Amen! 🙏",
+                                        "Praise God! 🙌",
+                                        "Powerful teaching! ✝️",
+                                        "Praying for this! ❤️",
+                                        "So true, thank you Pastor! 💡",
+                                        "Glory to God! ✨"
+                                    ].map((pill) => (
+                                        <button
+                                            key={pill}
+                                            type="button"
+                                            className="quick-pill"
+                                            onClick={() => handleInsertQuickReflection(pill)}
+                                        >
+                                            {pill}
+                                        </button>
+                                    ))}
+                                </div>
+
                                 <textarea
+                                    ref={commentTextareaRef}
                                     className="comment-textarea"
                                     placeholder="Write your thoughts, testimony, or prayer request regarding this teaching..."
                                     value={commentText}
@@ -1014,7 +1218,7 @@ export default function BlogPage({ onNavigate, initialSlug, initialSubpath }: Bl
                                 />
                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
                                     <small style={{ color: "#94a3b8", fontSize: "0.8125rem" }}>
-                                        Comments are reviewed by pastoral moderators for biblical unity and encouragement.
+                                        Comments are recorded directly into the article reflection thread.
                                     </small>
                                     <button type="submit" className="comment-submit-btn">
                                         <Send size={15} />
@@ -1025,14 +1229,14 @@ export default function BlogPage({ onNavigate, initialSlug, initialSubpath }: Bl
 
                             {/* COMMENTS THREAD LIST */}
                             <div className="comments-list">
-                                {getArticleComments(activeArticle.id).length === 0 ? (
+                                {getCommentsForArticle(activeArticle.id).length === 0 ? (
                                     <div style={{ textAlign: "center", padding: "34px", color: "#94a3b8", background: "rgba(15, 23, 42, 0.8)", borderRadius: "16px", border: "1px solid rgba(255, 255, 255, 0.08)" }}>
                                         <MessageSquare size={34} style={{ margin: "0 auto 10px auto", color: "#38bdf8", opacity: 0.6 }} />
                                         <p style={{ margin: 0, fontWeight: 600 }}>Be the first to share a reflection or prayer request!</p>
                                     </div>
                                 ) : (
-                                    getArticleComments(activeArticle.id).map((c) => (
-                                        <div key={c.id} className="comment-item">
+                                    getCommentsForArticle(activeArticle.id).map((c) => (
+                                        <div key={c.id} className={`comment-item ${newlyAddedCommentId === c.id ? "newly-added" : ""}`}>
                                             <div className="comment-item-header">
                                                 <div className="comment-user-info">
                                                     <div
@@ -1059,7 +1263,7 @@ export default function BlogPage({ onNavigate, initialSlug, initialSubpath }: Bl
                                                     className="comment-action-link"
                                                     onClick={() => handleToggleCommentLike(c.id)}
                                                 >
-                                                    <ThumbsUp size={14} style={{ color: "#38bdf8" }} />
+                                                    <ThumbsUp size={14} style={{ color: c.userLiked ? "#38bdf8" : "#94a3b8" }} />
                                                     <span>Amen ({c.likes})</span>
                                                 </button>
                                                 <span>•</span>
@@ -1211,8 +1415,8 @@ export default function BlogPage({ onNavigate, initialSlug, initialSubpath }: Bl
                                     {categories.map((cat) => {
                                         const count =
                                             cat.id === "all"
-                                                ? CHURCH_ARTICLES.length
-                                                : CHURCH_ARTICLES.filter((a) => a.category === cat.id).length;
+                                                ? allArticles.length
+                                                : allArticles.filter((a) => a.category === cat.id).length;
 
                                         return (
                                             <button
@@ -1334,39 +1538,45 @@ export default function BlogPage({ onNavigate, initialSlug, initialSubpath }: Bl
 
                                         <div className="blog-card-footer">
                                             <div className="blog-engagement-bar">
-                                                <button
-                                                    type="button"
-                                                    className={`engagement-btn ${
-                                                        getArticleLikes(featuredArticle.id).userLiked ? "liked" : ""
-                                                    }`}
-                                                    onClick={(e) => handleToggleLike(featuredArticle.id, e)}
-                                                    title="Encouraged by this article"
-                                                >
-                                                    <Heart size={15} />
-                                                    <span>{getArticleLikes(featuredArticle.id).count}</span>
-                                                </button>
+                                                {(() => {
+                                                    const featReactions = getReactionsForArticle(featuredArticle.id);
+                                                    const featTotal = getTotalReactions(featReactions);
+                                                    const featComments = getCommentsForArticle(featuredArticle.id);
+                                                    return (
+                                                        <>
+                                                            <button
+                                                                type="button"
+                                                                className={`engagement-btn ${
+                                                                    featReactions.userReaction ? "liked" : ""
+                                                                }`}
+                                                                onClick={(e) => handleReact(featuredArticle.id, featReactions.userReaction || "like", e)}
+                                                                title="Encouraged by this article"
+                                                            >
+                                                                <Heart size={15} style={{ color: featReactions.userReaction ? "#f43f5e" : undefined, fill: featReactions.userReaction ? "#f43f5e" : "none" }} />
+                                                                <span>{featTotal}</span>
+                                                            </button>
 
-                                                <button
-                                                    type="button"
-                                                    className="engagement-btn"
-                                                    onClick={() => selectArticle(featuredArticle)}
-                                                    title="View reflections"
-                                                >
-                                                    <MessageSquare size={15} />
-                                                    <span>{getArticleComments(featuredArticle.id).length}</span>
-                                                </button>
+                                                            <button
+                                                                type="button"
+                                                                className="engagement-btn"
+                                                                onClick={() => selectArticle(featuredArticle)}
+                                                                title="View reflections"
+                                                            >
+                                                                <MessageSquare size={15} />
+                                                                <span>{featComments.length}</span>
+                                                            </button>
 
-                                                <button
-                                                    type="button"
-                                                    className="engagement-btn"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleSocialShare("messenger", featuredArticle);
-                                                    }}
-                                                    title="Share via Messenger"
-                                                >
-                                                    <Share2 size={15} />
-                                                </button>
+                                                            <button
+                                                                type="button"
+                                                                className="engagement-btn"
+                                                                onClick={(e) => handleShareModalOpen(featuredArticle, e)}
+                                                                title="Share article"
+                                                            >
+                                                                <Share2 size={15} />
+                                                            </button>
+                                                        </>
+                                                    );
+                                                })()}
                                             </div>
 
                                             <button
@@ -1472,39 +1682,45 @@ export default function BlogPage({ onNavigate, initialSlug, initialSubpath }: Bl
 
                                             <div className="blog-card-footer">
                                                 <div className="blog-engagement-bar">
-                                                    <button
-                                                        type="button"
-                                                        className={`engagement-btn ${
-                                                            getArticleLikes(art.id).userLiked ? "liked" : ""
-                                                        }`}
-                                                        onClick={(e) => handleToggleLike(art.id, e)}
-                                                        title="Encouraged"
-                                                    >
-                                                        <Heart size={14} />
-                                                        <span>{getArticleLikes(art.id).count}</span>
-                                                    </button>
+                                                    {(() => {
+                                                        const cardReactions = getReactionsForArticle(art.id);
+                                                        const cardTotal = getTotalReactions(cardReactions);
+                                                        const cardComments = getCommentsForArticle(art.id);
+                                                        return (
+                                                            <>
+                                                                <button
+                                                                    type="button"
+                                                                    className={`engagement-btn ${
+                                                                        cardReactions.userReaction ? "liked" : ""
+                                                                    }`}
+                                                                    onClick={(e) => handleReact(art.id, cardReactions.userReaction || "like", e)}
+                                                                    title="Encouraged"
+                                                                >
+                                                                    <Heart size={14} style={{ color: cardReactions.userReaction ? "#f43f5e" : undefined, fill: cardReactions.userReaction ? "#f43f5e" : "none" }} />
+                                                                    <span>{cardTotal}</span>
+                                                                </button>
 
-                                                    <button
-                                                        type="button"
-                                                        className="engagement-btn"
-                                                        onClick={() => selectArticle(art)}
-                                                        title="Discussion"
-                                                    >
-                                                        <MessageSquare size={14} />
-                                                        <span>{getArticleComments(art.id).length}</span>
-                                                    </button>
+                                                                <button
+                                                                    type="button"
+                                                                    className="engagement-btn"
+                                                                    onClick={() => selectArticle(art)}
+                                                                    title="Discussion"
+                                                                >
+                                                                    <MessageSquare size={14} />
+                                                                    <span>{cardComments.length}</span>
+                                                                </button>
 
-                                                    <button
-                                                        type="button"
-                                                        className="engagement-btn"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleSocialShare("messenger", art);
-                                                        }}
-                                                        title="Share on Messenger"
-                                                    >
-                                                        <Share2 size={14} />
-                                                    </button>
+                                                                <button
+                                                                    type="button"
+                                                                    className="engagement-btn"
+                                                                    onClick={(e) => handleShareModalOpen(art, e)}
+                                                                    title="Share article"
+                                                                >
+                                                                    <Share2 size={14} />
+                                                                </button>
+                                                            </>
+                                                        );
+                                                    })()}
                                                 </div>
 
                                                 <button
@@ -1545,6 +1761,95 @@ export default function BlogPage({ onNavigate, initialSlug, initialSubpath }: Bl
                     </p>
                 </div>
             </footer>
+
+            {/* FLOATING FACEBOOK REACTION PARTICLES */}
+            {particles.length > 0 && (
+                <div className="fb-particle-canvas">
+                    {particles.map((p) => (
+                        <span
+                            key={p.id}
+                            className="fb-particle"
+                            style={{ left: `${p.x}px`, top: `${p.y}px` }}
+                        >
+                            {p.emoji}
+                        </span>
+                    ))}
+                </div>
+            )}
+
+            {/* FACEBOOK SHARE MODAL */}
+            {shareModalArticle && (
+                <div className="fb-share-overlay" onClick={() => setShareModalArticle(null)}>
+                    <div className="fb-share-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="fb-share-modal-header">
+                            <h3>Share to Kingdom Network</h3>
+                            <button
+                                type="button"
+                                className="fb-share-close"
+                                onClick={() => setShareModalArticle(null)}
+                                title="Close"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                        <p className="fb-share-modal-desc">
+                            Share this teaching with your family, church members, and social network:
+                        </p>
+                        <div className="fb-share-preview-card">
+                            <img
+                                src={shareModalArticle.featuredImage}
+                                alt={shareModalArticle.title}
+                                className="fb-share-preview-img"
+                            />
+                            <div className="fb-share-preview-info">
+                                <h4>{shareModalArticle.title}</h4>
+                                <p>{shareModalArticle.subtitle}</p>
+                                <span>epic-cms.vercel.app</span>
+                            </div>
+                        </div>
+                        <div className="fb-share-grid">
+                            <button
+                                type="button"
+                                className="fb-share-item fb-facebook"
+                                onClick={() => handleShareAction("facebook")}
+                            >
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                                </svg>
+                                <span>Facebook</span>
+                            </button>
+                            <button
+                                type="button"
+                                className="fb-share-item fb-messenger"
+                                onClick={() => handleShareAction("messenger")}
+                            >
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M12 0C5.373 0 0 4.974 0 11.111c0 3.498 1.744 6.614 4.469 8.654V24l4.088-2.242c1.093.304 2.251.464 3.443.464 6.627 0 12-4.975 12-11.111C24 4.974 18.627 0 12 0zm1.194 14.963l-3.056-3.26-5.963 3.26 6.559-6.963 3.13 3.259 5.89-3.259-6.56 6.963z" />
+                                </svg>
+                                <span>Messenger</span>
+                            </button>
+                            <button
+                                type="button"
+                                className="fb-share-item fb-twitter"
+                                onClick={() => handleShareAction("twitter")}
+                            >
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                                </svg>
+                                <span>X (Twitter)</span>
+                            </button>
+                            <button
+                                type="button"
+                                className="fb-share-item fb-copy"
+                                onClick={() => handleShareAction("copy")}
+                            >
+                                <Copy size={20} />
+                                <span>Copy Link</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
