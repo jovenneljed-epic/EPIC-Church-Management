@@ -1,0 +1,137 @@
+/* =========================================================
+   EPIC PUBLIC — BLOG DETAIL PAGE (FACEBOOK LIGHT THEME)
+   ========================================================= */
+
+.epic-blog-detail-page {
+    min-height: 100vh;
+    background-color: #f0f2f5;
+    color: #050505;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    display: flex;
+    flex-direction: column;
+}
+
+.blog-detail-container {
+    width: 100%;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.blog-detail-hero {
+    background: #ffffff;
+    border-bottom: 1px solid #e4e6eb;
+    padding: 48px 0 36px 0;
+}
+
+.blog-detail-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #f0f2f5;
+    color: #050505;
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid #ccd0d5;
+    cursor: pointer;
+    margin-bottom: 24px;
+    transition: background-color 0.15s ease;
+}
+
+.blog-detail-back-btn:hover {
+    background: #e4e6eb;
+}
+
+.blog-detail-badge {
+    display: inline-block;
+    background: #e7f3ff;
+    color: #1877f2;
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+}
+
+.blog-detail-hero h1 {
+    font-size: 2.25rem;
+    font-weight: 800;
+    color: #050505;
+    line-height: 1.25;
+    margin: 0 0 16px 0;
+    letter-spacing: -0.02em;
+}
+
+.blog-detail-meta {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    color: #65676b;
+    font-size: 0.875rem;
+}
+
+.blog-detail-main {
+    padding: 36px 0 60px 0;
+    flex: 1;
+}
+
+.blog-detail-card {
+    background: #ffffff;
+    border: 1px solid #e4e6eb;
+    border-radius: 12px;
+    padding: 40px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    line-height: 1.7;
+    font-size: 1.0625rem;
+    color: #1c1e21;
+}
+
+.blog-detail-card h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #050505;
+    margin: 32px 0 14px 0;
+    border-left: 4px solid #1877f2;
+    padding-left: 14px;
+}
+
+.blog-detail-card h2:first-of-type {
+    margin-top: 0;
+}
+
+.blog-detail-card p {
+    margin: 0 0 20px 0;
+    color: #4b4f56;
+}
+
+.blog-detail-callout {
+    background: #f0f2f5;
+    border-left: 4px solid #1877f2;
+    padding: 18px 24px;
+    border-radius: 0 8px 8px 0;
+    margin: 28px 0;
+    font-style: italic;
+    color: #050505;
+}
+
+.blog-detail-footer-cta {
+    margin-top: 36px;
+    padding-top: 24px;
+    border-top: 1px solid #e4e6eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.blog-detail-page-footer {
+    background: #ffffff;
+    border-top: 1px solid #e4e6eb;
+    padding: 24px 0;
+    text-align: center;
+    color: #8a8d91;
+    font-size: 0.875rem;
+}

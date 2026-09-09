@@ -1519,6 +1519,14 @@ const App: React.FC = () => {
         normalizedPath ===
         PUBLIC_ROUTES["thank-you"];
 
+    const isBlogPublicPage =
+        normalizedPath === PUBLIC_ROUTES.blog ||
+        normalizedPath === "/blog";
+
+    const isBlogDetailPublicPage =
+        normalizedPath === PUBLIC_ROUTES["blog-detail"] ||
+        normalizedPath === "/blog-detail";
+
     const isAboutPage =
         normalizedPath ===
         PUBLIC_ROUTES.about;
@@ -2875,14 +2883,7 @@ if(
     );
 
 }
-if (
-    normalizedPath === "/blog"
-)
-{
-    return (
-        <BlogPage />
-    );
-}
+
 
     switch(activePage)
     {
@@ -3115,10 +3116,11 @@ return (
 <BlogDetailPage
 
 onBack={()=>
-navigate(
-"resources"
+handlePublicNavigate(
+"blog"
 )
 }
+onNavigate={handlePublicNavigate}
 
 />
 
@@ -3381,6 +3383,21 @@ if (normalizedPath === "/whats-new") {
 if (normalizedPath === "/resources") {
     return (
         <ResourcesPage
+            onNavigate={handlePublicNavigate}
+        />
+    );
+}
+if (isBlogPublicPage || normalizedPath === "/blog") {
+    return (
+        <BlogPage
+            onNavigate={handlePublicNavigate}
+        />
+    );
+}
+if (isBlogDetailPublicPage || normalizedPath === "/blog-detail") {
+    return (
+        <BlogDetailPage
+            onBack={() => handlePublicNavigate("blog")}
             onNavigate={handlePublicNavigate}
         />
     );
