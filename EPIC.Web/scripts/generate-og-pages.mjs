@@ -63,25 +63,7 @@ for (const article of articles) {
   fs.writeFileSync(outPath, html, 'utf-8');
 }
 
-// Also generate dist/blog/index.html for the main blog magazine view
-const blogDir = path.join(distDir, 'blog');
-fs.mkdirSync(blogDir, { recursive: true });
-const blogTitle = 'EPIC Church Journal & Pastoral Insights | Faith, Leadership & Discipleship';
-const blogDesc = 'Biblical insights, pastoral care, marriage and family guidance, youth revival, and church leadership articles.';
-const blogImage = `${BASE_URL}/images/og/epic-main-tagline.jpg`;
-const blogUrl = `${BASE_URL}/blog`;
-
-let blogHtml = template;
-blogHtml = blogHtml.replace(/<title>[\s\S]*?<\/title>/i, `<title>${escapeHtml(blogTitle)}</title>`);
-blogHtml = blogHtml.replace(/<meta property="og:title" content="[\s\S]*?" \/>/i, `<meta property="og:title" content="${escapeHtml(blogTitle)}" />`);
-blogHtml = blogHtml.replace(/<meta property="og:description" content="[\s\S]*?" \/>/i, `<meta property="og:description" content="${escapeHtml(blogDesc)}" />`);
-blogHtml = blogHtml.replace(/<meta property="og:image" content="[\s\S]*?" \/>/i, `<meta property="og:image" content="${blogImage}" />`);
-blogHtml = blogHtml.replace(/<meta property="og:image:secure_url" content="[\s\S]*?" \/>/i, `<meta property="og:image:secure_url" content="${blogImage}" />`);
-blogHtml = blogHtml.replace(/<meta property="og:url" content="[\s\S]*?" \/>/i, `<meta property="og:url" content="${blogUrl}" />`);
-blogHtml = blogHtml.replace(/<link rel="canonical" href="[\s\S]*?" \/>/i, `<link rel="canonical" href="${blogUrl}" />`);
-fs.writeFileSync(path.join(blogDir, 'index.html'), blogHtml, 'utf-8');
-
-console.log(`Successfully generated static OG pages for ${articles.length} articles and /blog.`);
+console.log(`Successfully generated static OG pages for ${articles.length} articles.`);
 
 function escapeHtml(str) {
   return (str || '')
