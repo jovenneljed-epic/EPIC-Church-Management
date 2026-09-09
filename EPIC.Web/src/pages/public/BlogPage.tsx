@@ -124,6 +124,38 @@ export default function BlogPage({ onNavigate, initialSlug, initialSubpath }: Bl
         }
     }, [initialSlug, initialSubpath]);
 
+    // Dynamically update document title and meta tags when activeArticle changes
+    useEffect(() => {
+        if (activeArticle) {
+            document.title = `${activeArticle.title} | EPIC Church`;
+            const updateMeta = (prop: string, val: string, isName = false) => {
+                let el = document.querySelector(isName ? `meta[name="${prop}"]` : `meta[property="${prop}"]`);
+                if (!el) {
+                    el = document.createElement("meta");
+                    if (isName) el.setAttribute("name", prop);
+                    else el.setAttribute("property", prop);
+                    document.head.appendChild(el);
+                }
+                el.setAttribute("content", val);
+            };
+
+            const fullImageUrl = activeArticle.ogImage?.startsWith("http")
+                ? activeArticle.ogImage
+                : `https://epic-cms.vercel.app${activeArticle.ogImage?.startsWith("/") ? "" : "/"}${activeArticle.ogImage || "images/og/epic-main-tagline.jpg"}`;
+            const canonicalUrl = `https://epic-cms.vercel.app/blog?article=${encodeURIComponent(activeArticle.slug)}`;
+
+            updateMeta("og:title", activeArticle.title);
+            updateMeta("og:description", activeArticle.subtitle);
+            updateMeta("og:image", fullImageUrl);
+            updateMeta("og:url", canonicalUrl);
+            updateMeta("twitter:title", activeArticle.title);
+            updateMeta("twitter:description", activeArticle.subtitle);
+            updateMeta("twitter:image", fullImageUrl);
+        } else {
+            document.title = "EPIC Church Journal & Pastoral Insights | Faith, Leadership & Discipleship";
+        }
+    }, [activeArticle]);
+
     // Synchronize URL query parameter when activeArticle changes
     const selectArticle = (article: ChurchArticle | null) => {
         setActiveArticle(article);
