@@ -352,11 +352,14 @@ export default function BlogPage({ onNavigate, initialSlug, initialSubpath }: Bl
         platform: "facebook" | "messenger" | "twitter" | "linkedin" | "copy",
         article: ChurchArticle
     ) => {
-        const articleUrl = `${window.location.origin}/blog?article=${article.slug}`;
-        const shareText = `"${article.title}" — Insights from EPIC Church Management System`;
+        const baseUrl = window.location.origin.includes("localhost")
+            ? "https://epic-cms.vercel.app"
+            : window.location.origin;
+        const articleUrl = `${baseUrl}/blog?article=${encodeURIComponent(article.slug)}`;
+        const shareText = `"${article.title}" — ${article.subtitle}`;
 
         if (platform === "copy") {
-            navigator.clipboard.writeText(`${shareText} ${articleUrl}`);
+            navigator.clipboard.writeText(`${shareText}\n\n${articleUrl}`);
             showToast("Article link copied to clipboard! Share with your cell group or family.");
             return;
         }

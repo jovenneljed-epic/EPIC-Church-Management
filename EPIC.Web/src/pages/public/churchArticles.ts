@@ -55,6 +55,7 @@ export interface ChurchArticle {
     updatedDate: string;
     readTime: string;
     featuredImage: string;
+    ogImage?: string;
     featuredImageCaption: string;
     featuredScripture: {
         verse: string;
@@ -154,7 +155,8 @@ export const CHURCH_ARTICLES: ChurchArticle[] = [
         publishDate: "September 10, 2026",
         updatedDate: "September 10, 2026",
         readTime: "8 min read",
-        featuredImage: "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=1200&q=80",
+        featuredImage: "/images/og/pastors-wife-documentary-tagline.jpg",
+        ogImage: "https://epic-cms.vercel.app/images/og/pastors-wife-documentary-tagline.jpg",
         featuredImageCaption: "Behind the bright lights of ministry platforms, Christ calls His church to protect the vulnerable and banish coercive abuse from the parsonage.",
         featuredScripture: {
             verse: "“Open your mouth for the mute, for the rights of all who are destitute. Open your mouth, judge righteously, defend the rights of the poor and needy.”",
@@ -263,7 +265,8 @@ export const CHURCH_ARTICLES: ChurchArticle[] = [
         publishDate: "September 9, 2026",
         updatedDate: "September 9, 2026",
         readTime: "7 min read",
-        featuredImage: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=1200&q=80",
+        featuredImage: "/images/og/celebrity-pastor-tagline.jpg",
+        ogImage: "https://epic-cms.vercel.app/images/og/celebrity-pastor-tagline.jpg",
         featuredImageCaption: "True biblical greatness is measured by Christlike servanthood, transparent stewardship, and personal holiness.",
         featuredScripture: {
             verse: "“For an overseer, as God's steward, must be above reproach. He must not be arrogant or quick-tempered or a drunkard or violent or greedy for gain...”",
@@ -334,7 +337,8 @@ export const CHURCH_ARTICLES: ChurchArticle[] = [
         publishDate: "September 7, 2026",
         updatedDate: "September 7, 2026",
         readTime: "6 min read",
-        featuredImage: "https://images.unsplash.com/photo-1516307365426-bea591f05011?auto=format&fit=crop&w=1200&q=80",
+        featuredImage: "/images/og/pastoral-burnout-tagline.jpg",
+        ogImage: "https://epic-cms.vercel.app/images/og/pastoral-burnout-tagline.jpg",
         featuredImageCaption: "Healing begins when pastors and their spouses are given permission to lay down the cape and rest in Christ.",
         featuredScripture: {
             verse: "“The Lord is near to the brokenhearted and saves the crushed in spirit.”",
