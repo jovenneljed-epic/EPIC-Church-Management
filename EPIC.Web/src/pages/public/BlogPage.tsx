@@ -34,9 +34,10 @@ import "./BlogPage.css";
 interface BlogPageProps {
     onNavigate?: (page: string) => void;
     initialSlug?: string;
+    initialSubpath?: string;
 }
 
-export default function BlogPage({ onNavigate, initialSlug }: BlogPageProps) {
+export default function BlogPage({ onNavigate, initialSlug, initialSubpath }: BlogPageProps) {
     const [selectedCategory, setSelectedCategory] = useState<string>("all");
     const [searchQuery, setSearchQuery] = useState<string>("");
     const [selectedTag, setSelectedTag] = useState<string | null>(null);
@@ -76,10 +77,30 @@ export default function BlogPage({ onNavigate, initialSlug }: BlogPageProps) {
         { id: "technology", label: "Technology" },
     ];
 
-    // Read URL param or initialSlug on mount
+    // Read URL param or initialSlug or subpath on mount
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
-        const slug = initialSlug || params.get("article") || params.get("slug");
+        let slug = initialSlug || params.get("article") || params.get("slug");
+        
+        // Handle subpath (e.g. /blog/category/faith-life or /blog/church-news or /blog/article-slug)
+        if (!slug && initialSubpath) {
+            const cleanSub = initialSubpath.replace(/^\/+|\/+$/g, "");
+            if (cleanSub.startsWith("category/")) {
+                const cat = cleanSub.replace("category/", "");
+                setSelectedCategory(cat);
+            } else if (cleanSub.startsWith("tag/")) {
+                const tg = cleanSub.replace("tag/", "");
+                setSelectedTag(tg);
+            } else {
+                const isCat = categories.some((c) => c.id === cleanSub);
+                if (isCat) {
+                    setSelectedCategory(cleanSub);
+                } else {
+                    slug = cleanSub;
+                }
+            }
+        }
+
         if (slug) {
             const found = CHURCH_ARTICLES.find(
                 (a) => a.slug === slug || a.id === slug
@@ -89,7 +110,19 @@ export default function BlogPage({ onNavigate, initialSlug }: BlogPageProps) {
                 window.scrollTo({ top: 0, behavior: "smooth" });
             }
         }
-    }, [initialSlug]);
+
+        // Check category query param (e.g., ?category=church-news or ?cat=faith-life)
+        const catParam = params.get("category") || params.get("cat");
+        if (catParam) {
+            setSelectedCategory(catParam);
+        }
+
+        // Check tag query param (e.g., ?tag=SpiritualAbuse)
+        const tagParam = params.get("tag");
+        if (tagParam) {
+            setSelectedTag(tagParam);
+        }
+    }, [initialSlug, initialSubpath]);
 
     // Synchronize URL query parameter when activeArticle changes
     const selectArticle = (article: ChurchArticle | null) => {
@@ -107,6 +140,36 @@ export default function BlogPage({ onNavigate, initialSlug }: BlogPageProps) {
         } catch {
             // ignore in restricted iframe
         }
+    };
+
+    // Synchronize category selection with URL
+    const handleSelectCategory = (catId: string) => {
+        setSelectedCategory(catId);
+        setSelectedTag(null);
+        try {
+            const url = new URL(window.location.href);
+            if (catId && catId !== "all") {
+                url.searchParams.set("category", catId);
+            } else {
+                url.searchParams.delete("category");
+                url.searchParams.delete("cat");
+            }
+            window.history.replaceState({}, "", url.toString());
+        } catch {}
+    };
+
+    // Synchronize tag selection with URL
+    const handleSelectTag = (tag: string | null) => {
+        setSelectedTag(tag);
+        try {
+            const url = new URL(window.location.href);
+            if (tag) {
+                url.searchParams.set("tag", tag);
+            } else {
+                url.searchParams.delete("tag");
+            }
+            window.history.replaceState({}, "", url.toString());
+        } catch {}
     };
 
     // Initialize Likes & Comments from LocalStorage
@@ -540,14 +603,33 @@ export default function BlogPage({ onNavigate, initialSlug }: BlogPageProps) {
                             BLOG
                         </button>
                         <span className="blog-breadcrumb-sep">&gt;</span>
-                        <span style={{ color: "#ffffff" }}>{activeArticle.categoryLabel}</span>
+                        <button
+                            type="button"
+                            className="blog-breadcrumb-link"
+                            onClick={() => {
+                                handleSelectCategory(activeArticle.category);
+                                selectArticle(null);
+                            }}
+                            style={{ background: "none", border: "none", color: "#38bdf8", cursor: "pointer", padding: 0, font: "inherit", fontWeight: 600 }}
+                        >
+                            {activeArticle.categoryLabel}
+                        </button>
                     </nav>
 
                     {/* 2. ARTICLE HEADER / HERO */}
                     <header className="article-hero-wrap">
-                        <span className="article-category-badge">
+                        <button
+                            type="button"
+                            className="article-category-badge"
+                            onClick={() => {
+                                handleSelectCategory(activeArticle.category);
+                                selectArticle(null);
+                            }}
+                            style={{ cursor: "pointer", border: "none" }}
+                            title={`View all ${activeArticle.categoryLabel} articles`}
+                        >
                             {activeArticle.categoryLabel}
-                        </span>
+                        </button>
 
                         <h1 className="article-hero-title">
                             {activeArticle.title}
@@ -694,7 +776,7 @@ export default function BlogPage({ onNavigate, initialSlug }: BlogPageProps) {
                                     type="button"
                                     className="article-tag-chip"
                                     onClick={() => {
-                                        setSelectedTag(tag);
+                                        handleSelectTag(tag);
                                         selectArticle(null);
                                     }}
                                 >
@@ -1104,10 +1186,7 @@ export default function BlogPage({ onNavigate, initialSlug }: BlogPageProps) {
                                                 className={`blog-cat-pill ${
                                                     selectedCategory === cat.id ? "active" : ""
                                                 }`}
-                                                onClick={() => {
-                                                    setSelectedCategory(cat.id);
-                                                    setSelectedTag(null);
-                                                }}
+                                                onClick={() => handleSelectCategory(cat.id)}
                                             >
                                                 <span>{cat.label}</span>
                                                 <span className="blog-cat-pill-count">{count}</span>
@@ -1125,7 +1204,7 @@ export default function BlogPage({ onNavigate, initialSlug }: BlogPageProps) {
                                         <button
                                             type="button"
                                             style={{ background: "none", border: "none", color: "#38bdf8", fontSize: "0.8125rem", cursor: "pointer", fontWeight: 700 }}
-                                            onClick={() => setSelectedTag(null)}
+                                            onClick={() => handleSelectTag(null)}
                                         >
                                             Clear filter
                                         </button>
@@ -1174,7 +1253,15 @@ export default function BlogPage({ onNavigate, initialSlug }: BlogPageProps) {
                                     <div className="blog-featured-body">
                                         <div>
                                             <div className="blog-featured-cat-meta">
-                                                <span className="blog-cat-badge-neon">
+                                                <span
+                                                    className="blog-cat-badge-neon"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleSelectCategory(featuredArticle.category);
+                                                    }}
+                                                    style={{ cursor: "pointer" }}
+                                                    title={`Filter by ${featuredArticle.categoryLabel}`}
+                                                >
                                                     {featuredArticle.categoryLabel}
                                                 </span>
                                                 <span>•</span>
@@ -1275,8 +1362,8 @@ export default function BlogPage({ onNavigate, initialSlug }: BlogPageProps) {
                                     type="button"
                                     className="church-cta-btn primary"
                                     onClick={() => {
-                                        setSelectedCategory("all");
-                                        setSelectedTag(null);
+                                        handleSelectCategory("all");
+                                        handleSelectTag(null);
                                         setSearchQuery("");
                                     }}
                                 >
@@ -1299,7 +1386,17 @@ export default function BlogPage({ onNavigate, initialSlug }: BlogPageProps) {
                                                 loading="lazy"
                                             />
                                             <div className="blog-card-media-overlay">
-                                                <span className="blog-card-floating-cat">{art.categoryLabel}</span>
+                                                <span
+                                                    className="blog-card-floating-cat"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleSelectCategory(art.category);
+                                                    }}
+                                                    style={{ cursor: "pointer" }}
+                                                    title={`Filter by ${art.categoryLabel}`}
+                                                >
+                                                    {art.categoryLabel}
+                                                </span>
                                                 <span className="blog-card-floating-time">
                                                     <Clock size={11} /> {art.readTime}
                                                 </span>

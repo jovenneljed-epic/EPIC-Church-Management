@@ -3387,10 +3387,14 @@ if (normalizedPath === "/resources") {
         />
     );
 }
-if (isBlogPublicPage || normalizedPath === "/blog") {
+if (isBlogPublicPage || normalizedPath === "/blog" || normalizedPath.startsWith("/blog/")) {
+    const subpath = normalizedPath.startsWith("/blog/")
+        ? normalizedPath.slice(6)
+        : undefined;
     return (
         <BlogPage
             onNavigate={handlePublicNavigate}
+            initialSubpath={subpath}
         />
     );
 }
