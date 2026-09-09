@@ -83,6 +83,8 @@ namespace EPIC.Api.Data
 
         public DbSet<Announcement> Announcements { get; set; }
         public DbSet<BlogPost> BlogPosts { get; set; }
+        public DbSet<BlogComment> BlogComments { get; set; }
+        public DbSet<BlogReaction> BlogReactions { get; set; }
 
 
         // =========================================================

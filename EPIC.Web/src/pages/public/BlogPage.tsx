@@ -35,6 +35,8 @@ import {
     addArticleComment,
     addCommentReply,
     toggleCommentLike,
+    fetchArticleEngagement,
+    fetchEngagementSummary,
     type ReactionType,
     type ArticleReactions,
     type BlogComment,
@@ -322,6 +324,25 @@ export default function BlogPage({ onNavigate, initialSlug, initialSubpath }: Bl
             window.removeEventListener("epic:blog-engagement-update", handleEngagementUpdate);
         };
     }, []);
+
+    // Synchronize magazine summary with central cloud database
+    useEffect(() => {
+        fetchEngagementSummary();
+        const interval = setInterval(() => {
+            fetchEngagementSummary();
+        }, 20000);
+        return () => clearInterval(interval);
+    }, []);
+
+    // Synchronize active article reactions and comments with cloud database in real time
+    useEffect(() => {
+        if (!activeArticle) return;
+        fetchArticleEngagement(activeArticle.id);
+        const interval = setInterval(() => {
+            fetchArticleEngagement(activeArticle.id);
+        }, 8000);
+        return () => clearInterval(interval);
+    }, [activeArticle?.id]);
 
     // Filter Articles for Magazine view
     const filteredArticles = useMemo(() => {

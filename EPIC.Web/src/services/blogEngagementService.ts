@@ -1,7 +1,11 @@
-/**
- * EPIC Church Blog - Engagement & Reaction Engine
- * Provides real-time Facebook-style reactions, share tracking, and persistent commenting with cross-tab synchronization.
+﻿/**
+ * EPIC Church Blog - Cloud Engagement & Reaction Engine
+ * Provides real-time Facebook-style reactions, share tracking, and cloud-persistent commenting.
+ * Synchronizes across the entire internet via the EPIC Cloud API (SQL Server backend)
+ * with instant optimistic rendering, local caching, and cross-tab BroadcastChannel updates.
  */
+
+import { API_BASE_URL } from "../config";
 
 export type ReactionType = "like" | "heart" | "amen" | "insight" | "blessed";
 
@@ -38,17 +42,42 @@ export interface BlogComment {
     replies: BlogCommentReply[];
 }
 
-const REACTIONS_STORAGE_KEY = "epic_blog_reactions_v2";
-const COMMENTS_STORAGE_KEY = "epic_blog_comments_v2";
+const REACTIONS_STORAGE_KEY = "epic_blog_reactions_v3";
+const COMMENTS_STORAGE_KEY = "epic_blog_comments_v3";
+const USER_PREFERENCES_KEY = "epic_blog_user_prefs_v1";
 
-// BroadcastChannel for instant cross-tab and cross-component synchronization
+interface UserPreferences {
+    userReactions: Record<string, ReactionType>;
+    userShares: Record<string, boolean>;
+    likedComments: Record<string, boolean>;
+}
+
+function getUserPreferences(): UserPreferences {
+    try {
+        const raw = localStorage.getItem(USER_PREFERENCES_KEY);
+        if (raw) return JSON.parse(raw);
+    } catch {
+        // ignore
+    }
+    return { userReactions: {}, userShares: {}, likedComments: {} };
+}
+
+function saveUserPreferences(prefs: UserPreferences): void {
+    try {
+        localStorage.setItem(USER_PREFERENCES_KEY, JSON.stringify(prefs));
+    } catch {
+        // ignore
+    }
+}
+
+// BroadcastChannel for instant cross-tab synchronization
 let broadcastChannel: BroadcastChannel | null = null;
 try {
     if (typeof window !== "undefined" && "BroadcastChannel" in window) {
         broadcastChannel = new BroadcastChannel("epic_blog_engagement");
     }
 } catch {
-    // BroadcastChannel unsupported or blocked in iframe
+    // BroadcastChannel unsupported or restricted
 }
 
 function notifyUpdate(type: "reactions" | "comments", articleId: string, payload: unknown) {
@@ -61,13 +90,13 @@ function notifyUpdate(type: "reactions" | "comments", articleId: string, payload
         try {
             broadcastChannel?.postMessage({ type, articleId, payload });
         } catch {
-            // Ignore channel error
+            // ignore
         }
     }
 }
 
 /**
- * Generate sensible seed reactions for articles based on their ID/hash
+ * Generate sensible base seed reactions for articles based on articleId
  */
 function getInitialReactionsForArticle(articleId: string): ArticleReactions {
     let hash = 0;
@@ -77,28 +106,18 @@ function getInitialReactionsForArticle(articleId: string): ArticleReactions {
     }
     const seed = Math.abs(hash);
 
-    const likes = 45 + (seed % 95);
-    const hearts = 30 + ((seed >> 2) % 65);
-    const amens = 20 + ((seed >> 4) % 45);
-    const insights = 12 + ((seed >> 6) % 30);
-    const blesseds = 8 + ((seed >> 8) % 25);
-    const shares = 15 + ((seed >> 10) % 35);
-
     return {
-        likes,
-        hearts,
-        amens,
-        insights,
-        blesseds,
-        shares,
+        likes: 45 + (seed % 95),
+        hearts: 30 + ((seed >> 2) % 65),
+        amens: 20 + ((seed >> 4) % 45),
+        insights: 12 + ((seed >> 6) % 30),
+        blesseds: 8 + ((seed >> 8) % 25),
+        shares: 15 + ((seed >> 10) % 35),
         userReaction: null,
         userShared: false
     };
 }
 
-/**
- * Load all stored reactions
- */
 function getAllStoredReactions(): Record<string, ArticleReactions> {
     try {
         const raw = localStorage.getItem(REACTIONS_STORAGE_KEY);
@@ -108,236 +127,286 @@ function getAllStoredReactions(): Record<string, ArticleReactions> {
     }
 }
 
-/**
- * Save all reactions
- */
 function saveAllStoredReactions(data: Record<string, ArticleReactions>): void {
     try {
         localStorage.setItem(REACTIONS_STORAGE_KEY, JSON.stringify(data));
-    } catch (e) {
-        console.warn("Failed saving reactions to localStorage", e);
+    } catch {
+        // ignore
+    }
+}
+
+function getAllStoredComments(): Record<string, BlogComment[]> {
+    try {
+        const raw = localStorage.getItem(COMMENTS_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : {};
+    } catch {
+        return {};
+    }
+}
+
+function saveAllStoredComments(data: Record<string, BlogComment[]>): void {
+    try {
+        localStorage.setItem(COMMENTS_STORAGE_KEY, JSON.stringify(data));
+    } catch {
+        // ignore
     }
 }
 
 /**
- * Retrieve reactions for a specific article
+ * Synchronous getter for instant UI load
  */
 export function getArticleReactions(articleId: string): ArticleReactions {
     const all = getAllStoredReactions();
+    const prefs = getUserPreferences();
     if (!all[articleId]) {
         all[articleId] = getInitialReactionsForArticle(articleId);
         saveAllStoredReactions(all);
     }
-    return all[articleId];
+    const reaction = all[articleId];
+    return {
+        ...reaction,
+        userReaction: prefs.userReactions[articleId] || null,
+        userShared: !!prefs.userShares[articleId]
+    };
 }
 
 /**
- * Toggle or set a reaction (Like, Heart, Amen, Insight, Blessed)
+ * Synchronous getter for instant UI load
+ */
+export function getArticleComments(articleId: string): BlogComment[] {
+    const all = getAllStoredComments();
+    const prefs = getUserPreferences();
+    const comments = all[articleId] || [];
+    return comments.map((c) => ({
+        ...c,
+        userLiked: !!prefs.likedComments[c.id]
+    }));
+}
+
+/**
+ * Calculate total reaction sum
+ */
+export function getTotalReactions(r?: ArticleReactions): number {
+    if (!r) return 0;
+    return (r.likes || 0) + (r.hearts || 0) + (r.amens || 0) + (r.insights || 0) + (r.blesseds || 0);
+}
+
+/**
+ * Cloud Fetch: Refresh reactions & comments from the central cloud database
+ */
+export async function fetchArticleEngagement(
+    articleId: string
+): Promise<{ reactions: ArticleReactions; comments: BlogComment[] } | null> {
+    try {
+        const res = await fetch(`${API_BASE_URL}/blog/${encodeURIComponent(articleId)}/engagement`);
+        if (!res.ok) return null;
+
+        const data = await res.json();
+        const prefs = getUserPreferences();
+
+        const mergedReactions: ArticleReactions = {
+            likes: data.reactions?.likes ?? 0,
+            hearts: data.reactions?.hearts ?? 0,
+            amens: data.reactions?.amens ?? 0,
+            insights: data.reactions?.insights ?? 0,
+            blesseds: data.reactions?.blesseds ?? 0,
+            shares: data.reactions?.shares ?? 0,
+            userReaction: prefs.userReactions[articleId] || null,
+            userShared: !!prefs.userShares[articleId]
+        };
+
+        const serverComments: BlogComment[] = (data.comments || []).map((c: any) => ({
+            id: c.id || c.Id,
+            articleId: c.articleId || c.ArticleId || articleId,
+            authorName: c.authorName || c.AuthorName || "Faithful Believer",
+            authorRole: c.authorRole || c.AuthorRole || "Church Member",
+            avatarBg: c.avatarBg || c.AvatarBg || "#0284c7",
+            timestamp: c.timestamp || "Recently",
+            content: c.content || c.Content || "",
+            likes: c.likes || c.Likes || 0,
+            userLiked: !!prefs.likedComments[c.id || c.Id],
+            replies: (c.replies || []).map((r: any) => ({
+                id: r.id || r.Id,
+                authorName: r.authorName || r.AuthorName || "Fellow Disciple",
+                authorRole: r.authorRole || r.AuthorRole || "Church Member",
+                avatarBg: r.avatarBg || r.AvatarBg || "#0284c7",
+                timestamp: r.timestamp || "Recently",
+                content: r.content || r.Content || ""
+            }))
+        }));
+
+        // Update local caches
+        const allR = getAllStoredReactions();
+        allR[articleId] = mergedReactions;
+        saveAllStoredReactions(allR);
+
+        const allC = getAllStoredComments();
+        allC[articleId] = serverComments;
+        saveAllStoredComments(allC);
+
+        notifyUpdate("reactions", articleId, mergedReactions);
+        notifyUpdate("comments", articleId, serverComments);
+
+        return { reactions: mergedReactions, comments: serverComments };
+    } catch (e) {
+        console.warn("Could not fetch cloud engagement, using local cache.", e);
+        return null;
+    }
+}
+
+/**
+ * Cloud Fetch: Summary for all cards on the magazine home page
+ */
+export async function fetchEngagementSummary(): Promise<Record<string, { reactions: ArticleReactions; commentsCount: number }> | null> {
+    try {
+        const res = await fetch(`${API_BASE_URL}/blog/engagement/summary`);
+        if (!res.ok) return null;
+
+        const data = await res.json();
+        const prefs = getUserPreferences();
+        const allR = getAllStoredReactions();
+
+        for (const [artId, val] of Object.entries<any>(data)) {
+            if (val?.reactions) {
+                allR[artId] = {
+                    likes: val.reactions.likes ?? 0,
+                    hearts: val.reactions.hearts ?? 0,
+                    amens: val.reactions.amens ?? 0,
+                    insights: val.reactions.insights ?? 0,
+                    blesseds: val.reactions.blesseds ?? 0,
+                    shares: val.reactions.shares ?? 0,
+                    userReaction: prefs.userReactions[artId] || null,
+                    userShared: !!prefs.userShares[artId]
+                };
+                notifyUpdate("reactions", artId, allR[artId]);
+            }
+        }
+        saveAllStoredReactions(allR);
+        return data;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Set Reaction: Optimistic local update + background cloud sync to SQL Server
  */
 export function setArticleReaction(
     articleId: string,
     reaction: ReactionType
 ): { reactions: ArticleReactions; previous: ReactionType | null; current: ReactionType | null } {
     const all = getAllStoredReactions();
+    const prefs = getUserPreferences();
     const current = all[articleId] || getInitialReactionsForArticle(articleId);
-    const previous = current.userReaction;
+    const previous = prefs.userReactions[articleId] || null;
+
+    let targetReaction: ReactionType | null = reaction;
 
     if (previous === reaction) {
         // Toggle OFF
+        targetReaction = null;
         switch (reaction) {
-            case "like":
-                current.likes = Math.max(0, current.likes - 1);
-                break;
-            case "heart":
-                current.hearts = Math.max(0, current.hearts - 1);
-                break;
-            case "amen":
-                current.amens = Math.max(0, current.amens - 1);
-                break;
-            case "insight":
-                current.insights = Math.max(0, current.insights - 1);
-                break;
-            case "blessed":
-                current.blesseds = Math.max(0, current.blesseds - 1);
-                break;
+            case "like": current.likes = Math.max(0, current.likes - 1); break;
+            case "heart": current.hearts = Math.max(0, current.hearts - 1); break;
+            case "amen": current.amens = Math.max(0, current.amens - 1); break;
+            case "insight": current.insights = Math.max(0, current.insights - 1); break;
+            case "blessed": current.blesseds = Math.max(0, current.blesseds - 1); break;
         }
-        current.userReaction = null;
+        delete prefs.userReactions[articleId];
     } else {
-        // Decrement previous if existed
+        // Decrement old
         if (previous) {
             switch (previous) {
-                case "like":
-                    current.likes = Math.max(0, current.likes - 1);
-                    break;
-                case "heart":
-                    current.hearts = Math.max(0, current.hearts - 1);
-                    break;
-                case "amen":
-                    current.amens = Math.max(0, current.amens - 1);
-                    break;
-                case "insight":
-                    current.insights = Math.max(0, current.insights - 1);
-                    break;
-                case "blessed":
-                    current.blesseds = Math.max(0, current.blesseds - 1);
-                    break;
+                case "like": current.likes = Math.max(0, current.likes - 1); break;
+                case "heart": current.hearts = Math.max(0, current.hearts - 1); break;
+                case "amen": current.amens = Math.max(0, current.amens - 1); break;
+                case "insight": current.insights = Math.max(0, current.insights - 1); break;
+                case "blessed": current.blesseds = Math.max(0, current.blesseds - 1); break;
             }
         }
-        // Increment new reaction
+        // Increment new
         switch (reaction) {
-            case "like":
-                current.likes += 1;
-                break;
-            case "heart":
-                current.hearts += 1;
-                break;
-            case "amen":
-                current.amens += 1;
-                break;
-            case "insight":
-                current.insights += 1;
-                break;
-            case "blessed":
-                current.blesseds += 1;
-                break;
+            case "like": current.likes++; break;
+            case "heart": current.hearts++; break;
+            case "amen": current.amens++; break;
+            case "insight": current.insights++; break;
+            case "blessed": current.blesseds++; break;
         }
-        current.userReaction = reaction;
+        prefs.userReactions[articleId] = reaction;
     }
 
+    current.userReaction = targetReaction;
     all[articleId] = current;
     saveAllStoredReactions(all);
+    saveUserPreferences(prefs);
     notifyUpdate("reactions", articleId, current);
 
-    return {
-        reactions: current,
-        previous,
-        current: current.userReaction
-    };
+    // Sync to Cloud in background
+    fetch(`${API_BASE_URL}/blog/${encodeURIComponent(articleId)}/react`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            reactionType: targetReaction || "remove",
+            previousReaction: previous
+        })
+    })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((serverReactions) => {
+            if (serverReactions) {
+                current.likes = serverReactions.likes;
+                current.hearts = serverReactions.hearts;
+                current.amens = serverReactions.amens;
+                current.insights = serverReactions.insights;
+                current.blesseds = serverReactions.blesseds;
+                current.shares = serverReactions.shares;
+                all[articleId] = current;
+                saveAllStoredReactions(all);
+                notifyUpdate("reactions", articleId, current);
+            }
+        })
+        .catch(() => {});
+
+    return { reactions: current, previous, current: targetReaction };
 }
 
 /**
- * Record a share on an article (increments counter & marks shared)
+ * Record Share: Optimistic local update + background cloud sync to SQL Server
  */
 export function recordArticleShare(articleId: string): ArticleReactions {
     const all = getAllStoredReactions();
+    const prefs = getUserPreferences();
     const current = all[articleId] || getInitialReactionsForArticle(articleId);
 
-    current.shares += 1;
+    current.shares++;
     current.userShared = true;
+    prefs.userShares[articleId] = true;
 
     all[articleId] = current;
     saveAllStoredReactions(all);
+    saveUserPreferences(prefs);
     notifyUpdate("reactions", articleId, current);
+
+    // Sync to Cloud in background
+    fetch(`${API_BASE_URL}/blog/${encodeURIComponent(articleId)}/share`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+    })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((serverReactions) => {
+            if (serverReactions) {
+                current.shares = serverReactions.shares;
+                all[articleId] = current;
+                saveAllStoredReactions(all);
+                notifyUpdate("reactions", articleId, current);
+            }
+        })
+        .catch(() => {});
 
     return current;
 }
 
 /**
- * Total reaction count helper
- */
-export function getTotalReactions(reactions: ArticleReactions): number {
-    return (
-        reactions.likes +
-        reactions.hearts +
-        reactions.amens +
-        reactions.insights +
-        reactions.blesseds
-    );
-}
-
-/* =========================================================================
-   COMMENTS SYSTEM
-   ========================================================================= */
-
-const INITIAL_SEED_COMMENTS: Record<string, BlogComment[]> = {
-    "5-ways-to-strengthen-your-family-faith": [
-        {
-            id: "comm-1",
-            articleId: "5-ways-to-strengthen-your-family-faith",
-            authorName: "Sister Grace Villanueva",
-            authorRole: "Sunday School Superintendent",
-            avatarBg: "#1e8e3e",
-            timestamp: "2 hours ago",
-            content: "We began the 15-minute dinner altar with our children last Tuesday. Even my 8-year-old opened his Bible to Proverbs! This practical guide is an answer to our prayers.",
-            likes: 14,
-            userLiked: false,
-            replies: [
-                {
-                    id: "rep-1-1",
-                    authorName: "Pastor Ronnel M. Aviguetero",
-                    authorRole: "Lead Pastor",
-                    avatarBg: "#0284c7",
-                    timestamp: "1 hour ago",
-                    content: "Praise God, Sister Grace! When parents model simple consistency, the Holy Spirit establishes generational faith. Let us know how your cell group adopts it too!"
-                }
-            ]
-        },
-        {
-            id: "comm-2",
-            articleId: "5-ways-to-strengthen-your-family-faith",
-            authorName: "Brother Michael Torres",
-            authorRole: "Cell Group Leader",
-            avatarBg: "#e37400",
-            timestamp: "4 hours ago",
-            content: "Point 3 regarding digital boundaries on Sunday afternoons resonated deeply with my family. We put our phones in a basket and walked around the park while memorizing Joshua 24:15. Glorious Sunday!",
-            likes: 9,
-            userLiked: false,
-            replies: []
-        }
-    ],
-    "lessons-death-of-a-pastors-wife-documentary-spiritual-abuse-church-accountability": [
-        {
-            id: "comm-pw-1",
-            articleId: "lessons-death-of-a-pastors-wife-documentary-spiritual-abuse-church-accountability",
-            authorName: "Elder Daniel Cruz",
-            authorRole: "Pastoral Council Member",
-            avatarBg: "#8e24aa",
-            timestamp: "3 hours ago",
-            content: "This documentary review touched our hearts deeply. Pastors' wives carry silent burdens that few ever see. Our church council is implementing a confidential pastoral care hotline immediately. Thank you for this sobering, biblical reflection.",
-            likes: 27,
-            userLiked: false,
-            replies: [
-                {
-                    id: "rep-pw-1",
-                    authorName: "Pastor Ronnel M. Aviguetero",
-                    authorRole: "Lead Pastor",
-                    avatarBg: "#0284c7",
-                    timestamp: "2 hours ago",
-                    content: "Amen, Elder Daniel. Accountability and shepherd care must walk hand-in-hand. The body of Christ must protect both the flock and the shepherd's home."
-                }
-            ]
-        }
-    ]
-};
-
-function getAllStoredComments(): Record<string, BlogComment[]> {
-    try {
-        const raw = localStorage.getItem(COMMENTS_STORAGE_KEY);
-        if (raw) return JSON.parse(raw);
-    } catch {
-        // fallback
-    }
-    return INITIAL_SEED_COMMENTS;
-}
-
-function saveAllStoredComments(data: Record<string, BlogComment[]>): void {
-    try {
-        localStorage.setItem(COMMENTS_STORAGE_KEY, JSON.stringify(data));
-    } catch (e) {
-        console.warn("Failed saving comments to localStorage", e);
-    }
-}
-
-/**
- * Get comments for an article
- */
-export function getArticleComments(articleId: string): BlogComment[] {
-    const all = getAllStoredComments();
-    return all[articleId] || [];
-}
-
-/**
- * Add a new comment to an article
+ * Add Comment: Optimistic local prepend + immediate cloud persist to SQL Server
  */
 export function addArticleComment(
     articleId: string,
@@ -351,19 +420,20 @@ export function addArticleComment(
     const all = getAllStoredComments();
     const currentList = all[articleId] || [];
 
-    const colors = ["#1877f2", "#1e8e3e", "#e37400", "#8e24aa", "#c2185b", "#0077b6", "#059669"];
-    const avatarBg = data.avatarBg || colors[Math.floor(Math.random() * colors.length)];
+    const colors = ["#0284c7", "#0d9488", "#7c3aed", "#e11d48", "#d97706", "#2563eb", "#059669"];
+    const avatarBg = data.avatarBg || colors[Math.abs(data.authorName.split("").reduce((a, c) => a + c.charCodeAt(0), 0)) % colors.length];
 
+    const tempId = `temp-${Date.now()}`;
     const newComment: BlogComment = {
-        id: `comm-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        id: tempId,
         articleId,
         authorName: data.authorName.trim() || "Faithful Believer",
         authorRole: data.authorRole || "Church Member",
         avatarBg,
         timestamp: "Just now",
         content: data.content.trim(),
-        likes: 1,
-        userLiked: true,
+        likes: 0,
+        userLiked: false,
         replies: []
     };
 
@@ -372,11 +442,36 @@ export function addArticleComment(
     saveAllStoredComments(all);
     notifyUpdate("comments", articleId, updatedList);
 
+    // Send to Cloud Database
+    fetch(`${API_BASE_URL}/blog/${encodeURIComponent(articleId)}/comment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            authorName: newComment.authorName,
+            authorRole: newComment.authorRole,
+            avatarBg: newComment.avatarBg,
+            content: newComment.content
+        })
+    })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((serverComment) => {
+            if (serverComment) {
+                // Reconcile server ID
+                const reconciledList = (all[articleId] || []).map((c) =>
+                    c.id === tempId ? { ...c, id: serverComment.id, timestamp: "Just now" } : c
+                );
+                all[articleId] = reconciledList;
+                saveAllStoredComments(all);
+                notifyUpdate("comments", articleId, reconciledList);
+            }
+        })
+        .catch(() => {});
+
     return newComment;
 }
 
 /**
- * Add a reply to an existing comment
+ * Add Reply: Optimistic sub-thread update + cloud persist
  */
 export function addCommentReply(
     articleId: string,
@@ -390,11 +485,12 @@ export function addCommentReply(
     const all = getAllStoredComments();
     const currentList = all[articleId] || [];
 
-    const colors = ["#1877f2", "#1e8e3e", "#e37400", "#8e24aa", "#059669"];
-    const avatarBg = data.avatarBg || colors[Math.floor(Math.random() * colors.length)];
+    const colors = ["#0284c7", "#0d9488", "#7c3aed", "#e11d48", "#d97706", "#059669"];
+    const avatarBg = data.avatarBg || colors[Math.abs(data.authorName.split("").reduce((a, c) => a + c.charCodeAt(0), 0)) % colors.length];
 
+    const tempId = `rep-${Date.now()}`;
     const newReply: BlogCommentReply = {
-        id: `rep-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        id: tempId,
         authorName: data.authorName.trim() || "Fellow Disciple",
         authorRole: "Church Member",
         avatarBg,
@@ -418,6 +514,35 @@ export function addCommentReply(
         all[articleId] = updatedList;
         saveAllStoredComments(all);
         notifyUpdate("comments", articleId, updatedList);
+
+        // Send to Cloud Database
+        fetch(`${API_BASE_URL}/blog/${encodeURIComponent(articleId)}/comment/${encodeURIComponent(commentId)}/reply`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                authorName: newReply.authorName,
+                content: newReply.content
+            })
+        })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((serverReply) => {
+                if (serverReply) {
+                    const reconciledList = (all[articleId] || []).map((c) => {
+                        if (c.id === commentId) {
+                            return {
+                                ...c,
+                                replies: c.replies.map((r) => (r.id === tempId ? { ...r, id: serverReply.id } : r))
+                            };
+                        }
+                        return c;
+                    });
+                    all[articleId] = reconciledList;
+                    saveAllStoredComments(all);
+                    notifyUpdate("comments", articleId, reconciledList);
+                }
+            })
+            .catch(() => {});
+
         return newReply;
     }
 
@@ -425,23 +550,33 @@ export function addCommentReply(
 }
 
 /**
- * Toggle like/amen on a comment
+ * Toggle Comment Like: Optimistic update + cloud persist
  */
 export function toggleCommentLike(
     articleId: string,
     commentId: string
 ): { likes: number; userLiked: boolean } {
     const all = getAllStoredComments();
+    const prefs = getUserPreferences();
     const currentList = all[articleId] || [];
 
-    let result = { likes: 0, userLiked: false };
+    const currentlyLiked = !!prefs.likedComments[commentId];
+    const willBeLiked = !currentlyLiked;
+
+    if (willBeLiked) {
+        prefs.likedComments[commentId] = true;
+    } else {
+        delete prefs.likedComments[commentId];
+    }
+    saveUserPreferences(prefs);
+
+    let result = { likes: 0, userLiked: willBeLiked };
 
     const updatedList = currentList.map((c) => {
         if (c.id === commentId) {
-            const userLiked = !c.userLiked;
-            const likes = userLiked ? c.likes + 1 : Math.max(0, c.likes - 1);
-            result = { likes, userLiked };
-            return { ...c, likes, userLiked };
+            const likes = willBeLiked ? c.likes + 1 : Math.max(0, c.likes - 1);
+            result = { likes, userLiked: willBeLiked };
+            return { ...c, likes, userLiked: willBeLiked };
         }
         return c;
     });
@@ -449,6 +584,25 @@ export function toggleCommentLike(
     all[articleId] = updatedList;
     saveAllStoredComments(all);
     notifyUpdate("comments", articleId, updatedList);
+
+    // Sync to Cloud
+    fetch(`${API_BASE_URL}/blog/${encodeURIComponent(articleId)}/comment/${encodeURIComponent(commentId)}/like`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ increment: willBeLiked })
+    })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((serverRes) => {
+            if (serverRes?.likes !== undefined) {
+                const refreshed = (all[articleId] || []).map((c) =>
+                    c.id === commentId ? { ...c, likes: serverRes.likes } : c
+                );
+                all[articleId] = refreshed;
+                saveAllStoredComments(all);
+                notifyUpdate("comments", articleId, refreshed);
+            }
+        })
+        .catch(() => {});
 
     return result;
 }
