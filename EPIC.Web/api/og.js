@@ -39,13 +39,22 @@ export default async function handler(req, res) {
         : `${BASE_URL}${article.ogImage.startsWith('/') ? '' : '/'}${article.ogImage}`;
       targetUrl = `${BASE_URL}/blog/${encodeURIComponent(article.slug)}`;
     } else if (slug) {
-      // Future article created via CMS: synthesize title and use default/custom imagery
-      const formattedTitle = slug
-        .replace(/[-_]+/g, ' ')
-        .replace(/\b\w/g, c => c.toUpperCase());
-      title = `${formattedTitle} | EPIC Church Journal`;
-      subtitle = "Read this biblical insight, church leadership reflection, and spiritual encouragement on EPIC Church.";
-      image = req.query?.img || DEFAULT_IMAGE;
+      // Future article created via CMS or external source
+      const customTitle = parsedUrl.searchParams.get('title') || req.query?.title;
+      const customDesc = parsedUrl.searchParams.get('desc') || req.query?.desc;
+      const customImg = parsedUrl.searchParams.get('img') || req.query?.img;
+
+      if (customTitle) {
+        title = `${customTitle} | EPIC Church Journal`;
+      } else {
+        const formattedTitle = slug
+          .replace(/[-_]+/g, ' ')
+          .replace(/\b\w/g, c => c.toUpperCase());
+        title = `${formattedTitle} | EPIC Church Journal`;
+      }
+
+      subtitle = customDesc || "Read this biblical insight, church leadership reflection, and spiritual encouragement on EPIC Church.";
+      image = customImg || DEFAULT_IMAGE;
       targetUrl = `${BASE_URL}/blog/${encodeURIComponent(slug)}`;
     } else {
       // Main site root
