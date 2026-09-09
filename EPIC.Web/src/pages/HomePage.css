@@ -1,139 +1,931 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800;900&display=swap");
+
+/* =========================================================
+   EPIC CHURCH COMMUNITY HOME PAGE — FACEBOOK LIGHT THEME
+   Crisp White • Soft Slate Canvas • Facebook Blue Accents
+   ========================================================= */
 
 .epic-home-page {
-    --home-navy: #07111f;
-    --home-navy-2: #0b1728;
-    --home-navy-3: #10233a;
-    --home-blue: #168cff;
-    --home-blue-bright: #38a7ff;
-    --home-cyan: #35d8ff;
-    --home-white: #fff;
-    --home-soft: #c8d5e6;
-    --home-muted: #91a5bc;
-    --home-border: rgba(255,255,255,.09);
+    --home-bg: #f0f2f5;
+    --home-bg-elevated: #ffffff;
+    --home-surface: #ffffff;
+    --home-surface-hover: #f7f8fa;
+    --home-card: #ffffff;
+    
+    --home-blue: #1877f2;
+    --home-blue-bright: #1877f2;
+    --home-blue-hover: #166fe5;
+    --home-blue-soft: #e7f3ff;
+    
+    --home-text-primary: #050505;
+    --home-soft: #65676b;
+    --home-muted: #8a8d91;
+    --home-border: #e4e6eb;
+    --home-border-hover: #1877f2;
+    --home-card-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.04);
+    --home-card-shadow-hover: 0 8px 24px rgba(24, 119, 242, 0.12);
+
     min-height: 100vh;
-    overflow: hidden;
-    background: var(--home-navy);
-    color: var(--home-white);
-    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    overflow-x: hidden;
+    background: 
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(24, 119, 242, 0.08), transparent 70%),
+        var(--home-bg);
+    color: var(--home-text-primary);
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
 }
 
-.epic-home-page * { box-sizing: border-box; }
-.epic-home-page button { font: inherit; }
-.epic-home-page main { position: relative; overflow: hidden; }
+.epic-home-page * {
+    box-sizing: border-box;
+}
+
+.epic-home-page button {
+    font-family: inherit;
+}
+
+.epic-home-page main {
+    position: relative;
+    overflow: hidden;
+}
+
+/* =========================================================
+   BACKGROUND AMBIENCE & GRID
+   ========================================================= */
 
 .epic-home-grid {
-    position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: .16;
-    background-image: linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
-    background-size: 55px 55px;
-    mask-image: linear-gradient(to bottom, black, transparent 88%);
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.04;
+    background-image:
+        linear-gradient(#050505 1px, transparent 1px),
+        linear-gradient(90deg, #050505 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 70% 70% at 50% 30%, black, transparent 80%);
 }
-.epic-home-glow { position: fixed; width: 520px; height: 520px; border-radius: 50%; filter: blur(100px); pointer-events:none; z-index:0; opacity:.18; animation: homeFloat 10s ease-in-out infinite; }
-.epic-home-glow-one { top: 5%; left:-280px; background:var(--home-blue); }
-.epic-home-glow-two { top:35%; right:-280px; background:var(--home-cyan); animation-delay:-4s; }
-@keyframes homeFloat { 50% { transform: translateY(-28px); } }
 
-.epic-home-container { width:min(1240px, calc(100% - 48px)); margin:0 auto; position:relative; z-index:2; }
-.epic-home-hero { min-height:780px; padding:95px 0 105px; position:relative; z-index:1; }
-.epic-home-hero-layout { display:grid; grid-template-columns:.92fr 1.08fr; gap:65px; align-items:center; }
-.epic-home-hero-content { max-width:650px; }
-.epic-home-badge { display:inline-flex; align-items:center; gap:9px; padding:8px 13px; border:1px solid rgba(56,167,255,.22); border-radius:999px; color:#a9ddff; background:rgba(22,140,255,.08); font-size:10px; font-weight:800; letter-spacing:1.2px; }
-.epic-home-pulse { width:8px; height:8px; border-radius:50%; background:var(--home-cyan); box-shadow:0 0 0 5px rgba(53,216,255,.1),0 0 15px rgba(53,216,255,.8); animation:homePulse 1.8s infinite; }
-@keyframes homePulse { 50% { transform:scale(.7); opacity:.55; } }
-.epic-home-hero h1 { margin:24px 0 22px; font-size:clamp(48px, 6vw, 78px); line-height:.99; letter-spacing:-4px; font-weight:900; }
-.epic-home-hero h1 span, .epic-home-section-heading h2 span, .epic-home-mission h2 span, .epic-home-cta h2 span { display:block; background:linear-gradient(90deg,#fff 0%,#48baff 55%,#35d8ff 100%); -webkit-background-clip:text; background-clip:text; color:transparent; }
-.epic-home-hero-description { max-width:610px; margin:0; color:var(--home-soft); font-size:18px; line-height:1.8; }
-.epic-home-actions { display:flex; flex-wrap:wrap; gap:14px; margin-top:34px; }
-.epic-home-primary { min-height:52px; display:inline-flex; align-items:center; justify-content:center; gap:22px; padding:0 22px; border:0; border-radius:12px; color:#fff; background:linear-gradient(135deg,var(--home-blue),#35b9ff); font-size:14px; font-weight:800; cursor:pointer; box-shadow:0 12px 30px rgba(22,140,255,.28); transition:.25s ease; }
-.epic-home-primary:hover { transform:translateY(-3px); box-shadow:0 18px 40px rgba(22,140,255,.4); }
-.epic-home-secondary { min-height:52px; display:inline-flex; align-items:center; gap:10px; padding:0 18px; border:1px solid rgba(255,255,255,.14); border-radius:12px; color:#e5eef9; background:rgba(255,255,255,.045); font-size:14px; font-weight:700; cursor:pointer; transition:.25s ease; }
-.epic-home-secondary:hover { border-color:rgba(53,216,255,.35); color:#58d8ff; }
-.epic-home-trust-row { display:flex; flex-wrap:wrap; gap:20px; margin-top:28px; color:#8fa3bc; font-size:12px; font-weight:600; }
-.epic-home-trust-row span { display:inline-flex; align-items:center; gap:7px; }
-
-.epic-home-visual { position:relative; min-height:520px; display:grid; place-items:center; }
-.epic-home-visual-glow { position:absolute; width:72%; height:60%; border-radius:50%; background:rgba(22,140,255,.3); filter:blur(80px); }
-.epic-home-dashboard { position:relative; width:min(100%,690px); overflow:hidden; border:1px solid rgba(104,190,255,.24); border-radius:18px; background:linear-gradient(145deg,rgba(19,38,63,.96),rgba(6,17,31,.97)); box-shadow:0 35px 100px rgba(0,0,0,.5),0 0 60px rgba(22,140,255,.12); transform:perspective(1200px) rotateY(-3deg) rotateX(2deg); animation:homeDashboardFloat 6s ease-in-out infinite; }
-@keyframes homeDashboardFloat { 50% { transform:perspective(1200px) rotateY(-3deg) rotateX(2deg) translateY(-10px); } }
-.epic-home-dashboard-header { height:48px; display:flex; align-items:center; justify-content:space-between; padding:0 17px; border-bottom:1px solid rgba(255,255,255,.07); color:#d7e7f8; background:rgba(255,255,255,.025); font-size:9px; font-weight:800; letter-spacing:1px; }
-.epic-home-dashboard-title { display:flex; align-items:center; gap:8px; }
-.epic-home-live-dot { width:7px; height:7px; border-radius:50%; background:var(--home-cyan); box-shadow:0 0 12px var(--home-cyan); }
-.epic-home-live { color:#62d8a2; }
-.epic-home-dashboard-layout { display:grid; grid-template-columns:52px 1fr; }
-.epic-home-dashboard-side { min-height:420px; display:flex; flex-direction:column; align-items:center; gap:24px; padding-top:18px; border-right:1px solid rgba(255,255,255,.07); color:#738aa4; }
-.epic-home-mini-logo { width:28px; height:28px; display:grid; place-items:center; border-radius:8px; color:#fff; background:linear-gradient(135deg,var(--home-blue),var(--home-cyan)); font-size:9px; font-weight:900; }
-.epic-home-dashboard-main { padding:22px; }
-.epic-home-dashboard-welcome { display:flex; justify-content:space-between; align-items:flex-start; gap:14px; }
-.epic-home-dashboard-welcome small { display:block; color:#7590ac; font-size:7px; font-weight:800; letter-spacing:1px; }
-.epic-home-dashboard-welcome h3 { margin:5px 0 0; color:#fff; font-size:18px; }
-.epic-home-dashboard-welcome > span { padding:7px 9px; border:1px solid rgba(255,255,255,.07); border-radius:7px; color:#8fa6be; font-size:7px; font-weight:700; }
-.epic-home-dashboard-cards { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:20px; }
-.epic-home-dashboard-cards > div { min-height:135px; padding:14px; border:1px solid rgba(255,255,255,.07); border-radius:10px; background:rgba(255,255,255,.035); }
-.epic-home-dashboard-cards span { display:block; color:#7e95ad; font-size:7px; font-weight:800; letter-spacing:.7px; }
-.epic-home-dashboard-cards strong { display:block; margin:9px 0 4px; color:#fff; font-size:20px; }
-.epic-home-dashboard-cards small { color:#8ea5bc; font-size:8px; line-height:1.45; }
-.epic-home-dashboard-feature { display:flex; align-items:center; gap:12px; margin-top:13px; padding:16px; border:1px solid rgba(53,216,255,.14); border-radius:11px; background:linear-gradient(135deg,rgba(22,140,255,.1),rgba(255,255,255,.025)); }
-.epic-home-dashboard-feature-icon { width:40px; height:40px; display:grid; place-items:center; flex:none; border-radius:10px; color:#58ceff; background:rgba(22,140,255,.12); }
-.epic-home-dashboard-feature div:nth-child(2) { flex:1; }
-.epic-home-dashboard-feature strong { display:block; color:#fff; font-size:12px; }
-.epic-home-dashboard-feature span { display:block; margin-top:4px; color:#8ea5bc; font-size:9px; line-height:1.5; }
-.epic-home-floating { position:absolute; display:flex; align-items:center; gap:10px; padding:12px 14px; border:1px solid rgba(255,255,255,.1); border-radius:12px; background:rgba(10,25,43,.88); backdrop-filter:blur(12px); box-shadow:0 20px 50px rgba(0,0,0,.28); animation:homeFloatCard 5s ease-in-out infinite; }
-.epic-home-floating svg { color:#58d8ff; }
-.epic-home-floating strong { display:block; color:#fff; font-size:12px; }
-.epic-home-floating span { display:block; margin-top:2px; color:#7f96ad; font-size:9px; }
-.epic-home-floating-one { left:-12px; top:14%; }
-.epic-home-floating-two { right:-12px; bottom:14%; animation-delay:-2s; }
-@keyframes homeFloatCard { 50% { transform:translateY(-10px); } }
-
-.epic-home-intro { padding:120px 0; position:relative; z-index:1; }
-.epic-home-intro .epic-home-container { display:grid; grid-template-columns:.8fr 1.2fr; gap:70px; align-items:start; }
-.epic-home-eyebrow { display:inline-flex; align-items:center; gap:8px; margin-bottom:16px; color:#56c9ff; font-size:11px; font-weight:800; letter-spacing:2px; }
-.epic-home-eyebrow::before { content:""; width:24px; height:2px; background:linear-gradient(90deg,var(--home-blue),var(--home-cyan)); }
-.epic-home-section-heading h2, .epic-home-mission h2, .epic-home-cta h2 { margin:0; color:#fff; font-size:clamp(38px,5vw,58px); line-height:1.05; letter-spacing:-2px; font-weight:850; }
-.epic-home-section-heading p, .epic-home-mission p { margin:22px 0 0; color:var(--home-soft); font-size:16px; line-height:1.8; }
-.epic-home-text-link { display:inline-flex; align-items:center; gap:8px; margin-top:25px; padding:0; border:0; color:#58d8ff; background:transparent; font-size:13px; font-weight:800; cursor:pointer; }
-.epic-home-card-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:16px; }
-.epic-home-card-grid button { position:relative; min-height:270px; padding:25px; text-align:left; border:1px solid rgba(255,255,255,.08); border-radius:18px; color:#fff; background:linear-gradient(145deg,rgba(14,33,56,.9),rgba(7,17,30,.9)); cursor:pointer; overflow:hidden; transition:.3s ease; }
-.epic-home-card-grid button::before { content:""; position:absolute; left:0; top:0; width:100%; height:2px; background:linear-gradient(90deg,transparent,var(--home-cyan),transparent); opacity:0; transition:.3s ease; }
-.epic-home-card-grid button:hover { transform:translateY(-7px); border-color:rgba(53,216,255,.25); box-shadow:0 20px 50px rgba(0,0,0,.25); }
-.epic-home-card-grid button:hover::before { opacity:1; }
-.epic-home-card-number { position:absolute; top:20px; right:20px; color:#48627d; font-size:10px; font-weight:800; letter-spacing:1px; }
-.epic-home-card-icon { width:49px; height:49px; display:grid; place-items:center; border-radius:13px; color:#5dd5ff; background:linear-gradient(135deg,rgba(22,140,255,.18),rgba(53,216,255,.06)); }
-.epic-home-card-grid strong { display:block; margin:22px 0 9px; color:#fff; font-size:16px; letter-spacing:.5px; }
-.epic-home-card-grid button > span:not(.epic-home-card-number) { display:block; max-width:270px; color:#a9b9cb; font-size:13px; line-height:1.7; }
-.epic-home-card-grid button > svg { position:absolute; right:22px; bottom:22px; color:#56caff; }
-
-.epic-home-mission { padding:110px 0; background:linear-gradient(180deg,rgba(255,255,255,.018),transparent); position:relative; z-index:1; }
-.epic-home-mission-layout { display:grid; grid-template-columns:.8fr 1.2fr; gap:80px; align-items:center; }
-.epic-home-steps { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
-.epic-home-steps > div { min-height:220px; padding:24px; border:1px solid rgba(255,255,255,.08); border-radius:18px; background:rgba(255,255,255,.025); }
-.epic-home-steps b { width:48px; height:48px; display:grid; place-items:center; margin-bottom:20px; border-radius:13px; color:#fff; background:linear-gradient(135deg,var(--home-blue),var(--home-cyan)); font-size:12px; }
-.epic-home-steps strong { display:block; color:#fff; font-size:18px; }
-.epic-home-steps span { display:block; margin-top:8px; color:#aab9ca; font-size:12px; line-height:1.7; }
-
-.epic-home-cta { position:relative; padding:120px 0; overflow:hidden; z-index:1; }
-.epic-home-cta::before { content:""; position:absolute; inset:0; background:radial-gradient(circle at center,rgba(22,140,255,.13),transparent 50%),linear-gradient(180deg,rgba(255,255,255,.02),transparent); }
-.epic-home-cta-glow { position:absolute; width:380px; height:380px; left:50%; top:50%; transform:translate(-50%,-50%); border-radius:50%; background:rgba(53,216,255,.12); filter:blur(100px); }
-.epic-home-cta-inner { text-align:center; max-width:850px; }
-.epic-home-cta h2 { margin-top:18px; }
-.epic-home-cta p { max-width:650px; margin:22px auto 30px; color:var(--home-soft); font-size:17px; line-height:1.8; }
-
-@media (max-width:1000px) {
-    .epic-home-hero-layout, .epic-home-intro .epic-home-container, .epic-home-mission-layout { grid-template-columns:1fr; }
-    .epic-home-hero-content { max-width:760px; }
-    .epic-home-visual { margin-top:20px; }
-    .epic-home-section-heading { max-width:760px; }
+.epic-home-glow {
+    position: fixed;
+    width: 600px;
+    height: 600px;
+    border-radius: 50%;
+    filter: blur(140px);
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.08;
+    animation: homeFloat 14s ease-in-out infinite;
 }
-@media (max-width:760px) {
-    .epic-home-container { width:min(100% - 28px,1240px); }
-    .epic-home-hero { min-height:auto; padding:65px 0 80px; }
-    .epic-home-hero h1 { font-size:clamp(42px,12vw,62px); letter-spacing:-2.5px; }
-    .epic-home-hero-description { font-size:16px; }
-    .epic-home-dashboard { transform:none; }
-    .epic-home-dashboard-cards, .epic-home-steps { grid-template-columns:1fr; }
-    .epic-home-dashboard-cards > div { min-height:105px; }
-    .epic-home-floating { display:none; }
-    .epic-home-dashboard-welcome > span { display:none; }
-    .epic-home-card-grid { grid-template-columns:1fr; }
-    .epic-home-intro, .epic-home-mission, .epic-home-cta { padding:85px 0; }
+
+.epic-home-glow-one {
+    top: 2%;
+    left: -200px;
+    background: var(--home-blue);
+}
+
+.epic-home-glow-two {
+    top: 40%;
+    right: -240px;
+    background: #00b2ff;
+    animation-delay: -6s;
+}
+
+@keyframes homeFloat {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-35px) scale(1.06); }
+}
+
+/* =========================================================
+   CONTAINER
+   ========================================================= */
+
+.epic-home-container {
+    width: min(1320px, calc(100% - 32px));
+    margin: 0 auto;
+    position: relative;
+    z-index: 2;
+}
+
+/* =========================================================
+   HERO SECTION
+   ========================================================= */
+
+.epic-home-hero {
+    min-height: 800px;
+    padding: 80px 0 100px;
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+}
+
+.epic-home-hero-layout {
+    display: grid;
+    grid-template-columns: 1fr 1.05fr;
+    gap: 60px;
+    align-items: center;
+}
+
+.epic-home-hero-content {
+    max-width: 620px;
+}
+
+/* Badge */
+.epic-home-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px;
+    border: 1px solid rgba(24, 119, 242, 0.25);
+    border-radius: 9999px;
+    color: #1877f2;
+    background: #e7f3ff;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+}
+
+.epic-home-pulse {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #1877f2;
+    box-shadow: 0 0 0 4px rgba(24, 119, 242, 0.2);
+    animation: homePulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes homePulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(0.85); }
+}
+
+/* Hero Typography */
+.epic-home-hero h1 {
+    margin: 24px 0 20px;
+    font-family: "Plus Jakarta Sans", sans-serif;
+    font-size: clamp(44px, 5.2vw, 66px);
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    font-weight: 800;
+    color: #050505;
+}
+
+.epic-home-hero h1 span,
+.epic-home-section-heading h2 span,
+.epic-home-mission h2 span,
+.epic-home-cta h2 span {
+    display: block;
+    background: linear-gradient(135deg, #1877f2 0%, #00b2ff 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+.epic-home-hero-description {
+    max-width: 580px;
+    margin: 0;
+    color: var(--home-soft);
+    font-size: 18px;
+    line-height: 1.75;
+    font-weight: 400;
+}
+
+/* Actions */
+.epic-home-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    margin-top: 36px;
+}
+
+.epic-home-primary {
+    min-height: 52px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 0 28px;
+    border: 0;
+    border-radius: 12px;
+    color: #ffffff;
+    background: #1877f2;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(24, 119, 242, 0.3);
+    transition: all 0.2s ease;
+}
+
+.epic-home-primary:hover {
+    background: #166fe5;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(24, 119, 242, 0.4);
+}
+
+.epic-home-secondary {
+    min-height: 52px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 24px;
+    border: 1px solid #ccd0d5;
+    border-radius: 12px;
+    color: #050505;
+    background: #ffffff;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+}
+
+.epic-home-secondary:hover {
+    background: #f0f2f5;
+    border-color: #1877f2;
+    color: #1877f2;
+    transform: translateY(-2px);
+}
+
+/* Trust Badges */
+.epic-home-trust-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 32px;
+    color: var(--home-muted);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.epic-home-trust-row span {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: #ffffff;
+    border: 1px solid #e4e6eb;
+    border-radius: 8px;
+    color: #65676b;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.epic-home-trust-row span svg {
+    color: var(--home-blue);
+}
+
+/* =========================================================
+   HERO DASHBOARD VISUAL (Clean SaaS Mockup)
+   ========================================================= */
+
+.epic-home-visual {
+    position: relative;
+    min-height: 520px;
+    display: grid;
+    place-items: center;
+}
+
+.epic-home-visual-glow {
+    position: absolute;
+    width: 85%;
+    height: 70%;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(24, 119, 242, 0.12) 0%, transparent 70%);
+    filter: blur(80px);
+    pointer-events: none;
+}
+
+.epic-home-dashboard {
+    position: relative;
+    width: min(100%, 680px);
+    overflow: hidden;
+    border: 1px solid #e4e6eb;
+    border-radius: 18px;
+    background: #ffffff;
+    box-shadow: 
+        0 20px 50px -10px rgba(0, 0, 0, 0.1),
+        0 0 30px -5px rgba(24, 119, 242, 0.08);
+    transform: perspective(1200px) rotateY(-3deg) rotateX(2deg);
+    animation: homeDashboardFloat 7s ease-in-out infinite;
+    transition: transform 0.4s ease;
+}
+
+.epic-home-dashboard:hover {
+    transform: perspective(1200px) rotateY(0deg) rotateX(0deg);
+}
+
+@keyframes homeDashboardFloat {
+    0%, 100% { transform: perspective(1200px) rotateY(-3deg) rotateX(2deg) translateY(0); }
+    50% { transform: perspective(1200px) rotateY(-3deg) rotateX(2deg) translateY(-10px); }
+}
+
+.epic-home-dashboard-header {
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 18px;
+    border-bottom: 1px solid #e4e6eb;
+    background: #f7f8fa;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.epic-home-dashboard-title {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: #050505;
+}
+
+.epic-home-live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #31a24c;
+    box-shadow: 0 0 6px #31a24c;
+}
+
+.epic-home-live {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: #e7f7ed;
+    border: 1px solid rgba(49, 162, 76, 0.25);
+    color: #31a24c;
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.epic-home-dashboard-layout {
+    display: grid;
+    grid-template-columns: 56px 1fr;
+}
+
+.epic-home-dashboard-side {
+    min-height: 400px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 22px;
+    padding-top: 18px;
+    border-right: 1px solid #e4e6eb;
+    color: #65676b;
+    background: #f7f8fa;
+}
+
+.epic-home-dashboard-side svg {
+    transition: color 0.2s ease;
+    cursor: pointer;
+}
+
+.epic-home-dashboard-side svg:hover {
+    color: #1877f2;
+}
+
+.epic-home-mini-logo {
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    border-radius: 9px;
+    color: #ffffff;
+    background: #1877f2;
+    font-size: 10px;
+    font-weight: 900;
+}
+
+.epic-home-dashboard-main {
+    padding: 24px;
+    background: #ffffff;
+}
+
+.epic-home-dashboard-welcome {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 14px;
+}
+
+.epic-home-dashboard-welcome small {
+    display: block;
+    color: #8a8d91;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.epic-home-dashboard-welcome h3 {
+    margin: 4px 0 0;
+    color: #050505;
+    font-family: "Plus Jakarta Sans", sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.epic-home-dashboard-welcome > span {
+    padding: 6px 12px;
+    border: 1px solid #e4e6eb;
+    border-radius: 8px;
+    color: #65676b;
+    background: #f0f2f5;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+/* Metric Cards in Preview */
+.epic-home-dashboard-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.epic-home-dashboard-cards > div {
+    min-height: 125px;
+    padding: 16px;
+    border: 1px solid #e4e6eb;
+    border-radius: 12px;
+    background: #f7f8fa;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: all 0.2s ease;
+}
+
+.epic-home-dashboard-cards > div:hover {
+    border-color: #1877f2;
+    background: #ffffff;
+    box-shadow: 0 4px 14px rgba(24, 119, 242, 0.1);
+    transform: translateY(-2px);
+}
+
+.epic-home-dashboard-cards span {
+    display: block;
+    color: #65676b;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+}
+
+.epic-home-dashboard-cards strong {
+    display: block;
+    margin: 6px 0 2px;
+    color: #050505;
+    font-size: 22px;
+    font-family: "Plus Jakarta Sans", sans-serif;
+    font-weight: 800;
+}
+
+.epic-home-dashboard-cards small {
+    color: #8a8d91;
+    font-size: 11px;
+}
+
+/* Feature Preview Row */
+.epic-home-dashboard-feature {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 16px;
+    padding: 14px 16px;
+    border: 1px solid rgba(24, 119, 242, 0.2);
+    border-radius: 12px;
+    background: #e7f3ff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.epic-home-dashboard-feature:hover {
+    border-color: #1877f2;
+    background: #dbeafe;
+}
+
+.epic-home-dashboard-feature-icon {
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    flex: none;
+    border-radius: 10px;
+    color: #ffffff;
+    background: #1877f2;
+}
+
+.epic-home-dashboard-feature div:nth-child(2) {
+    flex: 1;
+}
+
+.epic-home-dashboard-feature strong {
+    display: block;
+    color: #050505;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.epic-home-dashboard-feature span {
+    display: block;
+    margin-top: 2px;
+    color: #65676b;
+    font-size: 11px;
+}
+
+.epic-home-dashboard-feature > svg {
+    color: #1877f2;
+}
+
+/* Floating Badges */
+.epic-home-floating {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 18px;
+    border: 1px solid #e4e6eb;
+    border-radius: 14px;
+    background: #ffffff;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+    animation: homeFloatCard 6s ease-in-out infinite;
+    z-index: 3;
+}
+
+.epic-home-floating svg {
+    color: #1877f2;
+}
+
+.epic-home-floating strong {
+    display: block;
+    color: #050505;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.epic-home-floating span {
+    display: block;
+    margin-top: 2px;
+    color: #65676b;
+    font-size: 11px;
+}
+
+.epic-home-floating-one {
+    left: -20px;
+    top: 15%;
+}
+
+.epic-home-floating-two {
+    right: -20px;
+    bottom: 14%;
+    animation-delay: -3s;
+}
+
+@keyframes homeFloatCard {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+/* =========================================================
+   INTRO / ABOUT SECTION
+   ========================================================= */
+
+.epic-home-intro {
+    padding: 110px 0;
+    position: relative;
+    z-index: 1;
+}
+
+.epic-home-intro .epic-home-container {
+    display: grid;
+    grid-template-columns: 0.85fr 1.15fr;
+    gap: 75px;
+    align-items: start;
+}
+
+.epic-home-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    color: #1877f2;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+}
+
+.epic-home-eyebrow::before {
+    content: "";
+    width: 24px;
+    height: 3px;
+    background: #1877f2;
+    border-radius: 2px;
+}
+
+.epic-home-section-heading h2,
+.epic-home-mission h2,
+.epic-home-cta h2 {
+    margin: 0;
+    color: #050505;
+    font-family: "Plus Jakarta Sans", sans-serif;
+    font-size: clamp(34px, 4.2vw, 48px);
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+    font-weight: 800;
+}
+
+.epic-home-section-heading p,
+.epic-home-mission p {
+    margin: 20px 0 0;
+    color: var(--home-soft);
+    font-size: 17px;
+    line-height: 1.75;
+}
+
+.epic-home-text-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 26px;
+    padding: 0;
+    border: 0;
+    color: #1877f2;
+    background: transparent;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.epic-home-text-link:hover {
+    color: #166fe5;
+    gap: 12px;
+}
+
+/* Card Grid (01-04) */
+.epic-home-card-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.epic-home-card-grid button {
+    position: relative;
+    min-height: 250px;
+    padding: 30px;
+    text-align: left;
+    border: 1px solid #e4e6eb;
+    border-radius: 16px;
+    color: #050505;
+    background: #ffffff;
+    box-shadow: var(--home-card-shadow);
+    cursor: pointer;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    transition: all 0.25s ease;
+}
+
+.epic-home-card-grid button:hover {
+    transform: translateY(-4px);
+    border-color: #1877f2;
+    box-shadow: var(--home-card-shadow-hover);
+}
+
+.epic-home-card-number {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    color: #bcc0c4;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 1px;
+}
+
+.epic-home-card-icon {
+    width: 50px;
+    height: 50px;
+    display: grid;
+    place-items: center;
+    border-radius: 14px;
+    color: #1877f2;
+    background: #e7f3ff;
+}
+
+.epic-home-card-grid strong {
+    display: block;
+    margin: 18px 0 8px;
+    color: #050505;
+    font-family: "Plus Jakarta Sans", sans-serif;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+}
+
+.epic-home-card-grid button > span:not(.epic-home-card-number) {
+    display: block;
+    color: var(--home-soft);
+    font-size: 14px;
+    line-height: 1.65;
+}
+
+.epic-home-card-grid button > svg {
+    position: absolute;
+    right: 26px;
+    bottom: 26px;
+    color: #1877f2;
+    transition: transform 0.2s ease;
+}
+
+.epic-home-card-grid button:hover > svg {
+    transform: translateX(4px);
+}
+
+/* =========================================================
+   MISSION / JOURNEY SECTION
+   ========================================================= */
+
+.epic-home-mission {
+    padding: 100px 0;
+    background: #ffffff;
+    border-top: 1px solid #e4e6eb;
+    border-bottom: 1px solid #e4e6eb;
+    position: relative;
+    z-index: 1;
+}
+
+.epic-home-mission-layout {
+    display: grid;
+    grid-template-columns: 0.85fr 1.15fr;
+    gap: 80px;
+    align-items: center;
+}
+
+.epic-home-steps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+}
+
+.epic-home-steps > div {
+    min-height: 220px;
+    padding: 24px;
+    border: 1px solid #e4e6eb;
+    border-radius: 16px;
+    background: #f7f8fa;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.2s ease;
+}
+
+.epic-home-steps > div:hover {
+    border-color: #1877f2;
+    background: #ffffff;
+    box-shadow: var(--home-card-shadow-hover);
+    transform: translateY(-4px);
+}
+
+.epic-home-steps b {
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    margin-bottom: 18px;
+    border-radius: 12px;
+    color: #ffffff;
+    background: #1877f2;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.epic-home-steps strong {
+    display: block;
+    color: #050505;
+    font-family: "Plus Jakarta Sans", sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.epic-home-steps span {
+    display: block;
+    margin-top: 8px;
+    color: var(--home-soft);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+/* =========================================================
+   CTA SECTION
+   ========================================================= */
+
+.epic-home-cta {
+    position: relative;
+    padding: 110px 0 120px;
+    overflow: hidden;
+    z-index: 1;
+}
+
+.epic-home-cta-glow {
+    position: absolute;
+    width: 440px;
+    height: 440px;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(24, 119, 242, 0.1), transparent 70%);
+    filter: blur(90px);
+    pointer-events: none;
+}
+
+.epic-home-cta-inner {
+    text-align: center;
+    max-width: 800px;
+    position: relative;
+    z-index: 2;
+}
+
+.epic-home-cta h2 {
+    margin-top: 20px;
+}
+
+.epic-home-cta p {
+    max-width: 620px;
+    margin: 20px auto 34px;
+    color: var(--home-soft);
+    font-size: 18px;
+    line-height: 1.75;
+}
+
+/* =========================================================
+   RESPONSIVE DESIGN
+   ========================================================= */
+
+@media (max-width: 1040px) {
+    .epic-home-hero-layout,
+    .epic-home-intro .epic-home-container,
+    .epic-home-mission-layout {
+        grid-template-columns: 1fr;
+        gap: 50px;
+    }
+
+    .epic-home-hero-content {
+        max-width: 760px;
+    }
+
+    .epic-home-visual {
+        margin-top: 20px;
+    }
+
+    .epic-home-section-heading {
+        max-width: 760px;
+    }
+}
+
+@media (max-width: 768px) {
+    .epic-home-container {
+        width: min(100% - 32px, 1280px);
+    }
+
+    .epic-home-hero {
+        min-height: auto;
+        padding: 50px 0 65px;
+    }
+
+    .epic-home-hero h1 {
+        font-size: clamp(36px, 9vw, 48px);
+        letter-spacing: -0.02em;
+    }
+
+    .epic-home-hero-description {
+        font-size: 16px;
+    }
+
+    .epic-home-dashboard {
+        transform: none !important;
+        animation: none;
+    }
+
+    .epic-home-dashboard-cards,
+    .epic-home-steps {
+        grid-template-columns: 1fr;
+    }
+
+    .epic-home-floating {
+        display: none;
+    }
+
+    .epic-home-card-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .epic-home-intro,
+    .epic-home-mission,
+    .epic-home-cta {
+        padding: 70px 0;
+    }
 }

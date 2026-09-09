@@ -1,5 +1,6 @@
 /* =========================================================
-   EPIC PUBLIC NAVBAR
+   EPIC PUBLIC NAVBAR — FACEBOOK LIGHT THEME
+   Clean • Fresh • Facebook Blue & Crisp White
    ========================================================= */
 
 .epic-public-navbar {
@@ -7,33 +8,30 @@
     top: 0;
     z-index: 1000;
     width: 100%;
-    min-height: 78px;
-
-    background: rgba(5, 14, 26, 0.86);
-
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
+    min-height: 68px;
+    background: #ffffff;
+    border-bottom: 1px solid #e4e6eb;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    transition: background 0.3s ease, border-color 0.3s ease;
+    box-sizing: border-box;
 }
 
-
 /* =========================================================
-   NAV INNER
+   NAV INNER CONTAINER
    ========================================================= */
 
 .epic-public-nav-inner {
-    width: min(1380px, calc(100% - 48px));
-    min-height: 78px;
-
+    width: 100%;
+    max-width: 1360px;
+    min-height: 68px;
     margin: 0 auto;
-
+    padding: 0 20px;
     display: flex;
     align-items: center;
-
-    gap: 28px;
+    justify-content: space-between;
+    gap: 14px;
+    box-sizing: border-box;
 }
-
 
 /* =========================================================
    LOGO
@@ -42,191 +40,141 @@
 .epic-public-logo {
     border: 0;
     background: transparent;
-
     padding: 0;
-
     display: flex;
     align-items: center;
-
-    gap: 12px;
-
+    gap: 10px;
     cursor: pointer;
-
     text-align: left;
-
-    color: #fff;
-
+    color: #050505;
     flex-shrink: 0;
+    text-decoration: none;
 }
 
 .epic-public-logo-mark {
     display: grid;
     place-items: center;
-
-    width: 46px;
-    height: 46px;
-
-    border: 1px solid rgba(56, 167, 255, 0.38);
-
-    border-radius: 13px;
-
-    background:
-        linear-gradient(
-            135deg,
-            rgba(22, 140, 255, 0.2),
-            rgba(53, 216, 255, 0.06)
-        );
-
-    color: #b7e7ff;
-
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: #1877f2;
+    color: #ffffff;
+    font-family: "Plus Jakarta Sans", sans-serif;
     font-weight: 900;
-
-    letter-spacing: -0.04em;
-
-    box-shadow:
-        inset 0 0 20px rgba(53, 216, 255, 0.04),
-        0 8px 30px rgba(0, 0, 0, 0.18);
+    font-size: 12px;
+    letter-spacing: -0.02em;
+    box-shadow: 0 4px 12px rgba(24, 119, 242, 0.28);
 }
 
 .epic-public-logo-text {
     display: flex;
     flex-direction: column;
-
     line-height: 1.15;
 }
 
 .epic-public-logo-text strong {
-    color: #fff;
-
-    font-size: 14px;
-
-    letter-spacing: 0.06em;
+    color: #050505;
+    font-family: "Plus Jakarta Sans", sans-serif;
+    font-size: 14.5px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
 }
 
 .epic-public-logo-text small {
-    margin-top: 4px;
-
-    color: #8fa5bc;
-
-    font-size: 9px;
+    margin-top: 2px;
+    color: #65676b;
+    font-size: 10.5px;
+    font-weight: 500;
+    white-space: nowrap;
 }
 
-
 /* =========================================================
-   NAVIGATION
+   NAVIGATION LINKS (DESKTOP)
    ========================================================= */
 
 .epic-public-nav-links {
     display: flex;
     align-items: center;
     justify-content: center;
-
     gap: 2px;
-
     flex: 1;
+    min-width: 0;
 }
 
 .epic-public-nav-links button {
     border: 0;
-
     background: transparent;
-
-    padding: 10px 11px;
-
+    padding: 7px 9px;
     border-radius: 8px;
-
     cursor: pointer;
-
-    color: #b9c8d9;
-
+    color: #65676b;
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     font-size: 13px;
-
-    font-weight: 700;
-
-    transition:
-        background 0.2s ease,
-        color 0.2s ease,
-        transform 0.2s ease;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: all 0.15s ease;
 }
 
 .epic-public-nav-links button:hover {
-    background: rgba(255, 255, 255, 0.055);
-
-    color: #fff;
+    background: #f0f2f5;
+    color: #1877f2;
 }
 
-
 /* =========================================================
-   DESKTOP ACTIONS
+   NAV ACTIONS (LOGIN + CONNECT)
    ========================================================= */
 
 .epic-public-nav-actions {
     display: flex;
     align-items: center;
-
-    gap: 9px;
-
+    gap: 8px;
     flex-shrink: 0;
 }
 
 .epic-client-login-button,
 .epic-nav-cta {
     border: 0;
-
     cursor: pointer;
-
-    border-radius: 10px;
-
-    padding: 10px 14px;
-
-    font-size: 11px;
-
-    font-weight: 800;
-
-    transition:
-        transform 0.2s ease,
-        opacity 0.2s ease;
-}
-
-.epic-client-login-button:hover,
-.epic-nav-cta:hover {
-    transform: translateY(-1px);
-}
-
-.epic-client-login-button {
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 12.5px;
+    font-weight: 700;
+    white-space: nowrap;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
 
+.epic-client-login-button {
     gap: 6px;
+    background: #f0f2f5;
+    color: #050505;
+    border: 1px solid #e4e6eb;
+}
 
-    background: rgba(255, 255, 255, 0.06);
-
-    color: #d8e4ef;
-
-    border: 1px solid rgba(255, 255, 255, 0.08);
+.epic-client-login-button:hover {
+    background: #e4e6eb;
+    color: #1877f2;
 }
 
 .epic-nav-cta {
-    color: #fff;
+    color: #ffffff;
+    background: #1877f2;
+    box-shadow: 0 2px 8px rgba(24, 119, 242, 0.25);
+}
 
-    background:
-        linear-gradient(
-            135deg,
-            #168cff,
-            #35b9ff
-        );
-
-    box-shadow:
-        0 8px 22px rgba(22, 140, 255, 0.2);
+.epic-nav-cta:hover {
+    background: #166fe5;
+    box-shadow: 0 4px 12px rgba(24, 119, 242, 0.35);
 }
 
 .epic-login-icon {
-    font-size: 16px;
-
+    font-size: 13px;
     line-height: 1;
 }
-
 
 /* =========================================================
    MOBILE MENU BUTTON
@@ -234,31 +182,23 @@
 
 .epic-mobile-menu {
     display: none;
-
-    border: 0;
-
-    background: transparent;
-
-    color: #fff;
-
-    font-size: 25px;
-
+    border: 1px solid #e4e6eb;
+    background: #f0f2f5;
+    color: #050505;
+    font-size: 18px;
     line-height: 1;
-
     cursor: pointer;
-
-    padding: 8px;
-
+    padding: 7px 11px;
     border-radius: 8px;
+    margin-left: 2px;
 }
 
 .epic-mobile-menu:hover {
-    background: rgba(255, 255, 255, 0.06);
+    background: #e4e6eb;
 }
 
-
 /* =========================================================
-   MOBILE-ONLY ELEMENTS
+   MOBILE-ONLY MENU DRAWER ITEMS
    ========================================================= */
 
 .epic-mobile-login,
@@ -266,243 +206,129 @@
     display: none;
 }
 
-
 /* =========================================================
-   TABLET
+   RESPONSIVE: INTERMEDIATE DESKTOPS / LAPTOPS (<= 1260px)
    ========================================================= */
 
-@media (max-width: 980px) {
-
+@media (max-width: 1260px) {
     .epic-public-nav-inner {
-        width: min(
-            100% - 28px,
-            1380px
-        );
-
-        gap: 14px;
-    }
-
-    .epic-public-nav-links button {
-        padding-left: 7px;
-        padding-right: 7px;
-
-        font-size: 12px;
-    }
-
-    .epic-nav-cta {
-        display: none;
-    }
-}
-
-
-/* =========================================================
-   MOBILE
-   ========================================================= */
-
-@media (max-width: 760px) {
-
-    .epic-public-navbar {
-        min-height: 68px;
-    }
-
-    .epic-public-nav-inner {
-        width: calc(100% - 24px);
-
-        min-height: 68px;
-
-        gap: 10px;
-    }
-
-
-    /* LOGO */
-
-    .epic-public-logo {
-        min-width: 0;
-
-        gap: 9px;
-    }
-
-    .epic-public-logo-mark {
-        width: 42px;
-        height: 42px;
-
-        border-radius: 11px;
-
-        font-size: 13px;
-    }
-
-    .epic-public-logo-text strong {
-        font-size: 12px;
+        padding: 0 14px;
+        gap: 8px;
     }
 
     .epic-public-logo-text small {
         display: none;
     }
 
-
-    /* DESKTOP ACTIONS */
-
-    .epic-public-nav-actions {
-        margin-left: auto;
-
-        display: flex;
-
-        gap: 6px;
+    .epic-public-nav-links button {
+        padding: 6px 7px;
+        font-size: 12px;
     }
 
-    .epic-client-login-button {
-        display: inline-flex;
-
-        padding: 9px 11px;
-
-        min-height: 38px;
-    }
-
-
-    /* HIDE DESKTOP CTA */
-
+    .epic-client-login-button,
     .epic-nav-cta {
-        display: none;
+        padding: 7px 11px;
+        font-size: 12px;
     }
+}
 
+/* =========================================================
+   RESPONSIVE: TABLETS & BELOW (<= 1100px)
+   ========================================================= */
 
-    /* MOBILE MENU */
-
+@media (max-width: 1100px) {
     .epic-mobile-menu {
         display: block;
-
         flex-shrink: 0;
     }
 
-
-    /* MOBILE NAV PANEL */
-
     .epic-public-nav-links {
         position: absolute;
-
         top: 68px;
-
         left: 0;
         right: 0;
-
         display: none;
-
         flex-direction: column;
-
         align-items: stretch;
-
         gap: 4px;
-
-        padding: 12px 16px 18px;
-
-        background: rgba(5, 14, 26, 0.98);
-
-        border-bottom:
-            1px solid rgba(255, 255, 255, 0.08);
-
-        box-shadow:
-            0 12px 35px rgba(0, 0, 0, 0.3);
+        padding: 16px 20px 22px;
+        background: #ffffff;
+        border-bottom: 1px solid #e4e6eb;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+        z-index: 1001;
     }
 
     .epic-public-nav-links.open {
         display: flex;
     }
 
-
-    /* MOBILE NAV LINKS */
-
     .epic-public-nav-links button {
         width: 100%;
-
         text-align: left;
-
-        padding: 13px 14px;
-
-        border-radius: 9px;
-
-        font-size: 13px;
+        padding: 11px 14px;
+        border-radius: 8px;
+        font-size: 14px;
     }
 
-
-    /* MOBILE LOGIN */
-
-    .epic-mobile-login {
-        display: flex !important;
-
-        align-items: center;
-
-        justify-content: center;
-
-        gap: 7px;
-
-        margin-top: 8px;
-
-        color: #fff !important;
-
-        background:
-            linear-gradient(
-                135deg,
-                #168cff,
-                #35b9ff
-            ) !important;
-
-        box-shadow:
-            0 8px 22px rgba(22, 140, 255, 0.2);
-    }
-
-
-    /* MOBILE CONNECT */
-
+    .epic-mobile-login,
     .epic-mobile-connect {
         display: flex !important;
-
         align-items: center;
-
         justify-content: center;
+        padding: 11px 14px;
+        border-radius: 8px;
+        font-size: 13.5px;
+        font-weight: 700;
+        margin-top: 8px;
+        text-decoration: none;
+        border: none;
+        cursor: pointer;
+    }
 
-        margin-top: 2px;
+    .epic-mobile-login {
+        color: #050505 !important;
+        background: #f0f2f5 !important;
+        border: 1px solid #e4e6eb !important;
+    }
 
-        color: #d8e4ef !important;
-
-        border:
-            1px solid rgba(255, 255, 255, 0.1) !important;
-
-        background:
-            rgba(255, 255, 255, 0.05) !important;
+    .epic-mobile-connect {
+        color: #ffffff !important;
+        background: #1877f2 !important;
+        box-shadow: 0 4px 14px rgba(24, 119, 242, 0.3);
     }
 }
 
-
 /* =========================================================
-   VERY SMALL PHONES
+   RESPONSIVE: SMARTPHONES (<= 600px)
    ========================================================= */
 
-@media (max-width: 400px) {
+@media (max-width: 600px) {
+    .epic-public-navbar {
+        min-height: 60px;
+    }
 
     .epic-public-nav-inner {
-        width: calc(100% - 16px);
-
+        min-height: 60px;
+        padding: 0 12px;
         gap: 6px;
     }
 
     .epic-public-logo-mark {
-        width: 39px;
-        height: 39px;
-
+        width: 34px;
+        height: 34px;
         font-size: 11px;
     }
 
     .epic-public-logo-text strong {
-        font-size: 11px;
+        font-size: 13px;
     }
 
     .epic-client-login-button {
-        padding: 8px 9px;
-
-        font-size: 10px;
+        display: none; /* Available in mobile menu drawer */
     }
 
-    .epic-mobile-menu {
-        font-size: 23px;
+    .epic-nav-cta {
+        padding: 6px 11px;
+        font-size: 11.5px;
     }
 }

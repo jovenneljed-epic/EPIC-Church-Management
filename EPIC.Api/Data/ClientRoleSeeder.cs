@@ -1,4 +1,4 @@
-﻿
+
 using EPIC.Api.Models;
 
 using Microsoft.EntityFrameworkCore;
@@ -164,15 +164,19 @@ namespace EPIC.Api.Data
             ApplicationDbContext context,
             ClientRole role)
         {
+            var existingModules = await context.ClientPermissions
+                .Where(p => p.ClientRoleId == role.ClientRoleId)
+                .Select(p => p.ModuleName)
+                .ToListAsync();
+
+            var existingSet = new HashSet<string>(existingModules);
+
             foreach (var moduleName in DefaultModules)
             {
-                var permission =
-                    await context.ClientPermissions
-                        .FirstOrDefaultAsync(p =>
-                            p.ClientRoleId ==
-                                role.ClientRoleId &&
-
-                            p.ModuleName == moduleName);
+                if (existingSet.Contains(moduleName))
+                {
+                    continue;
+                }
 
                 // =================================================
                 // DETERMINE DEFAULT PERMISSIONS
@@ -186,8 +190,6 @@ namespace EPIC.Api.Data
                 // =================================================
                 // CREATE
                 // =================================================
-
-                if (permission == null)
                 {
                     context.ClientPermissions.Add(
                         new ClientPermission

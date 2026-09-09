@@ -1,15 +1,13 @@
-
 import React, { useEffect, useState } from "react";
+import PublicHeader from "../components/PublicHeader";
+import { Sparkles, Check, ArrowRight, ShieldCheck, Building2, User, Mail, Phone, Users } from "lucide-react";
 import "./OptInPage.css";
 
 interface OptInPageProps {
     onNavigate?: (page: string) => void;
 }
 
-const OptInPage: React.FC<OptInPageProps> = ({
-    onNavigate,
-}) => {
-    const [menuOpen, setMenuOpen] = useState(false);
+const OptInPage: React.FC<OptInPageProps> = ({ onNavigate }) => {
     const [submitted, setSubmitted] = useState(false);
 
     const [formData, setFormData] = useState({
@@ -28,12 +26,9 @@ const OptInPage: React.FC<OptInPageProps> = ({
     }, []);
 
     const handleChange = (
-        event: React.ChangeEvent<
-            HTMLInputElement | HTMLSelectElement
-        >
+        event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
     ) => {
         const { name, value } = event.target;
-
         setFormData((previous) => ({
             ...previous,
             [name]: value,
@@ -48,428 +43,206 @@ const OptInPage: React.FC<OptInPageProps> = ({
         }
     };
 
-    const goToSales = () => {
-        if (onNavigate) {
-            onNavigate("sales");
-        } else {
-            window.location.href = "/";
-        }
-    };
-
-    const goToLogin = () => {
-        if (onNavigate) {
-            onNavigate("client-login");
-        } else {
-            window.location.href = "/client-login";
-        }
-    };
-
-    const handleSubmit = (
-        event: React.FormEvent<HTMLFormElement>
-    ) => {
+    const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-
-        /*
-         * UI / NAVIGATION ONLY
-         *
-         * No API call yet.
-         * We will connect this form to the ASP.NET API
-         * after the funnel UI is completed.
-         */
-
         setSubmitted(true);
-
         setTimeout(() => {
             goToOffer();
         }, 700);
     };
 
     return (
-        <div className="optin-page">
+        <div className="epic-optin-page">
+            <PublicHeader onNavigate={onNavigate} />
 
-            {/* BACKGROUND */}
-            <div className="optin-bg-grid" />
-            <div className="optin-bg-glow optin-glow-one" />
-            <div className="optin-bg-glow optin-glow-two" />
-
-            {/* NAVBAR */}
-            <header className="optin-navbar">
-
-                <button
-                    className="optin-brand"
-                    onClick={goToSales}
-                    type="button"
-                >
-                    <div className="optin-brand-logo">
-                        EPIC
-                    </div>
-
-                    <div className="optin-brand-text">
-                        <strong>
-                            EPIC CHURCH
-                        </strong>
-
-                        <span>
-                            MANAGEMENT SYSTEM
-                        </span>
-                    </div>
-                </button>
-
-                <button
-                    className="optin-mobile-menu"
-                    type="button"
-                    onClick={() =>
-                        setMenuOpen((previous) => !previous)
-                    }
-                    aria-label="Toggle navigation"
-                >
-                    ☰
-                </button>
-
-                <nav
-                    className={`optin-nav ${
-                        menuOpen
-                            ? "optin-nav-open"
-                            : ""
-                    }`}
-                >
-                    <button
-                        type="button"
-                        onClick={goToSales}
-                    >
-                        Home
-                    </button>
-
-                    <a href="/#features">
-                        Features
-                    </a>
-
-                    <a href="/#learning">
-                        EPIC Learning
-                    </a>
-
-                    <button
-                        type="button"
-                        className="optin-login-button"
-                        onClick={goToLogin}
-                    >
-                        Client Login
-                    </button>
-                </nav>
-            </header>
-
-            {/* MAIN */}
-            <main className="optin-main">
-
-                {/* LEFT SIDE */}
-                <section className="optin-content">
-
-                    <div className="optin-eyebrow">
-                        <span className="optin-live-dot" />
-                        START YOUR DIGITAL JOURNEY
-                    </div>
-
-                    <h1>
-                        Let's Build a
-                        <span>
-                            Better Church System.
-                        </span>
-                    </h1>
-
-                    <p className="optin-intro">
-                        Tell us a little about your church
-                        and discover how EPIC can help you
-                        organize your people, services,
-                        ministries, giving, discipleship,
-                        and church operations.
-                    </p>
-
-                    <div className="optin-benefits">
-
-                        <div className="optin-benefit">
-                            <div className="optin-benefit-icon">
-                                ✓
-                            </div>
-
-                            <div>
-                                <strong>
-                                    Church Management
-                                </strong>
-
-                                <span>
-                                    Organize your church
-                                    information in one place.
-                                </span>
-                            </div>
+            <main className="optin-main-container">
+                <div className="optin-columns-grid">
+                    {/* LEFT CONTENT */}
+                    <div className="optin-info-col">
+                        <div className="optin-eyebrow">
+                            <Sparkles size={15} />
+                            <span>SPECIAL LAUNCH PERKS &bull; 30-DAY FREE ACCESS</span>
                         </div>
 
-                        <div className="optin-benefit">
-                            <div className="optin-benefit-icon">
-                                ✓
-                            </div>
+                        <h1>
+                            Experience the Future of <span>Church Operations &amp; Growth</span>
+                        </h1>
 
-                            <div>
-                                <strong>
-                                    EPIC Learning
-                                </strong>
+                        <p className="optin-subtitle">
+                            Tell us a little about your church and unlock special perks, zero setup fees, and customized digital discipleship modules built for Philippine ministries.
+                        </p>
 
-                                <span>
-                                    Equip and disciple people
-                                    through online learning.
-                                </span>
-                            </div>
-                        </div>
-
-                        <div className="optin-benefit">
-                            <div className="optin-benefit-icon">
-                                ✓
-                            </div>
-
-                            <div>
-                                <strong>
-                                    One Connected Platform
-                                </strong>
-
-                                <span>
-                                    Bring church operations
-                                    together in one ecosystem.
-                                </span>
-                            </div>
-                        </div>
-
-                    </div>
-
-                    <div className="optin-trust">
-
-                        <span>🔒 Secure</span>
-                        <span>☁ Cloud-Based</span>
-                        <span>⚡ Easy Setup</span>
-
-                    </div>
-
-                </section>
-
-                {/* FORM SIDE */}
-                <section className="optin-form-wrapper">
-
-                    <div className="optin-form-glow" />
-
-                    <div className="optin-form-card">
-
-                        <div className="optin-form-header">
-
-                            <div className="optin-form-step">
-                                STEP 01
-                            </div>
-
-                            <h2>
-                                Tell Us About
-                                <span>
-                                    Your Church
-                                </span>
-                            </h2>
-
-                            <p>
-                                Complete this short form
-                                to continue to the EPIC
-                                package.
-                            </p>
-
-                        </div>
-
-                        <form
-                            className="optin-form"
-                            onSubmit={handleSubmit}
-                        >
-
-                            <div className="optin-field">
-
-                                <label htmlFor="name">
-                                    Your Name
-                                </label>
-
-                                <input
-                                    id="name"
-                                    name="name"
-                                    type="text"
-                                    placeholder="Enter your full name"
-                                    value={formData.name}
-                                    onChange={handleChange}
-                                    required
-                                />
-
-                            </div>
-
-                            <div className="optin-field">
-
-                                <label htmlFor="email">
-                                    Email Address
-                                </label>
-
-                                <input
-                                    id="email"
-                                    name="email"
-                                    type="email"
-                                    placeholder="you@example.com"
-                                    value={formData.email}
-                                    onChange={handleChange}
-                                    required
-                                />
-
-                            </div>
-
-                            <div className="optin-field">
-
-                                <label htmlFor="churchName">
-                                    Church / Organization Name
-                                </label>
-
-                                <input
-                                    id="churchName"
-                                    name="churchName"
-                                    type="text"
-                                    placeholder="Enter your church name"
-                                    value={formData.churchName}
-                                    onChange={handleChange}
-                                    required
-                                />
-
-                            </div>
-
-                            <div className="optin-row">
-
-                                <div className="optin-field">
-
-                                    <label htmlFor="phone">
-                                        Mobile Number
-                                    </label>
-
-                                    <input
-                                        id="phone"
-                                        name="phone"
-                                        type="tel"
-                                        placeholder="+63 9XX XXX XXXX"
-                                        value={formData.phone}
-                                        onChange={handleChange}
-                                    />
-
+                        <div className="optin-benefits-list">
+                            <div className="optin-benefit-item">
+                                <div className="benefit-check-box">
+                                    <Check size={16} />
                                 </div>
-
-                                <div className="optin-field">
-
-                                    <label htmlFor="churchSize">
-                                        Church Size
-                                    </label>
-
-                                    <select
-                                        id="churchSize"
-                                        name="churchSize"
-                                        value={formData.churchSize}
-                                        onChange={handleChange}
-                                        required
-                                    >
-                                        <option value="">
-                                            Select size
-                                        </option>
-
-                                        <option value="1-50">
-                                            1–50
-                                        </option>
-
-                                        <option value="51-100">
-                                            51–100
-                                        </option>
-
-                                        <option value="101-250">
-                                            101–250
-                                        </option>
-
-                                        <option value="251-500">
-                                            251–500
-                                        </option>
-
-                                        <option value="500+">
-                                            500+
-                                        </option>
-                                    </select>
-
+                                <div>
+                                    <strong>All-in-One Church Cloud Management</strong>
+                                    <p>Members, Sunday services, attendance desk, visitors, and giving records in one private dashboard.</p>
                                 </div>
-
                             </div>
 
-                            <div className="optin-consent">
-
-                                <span className="optin-check">
-                                    ✓
-                                </span>
-
-                                <p>
-                                    By continuing, you agree
-                                    to be contacted regarding
-                                    EPIC Church Management
-                                    System.
-                                </p>
-
+                            <div className="optin-benefit-item">
+                                <div className="benefit-check-box">
+                                    <Check size={16} />
+                                </div>
+                                <div>
+                                    <strong>Integrated Discipleship Academy</strong>
+                                    <p>Equip members with biblical discipleship tracks, video masterclasses, and certified completion badges.</p>
+                                </div>
                             </div>
 
-                            <button
-                                className={`optin-submit ${
-                                    submitted
-                                        ? "optin-submitted"
-                                        : ""
-                                }`}
-                                type="submit"
-                                disabled={submitted}
-                            >
-                                {submitted ? (
-                                    <>
-                                        Preparing Your
-                                        EPIC Experience...
-                                        <span>✓</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        Continue to EPIC
-                                        <span>→</span>
-                                    </>
-                                )}
-                            </button>
-
-                            <div className="optin-security">
-                                🔐 Your information is kept
-                                secure.
+                            <div className="optin-benefit-item">
+                                <div className="benefit-check-box">
+                                    <Check size={16} />
+                                </div>
+                                <div>
+                                    <strong>Free Onboarding Consultation</strong>
+                                    <p>Personalized step-by-step assistance from our team to migrate your rosters and setup your portal.</p>
+                                </div>
                             </div>
+                        </div>
 
-                        </form>
-
+                        <div className="optin-guarantee-note">
+                            <ShieldCheck size={18} className="shield-icon" />
+                            <span>Zero obligation &bull; No credit card required &bull; 100% Confidential</span>
+                        </div>
                     </div>
 
-                </section>
+                    {/* RIGHT FORM CARD */}
+                    <div className="optin-form-col">
+                        <div className="optin-card">
+                            <div className="optin-card-header">
+                                <h2>Claim Your Launch Offer</h2>
+                                <p>Fill in your details below to view tailored plans and get immediate trial access.</p>
+                            </div>
 
+                            {submitted ? (
+                                <div className="optin-success-box">
+                                    <div className="success-check-circle">
+                                        <Check size={28} />
+                                    </div>
+                                    <h3>Information Received!</h3>
+                                    <p>Preparing your customized church launch package and redirecting you to plans...</p>
+                                </div>
+                            ) : (
+                                <form onSubmit={handleSubmit} className="optin-form">
+                                    <div className="form-group">
+                                        <label htmlFor="churchName">
+                                            <Building2 size={16} />
+                                            <span>Church / Ministry Name *</span>
+                                        </label>
+                                        <input
+                                            id="churchName"
+                                            name="churchName"
+                                            type="text"
+                                            required
+                                            placeholder="e.g. Life in Christ Christian Fellowship"
+                                            value={formData.churchName}
+                                            onChange={handleChange}
+                                            className="optin-input"
+                                        />
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label htmlFor="name">
+                                            <User size={16} />
+                                            <span>Your Name / Pastoral Title *</span>
+                                        </label>
+                                        <input
+                                            id="name"
+                                            name="name"
+                                            type="text"
+                                            required
+                                            placeholder="e.g. Pastor Ronald Aviguetero"
+                                            value={formData.name}
+                                            onChange={handleChange}
+                                            className="optin-input"
+                                        />
+                                    </div>
+
+                                    <div className="form-row">
+                                        <div className="form-group">
+                                            <label htmlFor="email">
+                                                <Mail size={16} />
+                                                <span>Email Address *</span>
+                                            </label>
+                                            <input
+                                                id="email"
+                                                name="email"
+                                                type="email"
+                                                required
+                                                placeholder="pastor@church.org"
+                                                value={formData.email}
+                                                onChange={handleChange}
+                                                className="optin-input"
+                                            />
+                                        </div>
+
+                                        <div className="form-group">
+                                            <label htmlFor="phone">
+                                                <Phone size={16} />
+                                                <span>Mobile Number *</span>
+                                            </label>
+                                            <input
+                                                id="phone"
+                                                name="phone"
+                                                type="tel"
+                                                required
+                                                placeholder="09956326245"
+                                                value={formData.phone}
+                                                onChange={handleChange}
+                                                className="optin-input"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label htmlFor="churchSize">
+                                            <Users size={16} />
+                                            <span>Approximate Congregation Size *</span>
+                                        </label>
+                                        <select
+                                            id="churchSize"
+                                            name="churchSize"
+                                            required
+                                            value={formData.churchSize}
+                                            onChange={handleChange}
+                                            className="optin-input"
+                                        >
+                                            <option value="">Select church size...</option>
+                                            <option value="under50">Under 50 members (Church Plant)</option>
+                                            <option value="50-150">50 - 150 members (Growing Fellowship)</option>
+                                            <option value="150-500">150 - 500 members (Midsize Ministry)</option>
+                                            <option value="500-1000">500 - 1,000 members (Active Regional Church)</option>
+                                            <option value="1000plus">1,000+ members (Multi-Campus / Network)</option>
+                                        </select>
+                                    </div>
+
+                                    <button type="submit" className="optin-submit-btn">
+                                        <span>View Tailored Plans &amp; Perks</span>
+                                        <ArrowRight size={18} />
+                                    </button>
+                                </form>
+                            )}
+                        </div>
+                    </div>
+                </div>
             </main>
 
-            {/* BOTTOM MESSAGE */}
-            <section className="optin-bottom">
-
-                <div className="optin-bottom-line" />
-
-                <p>
-                    <strong>
-                        EPIC
-                    </strong>{" "}
-                    — Engaging People Into Christ
-                </p>
-
-                <span>
-                    Church management + discipleship
-                    in one powerful ecosystem.
-                </span>
-
-            </section>
-
+            <footer className="optin-footer">
+                <div className="optin-footer-inner">
+                    <span>&copy; 2026 EPIC Church Management Platform &bull; All Rights Reserved</span>
+                    <div className="optin-footer-links">
+                        <button type="button" onClick={() => onNavigate?.("offer")}>Plans &amp; Pricing</button>
+                        <button type="button" onClick={() => onNavigate?.("learning")}>EPIC Academy</button>
+                        <button type="button" onClick={() => onNavigate?.("contact")}>Contact Support</button>
+                    </div>
+                </div>
+            </footer>
         </div>
     );
 };
 
 export default OptInPage;
-

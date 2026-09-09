@@ -74,7 +74,25 @@ const navigationItems: NavigationItem[] = [
         moduleName: "Giving",
     },
     {
-        id: "reports",
+        id: "learning", label: "EPIC Learning", icon: "▤", moduleName: "Learning",
+    },
+    {
+        id: "income", label: "Income", icon: "▤", moduleName: "Income",
+},
+{
+id: "expenses", label: "Expenses", icon: "▤", moduleName: "Expenses",
+},
+{
+id: "visitors", label: "Visitors", icon: "▤", moduleName: "Visitors",
+},
+{
+id: "ministries", label: "Ministries", icon: "▤", moduleName: "Ministries",
+},
+{
+id: "events", label: "Events", icon: "▤", moduleName: "Events",
+},
+{
+id: "reports",
         label: "Reports",
         icon: "▥",
         moduleName: "Reports",

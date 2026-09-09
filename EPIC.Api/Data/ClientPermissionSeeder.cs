@@ -1,4 +1,4 @@
-﻿
+
 using EPIC.Api.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -109,6 +109,15 @@ namespace EPIC.Api.Data
                 "Settings"
             };
 
+            var roleIds = roles.Select(r => r.ClientRoleId).ToList();
+            var existingPermissions = await context.ClientPermissions
+                .Where(p => roleIds.Contains(p.ClientRoleId))
+                .Select(p => new { p.ClientRoleId, p.ModuleName })
+                .ToListAsync();
+
+            var existingLookup = new HashSet<string>(
+                existingPermissions.Select(p => $"{p.ClientRoleId}_{p.ModuleName}"));
+
             // =====================================================
             // PROCESS ROLES
             // =====================================================
@@ -124,18 +133,7 @@ namespace EPIC.Api.Data
                     // CHECK EXISTING PERMISSION
                     // =================================================
 
-                    var existing =
-                        await context.ClientPermissions
-                            .FirstOrDefaultAsync(p =>
-                                p.ClientRoleId ==
-                                    role.ClientRoleId &&
-                                p.ModuleName == module);
-
-                    // =================================================
-                    // DO NOT DUPLICATE
-                    // =================================================
-
-                    if (existing != null)
+                    if (existingLookup.Contains($"{role.ClientRoleId}_{module}"))
                     {
                         continue;
                     }

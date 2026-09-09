@@ -12,6 +12,7 @@ public class AcademyController(ApplicationDbContext db) : ControllerBase
 {
     private async Task<User?> MemberUser()
     {
+        if (User.IsInRole("CLIENT")) return null;
         if (!int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("userId"), out var id)) return null;
         return await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserId == id && u.IsActive && u.MemberId != null && u.Member != null && u.Member.Status == "ACTIVE");
     }

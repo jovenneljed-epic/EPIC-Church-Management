@@ -1,178 +1,235 @@
 /* =========================================================
    EPIC PUBLIC UNISON THEME
    Shared visual language for Home, About, Ministries,
-   EPIC System, Learning and Contact.
+   EPIC System, Learning, Contact, Events, Gallery, and
+   Announcements — Facebook-inspired clean light theme.
    ========================================================= */
 
 .epic-public-about,
 .epic-public-ministries,
 .epic-system-page,
 .epic-learning-public-page,
-.epic-contact-page {
-  --epic-bg: #07111f;
-  --epic-bg-2: #0b1728;
-  --epic-panel: rgba(14, 33, 56, .78);
-  --epic-panel-2: rgba(7, 17, 30, .88);
-  --epic-border: rgba(255,255,255,.09);
-  --epic-border-bright: rgba(56,167,255,.24);
-  --epic-text: #ffffff;
-  --epic-soft: #c8d5e6;
-  --epic-muted: #91a5bc;
-  --epic-blue: #168cff;
-  --epic-cyan: #35d8ff;
-  --epic-gradient: linear-gradient(135deg,#168cff,#35b9ff);
+.epic-contact-page,
+.epic-public-events,
+.epic-public-gallery,
+.epic-public-announcements,
+.epic-public-evaluation,
+.epic-public-giving {
+  --epic-bg: #f0f2f5;
+  --epic-bg-2: #ffffff;
+  --epic-panel: #ffffff;
+  --epic-panel-2: #f7f8fa;
+  --epic-border: #e4e6eb;
+  --epic-border-bright: #1877f2;
+  --epic-text: #050505;
+  --epic-soft: #65676b;
+  --epic-muted: #8a8d91;
+  --epic-blue: #1877f2;
+  --epic-blue-hover: #166fe5;
+  --epic-blue-tint: #e7f3ff;
+  --epic-cyan: #0064e0;
+  --epic-gradient: linear-gradient(135deg, #1877f2, #166fe5);
   position: relative;
   min-height: 100vh;
   overflow-x: hidden;
-  background:
-    radial-gradient(circle at 85% 8%, rgba(22,140,255,.12), transparent 28%),
-    radial-gradient(circle at 8% 45%, rgba(53,216,255,.07), transparent 26%),
-    var(--epic-bg) !important;
+  background: var(--epic-bg) !important;
   color: var(--epic-text) !important;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
 .epic-public-about::before,
 .epic-public-ministries::before,
 .epic-system-page::before,
 .epic-learning-public-page::before,
-.epic-contact-page::before {
-  content:"";
-  position:fixed;
-  inset:0;
-  pointer-events:none;
-  z-index:0;
-  opacity:.14;
-  background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);
-  background-size:55px 55px;
-  mask-image:linear-gradient(to bottom,black,transparent 90%);
+.epic-contact-page::before,
+.epic-public-events::before,
+.epic-public-gallery::before,
+.epic-public-announcements::before,
+.epic-public-evaluation::before,
+.epic-public-giving::before {
+  content: "";
+ position: fixed;
+ inset: 0;
+ pointer-events: none;
+ z-index: 0;
+ opacity: 0.45;
+ background-image:
+ radial-gradient(circle at 15% 15%, rgba(24, 119, 242, 0.04) 0%, transparent 40%),
+ radial-gradient(circle at 85% 85%, rgba(24, 119, 242, 0.03) 0%, transparent 40%);
 }
 
 .epic-public-about > *,
 .epic-public-ministries > *,
 .epic-system-page > *,
 .epic-learning-public-page > *,
-.epic-contact-page > * { position:relative; z-index:1; }
+.epic-contact-page > *,
+.epic-public-events > *,
+.epic-public-gallery > *,
+.epic-public-announcements > *,
+.epic-public-evaluation > * {
+ position: relative;
+ z-index: 1;
+}
 
-/* Consistent hero treatment */
+/* =========================================================
+ CONSISTENT HERO TREATMENT (Facebook Light)
+ ========================================================= */
+
 .about-hero,
 .ministries-hero,
 .system-hero,
 .learning-public-hero,
-.epic-contact-hero {
-  position:relative !important;
-  overflow:hidden;
-  min-height:570px !important;
-  display:flex !important;
-  align-items:center !important;
-  background:
-    radial-gradient(circle at 72% 35%, rgba(53,216,255,.13), transparent 28%),
-    linear-gradient(135deg,#07111f 0%,#0b1c31 55%,#102a45 100%) !important;
-  color:#fff !important;
+.epic-contact-hero,
+.events-hero,
+.gallery-hero,
+.announcements-hero,
+.evaluation-hero {
+ position: relative !important;
+ overflow: hidden;
+ min-height: 480px !important;
+ display: flex !important;
+ align-items: center !important;
+ justify-content: center !important;
+ background:
+ radial-gradient(circle at 50% 0%, #e7f3ff 0%, transparent 65%),
+ linear-gradient(180deg, #ffffff 0%, #f0f2f5 100%) !important;
+ color: var(--epic-text) !important;
+ border-bottom: 1px solid var(--epic-border) !important;
 }
 
 .about-hero::before,
 .ministries-hero::before,
 .system-hero::before,
 .learning-public-hero::before,
-.epic-contact-hero::before {
-  content:"";
-  position:absolute;
-  width:620px;
-  height:620px;
-  right:-260px;
-  top:-300px;
-  border:1px solid rgba(53,216,255,.14);
-  border-radius:50%;
-  box-shadow:0 0 100px rgba(22,140,255,.08);
+.epic-contact-hero::before,
+.events-hero::before,
+.gallery-hero::before,
+.announcements-hero::before,
+.evaluation-hero::before {
+ content: ;
+ position: absolute;
+ width: 700px;
+ height: 700px;
+ right: -200px;
+ top: -300px;
+ border: 1px solid rgba(24, 119, 242, 0.08);
+ border-radius: 50%;
+ pointer-events: none;
 }
 
 .about-hero::after,
 .ministries-hero::after,
 .system-hero::after,
 .learning-public-hero::after,
-.epic-contact-hero::after {
-  content:"";
-  position:absolute;
-  width:420px;
-  height:420px;
-  left:-230px;
-  bottom:-260px;
-  border:1px solid rgba(22,140,255,.11);
-  border-radius:50%;
+.epic-contact-hero::after,
+.events-hero::after,
+.gallery-hero::after,
+.announcements-hero::after,
+.evaluation-hero::after {
+ content: ;
+ position: absolute;
+ width: 500px;
+ height: 500px;
+ left: -200px;
+ bottom: -250px;
+ border: 1px solid rgba(24, 119, 242, 0.06);
+ border-radius: 50%;
+ pointer-events: none;
 }
 
 .about-hero-content,
 .ministries-hero-content,
 .system-hero > div,
 .learning-public-hero > div,
-.epic-contact-hero-content {
-  position:relative !important;
-  z-index:3 !important;
+.epic-contact-hero-content,
+.events-hero-content,
+.gallery-hero-content,
+.announcements-hero-content,
+.evaluation-hero-content {
+ position: relative !important;
+ z-index: 3 !important;
+ max-width: 900px;
+ text-align: center;
+ padding: 60px 24px;
 }
 
 .about-eyebrow,
 .ministries-eyebrow,
 .system-hero > div > span,
 .learning-public-hero > div > span,
-.epic-contact-label {
-  display:inline-flex !important;
-  align-items:center;
-  gap:9px;
-  color:#58d8ff !important;
-  font-size:11px !important;
-  font-weight:850 !important;
-  letter-spacing:.18em !important;
-  text-transform:uppercase;
-}
-
-.about-eyebrow::before,
-.ministries-eyebrow::before,
-.system-hero > div > span::before,
-.learning-public-hero > div > span::before,
-.epic-contact-label::before {
-  content:"";
-  width:24px;
-  height:2px;
-  border-radius:99px;
-  background:linear-gradient(90deg,var(--epic-blue),var(--epic-cyan));
+.epic-contact-label,
+.events-eyebrow,
+.gallery-eyebrow,
+.announcements-eyebrow,
+.evaluation-eyebrow {
+ display: inline-flex !important;
+ align-items: center;
+ gap: 8px;
+ color: var(--epic-blue) !important;
+ background: var(--epic-blue-tint) !important;
+ padding: 6px 14px !important;
+ border-radius: 20px !important;
+ font-size: 12px !important;
+ font-weight: 700 !important;
+ letter-spacing: 0.08em !important;
+ text-transform: uppercase;
+ margin-bottom: 20px;
 }
 
 .about-hero h1,
 .ministries-hero h1,
 .system-hero h1,
 .learning-public-hero h1,
-.epic-contact-hero h1 {
-  color:#fff !important;
-  font-size:clamp(48px,6.5vw,78px) !important;
-  line-height:1 !important;
-  letter-spacing:-.055em !important;
-  font-weight:900 !important;
-  margin:20px 0 !important;
+.epic-contact-hero h1,
+.events-hero h1,
+.gallery-hero h1,
+.announcements-hero h1,
+.evaluation-hero h1 {
+ color: #050505 !important;
+ font-size: clamp(38px, 5.5vw, 64px) !important;
+ line-height: 1.08 !important;
+ letter-spacing: -0.03em !important;
+ font-weight: 800 !important;
+ margin: 0 0 20px !important;
 }
 
 .about-hero h1 span,
 .ministries-hero h1 span,
 .system-hero h1 em,
 .learning-public-hero h1 em,
-.epic-contact-hero h1 span {
-  color:transparent !important;
-  background:linear-gradient(90deg,#fff 0%,#48baff 55%,#35d8ff 100%);
-  -webkit-background-clip:text;
-  background-clip:text;
-  font-style:normal;
+.epic-contact-hero h1 span,
+.events-hero h1 span,
+.gallery-hero h1 span,
+.announcements-hero h1 span,
+.evaluation-hero h1 span {
+ color: var(--epic-blue) !important;
+ background: none !important;
+ -webkit-background-clip: unset !important;
+ background-clip: unset !important;
+ font-style: normal;
+ display: block;
 }
 
 .about-hero p,
 .ministries-hero p,
 .system-hero p,
 .learning-public-hero p,
-.epic-contact-hero p {
-  max-width:720px;
-  color:var(--epic-soft) !important;
-  font-size:18px !important;
-  line-height:1.8 !important;
+.epic-contact-hero p,
+.events-hero p,
+.gallery-hero p,
+.announcements-hero p,
+.evaluation-hero p {
+ max-width: 680px;
+ margin: 0 auto 32px !important;
+ color: var(--epic-soft) !important;
+ font-size: 17px !important;
+ line-height: 1.65 !important;
 }
+
+/* =========================================================
+ BUTTONS (Facebook Theme)
+ ========================================================= */
 
 .about-primary-button,
 .ministries-primary-button,
@@ -181,36 +238,78 @@
 .epic-contact-primary-button,
 .system-final button,
 .learning-public-final button,
-.epic-contact-final button {
-  border:0 !important;
-  border-radius:12px !important;
-  padding:14px 21px !important;
-  color:#fff !important;
-  background:var(--epic-gradient) !important;
-  box-shadow:0 12px 30px rgba(22,140,255,.26) !important;
-  font-weight:800 !important;
-  cursor:pointer;
-  transition:.25s ease;
+.epic-contact-final button,
+.events-primary-button,
+.gallery-primary-button,
+.announcements-primary-button,
+.evaluation-primary-button {
+ display: inline-flex !important;
+ align-items: center !important;
+ justify-content: center !important;
+ gap: 8px !important;
+ border: 0 !important;
+ border-radius: 8px !important;
+ padding: 12px 24px !important;
+ color: #ffffff !important;
+ background: var(--epic-blue) !important;
+ box-shadow: 0 2px 6px rgba(24, 119, 242, 0.25) !important;
+ font-weight: 700 !important;
+ font-size: 15px !important;
+ cursor: pointer;
+ transition: all 0.2s ease;
 }
 
 .about-primary-button:hover,
 .ministries-primary-button:hover,
 .system-hero button:hover,
 .learning-public-hero button:hover,
-.epic-contact-primary-button:hover { transform:translateY(-3px); }
+.epic-contact-primary-button:hover,
+.events-primary-button:hover,
+.gallery-primary-button:hover,
+.announcements-primary-button:hover,
+.evaluation-primary-button:hover {
+ background: var(--epic-blue-hover) !important;
+ transform: translateY(-1px);
+ box-shadow: 0 4px 12px rgba(24, 119, 242, 0.35) !important;
+}
 
 .about-secondary-button,
 .ministries-secondary-button,
-.epic-contact-secondary-button {
-  border:1px solid rgba(255,255,255,.14) !important;
-  border-radius:12px !important;
-  padding:14px 20px !important;
-  color:#e5eef9 !important;
-  background:rgba(255,255,255,.045) !important;
-  font-weight:750 !important;
+.epic-contact-secondary-button,
+.events-secondary-button,
+.gallery-secondary-button,
+.announcements-secondary-button,
+.evaluation-secondary-button {
+ display: inline-flex !important;
+ align-items: center !important;
+ justify-content: center !important;
+ gap: 8px !important;
+ border: 1px solid var(--epic-border) !important;
+ border-radius: 8px !important;
+ padding: 12px 22px !important;
+ color: #050505 !important;
+ background: #ffffff !important;
+ font-weight: 600 !important;
+ font-size: 15px !important;
+ cursor: pointer;
+ transition: all 0.2s ease;
 }
 
-/* Shared content surfaces */
+.about-secondary-button:hover,
+.ministries-secondary-button:hover,
+.epic-contact-secondary-button:hover,
+.events-secondary-button:hover,
+.gallery-secondary-button:hover,
+.announcements-secondary-button:hover,
+.evaluation-secondary-button:hover {
+ background: #f2f3f5 !important;
+ border-color: #ccd0d5 !important;
+}
+
+/* =========================================================
+ SHARED CONTENT SURFACES
+ ========================================================= */
+
 .about-introduction,
 .about-mission,
 .about-values,
@@ -224,16 +323,30 @@
 .learning-public-content,
 .learning-public-final,
 .epic-contact-content,
-.epic-contact-final {
-  background:transparent !important;
-  color:var(--epic-text) !important;
+.epic-contact-final,
+.events-introduction,
+.events-upcoming,
+.events-categories,
+.gallery-intro,
+.gallery-filter-section,
+.gallery-grid-section,
+.gallery-message,
+.announcements-intro,
+.announcements-list-section,
+.announcements-connect {
+ background: transparent !important;
+ color: var(--epic-text) !important;
 }
 
 .about-section-container,
 .ministries-section-container,
 .epic-contact-container,
-.learning-public-content {
-  width:min(1240px,calc(100% - 48px)) !important;
+.learning-public-content,
+.events-section-container,
+.gallery-container,
+.announcements-container {
+ width: min(1200px, calc(100% - 48px)) !important;
+ margin: 0 auto;
 }
 
 .about-section-heading h2,
@@ -241,9 +354,16 @@
 .system-heading h2,
 .learning-public-heading h2,
 .about-intro-content h2,
-.ministries-intro-content h2 {
-  color:#fff !important;
-  letter-spacing:-.045em !important;
+.ministries-intro-content h2,
+.events-section-heading h2,
+.gallery-section-heading h2,
+.announcements-section-heading h2,
+.evaluation-heading h2 {
+ color: #050505 !important;
+ font-size: clamp(28px, 4vw, 40px) !important;
+ font-weight: 800 !important;
+ letter-spacing: -0.02em !important;
+ margin-bottom: 12px;
 }
 
 .about-section-heading p,
@@ -253,21 +373,36 @@
 .about-intro-content p,
 .ministries-intro-content p,
 .system-content p,
-.learning-public-content p {
-  color:var(--epic-soft) !important;
+.learning-public-content p,
+.events-section-heading p,
+.gallery-section-heading p,
+.announcements-section-heading p,
+.evaluation-heading p {
+ color: var(--epic-soft) !important;
+ font-size: 16px !important;
+ line-height: 1.6 !important;
 }
 
 .about-section-label,
 .ministries-section-label,
 .system-heading > span,
-.learning-public-heading > span {
-  color:#58d8ff !important;
+.learning-public-heading > span,
+.events-section-label,
+.gallery-section-label,
+.announcements-section-label,
+.evaluation-section-label {
+ display: inline-block !important;
+ color: var(--epic-blue) !important;
+ font-size: 12px !important;
+ font-weight: 700 !important;
+ letter-spacing: 0.08em !important;
+ text-transform: uppercase !important;
+ margin-bottom: 10px;
 }
 
-.about-section-label::before,
-.ministries-section-label::before {
-  background:linear-gradient(90deg,var(--epic-blue),var(--epic-cyan)) !important;
-}
+/* =========================================================
+ CARDS (Facebook Surface Styling)
+ ========================================================= */
 
 .about-intro-card,
 .about-mission-card,
@@ -281,19 +416,44 @@
 .learning-preview,
 .epic-contact-card,
 .epic-contact-form-card,
-.epic-contact-info-card {
-  border:1px solid var(--epic-border) !important;
-  border-radius:18px !important;
-  background:linear-gradient(145deg,rgba(14,33,56,.88),rgba(7,17,30,.9)) !important;
-  color:#fff !important;
-  box-shadow:0 22px 65px rgba(0,0,0,.22) !important;
+.epic-contact-info-card,
+.events-feature-card,
+.event-card,
+.events-category-card,
+.gallery-card,
+.gallery-intro-card,
+.gallery-message-card,
+.announcement-card,
+.announcements-intro-card,
+.announcements-connect-card,
+.evaluation-card {
+ border: 1px solid var(--epic-border) !important;
+ border-radius: 12px !important;
+ background: #ffffff !important;
+ color: #050505 !important;
+ box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+ transition: all 0.25s ease;
+}
+
+.about-mission-card:hover,
+.about-value-card:hover,
+.ministry-card:hover,
+.events-feature-card:hover,
+.event-card:hover,
+.events-category-card:hover,
+.gallery-card:hover,
+.announcement-card:hover {
+ transform: translateY(-2px);
+ box-shadow: 0 6px 18px rgba(0, 0, 0, 0.09) !important;
+ border-color: #ccd0d5 !important;
 }
 
 .about-mission-card.featured,
 .ministry-card.featured,
-.system-feature.featured {
-  border-color:var(--epic-border-bright) !important;
-  box-shadow:0 24px 70px rgba(22,140,255,.10) !important;
+.system-feature.featured,
+.announcement-card.featured {
+ border-color: rgba(24, 119, 242, 0.4) !important;
+ box-shadow: 0 4px 14px rgba(24, 119, 242, 0.12) !important;
 }
 
 .about-card-icon,
@@ -301,10 +461,15 @@
 .ministry-card-icon,
 .ministries-intro-icon,
 .system-icon,
-.course-icon {
-  background:rgba(22,140,255,.12) !important;
-  color:#58d8ff !important;
-  border:1px solid rgba(53,216,255,.12);
+.course-icon,
+.events-feature-icon,
+.announcement-icon,
+.gallery-intro-icon,
+.announcements-intro-icon {
+ background: var(--epic-blue-tint) !important;
+ color: var(--epic-blue) !important;
+ border: 1px solid rgba(24, 119, 242, 0.15) !important;
+ border-radius: 12px !important;
 }
 
 .about-mission-card p,
@@ -313,93 +478,129 @@
 .learning-steps article p,
 .epic-contact-card p,
 .epic-contact-info-card p,
-.epic-contact-form-card label {
-  color:var(--epic-soft) !important;
+.events-feature-card p,
+.event-content p,
+.gallery-card-content p,
+.announcement-card p {
+ color: var(--epic-soft) !important;
 }
 
 .ministry-card button,
 .about-text-link,
 .about-story-link,
-.epic-contact-link {
-  color:#58d8ff !important;
+.epic-contact-link,
+.event-view-button,
+.gallery-view-button,
+.announcement-read-more {
+ color: var(--epic-blue) !important;
+ font-weight: 600 !important;
 }
 
-.system-window,
-.learning-preview {
-  background:linear-gradient(145deg,rgba(19,38,63,.96),rgba(6,17,31,.97)) !important;
-  border-color:rgba(104,190,255,.22) !important;
-}
-
-.system-window-bar,
-.learning-preview-head {
-  color:#d7e7f8 !important;
-  border-bottom-color:rgba(255,255,255,.07) !important;
-}
-
-.system-stat-row,
-.learning-course {
-  color:#fff !important;
-  border-color:rgba(255,255,255,.07) !important;
-}
-
-.learning-bar { background:rgba(255,255,255,.08) !important; }
-.learning-bar span { background:linear-gradient(90deg,var(--epic-blue),var(--epic-cyan)) !important; }
+/* =========================================================
+ FORM CONTROLS (Facebook Light)
+ ========================================================= */
 
 .epic-contact-form-card input,
 .epic-contact-form-card textarea,
 .epic-contact-form-card select {
-  background:rgba(255,255,255,.045) !important;
-  border:1px solid rgba(255,255,255,.10) !important;
-  color:#fff !important;
+ background: #ffffff !important;
+ border: 1px solid #ccd0d5 !important;
+ color: #050505 !important;
+ border-radius: 8px !important;
+ padding: 12px 16px !important;
+ font-size: 15px !important;
 }
+
+.epic-contact-form-card input:focus,
+.epic-contact-form-card textarea:focus,
+.epic-contact-form-card select:focus {
+ border-color: var(--epic-blue) !important;
+ outline: 2px solid rgba(24, 119, 242, 0.2) !important;
+}
+
 .epic-contact-form-card input::placeholder,
-.epic-contact-form-card textarea::placeholder { color:#71869e !important; }
+.epic-contact-form-card textarea::placeholder {
+ color: var(--epic-muted) !important;
+}
+
+/* =========================================================
+ CALL TO ACTION / FINAL SECTION
+ ========================================================= */
 
 .about-final,
 .ministries-final,
 .system-final,
 .learning-public-final,
-.epic-contact-final {
-  position:relative;
-  margin-top:20px;
-  padding:90px 24px !important;
-  text-align:center;
-  background:linear-gradient(135deg,rgba(22,140,255,.11),rgba(53,216,255,.035)) !important;
-  border-top:1px solid rgba(255,255,255,.07);
+.epic-contact-final,
+.events-cta,
+.gallery-cta,
+.announcements-cta {
+ position: relative;
+ margin-top: 40px;
+ padding: 70px 24px !important;
+ text-align: center;
+ background:
+ radial-gradient(circle at 50% 0%, #e7f3ff 0%, transparent 70%),
+ #ffffff !important;
+ border-top: 1px solid var(--epic-border) !important;
 }
 
 .about-final h2,
 .ministries-final h2,
 .system-final h2,
 .learning-public-final h2,
-.epic-contact-final h2 { color:#fff !important; }
+.epic-contact-final h2,
+.events-cta h2,
+.gallery-cta h2,
+.announcements-cta h2 {
+ color: #050505 !important;
+ font-size: clamp(30px, 4vw, 42px) !important;
+ font-weight: 800 !important;
+ margin-bottom: 14px;
+}
 
 .about-final p,
 .ministries-final p,
 .system-final p,
 .learning-public-final p,
-.epic-contact-final p { color:var(--epic-soft) !important; }
+.epic-contact-final p,
+.events-cta p,
+.gallery-cta p,
+.announcements-cta p {
+ color: var(--epic-soft) !important;
+ font-size: 17px !important;
+ max-width: 650px;
+ margin: 0 auto 28px !important;
+}
 
-/* Footer consistency */
+/* =========================================================
+ FOOTER
+ ========================================================= */
+
 .epic-contact-footer,
 .epic-public-about footer,
 .epic-public-ministries footer,
 .epic-system-page footer,
-.epic-learning-public-page footer {
-  background:#050d18 !important;
-  color:#fff !important;
-  border-top:1px solid rgba(255,255,255,.08) !important;
+.epic-learning-public-page footer,
+.epic-public-events footer,
+.epic-public-gallery footer,
+.epic-public-announcements footer {
+ background: #ffffff !important;
+ color: var(--epic-soft) !important;
+ border-top: 1px solid var(--epic-border) !important;
+ padding: 40px 24px;
+ text-align: center;
 }
 
-@media (max-width:760px) {
-  .about-hero,
-  .ministries-hero,
-  .system-hero,
-  .learning-public-hero,
-  .epic-contact-hero { min-height:520px !important; }
-  .about-hero h1,
-  .ministries-hero h1,
-  .system-hero h1,
-  .learning-public-hero h1,
-  .epic-contact-hero h1 { font-size:clamp(42px,13vw,62px) !important; }
+@media (max-width: 760px) {
+ .about-hero,
+ .ministries-hero,
+ .system-hero,
+ .learning-public-hero,
+ .epic-contact-hero,
+ .events-hero,
+ .gallery-hero,
+ .announcements-hero {
+ min-height: 420px !important;
+ }
 }

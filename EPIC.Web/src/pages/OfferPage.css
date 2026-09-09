@@ -1,1093 +1,698 @@
-﻿
 /* =========================================================
-   EPIC OFFER / PLANS & PRICING
+   EPIC PLANS & PRICING — FACEBOOK LIGHT THEME
+   Crisp White Canvas • Facebook Blue (#1877f2) • Soft Slate
    ========================================================= */
 
 .epic-offer-page {
     min-height: 100vh;
-    background:
-        radial-gradient(
-            circle at 15% 10%,
-            rgba(0, 174, 255, 0.12),
-            transparent 30%
-        ),
-        radial-gradient(
-            circle at 85% 25%,
-            rgba(75, 92, 255, 0.12),
-            transparent 28%
-        ),
-        #050b16;
-    color: #ffffff;
-    font-family:
-        Inter,
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        sans-serif;
+    background: #f0f2f5;
+    color: #050505;
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
     overflow-x: hidden;
-    position: relative;
 }
 
-/* =========================================================
-   BACKGROUND GLOW
-   ========================================================= */
-
-.epic-offer-glow {
-    position: fixed;
-    width: 420px;
-    height: 420px;
-    border-radius: 50%;
-    filter: blur(100px);
-    pointer-events: none;
-    opacity: 0.12;
-    z-index: 0;
+.epic-offer-page *,
+.epic-offer-page *::before,
+.epic-offer-page *::after {
+    box-sizing: border-box;
 }
 
-.epic-offer-glow-one {
-    background: #00b7ff;
-    top: 15%;
-    left: -180px;
-}
-
-.epic-offer-glow-two {
-    background: #5267ff;
-    right: -180px;
-    top: 55%;
-}
-
-/* =========================================================
-   NAVIGATION
-   ========================================================= */
-
-.epic-offer-nav {
-    position: relative;
-    z-index: 10;
-    height: 78px;
-    padding: 0 6%;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 1px solid
-        rgba(255, 255, 255, 0.07);
-    background: rgba(5, 11, 22, 0.82);
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
-}
-
-.epic-offer-brand {
-    border: none;
-    background: transparent;
-    color: #ffffff;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    cursor: pointer;
-    padding: 0;
-}
-
-.epic-offer-logo {
-    width: 43px;
-    height: 43px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 900;
-    font-size: 14px;
-    letter-spacing: 1px;
-    background:
-        linear-gradient(
-            135deg,
-            #00b8ff,
-            #4169ff
-        );
-    box-shadow:
-        0 0 25px
-        rgba(0, 183, 255, 0.25);
-}
-
-.epic-offer-brand-text {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    line-height: 1.1;
-}
-
-.epic-offer-brand-text strong {
-    font-size: 13px;
-    letter-spacing: 1.3px;
-}
-
-.epic-offer-brand-text small {
-    margin-top: 4px;
-    color: #7890a9;
-    font-size: 8px;
-    letter-spacing: 1.4px;
-}
-
-.epic-offer-nav-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.epic-offer-nav-link {
-    border: 1px solid
-        rgba(255, 255, 255, 0.1);
-    background: rgba(255, 255, 255, 0.025);
-    color: #b9c8d8;
-    padding: 10px 17px;
-    border-radius: 9px;
-    cursor: pointer;
-    font-weight: 600;
-    transition: 0.25s ease;
-}
-
-.epic-offer-nav-link:hover {
-    color: #ffffff;
-    border-color:
-        rgba(0, 183, 255, 0.45);
-    background:
-        rgba(0, 183, 255, 0.08);
-}
-
-/* =========================================================
-   HERO
-   ========================================================= */
-
-.epic-offer-hero {
-    position: relative;
-    z-index: 1;
-    max-width: 1000px;
-    margin: 0 auto;
-    padding:
-        95px 25px
-        55px;
+/* HERO SECTION */
+.offer-hero {
+    background: radial-gradient(ellipse 70% 60% at 50% 0%, rgba(24, 119, 242, 0.09), transparent 70%), #ffffff;
+    border-bottom: 1px solid #e4e6eb;
+    padding: 60px 24px 44px;
     text-align: center;
 }
 
-.epic-offer-eyebrow {
+.offer-hero-inner {
+    max-width: 1040px;
+    margin: 0 auto;
+}
+
+.offer-eyebrow {
     display: inline-flex;
     align-items: center;
-    gap: 9px;
-    padding: 8px 14px;
-    border-radius: 999px;
-    border: 1px solid
-        rgba(0, 183, 255, 0.2);
-    background:
-        rgba(0, 183, 255, 0.06);
-    color: #70d6ff;
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: 1.5px;
-}
-
-.epic-offer-eyebrow-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: #00b7ff;
-    box-shadow:
-        0 0 12px
-        rgba(0, 183, 255, 0.8);
-}
-
-.epic-offer-hero h1 {
-    margin:
-        26px 0
-        18px;
-    font-size:
-        clamp(42px, 6vw, 72px);
-    line-height: 1.02;
-    letter-spacing: -3px;
-    font-weight: 800;
-}
-
-.epic-offer-hero h1 span {
-    display: block;
-    background:
-        linear-gradient(
-            90deg,
-            #ffffff,
-            #64d7ff,
-            #6d7dff
-        );
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-}
-
-.epic-offer-hero > p {
-    max-width: 730px;
-    margin: 0 auto;
-    color: #91a4b9;
-    font-size: 18px;
-    line-height: 1.75;
-}
-
-.epic-offer-trust-row {
-    margin-top: 38px;
-    display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 12px;
-}
-
-.epic-offer-trust-row div {
-    padding: 9px 13px;
-    border-radius: 8px;
-    background:
-        rgba(255, 255, 255, 0.035);
-    border: 1px solid
-        rgba(255, 255, 255, 0.07);
-    color: #aab9c8;
+    gap: 8px;
+    background: #e7f3ff;
+    color: #1877f2;
+    padding: 6px 16px;
+    border-radius: 20px;
     font-size: 12px;
-}
-
-.epic-offer-trust-row span {
-    color: #4fd5ff;
-    margin-right: 7px;
-    font-weight: 900;
-}
-
-/* =========================================================
-   BILLING
-   ========================================================= */
-
-.epic-billing-section {
-    position: relative;
-    z-index: 2;
-    text-align: center;
-    margin-bottom: 40px;
-}
-
-.epic-billing-toggle {
-    display: inline-flex;
-    padding: 5px;
-    border-radius: 13px;
-    background:
-        rgba(255, 255, 255, 0.05);
-    border: 1px solid
-        rgba(255, 255, 255, 0.09);
-}
-
-.epic-billing-toggle button {
-    border: none;
-    background: transparent;
-    color: #8497aa;
-    padding: 11px 20px;
-    border-radius: 9px;
-    cursor: pointer;
     font-weight: 700;
-    transition: 0.25s ease;
+    letter-spacing: 0.6px;
+    margin-bottom: 18px;
+    border: 1px solid rgba(24, 119, 242, 0.18);
 }
 
-.epic-billing-toggle button.active {
-    background:
-        linear-gradient(
-            135deg,
-            #00aef5,
-            #4d65ff
-        );
-    color: #ffffff;
-    box-shadow:
-        0 8px 25px
-        rgba(0, 174, 245, 0.2);
+.offer-eyebrow.small {
+    font-size: 11px;
+    padding: 4px 12px;
 }
 
-.epic-billing-toggle button span {
-    margin-left: 7px;
-    font-size: 8px;
-    background: rgba(255, 255, 255, 0.18);
-    padding: 3px 5px;
-    border-radius: 4px;
-}
-
-.epic-billing-section > p {
-    color: #687d92;
-    margin-top: 13px;
-    font-size: 12px;
-}
-
-/* =========================================================
-   PRICING
-   ========================================================= */
-
-.epic-pricing-section {
-    position: relative;
-    z-index: 2;
-    max-width: 1280px;
-    margin: 0 auto;
-    padding:
-        0 25px
-        80px;
-}
-
-.epic-pricing-grid {
-    display: grid;
-    grid-template-columns:
-        repeat(3, minmax(0, 1fr));
-    gap: 20px;
-    align-items: stretch;
-}
-
-.epic-plan-card {
-    position: relative;
-    border-radius: 22px;
-    padding: 32px;
-    background:
-        linear-gradient(
-            180deg,
-            rgba(19, 31, 48, 0.92),
-            rgba(8, 15, 27, 0.96)
-        );
-    border: 1px solid
-        rgba(255, 255, 255, 0.08);
-    box-shadow:
-        0 25px 60px
-        rgba(0, 0, 0, 0.2);
-    transition:
-        transform 0.3s ease,
-        border-color 0.3s ease,
-        box-shadow 0.3s ease;
-}
-
-.epic-plan-card:hover {
-    transform: translateY(-7px);
-    border-color:
-        rgba(0, 183, 255, 0.25);
-    box-shadow:
-        0 30px 70px
-        rgba(0, 0, 0, 0.35);
-}
-
-.epic-plan-card.popular {
-    border-color:
-        rgba(0, 183, 255, 0.45);
-    background:
-        linear-gradient(
-            180deg,
-            rgba(12, 39, 62, 0.95),
-            rgba(8, 16, 29, 0.98)
-        );
-    box-shadow:
-        0 25px 80px
-        rgba(0, 153, 255, 0.13);
-}
-
-.epic-plan-card.selected {
-    outline: 1px solid
-        rgba(80, 210, 255, 0.5);
-}
-
-.epic-plan-badge {
-    position: absolute;
-    top: -12px;
-    left: 28px;
-    padding: 6px 11px;
-    border-radius: 7px;
-    background:
-        linear-gradient(
-            135deg,
-            #00b7ff,
-            #5267ff
-        );
-    color: #ffffff;
-    font-size: 9px;
+.offer-hero h1 {
+    font-size: clamp(30px, 4.5vw, 46px);
     font-weight: 900;
-    letter-spacing: 1px;
-    box-shadow:
-        0 8px 25px
-        rgba(0, 174, 255, 0.25);
+    color: #050505;
+    line-height: 1.2;
+    margin: 0 0 16px;
+    letter-spacing: -0.02em;
 }
 
-.epic-plan-header {
-    min-height: 155px;
+.offer-hero h1 span {
+    background: linear-gradient(135deg, #1877f2 0%, #00b2ff 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
-.epic-plan-icon {
-    width: 43px;
-    height: 43px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 12px;
-    background:
-        rgba(0, 183, 255, 0.08);
-    border: 1px solid
-        rgba(0, 183, 255, 0.15);
-    color: #5ed9ff;
-    font-size: 20px;
-    margin-bottom: 19px;
-}
-
-.epic-plan-header h2 {
-    margin: 0;
-    font-size: 22px;
-}
-
-.epic-plan-header p {
-    margin:
-        10px 0
-        0;
-    color: #7f92a7;
-    font-size: 13px;
+.offer-subtitle {
+    max-width: 720px;
+    margin: 0 auto 32px;
+    color: #65676b;
+    font-size: 16px;
     line-height: 1.6;
 }
 
-.epic-plan-price {
+/* THREE PILLARS TAB SELECTOR */
+.offer-pillar-tabs {
     display: flex;
-    align-items: baseline;
-    margin:
-        25px 0
-        8px;
+    justify-content: center;
+    gap: 12px;
+    margin: 0 auto;
+    flex-wrap: wrap;
+    max-width: 960px;
 }
 
-.epic-currency {
-    color: #78dfff;
-    font-size: 18px;
-    font-weight: 700;
-    margin-right: 3px;
-}
-
-.epic-plan-price strong {
-    font-size: 42px;
-    letter-spacing: -2px;
-}
-
-.epic-price-cycle {
-    color: #73879a;
-    font-size: 12px;
-    margin-left: 5px;
-}
-
-.epic-yearly-note {
-    color: #53d7a4;
-    font-size: 11px;
-    margin-bottom: 16px;
-}
-
-.epic-plan-button {
-    width: 100%;
-    border: 1px solid
-        rgba(255, 255, 255, 0.12);
-    border-radius: 11px;
-    padding: 13px 15px;
-    background:
-        rgba(255, 255, 255, 0.045);
-    color: #ffffff;
-    font-weight: 800;
-    cursor: pointer;
-    transition: 0.25s ease;
-}
-
-.epic-plan-button span {
-    margin-left: 8px;
-}
-
-.epic-plan-button:hover {
-    border-color:
-        rgba(0, 183, 255, 0.4);
-    background:
-        rgba(0, 183, 255, 0.09);
-}
-
-.epic-plan-button.primary {
-    border: none;
-    background:
-        linear-gradient(
-            135deg,
-            #00aef5,
-            #4e65ff
-        );
-    box-shadow:
-        0 10px 30px
-        rgba(0, 174, 245, 0.18);
-}
-
-.epic-plan-button.primary:hover {
-    transform: translateY(-2px);
-    box-shadow:
-        0 15px 35px
-        rgba(0, 174, 245, 0.28);
-}
-
-.epic-plan-divider {
-    height: 1px;
-    background:
-        rgba(255, 255, 255, 0.07);
-    margin:
-        28px 0
-        22px;
-}
-
-.epic-plan-card h3 {
-    margin: 0 0 17px;
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: #a4b6c8;
-}
-
-.epic-feature-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.epic-feature-list li {
+.offer-pillar-btn {
     display: flex;
-    align-items: flex-start;
-    gap: 9px;
-    margin-bottom: 12px;
-    color: #aebdcb;
-    font-size: 12px;
-    line-height: 1.5;
-}
-
-.epic-feature-list li span {
-    flex: 0 0 auto;
-    color: #4bd3a3;
-    font-weight: 900;
-}
-
-/* =========================================================
-   SECTION HEADING
-   ========================================================= */
-
-.epic-section-heading {
-    max-width: 760px;
-    margin: 0 auto 45px;
-    text-align: center;
-}
-
-.epic-section-heading > span,
-.epic-cta-content > span {
-    color: #54cfff;
-    font-size: 10px;
-    font-weight: 900;
-    letter-spacing: 1.8px;
-}
-
-.epic-section-heading h2 {
-    margin:
-        15px 0
-        14px;
-    font-size:
-        clamp(32px, 4vw, 48px);
-    line-height: 1.12;
-    letter-spacing: -1.7px;
-}
-
-.epic-section-heading h2 strong {
-    color: #ffffff;
-}
-
-.epic-section-heading p {
-    color: #7e92a6;
-    line-height: 1.7;
-    font-size: 15px;
-}
-
-/* =========================================================
-   VALUE
-   ========================================================= */
-
-.epic-value-section {
-    position: relative;
-    z-index: 2;
-    max-width: 1200px;
-    margin: 0 auto;
-    padding:
-        80px 25px
-        110px;
-}
-
-.epic-value-grid {
-    display: grid;
-    grid-template-columns:
-        repeat(4, minmax(0, 1fr));
-    gap: 15px;
-}
-
-.epic-value-card {
-    padding: 25px;
-    border-radius: 17px;
-    background:
-        rgba(255, 255, 255, 0.025);
-    border: 1px solid
-        rgba(255, 255, 255, 0.07);
-}
-
-.epic-value-icon {
-    font-size: 25px;
-    margin-bottom: 17px;
-}
-
-.epic-value-card h3 {
-    margin: 0 0 9px;
-    font-size: 15px;
-}
-
-.epic-value-card p {
-    margin: 0;
-    color: #788da1;
-    font-size: 12px;
-    line-height: 1.7;
-}
-
-/* =========================================================
-   COMPARISON
-   ========================================================= */
-
-.epic-comparison-section {
-    position: relative;
-    z-index: 2;
-    max-width: 1100px;
-    margin: 0 auto;
-    padding:
-        70px 25px
-        110px;
-}
-
-.epic-comparison-table {
-    border: 1px solid
-        rgba(255, 255, 255, 0.08);
-    border-radius: 18px;
-    overflow: hidden;
-    background:
-        rgba(255, 255, 255, 0.018);
-}
-
-.epic-comparison-header,
-.epic-comparison-row {
-    display: grid;
-    grid-template-columns:
-        2fr
-        repeat(3, 1fr);
-}
-
-.epic-comparison-header {
-    background:
-        rgba(255, 255, 255, 0.045);
-    font-weight: 800;
-    font-size: 12px;
-}
-
-.epic-comparison-header > div,
-.epic-comparison-row > div {
-    padding:
-        16px 18px;
-    border-right: 1px solid
-        rgba(255, 255, 255, 0.06);
-}
-
-.epic-comparison-header > div:last-child,
-.epic-comparison-row > div:last-child {
-    border-right: none;
-}
-
-.epic-comparison-header > div:not(:first-child),
-.epic-comparison-row > div:not(:first-child) {
-    text-align: center;
-}
-
-.epic-comparison-header .highlight,
-.epic-comparison-row .highlight {
-    background:
-        rgba(0, 183, 255, 0.055);
-}
-
-.epic-comparison-row {
-    border-top: 1px solid
-        rgba(255, 255, 255, 0.06);
-    color: #9bacbc;
-    font-size: 12px;
-}
-
-.comparison-check {
-    color: #51d5a5;
-    font-weight: 900;
-    font-size: 16px;
-}
-
-.comparison-none {
-    color: #405366;
-}
-
-/* =========================================================
-   CTA
-   ========================================================= */
-
-.epic-offer-cta {
-    position: relative;
-    z-index: 2;
-    max-width: 1150px;
-    margin: 0 auto;
-    padding:
-        90px 25px;
-}
-
-.epic-cta-content {
-    position: relative;
-    overflow: hidden;
-    border-radius: 27px;
-    padding:
-        75px 35px;
-    text-align: center;
-    background:
-        radial-gradient(
-            circle at 50% 0%,
-            rgba(0, 183, 255, 0.18),
-            transparent 45%
-        ),
-        linear-gradient(
-            135deg,
-            rgba(10, 37, 60, 0.95),
-            rgba(11, 18, 35, 0.98)
-        );
-    border: 1px solid
-        rgba(0, 183, 255, 0.18);
-}
-
-.epic-cta-content h2 {
-    margin:
-        15px 0
-        18px;
-    font-size:
-        clamp(35px, 5vw, 58px);
-    line-height: 1.08;
-    letter-spacing: -2px;
-}
-
-.epic-cta-content p {
-    max-width: 650px;
-    margin: 0 auto;
-    color: #8fa4b8;
-    line-height: 1.7;
-    font-size: 15px;
-}
-
-.epic-cta-content button {
-    margin-top: 30px;
-    border: none;
-    padding:
-        15px 24px;
-    border-radius: 11px;
-    background:
-        linear-gradient(
-            135deg,
-            #00b7ff,
-            #5267ff
-        );
-    color: #ffffff;
-    font-weight: 900;
+    align-items: center;
+    gap: 12px;
+    background: #f0f2f5;
+    border: 2px solid transparent;
+    border-radius: 14px;
+    padding: 12px 20px;
     cursor: pointer;
-    box-shadow:
-        0 15px 40px
-        rgba(0, 174, 255, 0.2);
-    transition: 0.25s ease;
+    transition: all 0.2s ease;
+    text-align: left;
+    flex: 1 1 260px;
+    max-width: 300px;
 }
 
-.epic-cta-content button:hover {
-    transform: translateY(-3px);
-    box-shadow:
-        0 20px 50px
-        rgba(0, 174, 255, 0.3);
+.offer-pillar-btn:hover {
+    background: #e4e6eb;
 }
 
-.epic-cta-content button span {
-    margin-left: 10px;
+.offer-pillar-btn.is-active {
+    background: #ffffff;
+    border-color: #1877f2;
+    box-shadow: 0 6px 18px rgba(24, 119, 242, 0.16);
 }
 
-.epic-cta-content small {
+.pillar-icon {
+    font-size: 26px;
+    line-height: 1;
+}
+
+.pillar-btn-text strong {
     display: block;
-    margin-top: 13px;
-    color: #60778d;
-    font-size: 10px;
+    color: #050505;
+    font-size: 14px;
+    font-weight: 800;
 }
 
-/* =========================================================
-   FAQ
-   ========================================================= */
+.offer-pillar-btn.is-active .pillar-btn-text strong {
+    color: #1877f2;
+}
 
-.epic-faq-section {
+.pillar-btn-text small {
+    display: block;
+    color: #65676b;
+    font-size: 12px;
+}
+
+/* BILLING CYCLE TOGGLE */
+.offer-billing-toggle-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+    background: #ffffff;
+    border: 1px solid #e4e6eb;
+    padding: 8px 18px;
+    border-radius: 30px;
+    margin-top: 32px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.toggle-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #65676b;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    user-select: none;
+}
+
+.toggle-label.active {
+    color: #050505;
+    font-weight: 700;
+}
+
+.discount-pill {
+    background: #e7f3ff;
+    color: #1877f2;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 3px 10px;
+    border-radius: 12px;
+    letter-spacing: 0.3px;
+}
+
+.offer-toggle-switch {
+    width: 52px;
+    height: 28px;
+    background: #1877f2;
+    border-radius: 14px;
+    border: none;
     position: relative;
-    z-index: 2;
-    max-width: 900px;
-    margin: 0 auto;
-    padding:
-        80px 25px
-        110px;
+    cursor: pointer;
+    padding: 2px;
+    transition: background 0.2s ease;
 }
 
-.epic-faq-list {
+.toggle-thumb {
+    width: 24px;
+    height: 24px;
+    background: #ffffff;
+    border-radius: 50%;
+    display: block;
+    transition: transform 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.offer-toggle-switch.yearly .toggle-thumb {
+    transform: translateX(24px);
+}
+
+/* MAIN CONTENT CONTAINER */
+.offer-content-container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 50px 24px 80px;
+}
+
+.offer-section {
+    margin-bottom: 60px;
+}
+
+/* CARDS GRID */
+.offer-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 24px;
+    align-items: stretch;
+}
+
+.offer-cards-grid.grid-4-cols {
+    grid-template-columns: repeat(auto-fit, minmax(265px, 1fr));
+}
+
+/* CARD STYLING */
+.offer-card {
+    background: #ffffff;
+    border: 1px solid #e4e6eb;
+    border-radius: 18px;
+    padding: 32px 26px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
-}
-
-.epic-faq-item {
-    border: 1px solid
-        rgba(255, 255, 255, 0.07);
-    border-radius: 13px;
-    overflow: hidden;
-    background:
-        rgba(255, 255, 255, 0.025);
-}
-
-.epic-faq-item button {
-    width: 100%;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 20px;
-    border: none;
-    background: transparent;
-    color: #d8e4ef;
-    padding:
-        18px 20px;
-    cursor: pointer;
-    text-align: left;
-    font-weight: 700;
-}
-
-.epic-faq-item button strong {
-    color: #55d5ff;
-    font-size: 20px;
-    font-weight: 400;
-}
-
-.epic-faq-answer {
-    padding:
-        0 20px
-        20px;
-    color: #8095a9;
-    font-size: 13px;
-    line-height: 1.7;
-}
-
-.epic-faq-item.open {
-    border-color:
-        rgba(0, 183, 255, 0.18);
-}
-
-/* =========================================================
-   FOOTER
-   ========================================================= */
-
-.epic-offer-footer {
     position: relative;
-    z-index: 2;
-    border-top: 1px solid
-        rgba(255, 255, 255, 0.07);
-    padding:
-        30px 6%;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 25px;
-    background:
-        rgba(3, 8, 16, 0.8);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
-.epic-footer-brand {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+.offer-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.08);
+    border-color: #cbd5e1;
 }
 
-.epic-footer-logo {
-    width: 35px;
-    height: 35px;
+.offer-card.is-featured {
+    border: 2px solid #1877f2;
+    box-shadow: 0 8px 28px rgba(24, 119, 242, 0.14);
+}
+
+.offer-card-badge {
+    position: absolute;
+    top: -13px;
+    right: 22px;
+    background: #1877f2;
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 5px 14px;
+    border-radius: 20px;
+    letter-spacing: 0.6px;
+    box-shadow: 0 4px 12px rgba(24, 119, 242, 0.35);
+}
+
+.offer-card-top h3 {
+    font-size: 22px;
+    font-weight: 800;
+    color: #050505;
+    margin: 0 0 8px;
+    letter-spacing: -0.01em;
+}
+
+.offer-card-top p {
+    color: #65676b;
+    font-size: 14px;
+    line-height: 1.5;
+    min-height: 42px;
+    margin: 0 0 20px;
+}
+
+.offer-course-category-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #e7f3ff;
+    color: #1877f2;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 4px 10px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    letter-spacing: 0.5px;
+}
+
+.offer-course-category-tag.product-tag {
+    background: #f0fdf4;
+    color: #16a34a;
+}
+
+/* PRICE BOX */
+.offer-card-price-box {
+    background: #f7f8fa;
+    border: 1px solid #e4e6eb;
+    border-radius: 12px;
+    padding: 16px 18px;
+    margin-bottom: 24px;
+}
+
+.offer-price {
+    display: flex;
+    align-items: baseline;
+    gap: 3px;
+}
+
+.offer-price-currency {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1877f2;
+}
+
+.offer-price-amount {
+    font-size: 38px;
+    font-weight: 900;
+    color: #050505;
+    line-height: 1;
+}
+
+.offer-price-period {
+    font-size: 13px;
+    color: #65676b;
+    font-weight: 600;
+    margin-left: 4px;
+}
+
+.offer-billing-detail {
+    font-size: 12px;
+    color: #1877f2;
+    font-weight: 600;
+    margin-top: 6px;
+}
+
+.offer-highlight-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #ffffff;
+    border: 1px solid #e4e6eb;
+    color: #050505;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 8px;
+    margin-top: 10px;
+}
+
+.offer-highlight-pill.course-pill {
+    color: #1877f2;
+    background: #e7f3ff;
+    border-color: #cce4ff;
+}
+
+.offer-highlight-pill.product-pill {
+    color: #16a34a;
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+}
+
+/* CTA BUTTONS */
+.offer-cta-button {
+    width: 100%;
+    padding: 14px 20px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 700;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 9px;
-    background:
-        linear-gradient(
-            135deg,
-            #00b7ff,
-            #5267ff
-        );
-    font-size: 10px;
-    font-weight: 900;
-}
-
-.epic-footer-brand strong {
-    display: block;
-    font-size: 10px;
-    letter-spacing: 0.7px;
-}
-
-.epic-footer-brand span {
-    display: block;
-    margin-top: 3px;
-    color: #64798e;
-    font-size: 9px;
-}
-
-.epic-footer-links {
-    display: flex;
-    gap: 18px;
-}
-
-.epic-footer-links button {
-    border: none;
-    background: transparent;
-    color: #71869a;
+    gap: 8px;
     cursor: pointer;
-    font-size: 11px;
+    transition: all 0.2s ease;
+    margin-bottom: 24px;
 }
 
-.epic-footer-links button:hover {
+.offer-cta-button.is-primary {
+    background: #1877f2;
     color: #ffffff;
+    border: none;
+    box-shadow: 0 4px 14px rgba(24, 119, 242, 0.3);
 }
 
-.epic-footer-copy {
-    color: #52677b;
-    font-size: 10px;
+.offer-cta-button.is-primary:hover {
+    background: #166fe5;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(24, 119, 242, 0.45);
 }
 
-/* =========================================================
-   RESPONSIVE
-   ========================================================= */
-
-@media (max-width: 1050px) {
-
-    .epic-pricing-grid {
-        grid-template-columns:
-            repeat(2, minmax(0, 1fr));
-    }
-
-    .epic-plan-card:last-child {
-        grid-column:
-            1 / -1;
-        max-width: 600px;
-        width: 100%;
-        margin: 0 auto;
-    }
-
-    .epic-value-grid {
-        grid-template-columns:
-            repeat(2, minmax(0, 1fr));
-    }
+.offer-cta-button.is-secondary {
+    background: #e7f3ff;
+    color: #1877f2;
+    border: 1px solid #cce4ff;
 }
 
-@media (max-width: 760px) {
+.offer-cta-button.is-secondary:hover {
+    background: #d8ecff;
+    border-color: #1877f2;
+    color: #166fe5;
+}
 
-    .epic-offer-nav {
-        padding: 0 20px;
+/* FEATURES LIST */
+.offer-card-features-list {
+    border-top: 1px solid #f0f2f5;
+    padding-top: 20px;
+    flex-grow: 1;
+}
+
+.features-list-title {
+    font-size: 12px;
+    font-weight: 800;
+    color: #65676b;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 14px;
+}
+
+.offer-card-features-list ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+}
+
+.offer-card-features-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 13.5px;
+    color: #050505;
+    line-height: 1.45;
+}
+
+.feature-check-icon {
+    color: #31a24c;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+/* TRUST BANNER */
+.offer-trust-banner {
+    background: #ffffff;
+    border: 1px solid #e4e6eb;
+    border-radius: 18px;
+    padding: 32px 28px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 28px;
+    margin-bottom: 60px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+.trust-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+}
+
+.trust-icon-box {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: #e7f3ff;
+    color: #1877f2;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+}
+
+.trust-item strong {
+    display: block;
+    font-size: 15px;
+    font-weight: 800;
+    color: #050505;
+    margin-bottom: 4px;
+}
+
+.trust-item p {
+    margin: 0;
+    font-size: 13px;
+    color: #65676b;
+    line-height: 1.5;
+}
+
+/* FAQ SECTION */
+.offer-faq-section {
+    max-width: 860px;
+    margin: 0 auto 70px;
+}
+
+.offer-faq-header {
+    text-align: center;
+    margin-bottom: 36px;
+}
+
+.offer-faq-header h2 {
+    font-size: clamp(24px, 3.5vw, 34px);
+    font-weight: 800;
+    color: #050505;
+    margin: 8px 0 10px;
+}
+
+.offer-faq-header p {
+    color: #65676b;
+    font-size: 15px;
+}
+
+.offer-faq-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.offer-faq-item {
+    background: #ffffff;
+    border: 1px solid #e4e6eb;
+    border-radius: 14px;
+    padding: 18px 22px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.offer-faq-item:hover {
+    border-color: #cbd5e1;
+}
+
+.offer-faq-item.is-open {
+    border-color: #1877f2;
+    box-shadow: 0 4px 14px rgba(24, 119, 242, 0.08);
+}
+
+.offer-faq-question {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: 700;
+    font-size: 16px;
+    color: #050505;
+}
+
+.offer-faq-item.is-open .offer-faq-question {
+    color: #1877f2;
+}
+
+.offer-faq-answer {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid #f0f2f5;
+}
+
+.offer-faq-answer p {
+    margin: 0;
+    font-size: 14px;
+    color: #65676b;
+    line-height: 1.6;
+}
+
+/* BOTTOM CALL TO ACTION */
+.offer-bottom-cta {
+    background: linear-gradient(135deg, #1877f2 0%, #166fe5 100%);
+    border-radius: 20px;
+    padding: 48px 36px;
+    text-align: center;
+    color: #ffffff;
+    box-shadow: 0 12px 36px rgba(24, 119, 242, 0.25);
+}
+
+.offer-bottom-cta h2 {
+    font-size: clamp(24px, 3.5vw, 32px);
+    font-weight: 900;
+    margin: 0 0 12px;
+}
+
+.offer-bottom-cta p {
+    max-width: 640px;
+    margin: 0 auto 28px;
+    font-size: 16px;
+    opacity: 0.92;
+    line-height: 1.6;
+}
+
+.bottom-cta-actions {
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.cta-primary-btn {
+    background: #ffffff;
+    color: #1877f2;
+    border: none;
+    padding: 14px 24px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.cta-primary-btn:hover {
+    background: #f0f2f5;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.cta-secondary-btn {
+    background: rgba(255, 255, 255, 0.16);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    padding: 14px 24px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.cta-secondary-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+/* FOOTER */
+.offer-footer {
+    background: #ffffff;
+    border-top: 1px solid #e4e6eb;
+    padding: 28px 24px;
+}
+
+.offer-footer-inner {
+    max-width: 1280px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.offer-footer-copy {
+    font-size: 13px;
+    color: #65676b;
+}
+
+.offer-footer-links {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+}
+
+.offer-footer-links button {
+    background: none;
+    border: none;
+    color: #65676b;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+    transition: color 0.15s ease;
+}
+
+.offer-footer-links button:hover {
+    color: #1877f2;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+    .offer-hero {
+        padding: 40px 16px 30px;
     }
 
-    .epic-offer-nav-actions {
-        display: none;
-    }
-
-    .epic-offer-hero {
-        padding:
-            70px 20px
-            40px;
-    }
-
-    .epic-offer-hero h1 {
-        letter-spacing: -2px;
-    }
-
-    .epic-offer-hero > p {
-        font-size: 15px;
-    }
-
-    .epic-offer-trust-row {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .epic-offer-trust-row div {
-        text-align: left;
-    }
-
-    .epic-pricing-section {
-        padding:
-            0 18px
-            60px;
-    }
-
-    .epic-pricing-grid {
+    .offer-cards-grid {
         grid-template-columns: 1fr;
     }
 
-    .epic-plan-card:last-child {
-        grid-column: auto;
-        max-width: none;
-    }
-
-    .epic-plan-card {
-        padding: 27px;
-    }
-
-    .epic-value-grid {
+    .offer-trust-banner {
         grid-template-columns: 1fr;
+        padding: 24px 20px;
     }
 
-    .epic-value-section,
-    .epic-comparison-section,
-    .epic-faq-section {
-        padding-left: 18px;
-        padding-right: 18px;
+    .offer-bottom-cta {
+        padding: 36px 20px;
     }
 
-    .epic-comparison-table {
-        overflow-x: auto;
-    }
-
-    .epic-comparison-header,
-    .epic-comparison-row {
-        min-width: 620px;
-    }
-
-    .epic-cta-content {
-        padding:
-            55px 22px;
-    }
-
-    .epic-offer-footer {
+    .offer-footer-inner {
         flex-direction: column;
         align-items: flex-start;
     }
-
-    .epic-footer-links {
-        flex-wrap: wrap;
-    }
 }
-
-@media (max-width: 430px) {
-
-    .epic-offer-logo {
-        width: 38px;
-        height: 38px;
-    }
-
-    .epic-offer-brand-text strong {
-        font-size: 11px;
-    }
-
-    .epic-offer-hero h1 {
-        font-size: 39px;
-    }
-
-    .epic-billing-toggle button {
-        padding:
-            10px 14px;
-        font-size: 12px;
-    }
-
-    .epic-plan-price strong {
-        font-size: 36px;
-    }
-
-    .epic-plan-card {
-        border-radius: 18px;
-    }
-}
-

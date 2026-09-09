@@ -1,4 +1,4 @@
-﻿using EPIC.Api.Data;
+using EPIC.Api.Data;
 using EPIC.Api.Models;
 using EPIC.Api.Services;
 using EPIC.Core.Interfaces;
@@ -85,41 +85,175 @@ namespace EPIC.Api.Controllers
             await _context.SaveChangesAsync();
 
             // =====================================================
-            // SEND CONFIRMATION EMAIL TO REQUESTER
+            // SEND EMAILS (1 FOR STUDENT/REQUESTER, 1 FOR ADMIN)
             // =====================================================
 
-            try
-            {
-                await _emailService.SendDemoRequestConfirmationAsync(
-                    request.FullName,
-                    request.Email,
-                    request.ChurchName);
-            }
-            catch
-            {
-                // Email failure should not invalidate the
-                // successfully saved demo request.
-            }
+            bool isAcademyEnrollment =
+                (!string.IsNullOrWhiteSpace(request.ChurchName) && request.ChurchName.Contains("EPIC Academy", StringComparison.OrdinalIgnoreCase)) ||
+                (!string.IsNullOrWhiteSpace(request.Position) && request.Position.Contains("Academy", StringComparison.OrdinalIgnoreCase)) ||
+                (!string.IsNullOrWhiteSpace(request.Message) && request.Message.Contains("[EPIC ACADEMY ENROLLMENT APPLICATION]", StringComparison.OrdinalIgnoreCase));
 
-            // =====================================================
-            // SEND ADMIN NOTIFICATION
-            // =====================================================
+            bool isContactInquiry =
+                !isAcademyEnrollment && (
+                    (!string.IsNullOrWhiteSpace(request.ChurchName) && (
+                        request.ChurchName.Contains("Contact Inquiry", StringComparison.OrdinalIgnoreCase) ||
+                        request.ChurchName.Contains("Website Contact", StringComparison.OrdinalIgnoreCase) ||
+                        request.ChurchName.Contains("Website Inquiry", StringComparison.OrdinalIgnoreCase) ||
+                        request.ChurchName.Contains("Contact", StringComparison.OrdinalIgnoreCase))) ||
+                    (!string.IsNullOrWhiteSpace(request.Position) && (
+                        request.Position.Contains("Inquiry", StringComparison.OrdinalIgnoreCase) ||
+                        request.Position.Contains("Prayer", StringComparison.OrdinalIgnoreCase) ||
+                        request.Position.Contains("Counseling", StringComparison.OrdinalIgnoreCase) ||
+                        request.Position.Contains("Worship", StringComparison.OrdinalIgnoreCase) ||
+                        request.Position.Contains("Baptism", StringComparison.OrdinalIgnoreCase) ||
+                        request.Position.Contains("Giving", StringComparison.OrdinalIgnoreCase) ||
+                        request.Position.Contains("Volunteer", StringComparison.OrdinalIgnoreCase) ||
+                        request.Position.Contains("Ministry", StringComparison.OrdinalIgnoreCase))));
 
-            try
+            string responseMessage;
+
+            if (isAcademyEnrollment)
             {
-                await _emailService.SendNewDemoRequestAdminNotificationAsync(
-                    request.FullName,
-                    request.Email,
-                    request.ChurchName,
-                    request.Phone,
-                    request.Position,
-                    request.Message,
-                    request.DemoRequestId);
+                responseMessage =
+                    "Your academy enrollment application has been recorded successfully. " +
+                    "Please check your email for confirmation. " +
+                    "Our discipleship team will contact you soon. God bless you!";
+
+                string courseCode = "ACADEMY";
+                string courseTitle = "Discipleship Course Track";
+                if (!string.IsNullOrWhiteSpace(request.ChurchName))
+                {
+                    var clean = request.ChurchName.Replace("EPIC Academy - ", "").Trim();
+                    if (clean.Contains(':'))
+                    {
+                        var parts = clean.Split(':', 2);
+                        courseCode = parts[0].Trim();
+                        courseTitle = parts[1].Trim();
+                    }
+                    else
+                    {
+                        courseTitle = clean;
+                    }
+                }
+
+                // 1. Send confirmation email to the enrolled student
+                try
+                {
+                    await _emailService.SendCourseEnrollmentStudentConfirmationAsync(
+                        fullName: request.FullName,
+                        studentEmail: request.Email,
+                        courseCode: courseCode,
+                        courseTitle: courseTitle,
+                        cohort: "Selected Cohort",
+                        memberStatus: request.Position ?? "Active Member",
+                        mentorName: null,
+                        referenceCode: $"EPIC-ENROLL-{request.DemoRequestId:D6}",
+                        enrolledDate: request.CreatedDate);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Student confirmation email sending failed: {ex.Message}");
+                }
+
+                // 2. Send notification email to admin
+                try
+                {
+                    await _emailService.SendCourseEnrollmentAdminNotificationAsync(
+                        fullName: request.FullName,
+                        studentEmail: request.Email,
+                        phone: request.Phone,
+                        courseCode: courseCode,
+                        courseTitle: courseTitle,
+                        cohort: "Selected Cohort",
+                        memberStatus: request.Position ?? "Active Member",
+                        mentorName: null,
+                        referenceCode: $"EPIC-ENROLL-{request.DemoRequestId:D6}",
+                        enrolledDate: request.CreatedDate);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Admin enrollment notification email sending failed: {ex.Message}");
+                }
             }
-            catch
+            else if (isContactInquiry)
             {
-                // Email failure should not invalidate the
-                // successfully saved demo request.
+                responseMessage =
+                    "Thank you for reaching out! Your message has been received by our pastoral team and recorded in our database. " +
+                    "Please check your email for confirmation.";
+
+                var dept = string.IsNullOrWhiteSpace(request.Position)
+                    ? "General Church Inquiry"
+                    : request.Position;
+
+                // 1. Send confirmation email to the person who contacted
+                try
+                {
+                    await _emailService.SendContactInquirySenderConfirmationAsync(
+                        fullName: request.FullName,
+                        email: request.Email,
+                        phone: request.Phone,
+                        departmentOrSubject: dept,
+                        messageText: request.Message ?? "No message text provided.",
+                        inquiryId: request.DemoRequestId,
+                        receivedDate: request.CreatedDate);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Contact inquiry sender confirmation email sending failed: {ex.Message}");
+                }
+
+                // 2. Send notification email to admin
+                try
+                {
+                    await _emailService.SendContactInquiryAdminNotificationAsync(
+                        fullName: request.FullName,
+                        email: request.Email,
+                        phone: request.Phone,
+                        departmentOrSubject: dept,
+                        messageText: request.Message ?? "No message text provided.",
+                        inquiryId: request.DemoRequestId,
+                        receivedDate: request.CreatedDate);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Admin contact inquiry notification email sending failed: {ex.Message}");
+                }
+            }
+            else
+            {
+                responseMessage =
+                    "Your demo request has been submitted successfully. " +
+                    "Please check your email for confirmation. " +
+                    "Our EPIC team will contact you soon. God bless you!";
+
+                // Normal demo request emails
+                try
+                {
+                    await _emailService.SendDemoRequestConfirmationAsync(
+                        request.FullName,
+                        request.Email,
+                        request.ChurchName);
+                }
+                catch
+                {
+                    // Email failure should not invalidate saved record
+                }
+
+                try
+                {
+                    await _emailService.SendNewDemoRequestAdminNotificationAsync(
+                        request.FullName,
+                        request.Email,
+                        request.ChurchName,
+                        request.Phone,
+                        request.Position,
+                        request.Message,
+                        request.DemoRequestId);
+                }
+                catch
+                {
+                    // Email failure should not invalidate saved record
+                }
             }
 
             // =====================================================
@@ -129,12 +263,7 @@ namespace EPIC.Api.Controllers
             return Ok(new
             {
                 success = true,
-
-                message =
-                    "Your demo request has been submitted successfully. " +
-                    "Please check your email for confirmation. " +
-                    "Our EPIC team will contact you soon. God bless you!",
-
+                message = responseMessage,
                 demoRequestId = request.DemoRequestId
             });
         }

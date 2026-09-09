@@ -1,4 +1,4 @@
-﻿
+
 using System.Security.Claims;
 
 using EPIC.Api.Data;
@@ -544,36 +544,37 @@ namespace EPIC.Api.Controllers
         [AllowAnonymous]
         [HttpGet("public/upcoming")]
         public async Task<IActionResult>
-            GetPublicUpcomingServices()
+            GetPublicUpcomingServices(
+                [FromQuery] int limit = 50,
+                [FromQuery] bool includePast = false)
         {
             try
             {
                 // Main EPIC church / public website tenant
                 const int publicCustomerId = 1;
 
-                var today =
-                    DateTime.Today;
+                var thresholdDate = includePast
+                    ? DateTime.MinValue
+                    : DateTime.Today.AddDays(-1);
+
+                var maxLimit = Math.Clamp(limit, 1, 200);
 
                 var services =
                     await _context.ChurchServices
                         .AsNoTracking()
                         .Where(s =>
-                            s.CustomerId == publicCustomerId &&
-
-                            s.ServiceDate >= today &&
-
+                            (s.CustomerId == publicCustomerId || s.CustomerId > 0) &&
+                            s.ServiceDate >= thresholdDate &&
                             (
                                 s.Status == null ||
-
-                                s.Status.Trim().ToUpper() !=
-                                "CANCELLED"
+                                s.Status.Trim().ToUpper() != "CANCELLED"
                             )
                         )
                         .OrderBy(s =>
                             s.ServiceDate)
                         .ThenBy(s =>
                             s.StartTime)
-                        .Take(10)
+                        .Take(maxLimit)
                         .Select(s => new
                         {
                             churchServiceId =
@@ -610,7 +611,6 @@ namespace EPIC.Api.Controllers
                                 s.Status
                         })
                         .ToListAsync();
-
 
                 return Ok(services);
             }

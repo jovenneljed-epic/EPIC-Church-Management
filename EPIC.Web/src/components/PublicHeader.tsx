@@ -71,6 +71,34 @@ const PublicHeader: React.FC<PublicHeaderProps> = ({
 
                     <button
                         type="button"
+                        onClick={() => navigateTo("events")}
+                    >
+                        Events
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => navigateTo("gallery")}
+                    >
+                        Gallery
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => navigateTo("announcements")}
+                    >
+                        Announcements
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => navigateTo("giving")}
+                    >
+                        Giving
+                    </button>
+
+                    <button
+                        type="button"
                         onClick={() => navigateTo("epic-system")}
                     >
                         EPIC System
@@ -80,7 +108,7 @@ const PublicHeader: React.FC<PublicHeaderProps> = ({
                         type="button"
                         onClick={() => navigateTo("learning")}
                     >
-                        Learning
+                        EPIC Academy
                     </button>
 
                     <button
@@ -131,7 +159,7 @@ const PublicHeader: React.FC<PublicHeaderProps> = ({
                         className="epic-nav-cta"
                         onClick={() => navigateTo("contact")}
                     >
-                        Connect With Us
+                        Connect
                     </button>
 
                 </div>

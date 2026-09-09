@@ -1,954 +1,745 @@
-
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
+import PublicHeader from "../components/PublicHeader";
+import {
+    Check,
+    Sparkles,
+    ShieldCheck,
+    Zap,
+    Download,
+    GraduationCap,
+    Clock,
+    Award,
+    HelpCircle,
+    ChevronDown,
+    ChevronUp,
+    ArrowRight,
+    QrCode,
+    FileText,
+    Users,
+} from "lucide-react";
 import "./OfferPage.css";
 
 interface OfferPageProps {
     onNavigate: (page: string) => void;
 }
 
+type PillarCategory = "saas" | "courses" | "products";
 type BillingCycle = "monthly" | "yearly";
 
-interface Plan {
+interface SaasPlan {
     id: string;
     name: string;
+    badge?: string;
+    popular?: boolean;
     description: string;
     monthlyPrice: number;
     yearlyPrice: number;
-    popular?: boolean;
+    features: string[];
+    highlightFeature: string;
+}
+
+interface CourseItem {
+    id: string;
+    name: string;
     badge?: string;
+    popular?: boolean;
+    description: string;
+    price: number;
+    billingType: "One-Time" | "Annual Access";
+    duration: string;
+    modulesCount: number;
     features: string[];
 }
 
-const PLANS: Plan[] = [
+interface ProductItem {
+    id: string;
+    name: string;
+    badge?: string;
+    popular?: boolean;
+    description: string;
+    price: number;
+    fileFormats: string;
+    features: string[];
+}
+
+const SAAS_PLANS: SaasPlan[] = [
     {
         id: "starter",
         name: "EPIC Starter",
-        description:
-            "Essential church management tools for growing churches.",
+        description: "Essential church administration tools for growing congregations and local fellowships.",
         monthlyPrice: 999,
         yearlyPrice: 9990,
+        highlightFeature: "Up to 250 Active Members",
         features: [
-            "Church Dashboard",
-            "Member Management",
-            "Church Services",
-            "Attendance Management",
-            "Visitor Management",
-            "Basic Reports",
-            "Secure Cloud Access",
-            "Email Support",
+            "Church Operations Dashboard",
+            "Member Directory & Profiles",
+            "Church Services & Schedules",
+            "Attendance Tracking Desk",
+            "First-Time Visitor Management",
+            "Weekly & Monthly Summary Reports",
+            "Cloud Multi-Device Synchronization",
+            "Standard Email Support",
         ],
     },
     {
         id: "growth",
         name: "EPIC Growth",
-        description:
-            "The complete church management solution for active ministries.",
+        badge: "MOST POPULAR",
+        popular: true,
+        description: "The complete, all-in-one church operations system for active, thriving ministries.",
         monthlyPrice: 1999,
         yearlyPrice: 19990,
-        popular: true,
-        badge: "MOST POPULAR",
+        highlightFeature: "Up to 1,000 Active Members",
         features: [
-            "Everything in Starter",
-            "Giving Management",
-            "Income Management",
-            "Expense Management",
-            "Ministry Management",
-            "Event Management",
-            "Advanced Reports",
-            "Member Attendance Reports",
-            "Client Church Portal",
-            "Priority Support",
+            "Everything in Starter Plan",
+            "Giving & Tithes Management",
+            "Income & Expense Ledgers",
+            "Ministries & Points Leaderboard",
+            "Event Planning & Management",
+            "Member Attendance Detail Reports",
+            "Dedicated Client Church Portal",
+            "GCash & Maya Giving Support",
+            "Priority Technical Support",
         ],
     },
     {
         id: "complete",
         name: "EPIC Complete",
-        description:
-            "The full digital church ecosystem with discipleship and advanced tools.",
+        badge: "BEST VALUE",
+        description: "The full digital church ecosystem with integrated discipleship, analytics, and VIP care.",
         monthlyPrice: 2999,
         yearlyPrice: 29990,
-        badge: "BEST VALUE",
+        highlightFeature: "Unlimited Members & Ministries",
         features: [
-            "Everything in Growth",
-            "EPIC Learning School",
-            "Online Discipleship",
-            "Certificates",
-            "Course & Lesson Management",
-            "Learning Progress Tracking",
-            "Website Analytics",
-            "Subscription Management",
-            "Advanced Business Dashboard",
-            "Premium Support",
+            "Everything in Growth Plan",
+            "Integrated EPIC Academy LMS",
+            "Online Discipleship Tracking",
+            "Automated Course Certificates",
+            "Church Website Analytics",
+            "Multi-Campus & Role Permissions",
+            "Custom Data Exports & PDF Reports",
+            "VIP Dedicated Support & Training",
         ],
     },
 ];
 
-const OfferPage: React.FC<OfferPageProps> = ({
-    onNavigate,
-}) => {
-    const [billingCycle, setBillingCycle] =
-        useState<BillingCycle>("monthly");
+const DIGITAL_COURSES: CourseItem[] = [
+    {
+        id: "course-foundations",
+        name: "Foundations of Faith Masterclass",
+        badge: "CERTIFICATE COURSE",
+        description: "A comprehensive discipleship curriculum designed for new believers, baptismal classes, and cell groups.",
+        price: 499,
+        billingType: "One-Time",
+        duration: "Self-Paced • 6 Modules",
+        modulesCount: 6,
+        features: [
+            "6 Foundational Video & Text Modules",
+            "30 Structured Discipleship Lessons",
+            "Printable PDF Reflection Worksheets",
+            "Theological Pillar Study Notes",
+            "Certified Disciple Digital Diploma",
+            "Lifetime Personal Access",
+        ],
+    },
+    {
+        id: "course-leadership",
+        name: "Church Leadership & Ministry Mastery",
+        badge: "PASTOR & LEADER LEVEL",
+        popular: true,
+        description: "Equip elders, deacons, and ministry heads with modern leadership, conflict resolution, and stewardship skills.",
+        price: 1499,
+        billingType: "One-Time",
+        duration: "10-Session Intensive",
+        modulesCount: 10,
+        features: [
+            "10 Leadership & Administration Sessions",
+            "Ministry Health & Evaluation Rubrics",
+            "Volunteer Recruitment & Retention Systems",
+            "Biblical Leadership Principles",
+            "Ministry Head Certificate of Completion",
+            "Includes Printable Leader Manuals",
+        ],
+    },
+    {
+        id: "course-all-access",
+        name: "EPIC Academy All-Access Scholar Pass",
+        badge: "WHOLE CHURCH PASS",
+        description: "Unlock the entire EPIC Academy curriculum for your entire congregation and all ministry team scholars.",
+        price: 2499,
+        billingType: "Annual Access",
+        duration: "12 Months All-Access",
+        modulesCount: 20,
+        features: [
+            "Full Access to All Current & Future Courses",
+            "Unlimited Congregation Student Accounts",
+            "Live Discipleship Progress Tracking",
+            "Ladder Board of Success Integration",
+            "Automated Graduation Diplomas",
+            "Quarterly Theological Updates",
+        ],
+    },
+];
 
-    const [selectedPlan, setSelectedPlan] =
-        useState<string>("growth");
+const DIGITAL_PRODUCTS: ProductItem[] = [
+    {
+        id: "product-admin-suite",
+        name: "Church Administration & Policy Suite",
+        badge: "INSTANT DOWNLOAD",
+        description: "Legally reviewed, customizable church governance documents, constitution templates, and policies.",
+        price: 799,
+        fileFormats: "DOCX • PDF • Google Docs",
+        features: [
+            "Church Constitution & Bylaws Template",
+            "Pastoral & Staff Employment Agreements",
+            "Volunteer Safety & Child Protection Policy",
+            "Ministry Team Job Descriptions & Rubrics",
+            "Usher & Protocol Service Handbooks",
+            "100% Editable in Microsoft Word / Docs",
+        ],
+    },
+    {
+        id: "product-media-pack",
+        name: "Worship Media & Sermon Slide Pack",
+        badge: "150+ ASSETS",
+        description: "High-definition worship backgrounds, title slides, countdowns, and presentation decks ready to project.",
+        price: 999,
+        fileFormats: "1080p MP4 • PPTX • Canva Links",
+        features: [
+            "150+ Motion Video Backgrounds (1080p)",
+            "20 Complete Sermon Slide Themes",
+            "5-Minute Pre-Service Countdowns",
+            "Offering, Communion & Welcome Title Cards",
+            "Editable Canva & PowerPoint Templates",
+            "Royalty-Free for Sanctuary & Live Stream",
+        ],
+    },
+    {
+        id: "product-financial-suite",
+        name: "Church Financial Ledgers & Stewardship Suite",
+        badge: "EXCEL & SHEETS",
+        description: "Automated church bookkeeping spreadsheets, tithe reconciliation formulas, and annual budget templates.",
+        price: 1299,
+        fileFormats: "XLSX • Google Sheets",
+        features: [
+            "Automated Tithes & Offering Calculator",
+            "GCash & Maya Giving Reconciliation Tab",
+            "Departmental Budget Tracking Spreadsheets",
+            "Automated Donor Contribution Statements",
+            "Year-End Financial Audit & Statement Sheet",
+            "Video Tutorial on Church Bookkeeping",
+        ],
+    },
+    {
+        id: "product-launch-bundle",
+        name: "Complete Church Starter Launch Kit",
+        badge: "BEST VALUE BUNDLE",
+        popular: true,
+        description: "The complete suite: Admin Documents, Worship Media Pack, and Financial Bookkeeping Suite all in one.",
+        price: 1999,
+        fileFormats: "Full Digital Archive (.ZIP)",
+        features: [
+            "Everything in Admin & Policy Suite",
+            "Everything in Worship Media Pack",
+            "Everything in Financial Stewardship Suite",
+            "Church Launch 90-Day Implementation Checklist",
+            "Over ₱3,097 Total Value (Save 35%)",
+            "Lifetime Access & Free Template Updates",
+        ],
+    },
+];
 
-    const [openFaq, setOpenFaq] =
-        useState<number | null>(null);
+const FAQS = [
+    {
+        question: "Can I upgrade or change my plan anytime?",
+        answer: "Yes! You can upgrade your SaaS subscription tier at any time from your church portal. Upgrades take effect immediately and are prorated so you only pay the difference.",
+    },
+    {
+        question: "How do Digital Course enrollments work?",
+        answer: "When you enroll in an EPIC Academy course, your account is immediately granted access to all lessons, videos, and study notes. You can learn at your own pace and receive an official certificate upon completion.",
+    },
+    {
+        question: "How do I receive my Digital Products after purchase?",
+        answer: "Digital Products (Toolkits, Media Packs, Spreadsheets) are delivered immediately via a secure download link on your receipt page and emailed to your address. You can download and edit them right away in Microsoft Office, Canva, or Google Docs.",
+    },
+    {
+        question: "What payment methods are supported?",
+        answer: "We support real-time Philippine payments via GCash, Maya, and Bank Transfer / GoTyme with instant verification and zero transaction surcharge.",
+    },
+    {
+        question: "Is there a free trial for the Church Management SaaS?",
+        answer: "Yes! All church management plans come with a 30-day satisfaction guarantee and free onboarding guidance. If you ever need help, our team provides step-by-step assistance.",
+    },
+    {
+        question: "Is my church data safe and private?",
+        answer: "Absolutely. EPIC utilizes tenant-isolated SQL databases, 256-bit SSL encryption, and strict role-based access control so your members' private records, giving data, and pastoral notes remain confidential.",
+    },
+];
 
-    const billingLabel = useMemo(
-        () =>
-            billingCycle === "monthly"
-                ? "month"
-                : "year",
-        [billingCycle]
-    );
+const OfferPage: React.FC<OfferPageProps> = ({ onNavigate }) => {
+    const [category, setCategory] = useState<PillarCategory>("saas");
+    const [billingCycle, setBillingCycle] = useState<BillingCycle>("monthly");
+    const [openFaq, setOpenFaq] = useState<number | null>(null);
 
-    const handleSelectPlan = (plan: Plan) => {
-        setSelectedPlan(plan.id);
-
-        localStorage.setItem(
-            "epicSelectedPlan",
-            plan.id
-        );
-
-        localStorage.setItem(
-            "epicSelectedPlanName",
-            plan.name
-        );
-
-        localStorage.setItem(
-            "epicBillingCycle",
-            billingCycle
-        );
-
-        localStorage.setItem(
-            "epicPlanPrice",
-            String(
-                billingCycle === "monthly"
-                    ? plan.monthlyPrice
-                    : plan.yearlyPrice
-            )
-        );
-
+    const handleSelectSaas = (plan: SaasPlan) => {
+        const price = billingCycle === "monthly" ? plan.monthlyPrice : plan.yearlyPrice;
+        localStorage.setItem("epicSelectedPlan", plan.id);
+        localStorage.setItem("epicSelectedPlanName", plan.name);
+        localStorage.setItem("epicBillingCycle", billingCycle);
+        localStorage.setItem("epicCheckoutAmount", String(price));
+        localStorage.setItem("epicSelectedItemType", "saas");
+        localStorage.setItem("epicSelectedItemBadge", plan.badge || "");
         onNavigate("checkout");
     };
 
-    const faqs = [
-        {
-            question:
-                "Can I change my plan later?",
-            answer:
-                "Yes. You can upgrade or change your EPIC plan as your church grows. Your existing church data remains protected.",
-        },
-        {
-            question:
-                "Do I need technical knowledge to use EPIC?",
-            answer:
-                "No. EPIC is designed for church administrators and ministry leaders. The system is built to be simple, organized and easy to use.",
-        },
-        {
-            question:
-                "Does EPIC include a church portal?",
-            answer:
-                "Yes. EPIC supports a dedicated client church portal where authorized church users can access their church information and services.",
-        },
-        {
-            question:
-                "What is EPIC Learning?",
-            answer:
-                "EPIC Learning is the discipleship and online learning component of the EPIC ecosystem. Churches can provide structured lessons, track learning progress and issue certificates.",
-        },
-        {
-            question:
-                "Is my church data secure?",
-            answer:
-                "EPIC is designed with authenticated access, role-based permissions and protected API communication to help keep church information secure.",
-        },
-        {
-            question:
-                "Can I request a demonstration?",
-            answer:
-                "Absolutely. If you want to see how EPIC works before subscribing, you can request a personalized demonstration.",
-        },
-    ];
+    const handleSelectCourse = (course: CourseItem) => {
+        localStorage.setItem("epicSelectedPlan", course.id);
+        localStorage.setItem("epicSelectedPlanName", course.name);
+        localStorage.setItem("epicBillingCycle", course.billingType === "Annual Access" ? "yearly" : "one-time");
+        localStorage.setItem("epicCheckoutAmount", String(course.price));
+        localStorage.setItem("epicSelectedItemType", "course");
+        localStorage.setItem("epicSelectedItemBadge", course.badge || "");
+        onNavigate("checkout");
+    };
+
+    const handleSelectProduct = (product: ProductItem) => {
+        localStorage.setItem("epicSelectedPlan", product.id);
+        localStorage.setItem("epicSelectedPlanName", product.name);
+        localStorage.setItem("epicBillingCycle", "one-time");
+        localStorage.setItem("epicCheckoutAmount", String(product.price));
+        localStorage.setItem("epicSelectedItemType", "product");
+        localStorage.setItem("epicSelectedItemBadge", product.badge || "");
+        onNavigate("checkout");
+    };
+
+    const formatCurrency = (val: number) => {
+        return "₱" + val.toLocaleString("en-PH");
+    };
 
     return (
         <div className="epic-offer-page">
+            <PublicHeader onNavigate={onNavigate} />
 
-            {/* =====================================================
-                BACKGROUND
-            ===================================================== */}
-
-            <div className="epic-offer-glow epic-offer-glow-one" />
-            <div className="epic-offer-glow epic-offer-glow-two" />
-
-            {/* =====================================================
-                NAVIGATION
-            ===================================================== */}
-
-            <header className="epic-offer-nav">
-                <button
-                    type="button"
-                    className="epic-offer-brand"
-                    onClick={() =>
-                        onNavigate("landing")
-                    }
-                >
-                    <span className="epic-offer-logo">
-                        EPIC
-                    </span>
-
-                    <span className="epic-offer-brand-text">
-                        <strong>
-                            EPIC CHURCH
-                        </strong>
-                        <small>
-                            MANAGEMENT SYSTEM
-                        </small>
-                    </span>
-                </button>
-
-                <div className="epic-offer-nav-actions">
-                    <button
-                        type="button"
-                        className="epic-offer-nav-link"
-                        onClick={() =>
-                            onNavigate("opt-in")
-                        }
-                    >
-                        Free Demo
-                    </button>
-
-                    <button
-                        type="button"
-                        className="epic-offer-nav-link"
-                        onClick={() =>
-                            onNavigate("home")
-                        }
-                    >
-                        EPIC Website
-                    </button>
-                </div>
-            </header>
-
-            {/* =====================================================
-                HERO
-            ===================================================== */}
-
-            <section className="epic-offer-hero">
-
-                <div className="epic-offer-eyebrow">
-                    <span className="epic-offer-eyebrow-dot" />
-                    SIMPLE • POWERFUL • BUILT FOR CHURCHES
-                </div>
-
-                <h1>
-                    Choose the EPIC plan
-                    <span>
-                        that fits your church.
-                    </span>
-                </h1>
-
-                <p>
-                    Everything your church needs to
-                    organize people, manage ministry,
-                    strengthen discipleship and grow
-                    digitally — all in one ecosystem.
-                </p>
-
-                <div className="epic-offer-trust-row">
-                    <div>
-                        <span>✓</span>
-                        Church Management
+            {/* HERO BANNER */}
+            <section className="offer-hero">
+                <div className="offer-hero-inner">
+                    <div className="offer-eyebrow">
+                        <Sparkles size={16} />
+                        <span>TRANSPARENT KINGDOM SOLUTIONS &bull; ZERO HIDDEN FEES</span>
                     </div>
 
-                    <div>
-                        <span>✓</span>
-                        Member Portal
-                    </div>
+                    <h1>
+                        Empower Your Church with <span>Software, Courses &amp; Tools</span>
+                    </h1>
 
-                    <div>
-                        <span>✓</span>
-                        EPIC Learning
-                    </div>
-
-                    <div>
-                        <span>✓</span>
-                        Secure Cloud System
-                    </div>
-                </div>
-
-            </section>
-
-            {/* =====================================================
-                BILLING TOGGLE
-            ===================================================== */}
-
-            <section className="epic-billing-section">
-
-                <div className="epic-billing-toggle">
-
-                    <button
-                        type="button"
-                        className={
-                            billingCycle === "monthly"
-                                ? "active"
-                                : ""
-                        }
-                        onClick={() =>
-                            setBillingCycle(
-                                "monthly"
-                            )
-                        }
-                    >
-                        Monthly
-                    </button>
-
-                    <button
-                        type="button"
-                        className={
-                            billingCycle === "yearly"
-                                ? "active"
-                                : ""
-                        }
-                        onClick={() =>
-                            setBillingCycle(
-                                "yearly"
-                            )
-                        }
-                    >
-                        Yearly
-                        <span>
-                            SAVE
-                        </span>
-                    </button>
-
-                </div>
-
-                <p>
-                    {billingCycle === "monthly"
-                        ? "Flexible monthly billing. Cancel anytime."
-                        : "Pay yearly and save compared with monthly billing."}
-                </p>
-
-            </section>
-
-            {/* =====================================================
-                PRICING
-            ===================================================== */}
-
-            <section className="epic-pricing-section">
-
-                <div className="epic-pricing-grid">
-
-                    {PLANS.map((plan) => {
-
-                        const price =
-                            billingCycle ===
-                            "monthly"
-                                ? plan.monthlyPrice
-                                : plan.yearlyPrice;
-
-                        const isSelected =
-                            selectedPlan ===
-                            plan.id;
-
-                        return (
-                            <article
-                                key={plan.id}
-                                className={`epic-plan-card ${
-                                    plan.popular
-                                        ? "popular"
-                                        : ""
-                                } ${
-                                    isSelected
-                                        ? "selected"
-                                        : ""
-                                }`}
-                            >
-
-                                {plan.badge && (
-                                    <div className="epic-plan-badge">
-                                        {plan.badge}
-                                    </div>
-                                )}
-
-                                <div className="epic-plan-header">
-
-                                    <div className="epic-plan-icon">
-                                        {plan.id ===
-                                            "starter"
-                                            ? "◈"
-                                            : plan.id ===
-                                              "growth"
-                                            ? "◆"
-                                            : "✦"}
-                                    </div>
-
-                                    <h2>
-                                        {plan.name}
-                                    </h2>
-
-                                    <p>
-                                        {
-                                            plan.description
-                                        }
-                                    </p>
-
-                                </div>
-
-                                <div className="epic-plan-price">
-
-                                    <span className="epic-currency">
-                                        ₱
-                                    </span>
-
-                                    <strong>
-                                        {price.toLocaleString(
-                                            "en-PH"
-                                        )}
-                                    </strong>
-
-                                    <span className="epic-price-cycle">
-                                        /
-                                        {billingLabel}
-                                    </span>
-
-                                </div>
-
-                                {billingCycle ===
-                                    "yearly" && (
-                                    <div className="epic-yearly-note">
-                                        Annual billing
-                                    </div>
-                                )}
-
-                                <button
-                                    type="button"
-                                    className={`epic-plan-button ${
-                                        plan.popular
-                                            ? "primary"
-                                            : ""
-                                    }`}
-                                    onClick={() =>
-                                        handleSelectPlan(
-                                            plan
-                                        )
-                                    }
-                                >
-                                    {isSelected
-                                        ? "Continue with this plan"
-                                        : "Choose this plan"}
-                                    <span>
-                                        →
-                                    </span>
-                                </button>
-
-                                <div className="epic-plan-divider" />
-
-                                <h3>
-                                    What's included
-                                </h3>
-
-                                <ul className="epic-feature-list">
-
-                                    {plan.features.map(
-                                        (
-                                            feature
-                                        ) => (
-                                            <li
-                                                key={
-                                                    feature
-                                                }
-                                            >
-                                                <span>
-                                                    ✓
-                                                </span>
-
-                                                {
-                                                    feature
-                                                }
-                                            </li>
-                                        )
-                                    )}
-
-                                </ul>
-
-                            </article>
-                        );
-                    })}
-
-                </div>
-
-            </section>
-
-            {/* =====================================================
-                VALUE SECTION
-            ===================================================== */}
-
-            <section className="epic-value-section">
-
-                <div className="epic-section-heading">
-
-                    <span>
-                        ONE DIGITAL ECOSYSTEM
-                    </span>
-
-                    <h2>
-                        More than church software.
-                        <br />
-                        <strong>
-                            It's your church's digital foundation.
-                        </strong>
-                    </h2>
-
-                    <p>
-                        EPIC connects administration,
-                        people, ministry, finances and
-                        discipleship into one organized
-                        platform.
+                    <p className="offer-subtitle">
+                        Select from cloud-hosted Church Management SaaS subscriptions, in-depth discipleship masterclasses from EPIC Academy, or instantly downloadable ministry toolkits.
                     </p>
 
-                </div>
-
-                <div className="epic-value-grid">
-
-                    <div className="epic-value-card">
-                        <div className="epic-value-icon">
-                            👥
-                        </div>
-                        <h3>
-                            Manage Your People
-                        </h3>
-                        <p>
-                            Keep member information,
-                            attendance, visitors and
-                            ministry connections organized.
-                        </p>
-                    </div>
-
-                    <div className="epic-value-card">
-                        <div className="epic-value-icon">
-                            ⛪
-                        </div>
-                        <h3>
-                            Organize Ministry
-                        </h3>
-                        <p>
-                            Manage services, events,
-                            ministries and church
-                            activities from one place.
-                        </p>
-                    </div>
-
-                    <div className="epic-value-card">
-                        <div className="epic-value-icon">
-                            📊
-                        </div>
-                        <h3>
-                            Understand Your Church
-                        </h3>
-                        <p>
-                            Turn church information into
-                            useful reports and actionable
-                            insights.
-                        </p>
-                    </div>
-
-                    <div className="epic-value-card">
-                        <div className="epic-value-icon">
-                            📚
-                        </div>
-                        <h3>
-                            Develop Disciples
-                        </h3>
-                        <p>
-                            Deliver structured learning,
-                            track progress and recognize
-                            completion with certificates.
-                        </p>
-                    </div>
-
-                </div>
-
-            </section>
-
-            {/* =====================================================
-                COMPARISON
-            ===================================================== */}
-
-            <section className="epic-comparison-section">
-
-                <div className="epic-section-heading">
-                    <span>
-                        COMPARE YOUR OPTIONS
-                    </span>
-
-                    <h2>
-                        Find the right level
-                        <br />
-                        <strong>
-                            for your church.
-                        </strong>
-                    </h2>
-                </div>
-
-                <div className="epic-comparison-table">
-
-                    <div className="epic-comparison-header">
-                        <div>
-                            Features
-                        </div>
-                        <div>
-                            Starter
-                        </div>
-                        <div className="highlight">
-                            Growth
-                        </div>
-                        <div>
-                            Complete
-                        </div>
-                    </div>
-
-                    {[
-                        [
-                            "Church Dashboard",
-                            true,
-                            true,
-                            true,
-                        ],
-                        [
-                            "Member Management",
-                            true,
-                            true,
-                            true,
-                        ],
-                        [
-                            "Attendance",
-                            true,
-                            true,
-                            true,
-                        ],
-                        [
-                            "Church Services",
-                            true,
-                            true,
-                            true,
-                        ],
-                        [
-                            "Visitors",
-                            true,
-                            true,
-                            true,
-                        ],
-                        [
-                            "Giving",
-                            false,
-                            true,
-                            true,
-                        ],
-                        [
-                            "Income & Expenses",
-                            false,
-                            true,
-                            true,
-                        ],
-                        [
-                            "Event Management",
-                            false,
-                            true,
-                            true,
-                        ],
-                        [
-                            "Client Portal",
-                            false,
-                            true,
-                            true,
-                        ],
-                        [
-                            "EPIC Learning",
-                            false,
-                            false,
-                            true,
-                        ],
-                        [
-                            "Certificates",
-                            false,
-                            false,
-                            true,
-                        ],
-                        [
-                            "Website Analytics",
-                            false,
-                            false,
-                            true,
-                        ],
-                    ].map(
-                        (
-                            row,
-                            index
-                        ) => (
-                            <div
-                                className="epic-comparison-row"
-                                key={index}
-                            >
-                                <div>
-                                    {
-                                        row[0]
-                                    }
-                                </div>
-
-                                <div>
-                                    {row[1] ? (
-                                        <span className="comparison-check">
-                                            ✓
-                                        </span>
-                                    ) : (
-                                        <span className="comparison-none">
-                                            —
-                                        </span>
-                                    )}
-                                </div>
-
-                                <div className="highlight">
-                                    {row[2] ? (
-                                        <span className="comparison-check">
-                                            ✓
-                                        </span>
-                                    ) : (
-                                        <span className="comparison-none">
-                                            —
-                                        </span>
-                                    )}
-                                </div>
-
-                                <div>
-                                    {row[3] ? (
-                                        <span className="comparison-check">
-                                            ✓
-                                        </span>
-                                    ) : (
-                                        <span className="comparison-none">
-                                            —
-                                        </span>
-                                    )}
-                                </div>
+                    {/* THREE PILLARS TAB SELECTOR */}
+                    <div className="offer-pillar-tabs" role="tablist">
+                        <button
+                            type="button"
+                            className={`offer-pillar-btn ${category === "saas" ? "is-active" : ""}`}
+                            onClick={() => setCategory("saas")}
+                        >
+                            <span className="pillar-icon">⛪</span>
+                            <div className="pillar-btn-text">
+                                <strong>Church Management SaaS</strong>
+                                <small>Cloud software &amp; operations</small>
                             </div>
-                        )
+                        </button>
+
+                        <button
+                            type="button"
+                            className={`offer-pillar-btn ${category === "courses" ? "is-active" : ""}`}
+                            onClick={() => setCategory("courses")}
+                        >
+                            <span className="pillar-icon">🎓</span>
+                            <div className="pillar-btn-text">
+                                <strong>Digital Discipleship Courses</strong>
+                                <small>EPIC Academy certifications</small>
+                            </div>
+                        </button>
+
+                        <button
+                            type="button"
+                            className={`offer-pillar-btn ${category === "products" ? "is-active" : ""}`}
+                            onClick={() => setCategory("products")}
+                        >
+                            <span className="pillar-icon">📦</span>
+                            <div className="pillar-btn-text">
+                                <strong>Digital Products &amp; Toolkits</strong>
+                                <small>Downloadable media &amp; templates</small>
+                            </div>
+                        </button>
+                    </div>
+
+                    {/* BILLING CYCLE TOGGLE (FOR SAAS ONLY) */}
+                    {category === "saas" && (
+                        <div className="offer-billing-toggle-wrap">
+                            <span className={`toggle-label ${billingCycle === "monthly" ? "active" : ""}`}>
+                                Monthly Billing
+                            </span>
+                            <button
+                                type="button"
+                                className={`offer-toggle-switch ${billingCycle === "yearly" ? "yearly" : ""}`}
+                                onClick={() =>
+                                    setBillingCycle((prev) => (prev === "monthly" ? "yearly" : "monthly"))
+                                }
+                                aria-label="Toggle billing cycle"
+                            >
+                                <span className="toggle-thumb" />
+                            </button>
+                            <span className={`toggle-label ${billingCycle === "yearly" ? "active" : ""}`}>
+                                Annual Billing
+                                <span className="discount-pill">Save 20% &bull; 2 Months Free</span>
+                            </span>
+                        </div>
                     )}
-
                 </div>
-
             </section>
 
-            {/* =====================================================
-                CTA
-            ===================================================== */}
+            {/* MAIN CONTENT AREA */}
+            <main className="offer-content-container">
 
-            <section className="epic-offer-cta">
+                {/* =========================================================
+                    PILLAR 1: SAAS CHURCH MANAGEMENT
+                ========================================================= */}
+                {category === "saas" && (
+                    <section className="offer-section">
+                        <div className="offer-cards-grid">
+                            {SAAS_PLANS.map((plan) => {
+                                const monthlyEquiv = Math.round(plan.yearlyPrice / 12);
 
-                <div className="epic-cta-content">
-
-                    <span>
-                        READY TO TAKE THE NEXT STEP?
-                    </span>
-
-                    <h2>
-                        Give your church
-                        <br />
-                        <strong>
-                            a better digital foundation.
-                        </strong>
-                    </h2>
-
-                    <p>
-                        Choose your EPIC plan and take
-                        the next step toward a more
-                        organized, connected and
-                        digitally empowered church.
-                    </p>
-
-                    <button
-                        type="button"
-                        onClick={() =>
-                            handleSelectPlan(
-                                PLANS.find(
-                                    (plan) =>
-                                        plan.id ===
-                                        selectedPlan
-                                ) || PLANS[1]
-                            )
-                        }
-                    >
-                        Continue to Checkout
-                        <span>
-                            →
-                        </span>
-                    </button>
-
-                    <small>
-                        No complicated setup.
-                        Secure checkout.
-                    </small>
-
-                </div>
-
-            </section>
-
-            {/* =====================================================
-                FAQ
-            ===================================================== */}
-
-            <section className="epic-faq-section">
-
-                <div className="epic-section-heading">
-                    <span>
-                        FREQUENTLY ASKED QUESTIONS
-                    </span>
-
-                    <h2>
-                        Questions?
-                        <br />
-                        <strong>
-                            We've got answers.
-                        </strong>
-                    </h2>
-                </div>
-
-                <div className="epic-faq-list">
-
-                    {faqs.map(
-                        (
-                            faq,
-                            index
-                        ) => {
-
-                            const open =
-                                openFaq ===
-                                index;
-
-                            return (
-                                <div
-                                    key={
-                                        index
-                                    }
-                                    className={`epic-faq-item ${
-                                        open
-                                            ? "open"
-                                            : ""
-                                    }`}
-                                >
-
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            setOpenFaq(
-                                                open
-                                                    ? null
-                                                    : index
-                                            )
-                                        }
+                                return (
+                                    <div
+                                        key={plan.id}
+                                        className={`offer-card ${plan.popular ? "is-featured" : ""}`}
                                     >
-                                        <span>
-                                            {
-                                                faq.question
-                                            }
-                                        </span>
+                                        {plan.badge && (
+                                            <div className="offer-card-badge">
+                                                {plan.badge}
+                                            </div>
+                                        )}
 
-                                        <strong>
-                                            {open
-                                                ? "−"
-                                                : "+"}
-                                        </strong>
-                                    </button>
+                                        <div className="offer-card-top">
+                                            <h3>{plan.name}</h3>
+                                            <p>{plan.description}</p>
+                                        </div>
 
-                                    {open && (
-                                        <div className="epic-faq-answer">
-                                            {
-                                                faq.answer
-                                            }
+                                        <div className="offer-card-price-box">
+                                            <div className="offer-price">
+                                                <span className="offer-price-currency">₱</span>
+                                                <span className="offer-price-amount">
+                                                    {billingCycle === "monthly"
+                                                        ? plan.monthlyPrice.toLocaleString()
+                                                        : monthlyEquiv.toLocaleString()}
+                                                </span>
+                                                <span className="offer-price-period">/ month</span>
+                                            </div>
+
+                                            {billingCycle === "yearly" && (
+                                                <div className="offer-billing-detail">
+                                                    Billed annually at {formatCurrency(plan.yearlyPrice)}/yr
+                                                </div>
+                                            )}
+
+                                            <div className="offer-highlight-pill">
+                                                <Users size={14} />
+                                                <span>{plan.highlightFeature}</span>
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            className={`offer-cta-button ${plan.popular ? "is-primary" : "is-secondary"}`}
+                                            onClick={() => handleSelectSaas(plan)}
+                                        >
+                                            Get Started with {plan.name}
+                                            <ArrowRight size={16} />
+                                        </button>
+
+                                        <div className="offer-card-features-list">
+                                            <div className="features-list-title">Everything Included:</div>
+                                            <ul>
+                                                {plan.features.map((feat, idx) => (
+                                                    <li key={idx}>
+                                                        <Check size={16} className="feature-check-icon" />
+                                                        <span>{feat}</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </section>
+                )}
+
+                {/* =========================================================
+                    PILLAR 2: DIGITAL COURSES & ACADEMY
+                ========================================================= */}
+                {category === "courses" && (
+                    <section className="offer-section">
+                        <div className="offer-cards-grid">
+                            {DIGITAL_COURSES.map((course) => (
+                                <div
+                                    key={course.id}
+                                    className={`offer-card ${course.popular ? "is-featured" : ""}`}
+                                >
+                                    {course.badge && (
+                                        <div className="offer-card-badge">
+                                            {course.badge}
                                         </div>
                                     )}
 
+                                    <div className="offer-card-top">
+                                        <div className="offer-course-category-tag">
+                                            <GraduationCap size={15} />
+                                            <span>EPIC ACADEMY</span>
+                                        </div>
+                                        <h3>{course.name}</h3>
+                                        <p>{course.description}</p>
+                                    </div>
+
+                                    <div className="offer-card-price-box">
+                                        <div className="offer-price">
+                                            <span className="offer-price-currency">₱</span>
+                                            <span className="offer-price-amount">
+                                                {course.price.toLocaleString()}
+                                            </span>
+                                            <span className="offer-price-period">
+                                                {course.billingType === "Annual Access" ? "/ year" : "one-time"}
+                                            </span>
+                                        </div>
+
+                                        <div className="offer-highlight-pill course-pill">
+                                            <Clock size={14} />
+                                            <span>{course.duration}</span>
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        className={`offer-cta-button ${course.popular ? "is-primary" : "is-secondary"}`}
+                                        onClick={() => handleSelectCourse(course)}
+                                    >
+                                        Enroll in Masterclass
+                                        <ArrowRight size={16} />
+                                    </button>
+
+                                    <div className="offer-card-features-list">
+                                        <div className="features-list-title">What You'll Receive:</div>
+                                        <ul>
+                                            {course.features.map((feat, idx) => (
+                                                <li key={idx}>
+                                                    <Check size={16} className="feature-check-icon" />
+                                                    <span>{feat}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+                )}
+
+                {/* =========================================================
+                    PILLAR 3: DIGITAL PRODUCTS & TOOLKITS
+                ========================================================= */}
+                {category === "products" && (
+                    <section className="offer-section">
+                        <div className="offer-cards-grid grid-4-cols">
+                            {DIGITAL_PRODUCTS.map((prod) => (
+                                <div
+                                    key={prod.id}
+                                    className={`offer-card ${prod.popular ? "is-featured" : ""}`}
+                                >
+                                    {prod.badge && (
+                                        <div className="offer-card-badge">
+                                            {prod.badge}
+                                        </div>
+                                    )}
+
+                                    <div className="offer-card-top">
+                                        <div className="offer-course-category-tag product-tag">
+                                            <Download size={14} />
+                                            <span>DIGITAL DOWNLOAD</span>
+                                        </div>
+                                        <h3>{prod.name}</h3>
+                                        <p>{prod.description}</p>
+                                    </div>
+
+                                    <div className="offer-card-price-box">
+                                        <div className="offer-price">
+                                            <span className="offer-price-currency">₱</span>
+                                            <span className="offer-price-amount">
+                                                {prod.price.toLocaleString()}
+                                            </span>
+                                            <span className="offer-price-period">one-time</span>
+                                        </div>
+
+                                        <div className="offer-highlight-pill product-pill">
+                                            <FileText size={14} />
+                                            <span>{prod.fileFormats}</span>
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        className={`offer-cta-button ${prod.popular ? "is-primary" : "is-secondary"}`}
+                                        onClick={() => handleSelectProduct(prod)}
+                                    >
+                                        Get Instant Download
+                                        <ArrowRight size={16} />
+                                    </button>
+
+                                    <div className="offer-card-features-list">
+                                        <div className="features-list-title">Contents &amp; Templates:</div>
+                                        <ul>
+                                            {prod.features.map((feat, idx) => (
+                                                <li key={idx}>
+                                                    <Check size={16} className="feature-check-icon" />
+                                                    <span>{feat}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+                )}
+
+                {/* =========================================================
+                    TRUST GUARANTEE BAR
+                ========================================================= */}
+                <section className="offer-trust-banner">
+                    <div className="trust-item">
+                        <div className="trust-icon-box">
+                            <ShieldCheck size={24} />
+                        </div>
+                        <div>
+                            <strong>256-Bit SSL Encryption</strong>
+                            <p>Bank-grade data security for all transactions and church databases.</p>
+                        </div>
+                    </div>
+
+                    <div className="trust-item">
+                        <div className="trust-icon-box">
+                            <Zap size={24} />
+                        </div>
+                        <div>
+                            <strong>Instant Activation</strong>
+                            <p>Immediate digital asset delivery &amp; real-time church workspace setup.</p>
+                        </div>
+                    </div>
+
+                    <div className="trust-item">
+                        <div className="trust-icon-box">
+                            <QrCode size={24} />
+                        </div>
+                        <div>
+                            <strong>GCash &amp; Maya Verified</strong>
+                            <p>Real-time Philippine mobile payments with zero extra transaction fees.</p>
+                        </div>
+                    </div>
+
+                    <div className="trust-item">
+                        <div className="trust-icon-box">
+                            <Award size={24} />
+                        </div>
+                        <div>
+                            <strong>30-Day Money-Back Guarantee</strong>
+                            <p>Try EPIC completely risk-free with full support from our pastoral team.</p>
+                        </div>
+                    </div>
+                </section>
+
+                {/* =========================================================
+                    FAQ ACCORDION
+                ========================================================= */}
+                <section className="offer-faq-section">
+                    <div className="offer-faq-header">
+                        <div className="offer-eyebrow small">
+                            <HelpCircle size={15} />
+                            <span>FREQUENTLY ASKED QUESTIONS</span>
+                        </div>
+                        <h2>Got Questions? We've Got Answers.</h2>
+                        <p>Everything you need to know about our plans, academy courses, and digital tools.</p>
+                    </div>
+
+                    <div className="offer-faq-list">
+                        {FAQS.map((faq, index) => {
+                            const isOpen = openFaq === index;
+                            return (
+                                <div
+                                    key={index}
+                                    className={`offer-faq-item ${isOpen ? "is-open" : ""}`}
+                                    onClick={() => setOpenFaq(isOpen ? null : index)}
+                                >
+                                    <div className="offer-faq-question">
+                                        <span>{faq.question}</span>
+                                        {isOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                                    </div>
+                                    {isOpen && (
+                                        <div className="offer-faq-answer">
+                                            <p>{faq.answer}</p>
+                                        </div>
+                                    )}
                                 </div>
                             );
-                        }
-                    )}
-
-                </div>
-
-            </section>
-
-            {/* =====================================================
-                FOOTER
-            ===================================================== */}
-
-            <footer className="epic-offer-footer">
-
-                <div className="epic-footer-brand">
-                    <div className="epic-footer-logo">
-                        EPIC
+                        })}
                     </div>
+                </section>
 
-                    <div>
-                        <strong>
-                            EPIC CHURCH
-                            MANAGEMENT SYSTEM
-                        </strong>
+                {/* BOTTOM CALL TO ACTION */}
+                <section className="offer-bottom-cta">
+                    <h2>Need a Custom Solution for Your Church Network?</h2>
+                    <p>
+                        We provide multi-campus enterprise configurations, theological seminary licenses, and personalized ministry consultation.
+                    </p>
+                    <div className="bottom-cta-actions">
+                        <button
+                            type="button"
+                            className="cta-primary-btn"
+                            onClick={() => onNavigate("contact")}
+                        >
+                            Talk to Our Church Solutions Specialist
+                            <ArrowRight size={16} />
+                        </button>
+                        <button
+                            type="button"
+                            className="cta-secondary-btn"
+                            onClick={() => onNavigate("learning")}
+                        >
+                            Explore EPIC Academy
+                        </button>
+                    </div>
+                </section>
 
-                        <span>
-                            Engaging People Into Christ
-                        </span>
+            </main>
+
+            {/* FOOTER */}
+            <footer className="offer-footer">
+                <div className="offer-footer-inner">
+                    <div className="offer-footer-copy">
+                        &copy; 2026 EPIC Church Management Platform &bull; Engaging People Into Christ. All rights reserved.
+                    </div>
+                    <div className="offer-footer-links">
+                        <button type="button" onClick={() => onNavigate("home")}>Home</button>
+                        <button type="button" onClick={() => onNavigate("learning")}>EPIC Academy</button>
+                        <button type="button" onClick={() => onNavigate("giving")}>Giving</button>
+                        <button type="button" onClick={() => onNavigate("contact")}>Contact</button>
+                        <button type="button" onClick={() => onNavigate("client-login")}>Member Portal</button>
                     </div>
                 </div>
-
-                <div className="epic-footer-links">
-
-                    <button
-                        type="button"
-                        onClick={() =>
-                            onNavigate(
-                                "landing"
-                            )
-                        }
-                    >
-                        Home
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={() =>
-                            onNavigate(
-                                "opt-in"
-                            )
-                        }
-                    >
-                        Free Demo
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={() =>
-                            onNavigate(
-                                "contact"
-                            )
-                        }
-                    >
-                        Contact
-                    </button>
-
-                </div>
-
-                <div className="epic-footer-copy">
-                    © {new Date().getFullYear()} EPIC
-                    Church Management System
-                </div>
-
             </footer>
-
         </div>
     );
 };
 
 export default OfferPage;
-

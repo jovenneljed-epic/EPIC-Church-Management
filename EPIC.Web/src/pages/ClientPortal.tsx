@@ -1,3 +1,7 @@
+import ClientRecords from "./ClientRecords";
+import ClientLearning from "./ClientLearning";
+import { ClientSettings } from "./ClientWorkspace";
+import ClientDocuments from "./ClientDocuments";
 
 import React, {
     useEffect,
@@ -738,40 +742,6 @@ const [mobileSidebarOpen, setMobileSidebarOpen] =
     // PLACEHOLDER PAGE
     // =========================================================
 
-    const renderPlaceholder = (
-        title: string,
-        description: string,
-        icon: string
-    ) => (
-
-        <section className="epic-client-page-placeholder">
-
-            <div className="epic-client-placeholder-icon">
-                {icon}
-            </div>
-
-            <h2>
-                {title}
-            </h2>
-
-            <p>
-                {description}
-            </p>
-
-            <button
-                type="button"
-                onClick={() =>
-                    handleNavigate(
-                        "dashboard"
-                    )
-                }
-            >
-                Back to Dashboard
-            </button>
-
-        </section>
-    );
-
     // =========================================================
     // MAIN PORTAL
     // =========================================================
@@ -1154,11 +1124,7 @@ const [mobileSidebarOpen, setMobileSidebarOpen] =
                             "Visitors"
                         ) &&
 
-                        renderPlaceholder(
-                            "Visitors",
-                            "Visitor management will be connected next.",
-                            "◉"
-                        )
+                        <ClientRecords key="visitors" kind="visitors" title="Visitors" canCreate={canCreate("Visitors")} canEdit={canEdit("Visitors")} canDelete={canDelete("Visitors")} />
                     }
 
                     {/* =========================================
@@ -1212,11 +1178,7 @@ const [mobileSidebarOpen, setMobileSidebarOpen] =
                             "Income"
                         ) &&
 
-                        renderPlaceholder(
-                            "Income",
-                            "Income management will be connected next.",
-                            "↑"
-                        )
+                        <ClientRecords key="income" kind="income" title="Income" canCreate={canCreate("Income")} canEdit={canEdit("Income")} canDelete={canDelete("Income")} />
                     }
 
                     {/* =========================================
@@ -1230,11 +1192,7 @@ const [mobileSidebarOpen, setMobileSidebarOpen] =
                             "Expenses"
                         ) &&
 
-                        renderPlaceholder(
-                            "Expenses",
-                            "Expense management will be connected next.",
-                            "↓"
-                        )
+                        <ClientRecords key="expenses" kind="expenses" title="Expenses" canCreate={canCreate("Expenses")} canEdit={canEdit("Expenses")} canDelete={canDelete("Expenses")} />
                     }
 
                     {/* =========================================
@@ -1248,11 +1206,7 @@ const [mobileSidebarOpen, setMobileSidebarOpen] =
                             "Ministries"
                         ) &&
 
-                        renderPlaceholder(
-                            "Ministries",
-                            "Ministry management will be connected next.",
-                            "✦"
-                        )
+                        <ClientRecords key="ministries" kind="ministries" title="Ministries" canCreate={canCreate("Ministries")} canEdit={canEdit("Ministries")} canDelete={canDelete("Ministries")} />
                     }
 
                     {/* =========================================
@@ -1266,11 +1220,7 @@ const [mobileSidebarOpen, setMobileSidebarOpen] =
                             "Events"
                         ) &&
 
-                        renderPlaceholder(
-                            "Events",
-                            "Event management will be connected next.",
-                            "◈"
-                        )
+                        <ClientRecords key="events" kind="events" title="Events" canCreate={canCreate("Events")} canEdit={canEdit("Events")} canDelete={canDelete("Events")} />
                     }
 
                     {/* =========================================
@@ -1284,11 +1234,7 @@ const [mobileSidebarOpen, setMobileSidebarOpen] =
                             "Learning"
                         ) &&
 
-                        renderPlaceholder(
-                            "EPIC Learning",
-                            "Learning and discipleship management will be connected next.",
-                            "▣"
-                        )
+                        <ClientLearning />
                     }
 
                     {/* =========================================
@@ -1302,11 +1248,7 @@ const [mobileSidebarOpen, setMobileSidebarOpen] =
                             "Reports"
                         ) &&
 
-                        renderPlaceholder(
-                            "Reports",
-                            "Client reports will be connected next.",
-                            "▥"
-                        )
+                        <ClientDocuments />
                     }
 
                     {/* =========================================
@@ -1320,11 +1262,7 @@ const [mobileSidebarOpen, setMobileSidebarOpen] =
                             "Settings"
                         ) &&
 
-                        renderPlaceholder(
-                            "Account Settings",
-                            "Client account settings will be connected next.",
-                            "⚙"
-                        )
+                        <ClientSettings canEdit={canEdit("Settings")} />
                     }
 
                 </main>
@@ -1356,4 +1294,5 @@ const [mobileSidebarOpen, setMobileSidebarOpen] =
 };
 
 export default ClientPortal;
+
 

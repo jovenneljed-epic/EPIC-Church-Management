@@ -1,4 +1,4 @@
-﻿
+
 using EPIC.Api.Authorization;
 using EPIC.Api.Data;
 using EPIC.Api.Models;
@@ -44,6 +44,8 @@ namespace EPIC.Api.Controllers
             {
                 "CASH",
                 "GCASH",
+                "MAYA",
+                "PAYMAYA",
                 "BANK TRANSFER",
                 "CHECK",
                 "OTHER"

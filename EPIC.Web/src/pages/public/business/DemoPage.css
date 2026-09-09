@@ -1,0 +1,471 @@
+﻿/* =========================================================
+   DEMO PAGE — Facebook Light Theme
+   ========================================================= */
+
+.epic-demo-page {
+    min-height: 100vh;
+    background-color: #f0f2f5;
+    color: #050505;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.demo-container {
+    width: min(1200px, calc(100% - 48px));
+    margin: 0 auto;
+}
+
+/* =========================================================
+   HERO
+   ========================================================= */
+
+.demo-hero {
+    padding: 70px 0 50px;
+    background: radial-gradient(circle at 50% 0%, rgba(24, 119, 242, 0.08) 0%, transparent 65%), #ffffff;
+    border-bottom: 1px solid #e4e6eb;
+    text-align: center;
+}
+
+.demo-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    background: #e7f3ff;
+    color: #1877f2;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    margin-bottom: 18px;
+}
+
+.demo-hero h1 {
+    font-size: clamp(34px, 5vw, 54px);
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+    color: #050505;
+    max-width: 840px;
+    margin: 0 auto 18px;
+}
+
+.demo-highlight {
+    color: #1877f2;
+}
+
+.demo-hero-desc {
+    max-width: 720px;
+    margin: 0 auto 32px;
+    color: #65676b;
+    font-size: 16.5px;
+    line-height: 1.6;
+}
+
+.demo-hero-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.demo-primary-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 10px;
+    background: #1877f2;
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(24, 119, 242, 0.35);
+    transition: all 0.2s ease;
+}
+
+.demo-primary-btn:hover {
+    background: #166fe5;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(24, 119, 242, 0.45);
+}
+
+.demo-secondary-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #050505;
+    font-size: 15px;
+    font-weight: 700;
+    border: 1px solid #ccd0d5;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.demo-secondary-btn:hover {
+    background: #f0f2f5;
+    color: #1877f2;
+    border-color: #1877f2;
+}
+
+/* =========================================================
+   SIMULATOR SECTION
+   ========================================================= */
+
+.demo-sim-section {
+    padding: 70px 0;
+}
+
+.demo-sim-card {
+    background: #ffffff;
+    border: 1px solid #ccd0d5;
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.1), 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+.demo-sim-tabs {
+    display: flex;
+    background: #f0f2f5;
+    border-bottom: 1px solid #e4e6eb;
+    overflow-x: auto;
+}
+
+.demo-sim-tab {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 22px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #65676b;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.18s ease;
+}
+
+.demo-sim-tab:hover {
+    color: #1877f2;
+    background: rgba(24, 119, 242, 0.04);
+}
+
+.demo-sim-tab.active {
+    color: #1877f2;
+    background: #ffffff;
+    border-bottom-color: #1877f2;
+}
+
+.demo-sim-workspace {
+    padding: 36px;
+    min-height: 400px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* QR SIMULATOR WORKSPACE */
+.demo-qr-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 36px;
+    align-items: center;
+}
+
+.demo-kiosk-box {
+    border: 2px dashed #ccd0d5;
+    border-radius: 16px;
+    padding: 32px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    background: #f0f2f5;
+}
+
+.demo-kiosk-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    background: #1877f2;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 16px rgba(24, 119, 242, 0.35);
+}
+
+.demo-kiosk-btn {
+    padding: 12px 22px;
+    border-radius: 10px;
+    background: #1877f2;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.demo-kiosk-btn:hover {
+    background: #166fe5;
+}
+
+.demo-qr-result {
+    background: #f0f2f5;
+    border: 1px solid #e4e6eb;
+    border-radius: 14px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.demo-qr-badge-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e4e6eb;
+}
+
+.demo-qr-verified {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 8px;
+    background: #e7f3ff;
+    color: #1877f2;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.demo-qr-counter {
+    font-size: 28px;
+    font-weight: 900;
+    color: #1877f2;
+    margin: 4px 0;
+}
+
+/* GIVING SIMULATOR */
+.demo-giving-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 36px;
+}
+
+.demo-receipt-card {
+    background: #ffffff;
+    border: 1px solid #ccd0d5;
+    border-radius: 14px;
+    padding: 24px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.demo-receipt-header {
+    text-align: center;
+    padding-bottom: 12px;
+    border-bottom: 1px dashed #ccd0d5;
+}
+
+.demo-receipt-header h4 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 800;
+    color: #050505;
+}
+
+.demo-receipt-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: #050505;
+}
+
+.demo-receipt-total {
+    display: flex;
+    justify-content: space-between;
+    font-size: 16px;
+    font-weight: 800;
+    color: #1877f2;
+    padding-top: 10px;
+    border-top: 1px solid #e4e6eb;
+}
+
+/* MINISTRY EVALUATION SIMULATOR */
+.demo-rubric-card {
+    background: #f0f2f5;
+    border: 1px solid #e4e6eb;
+    border-radius: 14px;
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.demo-rubric-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.demo-rubric-score {
+    font-size: 24px;
+    font-weight: 900;
+    color: #1877f2;
+}
+
+/* ACADEMY VIEWER */
+.demo-academy-card {
+    background: #f0f2f5;
+    border: 1px solid #e4e6eb;
+    border-radius: 14px;
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.demo-academy-bar-track {
+    width: 100%;
+    height: 10px;
+    border-radius: 50px;
+    background: #e4e6eb;
+    overflow: hidden;
+}
+
+.demo-academy-bar-fill {
+    height: 100%;
+    border-radius: 50px;
+    background: #31a24c;
+    transition: width 0.4s ease;
+}
+
+/* =========================================================
+   FORM SECTION
+   ========================================================= */
+
+.demo-form-section {
+    padding: 70px 0 90px;
+    background: #ffffff;
+    border-top: 1px solid #e4e6eb;
+}
+
+.demo-form-card {
+    max-width: 780px;
+    margin: 0 auto;
+    background: #f0f2f5;
+    border: 1px solid #e4e6eb;
+    border-radius: 16px;
+    padding: 36px;
+}
+
+.demo-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+}
+
+.demo-field-full {
+    grid-column: 1 / -1;
+}
+
+.demo-form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.demo-form-field label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #050505;
+}
+
+.demo-form-field label span {
+    color: #fa383e;
+}
+
+.demo-form-field input,
+.demo-form-field select,
+.demo-form-field textarea {
+    width: 100%;
+    padding: 11px 14px;
+    border: 1px solid #ccd0d5;
+    border-radius: 8px;
+    background: #ffffff;
+    font-size: 14px;
+    color: #050505;
+    outline: none;
+    transition: all 0.18s ease;
+    box-sizing: border-box;
+}
+
+.demo-form-field input:focus,
+.demo-form-field select:focus,
+.demo-form-field textarea:focus {
+    border-color: #1877f2;
+    box-shadow: 0 0 0 3px rgba(24, 119, 242, 0.2);
+}
+
+.demo-form-error {
+    grid-column: 1 / -1;
+    padding: 12px 16px;
+    border-radius: 8px;
+    background: #ffebe8;
+    border: 1px solid #e4a199;
+    color: #c00;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.demo-form-success {
+    text-align: center;
+    padding: 40px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.demo-success-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: #e7f3ff;
+    color: #1877f2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.demo-success-ref {
+    display: inline-block;
+    padding: 6px 14px;
+    border-radius: 8px;
+    background: #e7f3ff;
+    color: #1877f2;
+    font-weight: 800;
+    font-size: 14px;
+    margin: 8px 0;
+}
+
+@media (max-width: 800px) {
+    .demo-qr-grid,
+    .demo-giving-grid,
+    .demo-form-grid {
+        grid-template-columns: 1fr;
+    }
+}

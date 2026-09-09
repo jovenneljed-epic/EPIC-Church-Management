@@ -1,0 +1,474 @@
+﻿/* =========================================================
+   PLATFORM PAGE â€” Facebook Light Theme
+   ========================================================= */
+
+.epic-platform-page {
+    min-height: 100vh;
+    background-color: #f0f2f5;
+    color: #050505;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.platform-container {
+    width: min(1280px, calc(100% - 48px));
+    margin: 0 auto;
+}
+
+/* =========================================================
+   HERO
+   ========================================================= */
+
+.platform-hero {
+    padding: 70px 0 60px;
+    background: radial-gradient(circle at 50% 0%, rgba(24, 119, 242, 0.08) 0%, transparent 65%), #ffffff;
+    border-bottom: 1px solid #e4e6eb;
+    text-align: center;
+}
+
+.platform-hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    background: #e7f3ff;
+    color: #1877f2;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    margin-bottom: 20px;
+}
+
+.platform-hero h1 {
+    font-size: clamp(34px, 5vw, 54px);
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+    color: #050505;
+    max-width: 880px;
+    margin: 0 auto 20px;
+}
+
+.platform-highlight {
+    color: #1877f2;
+}
+
+.platform-hero-desc {
+    max-width: 740px;
+    margin: 0 auto 32px;
+    color: #65676b;
+    font-size: 16.5px;
+    line-height: 1.6;
+}
+
+.platform-hero-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 48px;
+}
+
+.platform-primary-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 10px;
+    background: #1877f2;
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(24, 119, 242, 0.35);
+    transition: all 0.2s ease;
+}
+
+.platform-primary-btn:hover {
+    background: #166fe5;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(24, 119, 242, 0.45);
+}
+
+.platform-secondary-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #050505;
+    font-size: 15px;
+    font-weight: 700;
+    border: 1px solid #ccd0d5;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.platform-secondary-btn:hover {
+    background: #f0f2f5;
+    color: #1877f2;
+    border-color: #1877f2;
+}
+
+/* Telemetry Strip */
+.platform-telemetry-strip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 32px;
+    padding: 18px 28px;
+    border-radius: 14px;
+    background: #f0f2f5;
+    border: 1px solid #e4e6eb;
+    max-width: 860px;
+    margin: 0 auto;
+    flex-wrap: wrap;
+}
+
+.platform-telemetry-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.platform-telemetry-val {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 18px;
+    font-weight: 800;
+    color: #050505;
+}
+
+.platform-dot-active {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #31a24c;
+    box-shadow: 0 0 0 3px rgba(49, 162, 76, 0.2);
+}
+
+.platform-telemetry-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #65676b;
+    margin-top: 2px;
+}
+
+.platform-telemetry-sep {
+    width: 1px;
+    height: 30px;
+    background: #ccd0d5;
+}
+
+/* =========================================================
+   SECTIONS
+   ========================================================= */
+
+.platform-section {
+    padding: 80px 0;
+}
+
+.platform-section.light {
+    background: #ffffff;
+    border-top: 1px solid #e4e6eb;
+    border-bottom: 1px solid #e4e6eb;
+}
+
+.platform-section-header {
+    text-align: center;
+    max-width: 740px;
+    margin: 0 auto 48px;
+}
+
+.platform-subhead {
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #1877f2;
+}
+
+.platform-section-header h2 {
+    font-size: clamp(28px, 4vw, 38px);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: #050505;
+    margin: 10px 0 14px;
+}
+
+.platform-section-header p {
+    font-size: 16px;
+    color: #65676b;
+    line-height: 1.6;
+}
+
+/* =========================================================
+   ARCHITECTURAL PILLARS GRID
+   ========================================================= */
+
+.platform-pillars-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 24px;
+}
+
+.platform-pillar-card {
+    background: #ffffff;
+    border: 1px solid #e4e6eb;
+    border-radius: 14px;
+    padding: 28px 24px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-direction: column;
+    transition: all 0.22s ease;
+}
+
+.platform-pillar-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
+    border-color: #1877f2;
+}
+
+.platform-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+}
+
+.platform-card-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: #e7f3ff;
+    color: #1877f2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.platform-pillar-card:hover .platform-card-icon {
+    background: #1877f2;
+    color: #ffffff;
+}
+
+.platform-card-badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 12px;
+    background: #f0f2f5;
+    color: #65676b;
+}
+
+.platform-pillar-card h3 {
+    font-size: 17px;
+    font-weight: 800;
+    color: #050505;
+    margin: 0 0 10px;
+    line-height: 1.3;
+}
+
+.platform-pillar-card p {
+    font-size: 13.5px;
+    color: #65676b;
+    line-height: 1.55;
+    margin: 0 0 18px;
+    flex: 1;
+}
+
+.platform-card-specs {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    border-top: 1px solid #f0f2f5;
+    padding-top: 14px;
+}
+
+.platform-card-specs li {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 12.5px;
+    color: #050505;
+    line-height: 1.4;
+}
+
+.platform-check {
+    color: #1877f2;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+/* =========================================================
+   STACK VISUALIZATION
+   ========================================================= */
+
+.platform-stack-card {
+    background: #ffffff;
+    border: 1px solid #ccd0d5;
+    border-radius: 16px;
+    padding: 32px;
+    box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.platform-tier {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: 20px;
+    align-items: center;
+    padding: 16px 20px;
+    border-radius: 12px;
+    background: #f0f2f5;
+    border: 1px solid #e4e6eb;
+    transition: all 0.2s ease;
+}
+
+.platform-tier:hover {
+    background: #e7f3ff;
+    border-color: rgba(24, 119, 242, 0.4);
+}
+
+.platform-tier-label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.platform-tier-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #1877f2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e4e6eb;
+    flex-shrink: 0;
+}
+
+.platform-tier-text strong {
+    display: block;
+    font-size: 13.5px;
+    font-weight: 800;
+    color: #050505;
+}
+
+.platform-tier-text span {
+    font-size: 11.5px;
+    color: #65676b;
+}
+
+.platform-tier-chips {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.platform-chip {
+    padding: 5px 12px;
+    border-radius: 8px;
+    background: #ffffff;
+    border: 1px solid #ccd0d5;
+    font-size: 12px;
+    font-weight: 700;
+    color: #050505;
+}
+
+/* Security Callout */
+.platform-security-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 20px;
+    margin-top: 40px;
+}
+
+.platform-sec-box {
+    background: #f0f2f5;
+    border: 1px solid #e4e6eb;
+    border-radius: 12px;
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.platform-sec-box h4 {
+    font-size: 15px;
+    font-weight: 800;
+    color: #050505;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.platform-sec-box p {
+    font-size: 13px;
+    color: #65676b;
+    line-height: 1.5;
+    margin: 0;
+}
+
+/* =========================================================
+   BOTTOM CTA
+   ========================================================= */
+
+.platform-cta-section {
+    padding: 70px 0;
+    background: #f0f2f5;
+    text-align: center;
+}
+
+.platform-cta-section h2 {
+    font-size: clamp(26px, 3.5vw, 36px);
+    font-weight: 800;
+    color: #050505;
+    margin: 0 0 12px;
+}
+
+.platform-cta-section p {
+    font-size: 16px;
+    color: #65676b;
+    max-width: 600px;
+    margin: 0 auto 28px;
+}
+
+.platform-cta-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 900px) {
+    .platform-tier {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 600px) {
+    .platform-telemetry-strip {
+        gap: 16px;
+    }
+    .platform-telemetry-sep {
+        display: none;
+    }
+}

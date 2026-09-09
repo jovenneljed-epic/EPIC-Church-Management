@@ -9,6 +9,7 @@ namespace EPIC.Api.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
+    [EPIC.Api.Authorization.InternalAccountOnly]
     public class IncomeController : ControllerBase
     {
         private readonly ApplicationDbContext _context;

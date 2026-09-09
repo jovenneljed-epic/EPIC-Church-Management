@@ -514,6 +514,58 @@ namespace EPIC.Api.Migrations
                     b.ToTable("ChurchSettings");
                 });
 
+            modelBuilder.Entity("EPIC.Api.Models.ClientCourseEnrollment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ClientMemberId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("CourseId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("EnrolledAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CourseId");
+
+                    b.HasIndex("ClientMemberId", "CourseId")
+                        .IsUnique();
+
+                    b.ToTable("ClientCourseEnrollments");
+                });
+
+            modelBuilder.Entity("EPIC.Api.Models.ClientLessonCompletion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ClientCourseEnrollmentId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("LessonId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClientCourseEnrollmentId", "LessonId")
+                        .IsUnique();
+
+                    b.ToTable("ClientLessonCompletions");
+                });
+
             modelBuilder.Entity("EPIC.Api.Models.ClientMember", b =>
                 {
                     b.Property<int>("ClientMemberId")
@@ -3311,6 +3363,36 @@ namespace EPIC.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Customer");
+                });
+
+            modelBuilder.Entity("EPIC.Api.Models.ClientCourseEnrollment", b =>
+                {
+                    b.HasOne("EPIC.Api.Models.ClientMember", "ClientMember")
+                        .WithMany()
+                        .HasForeignKey("ClientMemberId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("EPIC.Api.Models.Course", "Course")
+                        .WithMany()
+                        .HasForeignKey("CourseId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ClientMember");
+
+                    b.Navigation("Course");
+                });
+
+            modelBuilder.Entity("EPIC.Api.Models.ClientLessonCompletion", b =>
+                {
+                    b.HasOne("EPIC.Api.Models.ClientCourseEnrollment", "ClientCourseEnrollment")
+                        .WithMany()
+                        .HasForeignKey("ClientCourseEnrollmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ClientCourseEnrollment");
                 });
 
             modelBuilder.Entity("EPIC.Api.Models.ClientMember", b =>

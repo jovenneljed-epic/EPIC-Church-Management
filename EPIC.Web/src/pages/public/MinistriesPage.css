@@ -1,891 +1,915 @@
-﻿/* =========================================================
-   EPIC PUBLIC — MINISTRIES PAGE
+/* =========================================================
+   EPIC PUBLIC — MINISTRIES PAGE (Facebook Light Theme Unison)
    ========================================================= */
 
 .epic-public-ministries {
     width: 100%;
     min-height: 100vh;
-    background: #ffffff;
-    color: #172033;
+    background: #f0f2f5;
+    color: #050505;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     overflow-x: hidden;
 }
 
-/* =========================================================
-   CONTAINER
-   ========================================================= */
-
 .ministries-section-container {
-    width: min(1180px, calc(100% - 40px));
+    width: min(1200px, calc(100% - 40px));
     margin: 0 auto;
 }
 
 /* =========================================================
-   HERO
+   HERO SECTION
    ========================================================= */
 
 .ministries-hero {
     position: relative;
-    min-height: 500px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-
-    background:
-        linear-gradient(
-            135deg,
-            #10213f 0%,
-            #173967 48%,
-            #1d6576 100%
-        );
-}
-
-.ministries-hero::before {
-    content: "";
-    position: absolute;
-    width: 560px;
-    height: 560px;
-    right: -220px;
-    top: -230px;
-    border-radius: 50%;
-    border: 1px solid rgba(255, 255, 255, 0.13);
-}
-
-.ministries-hero::after {
-    content: "";
-    position: absolute;
-    width: 400px;
-    height: 400px;
-    left: -210px;
-    bottom: -240px;
-    border-radius: 50%;
-    border: 1px solid rgba(255, 255, 255, 0.10);
-}
-
-.ministries-hero-overlay {
-    position: absolute;
-    inset: 0;
-
-    background:
-        radial-gradient(
-            circle at 70% 30%,
-            rgba(255, 255, 255, 0.11),
-            transparent 34%
-        );
+    background: #ffffff;
+    border-bottom: 1px solid #e4e6eb;
+    padding: 60px 0 50px;
+    text-align: center;
 }
 
 .ministries-hero-content {
-    position: relative;
-    z-index: 2;
-
-    width: min(900px, calc(100% - 40px));
+    max-width: 800px;
     margin: 0 auto;
-
-    text-align: center;
-    color: #ffffff;
 }
 
 .ministries-eyebrow {
-    display: inline-block;
-    margin-bottom: 20px;
-
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     font-size: 12px;
-    font-weight: 800;
-    letter-spacing: 2.5px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
     text-transform: uppercase;
-
-    color: #cceff3;
+    color: #1877f2;
+    background: #e7f3ff;
+    padding: 6px 14px;
+    border-radius: 20px;
+    margin-bottom: 16px;
 }
 
 .ministries-hero h1 {
-    margin: 0 auto 22px;
-
-    max-width: 850px;
-
-    font-size: clamp(42px, 6vw, 70px);
-    line-height: 1.05;
-    letter-spacing: -2px;
+    font-size: clamp(32px, 5vw, 48px);
     font-weight: 800;
+    line-height: 1.15;
+    color: #050505;
+    margin: 0 0 16px;
+    letter-spacing: -0.8px;
 }
 
 .ministries-hero h1 span {
-    display: block;
-    color: #8edce3;
+    color: #1877f2;
 }
 
 .ministries-hero p {
-    max-width: 720px;
-    margin: 0 auto;
-
-    font-size: 18px;
-    line-height: 1.8;
-
-    color: rgba(255, 255, 255, 0.84);
-}
-
-/* =========================================================
-   SECTION HEADING
-   ========================================================= */
-
-.ministries-section-heading {
-    max-width: 720px;
-    margin: 0 auto 55px;
-
-    text-align: center;
-}
-
-.ministries-section-label {
-    display: inline-block;
-    margin-bottom: 14px;
-
-    font-size: 12px;
-    font-weight: 800;
-    letter-spacing: 2.5px;
-    text-transform: uppercase;
-
-    color: #27778b;
-}
-
-.ministries-section-heading h2 {
-    margin: 0 0 18px;
-
-    font-size: clamp(36px, 5vw, 54px);
-    line-height: 1.08;
-    letter-spacing: -1.5px;
-
-    color: #14213d;
-}
-
-.ministries-section-heading p {
-    margin: 0;
-
     font-size: 16px;
-    line-height: 1.75;
-
-    color: #687588;
+    line-height: 1.6;
+    color: #65676b;
+    margin: 0 auto 28px;
+    max-width: 680px;
 }
 
-/* =========================================================
-   INTRODUCTION
-   ========================================================= */
-
-.ministries-introduction {
-    padding: 100px 0;
-
-    background: #ffffff;
-}
-
-.ministries-intro-grid {
-    display: grid;
-    grid-template-columns: 1.15fr 0.85fr;
-
-    gap: 70px;
-    align-items: center;
-}
-
-.ministries-intro-content .ministries-section-label {
-    margin-bottom: 15px;
-}
-
-.ministries-intro-content h2 {
-    margin: 0 0 25px;
-
-    font-size: clamp(36px, 5vw, 54px);
-    line-height: 1.08;
-    letter-spacing: -1.5px;
-
-    color: #14213d;
-}
-
-.ministries-intro-content h2 span {
-    color: #2b8494;
-}
-
-.ministries-intro-content p {
-    margin: 0 0 18px;
-
-    font-size: 16px;
-    line-height: 1.8;
-
-    color: #647084;
-}
-
-.ministries-intro-content strong {
-    color: #1c6275;
-}
-
-/* =========================================================
-   INTRO CARD
-   ========================================================= */
-
-.ministries-intro-card {
-    position: relative;
-
-    padding: 45px 35px;
-
-    border-radius: 24px;
-
-    background:
-        linear-gradient(
-            145deg,
-            #eff8fb,
-            #f7fbfc
-        );
-
-    border: 1px solid #dceef2;
-
-    box-shadow:
-        0 20px 55px rgba(22, 62, 80, 0.08);
-
-    text-align: center;
-}
-
-.ministries-intro-icon {
-    width: 78px;
-    height: 78px;
-
-    margin: 0 auto 22px;
-
+.ministries-hero-actions {
     display: flex;
     align-items: center;
     justify-content: center;
-
-    border-radius: 22px;
-
-    background: #1e6578;
-
-    color: #ffffff;
-
-    font-size: 34px;
-
-    box-shadow:
-        0 12px 28px rgba(30, 101, 120, 0.20);
-}
-
-.ministries-intro-card h3 {
-    margin: 0 0 12px;
-
-    font-size: 25px;
-
-    color: #172a46;
-}
-
-.ministries-intro-card p {
-    margin: 0;
-
-    font-size: 15px;
-    line-height: 1.75;
-
-    color: #657286;
-}
-
-.ministries-intro-divider {
-    width: 70px;
-    height: 3px;
-
-    margin: 28px auto;
-
-    border-radius: 20px;
-
-    background: #2c8797;
-}
-
-/* =========================================================
-   MINISTRY GRID
-   ========================================================= */
-
-.ministries-list {
-    padding: 100px 0;
-
-    background: #f6f9fb;
-}
-
-.ministries-grid {
-    display: grid;
-
-    grid-template-columns:
-        repeat(3, minmax(0, 1fr));
-
-    gap: 24px;
-}
-
-/* =========================================================
-   MINISTRY CARD
-   ========================================================= */
-
-.ministry-card {
-    position: relative;
-
-    display: flex;
-    flex-direction: column;
-
-    min-height: 330px;
-
-    padding: 32px 28px;
-
-    border-radius: 20px;
-
-    background: #ffffff;
-
-    border: 1px solid #e4ebef;
-
-    box-shadow:
-        0 12px 35px rgba(23, 42, 70, 0.05);
-
-    overflow: hidden;
-
-    transition:
-        transform 0.25s ease,
-        box-shadow 0.25s ease,
-        border-color 0.25s ease;
-}
-
-.ministry-card::before {
-    content: "";
-
-    position: absolute;
-
-    left: 0;
-    top: 0;
-
-    width: 100%;
-    height: 4px;
-
-    background:
-        linear-gradient(
-            90deg,
-            #1b5c72,
-            #35a0aa
-        );
-
-    transform: scaleX(0);
-    transform-origin: left;
-
-    transition:
-        transform 0.25s ease;
-}
-
-.ministry-card:hover {
-    transform: translateY(-7px);
-
-    border-color: #d3e7eb;
-
-    box-shadow:
-        0 22px 50px rgba(23, 42, 70, 0.10);
-}
-
-.ministry-card:hover::before {
-    transform: scaleX(1);
-}
-
-/* =========================================================
-   MINISTRY ICON
-   ========================================================= */
-
-.ministry-icon {
-    width: 60px;
-    height: 60px;
-
-    margin-bottom: 24px;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    border-radius: 17px;
-
-    background: #eaf5f7;
-
-    color: #26788a;
-
-    font-size: 26px;
-
-    transition:
-        background 0.25s ease,
-        transform 0.25s ease;
-}
-
-.ministry-card:hover .ministry-icon {
-    background: #dff1f4;
-
-    transform: scale(1.05);
-}
-
-/* =========================================================
-   CARD CONTENT
-   ========================================================= */
-
-.ministry-card h3 {
-    margin: 0 0 12px;
-
-    font-size: 22px;
-    line-height: 1.25;
-
-    color: #172a46;
-}
-
-.ministry-card p {
-    margin: 0 0 22px;
-
-    font-size: 14px;
-    line-height: 1.75;
-
-    color: #6c798b;
-}
-
-.ministry-card-footer {
-    margin-top: auto;
-
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-
-    padding-top: 20px;
-
-    border-top: 1px solid #edf1f3;
-}
-
-.ministry-card-category {
-    font-size: 11px;
-    font-weight: 800;
-
-    letter-spacing: 1.4px;
-    text-transform: uppercase;
-
-    color: #27778b;
-}
-
-.ministry-card-arrow {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-
-    width: 34px;
-    height: 34px;
-
-    border-radius: 50%;
-
-    background: #eef7f8;
-
-    color: #26788a;
-
-    font-size: 17px;
-
-    transition:
-        transform 0.2s ease,
-        background 0.2s ease;
-}
-
-.ministry-card:hover .ministry-card-arrow {
-    transform: translateX(4px);
-
-    background: #dff1f4;
-}
-
-/* =========================================================
-   FEATURED MINISTRY
-   ========================================================= */
-
-.ministry-card.featured {
-    background:
-        linear-gradient(
-            145deg,
-            #163a60,
-            #1d6576
-        );
-
-    border-color: transparent;
-
-    box-shadow:
-        0 20px 45px rgba(21, 62, 85, 0.16);
-}
-
-.ministry-card.featured::before {
-    background: #9be0e6;
-}
-
-.ministry-card.featured .ministry-icon {
-    background: rgba(255, 255, 255, 0.12);
-
-    color: #ffffff;
-}
-
-.ministry-card.featured h3 {
-    color: #ffffff;
-}
-
-.ministry-card.featured p {
-    color: rgba(255, 255, 255, 0.82);
-}
-
-.ministry-card.featured .ministry-card-footer {
-    border-top-color: rgba(255, 255, 255, 0.15);
-}
-
-.ministry-card.featured .ministry-card-category {
-    color: #bdebf0;
-}
-
-.ministry-card.featured .ministry-card-arrow {
-    background: rgba(255, 255, 255, 0.12);
-
-    color: #ffffff;
-}
-
-/* =========================================================
-   HOW TO GET INVOLVED
-   ========================================================= */
-
-.ministries-involvement {
-    padding: 100px 0;
-
-    background: #ffffff;
-}
-
-.ministries-involvement-grid {
-    display: grid;
-
-    grid-template-columns:
-        repeat(4, minmax(0, 1fr));
-
-    gap: 20px;
-}
-
-.ministry-involvement-card {
-    padding: 30px 24px;
-
-    border-radius: 18px;
-
-    background: #ffffff;
-
-    border: 1px solid #e4ebef;
-
-    text-align: center;
-
-    transition:
-        transform 0.25s ease,
-        box-shadow 0.25s ease;
-}
-
-.ministry-involvement-card:hover {
-    transform: translateY(-5px);
-
-    box-shadow:
-        0 15px 35px rgba(23, 42, 70, 0.08);
-}
-
-.ministry-involvement-number {
-    display: block;
-
-    margin-bottom: 15px;
-
-    font-size: 12px;
-    font-weight: 800;
-
-    letter-spacing: 2px;
-
-    color: #2c8797;
-}
-
-.ministry-involvement-card h3 {
-    margin: 0 0 10px;
-
-    font-size: 19px;
-
-    color: #1b2d46;
-}
-
-.ministry-involvement-card p {
-    margin: 0;
-
-    font-size: 14px;
-    line-height: 1.65;
-
-    color: #718095;
-}
-
-/* =========================================================
-   CTA
-   ========================================================= */
-
-.ministries-cta {
-    position: relative;
-
-    padding: 100px 20px;
-
-    overflow: hidden;
-
-    background:
-        linear-gradient(
-            135deg,
-            #122b4b,
-            #174f66,
-            #1e7580
-        );
-}
-
-.ministries-cta::before {
-    content: "";
-
-    position: absolute;
-
-    width: 500px;
-    height: 500px;
-
-    right: -250px;
-    top: -250px;
-
-    border-radius: 50%;
-
-    border:
-        1px solid rgba(255, 255, 255, 0.12);
-}
-
-.ministries-cta::after {
-    content: "";
-
-    position: absolute;
-
-    width: 350px;
-    height: 350px;
-
-    left: -180px;
-    bottom: -220px;
-
-    border-radius: 50%;
-
-    border:
-        1px solid rgba(255, 255, 255, 0.10);
-}
-
-.ministries-cta-overlay {
-    position: absolute;
-
-    inset: 0;
-
-    background:
-        radial-gradient(
-            circle at center,
-            rgba(255, 255, 255, 0.08),
-            transparent 55%
-        );
-}
-
-.ministries-cta-content {
-    position: relative;
-
-    z-index: 2;
-
-    max-width: 800px;
-
-    margin: 0 auto;
-
-    text-align: center;
-
-    color: #ffffff;
-}
-
-.ministries-cta .ministries-section-label {
-    color: #bdebf0;
-}
-
-.ministries-cta h2 {
-    margin: 0 0 20px;
-
-    font-size: clamp(38px, 5vw, 58px);
-
-    line-height: 1.08;
-
-    letter-spacing: -1.5px;
-}
-
-.ministries-cta h2 span {
-    display: block;
-
-    color: #9be0e6;
-}
-
-.ministries-cta p {
-    max-width: 660px;
-
-    margin: 0 auto 35px;
-
-    font-size: 17px;
-
-    line-height: 1.8;
-
-    color:
-        rgba(255, 255, 255, 0.82);
-}
-
-/* =========================================================
-   BUTTONS
-   ========================================================= */
-
-.ministries-cta-actions {
-    display: flex;
-
-    justify-content: center;
-
-    gap: 14px;
-
+    gap: 12px;
     flex-wrap: wrap;
 }
 
-.ministries-primary-button,
-.ministries-secondary-button {
-    min-width: 160px;
-
-    padding: 14px 24px;
-
-    border-radius: 10px;
-
-    font-family: inherit;
-
-    font-size: 14px;
-
-    font-weight: 700;
-
-    cursor: pointer;
-
-    transition:
-        transform 0.2s ease,
-        box-shadow 0.2s ease,
-        background 0.2s ease;
-}
-
 .ministries-primary-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: #1877f2;
+    color: #ffffff;
     border: none;
+    border-radius: 8px;
+    padding: 11px 22px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.1s ease;
+    box-shadow: 0 2px 6px rgba(24, 119, 242, 0.25);
+}
 
-    background: #ffffff;
+.ministries-primary-button:hover {
+    background: #166fe5;
+}
 
-    color: #16445d;
-
-    box-shadow:
-        0 10px 25px rgba(0, 0, 0, 0.15);
+.ministries-primary-button:active {
+    transform: scale(0.98);
 }
 
 .ministries-secondary-button {
-    border:
-        1px solid rgba(255, 255, 255, 0.45);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: #e4e6eb;
+    color: #050505;
+    border: none;
+    border-radius: 8px;
+    padding: 11px 22px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
 
-    background: transparent;
+.ministries-secondary-button:hover {
+    background: #d8dadf;
+}
 
+/* =========================================================
+   SYSTEM STAT STRIP
+   ========================================================= */
+
+.ministries-stat-strip {
+    background: #ffffff;
+    border-bottom: 1px solid #e4e6eb;
+    padding: 24px 0;
+}
+
+.ministries-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+.ministries-stat-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 20px;
+    border-radius: 12px;
+    background: #f7f8fa;
+    border: 1px solid #e4e6eb;
+}
+
+.ministries-stat-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 10px;
+    background: #e7f3ff;
+    color: #1877f2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.ministries-stat-card strong {
+    display: block;
+    font-size: 16px;
+    color: #050505;
+    margin-bottom: 2px;
+}
+
+.ministries-stat-card p {
+    margin: 0;
+    font-size: 13px;
+    color: #65676b;
+}
+
+/* =========================================================
+   LIVE DATABASE CONNECTION BAR
+   ========================================================= */
+
+.ministries-db-status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    background: #ffffff;
+    border: 1px solid #e4e6eb;
+    border-radius: 12px;
+    padding: 12px 20px;
+    margin-bottom: 28px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.ministries-db-badge-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.ministries-live-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e7e34;
+    background: #eafaf1;
+    border: 1px solid #b7eb8f;
+    padding: 6px 14px;
+    border-radius: 20px;
+}
+
+.ministries-pulse-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #31a24c;
+    box-shadow: 0 0 0 0 rgba(49, 162, 76, 0.7);
+    animation: minPulse 2s infinite;
+}
+
+@keyframes minPulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(49, 162, 76, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 6px rgba(49, 162, 76, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(49, 162, 76, 0);
+    }
+}
+
+.ministries-count-badge {
+    font-size: 13px;
+    color: #65676b;
+    font-weight: 500;
+}
+
+.ministries-count-badge strong {
+    color: #050505;
+}
+
+.ministries-refresh-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 14px;
+    border-radius: 8px;
+    border: 1px solid #ccd0d5;
+    background: #f0f2f5;
+    color: #050505;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.ministries-refresh-btn:hover:not(:disabled) {
+    background: #e4e6eb;
+    border-color: #bec3c9;
+}
+
+.ministries-refresh-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.spin-icon {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* =========================================================
+   FILTER & SEARCH CONTROLS
+   ========================================================= */
+
+.ministries-browser-section {
+    padding: 40px 0 80px;
+}
+
+.ministries-filter-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+}
+
+.ministries-category-pills {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.ministries-pill {
+    border: 1px solid #e4e6eb;
+    background: #ffffff;
+    color: #65676b;
+    border-radius: 20px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.ministries-pill:hover {
+    background: #f0f2f5;
+    color: #050505;
+}
+
+.ministries-pill.active {
+    background: #1877f2;
     color: #ffffff;
+    border-color: #1877f2;
+    box-shadow: 0 2px 6px rgba(24, 119, 242, 0.25);
 }
 
-.ministries-primary-button:hover,
-.ministries-secondary-button:hover {
-    transform: translateY(-2px);
+.ministries-search-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-width: 320px;
 }
 
-.ministries-secondary-button:hover {
-    background:
-        rgba(255, 255, 255, 0.10);
+.ministries-search-icon {
+    position: absolute;
+    left: 14px;
+    color: #8a8d91;
+    pointer-events: none;
 }
 
-/* =========================================================
-   RESPONSIVE — TABLET
-   ========================================================= */
-
-@media (max-width: 1000px) {
-
-    .ministries-grid {
-        grid-template-columns:
-            repeat(2, minmax(0, 1fr));
-    }
-
-    .ministries-involvement-grid {
-        grid-template-columns:
-            repeat(2, minmax(0, 1fr));
-    }
-
-    .ministries-intro-grid {
-        gap: 45px;
-    }
+.ministries-search-box input {
+    width: 100%;
+    padding: 10px 38px;
+    border-radius: 20px;
+    border: 1px solid #ccd0d5;
+    background: #ffffff;
+    font-size: 14px;
+    color: #050505;
+    transition: border-color 0.2s ease;
 }
 
-/* =========================================================
-   RESPONSIVE — MOBILE
-   ========================================================= */
+.ministries-search-box input:focus {
+    outline: none;
+    border-color: #1877f2;
+    box-shadow: 0 0 0 2px rgba(24, 119, 242, 0.15);
+}
 
-@media (max-width: 800px) {
-
-    .ministries-intro-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .ministries-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .ministries-involvement-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .ministries-hero {
-        min-height: 450px;
-    }
-
-    .ministries-introduction,
-    .ministries-list,
-    .ministries-involvement,
-    .ministries-cta {
-        padding-top: 75px;
-        padding-bottom: 75px;
-    }
+.ministries-clear-search {
+    position: absolute;
+    right: 12px;
+    background: none;
+    border: none;
+    color: #8a8d91;
+    font-size: 14px;
+    cursor: pointer;
 }
 
 /* =========================================================
-   SMALL MOBILE
+   MINISTRY CARDS GRID
    ========================================================= */
 
-@media (max-width: 600px) {
+.ministries-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 24px;
+}
 
-    .ministries-section-container {
-        width:
-            min(100% - 28px, 1180px);
+.ministry-fb-card {
+    background: #ffffff;
+    border: 1px solid #e4e6eb;
+    border-radius: 14px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.ministry-fb-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    border-color: #ccd0d5;
+}
+
+/* Card Top Tags */
+.ministry-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.ministry-cat-badge {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #1877f2;
+    background: #e7f3ff;
+    padding: 4px 10px;
+    border-radius: 6px;
+}
+
+.ministry-tier-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 6px;
+    text-transform: uppercase;
+}
+
+.ministry-tier-badge.exemplary {
+    background: #fef7e0;
+    color: #b06000;
+    border: 1px solid #ffe58f;
+}
+
+.ministry-tier-badge.excellent {
+    background: #eafaf1;
+    color: #1e7e34;
+    border: 1px solid #b7eb8f;
+}
+
+.ministry-tier-badge.distinguished {
+    background: #e7f3ff;
+    color: #1877f2;
+    border: 1px solid #adc6ff;
+}
+
+.ministry-tier-badge.growing {
+    background: #f0f2f5;
+    color: #65676b;
+    border: 1px solid #e4e6eb;
+}
+
+/* Card Main Details */
+.ministry-card-main h3 {
+    font-size: 19px;
+    font-weight: 700;
+    color: #050505;
+    margin: 0 0 10px;
+    line-height: 1.3;
+}
+
+.ministry-head-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #050505;
+    background: #f0f2f5;
+    padding: 5px 12px;
+    border-radius: 6px;
+    margin-bottom: 12px;
+}
+
+.ministry-head-chip svg {
+    color: #d48806;
+}
+
+.ministry-card-desc {
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: #65676b;
+    margin: 0 0 16px;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Encouragement Points & Health Box */
+.ministry-points-box {
+    background: #f7f8fa;
+    border: 1px solid #e4e6eb;
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 16px;
+}
+
+.ministry-points-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.ministry-points-total {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #050505;
+}
+
+.ministry-points-total svg {
+    color: #e3a008;
+}
+
+.ministry-rating-stars {
+    font-size: 12px;
+    font-weight: 700;
+    color: #1e7e34;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.ministry-health-progress-bar {
+    width: 100%;
+    height: 6px;
+    background: #e4e6eb;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 6px;
+}
+
+.ministry-health-fill {
+    height: 100%;
+    background: #31a24c;
+    border-radius: 3px;
+    transition: width 0.4s ease;
+}
+
+.ministry-health-caption {
+    font-size: 11px;
+    color: #65676b;
+    display: flex;
+    justify-content: space-between;
+}
+
+/* Roster preview */
+.ministry-roster-preview {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12.5px;
+    color: #65676b;
+    margin-bottom: 14px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #f0f2f5;
+}
+
+.ministry-roster-preview svg {
+    color: #1877f2;
+}
+
+.ministry-roster-preview strong {
+    color: #050505;
+}
+
+/* Schedule & Location */
+.ministry-meta-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12px;
+    color: #65676b;
+    margin-bottom: 18px;
+}
+
+.ministry-meta-row span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* FIXED CARD ACTIONS (NO OVERLAP / SEPARATE CLEAN BUTTONS) */
+.ministry-card-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: auto;
+}
+
+.ministry-action-btn-primary {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: #1877f2;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.ministry-action-btn-primary:hover {
+    background: #166fe5;
+}
+
+.ministry-action-btn-primary:active {
+    transform: scale(0.98);
+}
+
+.ministry-action-btn-secondary {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: #f0f2f5;
+    color: #050505;
+    border: 1px solid #ccd0d5;
+    border-radius: 8px;
+    padding: 9px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.ministry-action-btn-secondary:hover {
+    background: #e4e6eb;
+}
+
+/* =========================================================
+   MODAL DIALOG — ROSTER & POINT SYSTEM RUBRIC
+   ========================================================= */
+
+.ministry-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    backdrop-filter: blur(4px);
+}
+
+.ministry-modal-content {
+    background: #ffffff;
+    width: min(850px, 100%);
+    max-height: 90vh;
+    border-radius: 16px;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: column;
+}
+
+.ministry-modal-close {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    background: #f0f2f5;
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #65676b;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    z-index: 10;
+}
+
+.ministry-modal-close:hover {
+    background: #e4e6eb;
+    color: #050505;
+}
+
+.ministry-modal-header {
+    padding: 28px 28px 20px;
+    border-bottom: 1px solid #e4e6eb;
+}
+
+.ministry-modal-header h2 {
+    font-size: 24px;
+    font-weight: 800;
+    color: #050505;
+    margin: 8px 0;
+}
+
+.ministry-modal-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    font-size: 13px;
+    color: #65676b;
+    margin-top: 8px;
+}
+
+.ministry-modal-meta div {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ministry-modal-body {
+    padding: 24px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Scripture Box */
+.ministry-verse-box {
+    background: #e7f3ff;
+    border-left: 4px solid #1877f2;
+    padding: 14px 18px;
+    border-radius: 0 8px 8px 0;
+    font-size: 13.5px;
+    font-style: italic;
+    color: #1877f2;
+    line-height: 1.5;
+}
+
+/* Department Honor Overview */
+.ministry-honor-overview {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    background: #f7f8fa;
+    border: 1px solid #e4e6eb;
+    border-radius: 12px;
+    padding: 16px;
+}
+
+.ministry-honor-item {
+    text-align: center;
+}
+
+.ministry-honor-item small {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #65676b;
+    margin-bottom: 4px;
+}
+
+.ministry-honor-item strong {
+    font-size: 20px;
+    font-weight: 800;
+    color: #050505;
+}
+
+/* Roster Table */
+.ministry-roster-section h4 {
+    font-size: 16px;
+    font-weight: 700;
+    color: #050505;
+    margin: 0 0 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.ministry-roster-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid #e4e6eb;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.ministry-roster-table th {
+    background: #f0f2f5;
+    padding: 10px 14px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #65676b;
+    text-align: left;
+    border-bottom: 1px solid #e4e6eb;
+}
+
+.ministry-roster-table td {
+    padding: 12px 14px;
+    font-size: 13px;
+    color: #050505;
+    border-bottom: 1px solid #f0f2f5;
+}
+
+.ministry-roster-table tr:hover {
+    background: #f7f8fa;
+}
+
+.member-role-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    background: #f0f2f5;
+    border-radius: 4px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #4b4f56;
+}
+
+.member-points-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #eafaf1;
+    color: #1e7e34;
+    font-weight: 700;
+    font-size: 12px;
+    padding: 3px 8px;
+    border-radius: 12px;
+}
+
+/* Volunteer Enlistment Strip */
+.ministry-volunteer-box {
+    background: #f0f2f5;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.ministry-volunteer-box strong {
+    display: block;
+    font-size: 15px;
+    color: #050505;
+    margin-bottom: 2px;
+}
+
+.ministry-volunteer-box p {
+    margin: 0;
+    font-size: 13px;
+    color: #65676b;
+}
+
+/* Empty State */
+.ministries-empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px 20px;
+    background: #ffffff;
+    border-radius: 14px;
+    border: 1px solid #e4e6eb;
+    color: #65676b;
+}
+
+.ministries-empty-state h3 {
+    margin: 16px 0 8px;
+    color: #050505;
+    font-size: 18px;
+}
+
+/* Skeletons */
+.ministry-skeleton {
+    background: linear-gradient(90deg, #eceff1 25%, #f5f7f8 50%, #eceff1 75%);
+    background-size: 200% 100%;
+    animation: minShimmer 1.5s infinite;
+    border-radius: 14px;
+    min-height: 380px;
+}
+
+@keyframes minShimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* Responsive */
+@media (max-width: 980px) {
+    .ministries-cards-grid {
+        grid-template-columns: repeat(2, 1fr);
     }
-
-    .ministries-hero {
-        min-height: 420px;
+    .ministries-stat-grid {
+        grid-template-columns: 1fr;
     }
-
-    .ministries-hero-content {
-        width:
-            min(100% - 28px, 900px);
+    .ministry-honor-overview {
+        grid-template-columns: 1fr;
     }
+}
 
-    .ministries-hero h1 {
-        letter-spacing: -1px;
+@media (max-width: 640px) {
+    .ministries-cards-grid {
+        grid-template-columns: 1fr;
     }
-
-    .ministries-hero p {
-        font-size: 15px;
-        line-height: 1.7;
-    }
-
-    .ministries-intro-card {
-        padding: 35px 24px;
-    }
-
-    .ministry-card {
-        min-height: auto;
-
-        padding: 28px 24px;
-    }
-
-    .ministry-involvement-card {
-        padding: 27px 22px;
-    }
-
-    .ministries-cta-actions {
+    .ministries-filter-bar {
         flex-direction: column;
         align-items: stretch;
     }
-
-    .ministries-primary-button,
-    .ministries-secondary-button {
-        width: 100%;
+    .ministries-search-box {
+        min-width: 100%;
+    }
+    .ministry-volunteer-box {
+        flex-direction: column;
+        align-items: stretch;
     }
 }

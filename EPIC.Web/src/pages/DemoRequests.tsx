@@ -822,12 +822,11 @@ const DemoRequests: React.FC = () => {
                 <div>
 
                     <h1>
-                        Demo Requests
+                        Contact Requests
                     </h1>
 
                     <p>
-                        Manage churches interested in
-                        an EPIC system demonstration.
+                        Manage incoming contact inquiries, demo bookings, and academy course enrollments.
                     </p>
 
                 </div>
@@ -998,7 +997,7 @@ const DemoRequests: React.FC = () => {
 
                         <input
                             type="text"
-                            placeholder="Search requester, church, email..."
+                            placeholder="Search requester, church, email, department..."
                             value={searchTerm}
                             onChange={event =>
                                 setSearchTerm(
@@ -1066,7 +1065,7 @@ const DemoRequests: React.FC = () => {
                         </div>
 
                         <h3>
-                            No Demo Requests Found
+                            No Contact Requests Found
                         </h3>
 
                         <p>
@@ -1091,7 +1090,7 @@ const DemoRequests: React.FC = () => {
                                     </th>
 
                                     <th>
-                                        Church
+                                        Source / Church
                                     </th>
 
                                     <th>
@@ -1099,7 +1098,7 @@ const DemoRequests: React.FC = () => {
                                     </th>
 
                                     <th>
-                                        Position
+                                        Department / Position
                                     </th>
 
                                     <th>
@@ -1135,6 +1134,22 @@ const DemoRequests: React.FC = () => {
                                                         request.fullName
                                                     }
                                                 </strong>
+                                                <div>
+                                                    {request.churchName?.toLowerCase().includes("contact") ||
+                                                    request.churchName?.toLowerCase().includes("website") ? (
+                                                        <span style={{ fontSize: "11px", fontWeight: 700, color: "#1877f2", background: "#e7f3ff", padding: "2px 8px", borderRadius: "10px", display: "inline-block", marginTop: "3px" }}>
+                                                            📩 Website Inquiry
+                                                        </span>
+                                                    ) : request.churchName?.toLowerCase().includes("academy") ? (
+                                                        <span style={{ fontSize: "11px", fontWeight: 700, color: "#0d5cb6", background: "#f0f2f5", padding: "2px 8px", borderRadius: "10px", display: "inline-block", marginTop: "3px" }}>
+                                                            🎓 Academy Enrollment
+                                                        </span>
+                                                    ) : (
+                                                        <span style={{ fontSize: "11px", fontWeight: 700, color: "#475569", background: "#f1f5f9", padding: "2px 8px", borderRadius: "10px", display: "inline-block", marginTop: "3px" }}>
+                                                            🏛️ Demo Request
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </td>
 
                                             <td>
@@ -1253,7 +1268,12 @@ const DemoRequests: React.FC = () => {
                             <div>
 
                                 <h2>
-                                    Demo Request
+                                    {selectedRequest.churchName?.toLowerCase().includes("contact") ||
+                                    selectedRequest.churchName?.toLowerCase().includes("website")
+                                        ? "Contact Inquiry"
+                                        : selectedRequest.churchName?.toLowerCase().includes("academy")
+                                        ? "Academy Enrollment"
+                                        : "Demo Request"}
                                 </h2>
 
                                 <span>

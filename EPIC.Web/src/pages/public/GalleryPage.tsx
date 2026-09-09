@@ -1,591 +1,434 @@
-
 import React, { useState } from "react";
+import PublicHeader from "../../components/PublicHeader";
+import {
+    Camera,
+    Heart,
+    Users,
+    Sparkles,
+    Music,
+    BookOpen,
+    Award,
+    ArrowRight,
+    Search,
+    X,
+    QrCode,
+    HeartHandshake,
+    Calendar
+} from "lucide-react";
 import "./GalleryPage.css";
+import "./PublicUnisonTheme.css";
 
-interface GalleryItem {
+export interface GalleryMoment {
     id: number;
     title: string;
-    category: string;
+    category: "WORSHIP" | "TECHNOLOGY" | "YOUTH" | "DISCIPLESHIP" | "OUTREACH" | "FAMILY" | "LEADERSHIP";
+    department: string;
+    iconType: string;
     description: string;
-    icon: string;
+    fullDetails: string;
+    systemConnection: string;
+    date: string;
 }
 
 interface GalleryPageProps {
     onNavigate?: (page: string) => void;
 }
 
-const GalleryPage: React.FC<GalleryPageProps> = ({
-    onNavigate,
-}) => {
-    const [activeCategory, setActiveCategory] = useState("ALL");
-    const [selectedItem, setSelectedItem] =
-        useState<GalleryItem | null>(null);
+const GALLERY_DATA: GalleryMoment[] = [
+    {
+        id: 1,
+        title: "Sunday Morning Praise & Expository Worship",
+        category: "WORSHIP",
+        department: "Worship & Arts Ministry",
+        iconType: "music",
+        description: "Dynamic worship and congregation-wide prayer filling the main sanctuary with praise.",
+        fullDetails:
+            "Every Sunday, the EPIC Worship Team and instrumentalists lead the church into the presence of God. Our services feature sound expository preaching, corporate prayer, and an atmosphere where hearts encounter Jesus.",
+        systemConnection: "Attendance tracked live via EPIC QR check-in stations.",
+        date: "Sunday Gatherings"
+    },
+    {
+        id: 2,
+        title: "Real-Time Mobile QR Check-In Kiosks",
+        category: "TECHNOLOGY",
+        department: "Greeters & IT Operations",
+        iconType: "qrcode",
+        description: "Express scanning for members, first-time visitors, and kids church attendees at sanctuary doors.",
+        fullDetails:
+            "Equipped with tablet-based QR scanner kiosks, our greeting team greets every arriving member with warmth and speed. Check-ins instantly update the pastoral dashboard to track Sunday service headcounts.",
+        systemConnection: "Directly powered by the EPIC Web API QR verification engine.",
+        date: "Weekly Services"
+    },
+    {
+        id: 3,
+        title: "EPIC Youth Encounter: 'Unstoppable Generation'",
+        category: "YOUTH",
+        department: "Youth & Campus Ministry",
+        iconType: "sparkles",
+        description: "High-energy worship, spirit-led breakout huddles, and fellowship for high school & college youth.",
+        fullDetails:
+            "Our youth encounters provide an encouraging, safe environment where young people discover their true identity in Christ, break free from worldly pressures, and build lifelong Christian friendships.",
+        systemConnection: "Session attendance and security managed with CRBreakPass QR passes.",
+        date: "Monthly Youth Rally"
+    },
+    {
+        id: 4,
+        title: "Discipleship Small Group & Bible Study Circles",
+        category: "DISCIPLESHIP",
+        department: "Pastoral Care & Mentorship",
+        iconType: "book",
+        description: "Believers gathering in homes and fellowship rooms for weekly scripture study and prayer.",
+        fullDetails:
+            "True spiritual growth happens in community. Our discipleship groups use the structured 4-track EPIC Academy curriculum, walking together from new believers to mature spiritual leaders.",
+        systemConnection: "Learner progress recorded through the EPIC Academy LMS.",
+        date: "Midweek Life Groups"
+    },
+    {
+        id: 5,
+        title: "Children's Faith Explorers Sunday School",
+        category: "FAMILY",
+        department: "Children's Ministry",
+        iconType: "heart",
+        description: "Joyful, secure bible lessons, action songs, and creative crafts for toddlers to pre-teens.",
+        fullDetails:
+            "Parents worship with peace of mind knowing their children are receiving sound biblical instruction in a fun, safe, and loving environment tailored to their developmental age.",
+        systemConnection: "Secure parent-child QR matching tokens ensure child safety.",
+        date: "Every Sunday 9AM & 2PM"
+    },
+    {
+        id: 6,
+        title: "Community Medical Aid & Food Relief Mission",
+        category: "OUTREACH",
+        department: "Community Compassion Team",
+        iconType: "handshake",
+        description: "Free medical checkups, pediatric care, and grocery food packages for local barangay families.",
+        fullDetails:
+            "Serving the community as Christ served. Our church volunteers and medical professionals provided essential consultations, free medicines, and food supplies to over 500 neighborhood families.",
+        systemConnection: "Volunteer rosters and supply distributions coordinated via EPIC Ministry Rosters.",
+        date: "Quarterly Outreach"
+    },
+    {
+        id: 7,
+        title: "Water Baptism & Public Confession of Faith",
+        category: "WORSHIP",
+        department: "Pastoral & Discipleship",
+        iconType: "award",
+        description: "New believers taking the bold step of obedience through water baptism before the church family.",
+        fullDetails:
+            "A holy milestone in the Christian walk. Following completion of Foundations of Faith Track 101, candidates publicly profess Christ Jesus as Lord and Savior in our sanctuary courtyard pool.",
+        systemConnection: "Baptismal date and digital certificate archived in Member Records.",
+        date: "Quarterly Baptism Service"
+    },
+    {
+        id: 8,
+        title: "Media, Broadcast & Sound Console Ministry",
+        category: "TECHNOLOGY",
+        department: "Media & Tech Production",
+        iconType: "camera",
+        description: "Dedicated production volunteers operating live audio, lighting, and multicam streaming feeds.",
+        fullDetails:
+            "Our media booth ensures crisp audio, vibrant visuals, and high-definition video broadcasting so that homebound members and overseas families can participate in worship without interruption.",
+        systemConnection: "Ministry duty rotations and gear checklists logged in Ministry Evaluations.",
+        date: "Every Gathering"
+    },
+    {
+        id: 9,
+        title: "Guest Hospitality & Usher Greeting Service",
+        category: "FAMILY",
+        department: "Ushers & Hospitality",
+        iconType: "users",
+        description: "Welcoming every person with Christ's warmth, providing seating assistance and order of service.",
+        fullDetails:
+            "From the parking entrance to the sanctuary seats, our ushering team represents the welcoming heart of EPIC Church, ensuring every visitor feels loved, respected, and welcomed as family.",
+        systemConnection: "Usher team attendance and headcounts tracked in EPIC Services module.",
+        date: "Weekly Celebrations"
+    },
+    {
+        id: 10,
+        title: "Quarterly Leadership Alignment & Vision Summit",
+        category: "LEADERSHIP",
+        department: "Pastoral Staff & Ministry Heads",
+        iconType: "award",
+        description: "Pastors, department directors, and cell group facilitators aligning on church mission.",
+        fullDetails:
+            "Ministry leaders gather each quarter to review department health scores, examine operational rubrics, pray for the congregation, and cast vision for church expansion and disciple-making.",
+        systemConnection: "Quarterly department evaluations conducted via EPIC Ministry Rubrics.",
+        date: "Quarterly Summit"
+    }
+];
 
-    const galleryItems: GalleryItem[] = [
-        {
-            id: 1,
-            title: "Sunday Worship",
-            category: "WORSHIP",
-            description:
-                "A time of worship, prayer, fellowship, and hearing God's Word together.",
-            icon: "⛪",
-        },
-        {
-            id: 2,
-            title: "Praise & Worship",
-            category: "WORSHIP",
-            description:
-                "Celebrating God's goodness through music, worship, and thanksgiving.",
-            icon: "🎵",
-        },
-        {
-            id: 3,
-            title: "Bible Teaching",
-            category: "DISCIPLESHIP",
-            description:
-                "Growing together through biblical teaching and practical application of God's Word.",
-            icon: "📖",
-        },
-        {
-            id: 4,
-            title: "Prayer Gathering",
-            category: "PRAYER",
-            description:
-                "Coming together in prayer and seeking God's direction for our church and community.",
-            icon: "🙏",
-        },
-        {
-            id: 5,
-            title: "Youth Ministry",
-            category: "MINISTRIES",
-            description:
-                "Helping the next generation discover Christ, build relationships, and grow in faith.",
-            icon: "🙌",
-        },
-        {
-            id: 6,
-            title: "Children's Ministry",
-            category: "MINISTRIES",
-            description:
-                "Creating a safe and engaging environment where children can learn about Jesus.",
-            icon: "🌱",
-        },
-        {
-            id: 7,
-            title: "Church Fellowship",
-            category: "COMMUNITY",
-            description:
-                "Building meaningful relationships through fellowship, friendship, and shared experiences.",
-            icon: "👥",
-        },
-        {
-            id: 8,
-            title: "Community Outreach",
-            category: "OUTREACH",
-            description:
-                "Serving people and demonstrating God's love through practical acts of compassion.",
-            icon: "❤️",
-        },
-        {
-            id: 9,
-            title: "Leadership Training",
-            category: "LEADERSHIP",
-            description:
-                "Equipping leaders to serve with integrity, humility, excellence, and purpose.",
-            icon: "🎯",
-        },
-        {
-            id: 10,
-            title: "Special Church Events",
-            category: "EVENTS",
-            description:
-                "Celebrating special moments and creating memories together as a church family.",
-            icon: "🎉",
-        },
-        {
-            id: 11,
-            title: "Discipleship Community",
-            category: "DISCIPLESHIP",
-            description:
-                "Growing deeper in Christ through intentional relationships and discipleship.",
-            icon: "📚",
-        },
-        {
-            id: 12,
-            title: "Serving Together",
-            category: "OUTREACH",
-            description:
-                "Using our gifts, time, and resources to serve God and bless others.",
-            icon: "🤝",
-        },
-    ];
+const GalleryPage: React.FC<GalleryPageProps> = ({ onNavigate }) => {
+    const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
+    const [searchQuery, setSearchQuery] = useState<string>("");
+    const [activeMoment, setActiveMoment] = useState<GalleryMoment | null>(null);
 
-    const categories = [
-        "ALL",
-        "WORSHIP",
-        "DISCIPLESHIP",
-        "MINISTRIES",
-        "COMMUNITY",
-        "OUTREACH",
-        "PRAYER",
-        "EVENTS",
-        "LEADERSHIP",
-    ];
+    const categories = ["ALL", "WORSHIP", "TECHNOLOGY", "YOUTH", "DISCIPLESHIP", "OUTREACH", "FAMILY", "LEADERSHIP"];
 
-    const filteredItems =
-        activeCategory === "ALL"
-            ? galleryItems
-            : galleryItems.filter(
-                  (item) => item.category === activeCategory
-              );
+    const filteredMoments = GALLERY_DATA.filter((item) => {
+        const matchesCat = selectedCategory === "ALL" || item.category === selectedCategory;
+        const matchesSearch =
+            searchQuery.trim() === "" ||
+            item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.department.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesCat && matchesSearch;
+    });
 
-    const handleNavigate = (page: string) => {
-        if (onNavigate) {
-            onNavigate(page);
+    const renderIcon = (type: string) => {
+        switch (type) {
+            case "music":
+                return <Music size={24} />;
+            case "qrcode":
+                return <QrCode size={24} />;
+            case "sparkles":
+                return <Sparkles size={24} />;
+            case "book":
+                return <BookOpen size={24} />;
+            case "heart":
+                return <Heart size={24} />;
+            case "handshake":
+                return <HeartHandshake size={24} />;
+            case "award":
+                return <Award size={24} />;
+            case "camera":
+                return <Camera size={24} />;
+            case "users":
+                return <Users size={24} />;
+            default:
+                return <Camera size={24} />;
         }
     };
 
     return (
-        <div className="epic-public-page epic-public-gallery">
+        <div className="epic-public-gallery">
+            <PublicHeader onNavigate={onNavigate} />
 
-            {/* =====================================================
-                HERO
-            ===================================================== */}
-
+            {/* HERO */}
             <section className="gallery-hero">
-
-                <div className="gallery-hero-overlay" />
-
                 <div className="gallery-hero-content">
-
                     <span className="gallery-eyebrow">
-                        EPIC GALLERY
+                        <Camera size={14} /> CHURCH LIFE &amp; MINISTRY MOMENTS
                     </span>
-
                     <h1>
-                        Moments.
-                        <span>People. Purpose.</span>
+                        Moments. People. <span>Living Purpose.</span>
                     </h1>
-
                     <p>
-                        Take a glimpse into the life of our
-                        church community — worshipping together,
-                        growing together, serving together, and
-                        engaging people into Christ.
+                        Take a look into the vibrant life of EPIC Church. From uplifting Sunday worship
+                        and mobile QR check-in kiosks to youth camps, discipleship groups, and community outreach.
                     </p>
-
+                    <div className="events-hero-actions">
+                        <button
+                            type="button"
+                            className="events-primary-button"
+                            onClick={() => {
+                                const el = document.getElementById("gallery-grid-anchor");
+                                el?.scrollIntoView({ behavior: "smooth" });
+                            }}
+                        >
+                            Explore Moments <ArrowRight size={16} />
+                        </button>
+                        <button
+                            type="button"
+                            className="events-secondary-button"
+                            onClick={() => onNavigate?.("events")}
+                        >
+                            <Calendar size={16} /> Upcoming Events
+                        </button>
+                    </div>
                 </div>
-
             </section>
 
-            {/* =====================================================
-                INTRO
-            ===================================================== */}
-
-            <section className="gallery-intro">
-
+            {/* MAIN GALLERY SECTION */}
+            <section className="gallery-main-section" id="gallery-grid-anchor">
                 <div className="gallery-container">
-
-                    <div className="gallery-intro-grid">
-
-                        <div className="gallery-intro-content">
-
-                            <span className="gallery-section-label">
-                                LIFE AT EPIC
-                            </span>
-
-                            <h2>
-                                More Than
-                                <span> Moments</span>
-                            </h2>
-
-                            <p>
-                                Every gathering represents an
-                                opportunity to encounter God,
-                                connect with people, grow in faith,
-                                and discover our purpose.
-                            </p>
-
-                            <p>
-                                These moments reflect the heart of
-                                EPIC — a community committed to
-                                following Christ and helping others
-                                take their next step in faith.
-                            </p>
-
+                    {/* CONTROLS */}
+                    <div className="gallery-controls-bar">
+                        <div className="gallery-filter-pills">
+                            {categories.map((cat) => (
+                                <button
+                                    key={cat}
+                                    type="button"
+                                    className={`gallery-pill ${selectedCategory === cat ? "active" : ""}`}
+                                    onClick={() => setSelectedCategory(cat)}
+                                >
+                                    {cat === "ALL" ? "All Moments" : cat}
+                                </button>
+                            ))}
                         </div>
 
-                        <div className="gallery-intro-card">
-
-                            <div className="gallery-intro-icon">
-                                ✦
-                            </div>
-
-                            <strong>
-                                Engaging People
-                            </strong>
-
-                            <p>
-                                Creating meaningful opportunities
-                                for people to connect, grow,
-                                serve, and belong.
-                            </p>
-
-                            <div className="gallery-intro-divider" />
-
-                            <strong>
-                                Into Christ
-                            </strong>
-
-                            <p>
-                                Pointing every generation toward
-                                Jesus and helping people live out
-                                their faith.
-                            </p>
-
+                        <div className="gallery-search-input">
+                            <Search size={16} className="gallery-search-icon" />
+                            <input
+                                type="text"
+                                placeholder="Search moments or ministries..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                            {searchQuery && (
+                                <button
+                                    type="button"
+                                    className="gallery-clear-search"
+                                    onClick={() => setSearchQuery("")}
+                                >
+                                    ✕
+                                </button>
+                            )}
                         </div>
-
                     </div>
 
-                </div>
-
-            </section>
-
-            {/* =====================================================
-                CATEGORY FILTER
-            ===================================================== */}
-
-            <section className="gallery-filter-section">
-
-                <div className="gallery-container">
-
-                    <div className="gallery-section-heading">
-
-                        <span className="gallery-section-label">
-                            EXPLORE
-                        </span>
-
-                        <h2>
-                            Our Community
-                        </h2>
-
-                        <p>
-                            Explore different areas of life and
-                            ministry at EPIC.
-                        </p>
-
-                    </div>
-
-                    <div className="gallery-filters">
-
-                        {categories.map((category) => (
-
-                            <button
-                                key={category}
-                                type="button"
-                                className={
-                                    activeCategory === category
-                                        ? "gallery-filter active"
-                                        : "gallery-filter"
-                                }
-                                onClick={() =>
-                                    setActiveCategory(category)
-                                }
-                            >
-                                {category}
-                            </button>
-
-                        ))}
-
-                    </div>
-
-                </div>
-
-            </section>
-
-            {/* =====================================================
-                GALLERY GRID
-            ===================================================== */}
-
-            <section className="gallery-grid-section">
-
-                <div className="gallery-container">
-
-                    <div className="gallery-grid">
-
-                        {filteredItems.map((item) => (
-
+                    {/* GALLERY GRID */}
+                    <div className="gallery-cards-grid">
+                        {filteredMoments.map((moment) => (
                             <article
-                                key={item.id}
-                                className="gallery-card"
-                                onClick={() =>
-                                    setSelectedItem(item)
-                                }
+                                key={moment.id}
+                                className="gallery-item-card"
+                                onClick={() => setActiveMoment(moment)}
                             >
-
-                                <div className="gallery-card-visual">
-
-                                    <div className="gallery-card-pattern" />
-
-                                    <div className="gallery-card-icon">
-                                        {item.icon}
+                                <div className="gallery-card-banner">
+                                    <div className="gallery-card-icon-bubble">
+                                        {renderIcon(moment.iconType)}
                                     </div>
-
-                                    <span className="gallery-card-category">
-                                        {item.category}
-                                    </span>
-
+                                    <span className="gallery-card-category-tag">{moment.category}</span>
                                 </div>
 
-                                <div className="gallery-card-content">
+                                <div className="gallery-card-body">
+                                    <span className="gallery-card-dept">{moment.department}</span>
+                                    <h3>{moment.title}</h3>
+                                    <p>{moment.description}</p>
 
-                                    <h3>
-                                        {item.title}
-                                    </h3>
-
-                                    <p>
-                                        {item.description}
-                                    </p>
-
-                                    <button
-                                        type="button"
-                                        className="gallery-view-button"
-                                        onClick={(event) => {
-                                            event.stopPropagation();
-                                            setSelectedItem(item);
-                                        }}
-                                    >
-                                        View Moment
-                                        <span>→</span>
-                                    </button>
-
+                                    <div className="gallery-card-footer">
+                                        <span className="gallery-card-date">
+                                            <Calendar size={12} /> {moment.date}
+                                        </span>
+                                        <button
+                                            type="button"
+                                            className="gallery-view-details-btn"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setActiveMoment(moment);
+                                            }}
+                                        >
+                                            View Story <ArrowRight size={13} />
+                                        </button>
+                                    </div>
                                 </div>
-
                             </article>
-
                         ))}
 
-                    </div>
-
-                    {filteredItems.length === 0 && (
-
-                        <div className="gallery-empty">
-
-                            <div className="gallery-empty-icon">
-                                ✦
+                        {filteredMoments.length === 0 && (
+                            <div className="gallery-empty-box">
+                                <Camera size={44} />
+                                <h3>No moments match your search</h3>
+                                <p>Try clearing your filter or searching for another ministry keyword.</p>
+                                <button
+                                    type="button"
+                                    className="events-primary-button"
+                                    onClick={() => {
+                                        setSelectedCategory("ALL");
+                                        setSearchQuery("");
+                                    }}
+                                >
+                                    View All Moments
+                                </button>
                             </div>
-
-                            <h3>
-                                No Gallery Items
-                            </h3>
-
-                            <p>
-                                There are currently no items in
-                                this category.
-                            </p>
-
-                        </div>
-
-                    )}
-
-                </div>
-
-            </section>
-
-            {/* =====================================================
-                COMMUNITY MESSAGE
-            ===================================================== */}
-
-            <section className="gallery-message">
-
-                <div className="gallery-container">
-
-                    <div className="gallery-message-card">
-
-                        <div className="gallery-message-content">
-
-                            <span className="gallery-section-label">
-                                OUR STORY
-                            </span>
-
-                            <h2>
-                                Every Moment Has
-                                <span> a Story.</span>
-                            </h2>
-
-                            <p>
-                                Behind every photograph is a person,
-                                a family, a testimony, a prayer,
-                                a lesson, or a moment of worship.
-                                These are the stories that make
-                                our church community special.
-                            </p>
-
-                            <button
-                                type="button"
-                                className="gallery-primary-button"
-                                onClick={() =>
-                                    handleNavigate("events")
-                                }
-                            >
-                                See Upcoming Events
-                                <span>→</span>
-                            </button>
-
-                        </div>
-
-                        <div className="gallery-message-mark">
-
-                            <div className="gallery-message-icon">
-                                📸
-                            </div>
-
-                            <strong>
-                                EPIC Community
-                            </strong>
-
-                            <span>
-                                Growing Together
-                            </span>
-
-                        </div>
-
+                        )}
                     </div>
-
                 </div>
-
             </section>
 
-            {/* =====================================================
-                CTA
-            ===================================================== */}
-
-            <section className="gallery-cta">
-
-                <div className="gallery-cta-overlay" />
-
-                <div className="gallery-cta-content">
-
-                    <span className="gallery-section-label">
-                        BE PART OF THE STORY
-                    </span>
-
-                    <h2>
-                        Your Story
-                        <span> Matters Too.</span>
-                    </h2>
-
-                    <p>
-                        Come worship with us, connect with our
-                        community, discover a ministry, and take
-                        your next step toward Christ.
-                    </p>
-
-                    <div className="gallery-cta-actions">
-
-                        <button
-                            type="button"
-                            className="gallery-primary-button light"
-                            onClick={() =>
-                                handleNavigate("contact")
-                            }
-                        >
-                            Connect With Us
-                            <span>→</span>
-                        </button>
-
-                        <button
-                            type="button"
-                            className="gallery-secondary-button light"
-                            onClick={() =>
-                                handleNavigate("ministries")
-                            }
-                        >
-                            Explore Ministries
-                        </button>
-
-                    </div>
-
-                </div>
-
-            </section>
-
-            {/* =====================================================
-                MODAL
-            ===================================================== */}
-
-            {selectedItem && (
-
-                <div
-                    className="gallery-modal"
-                    onClick={() =>
-                        setSelectedItem(null)
-                    }
-                >
-
-                    <div
-                        className="gallery-modal-content"
-                        onClick={(event) =>
-                            event.stopPropagation()
-                        }
-                    >
-
+            {/* MODAL PREVIEW */}
+            {activeMoment && (
+                <div className="gallery-modal-backdrop" onClick={() => setActiveMoment(null)}>
+                    <div className="gallery-modal-sheet" onClick={(e) => e.stopPropagation()}>
                         <button
                             type="button"
                             className="gallery-modal-close"
-                            aria-label="Close gallery item"
-                            onClick={() =>
-                                setSelectedItem(null)
-                            }
+                            onClick={() => setActiveMoment(null)}
+                            aria-label="Close modal"
                         >
-                            ×
+                            <X size={20} />
                         </button>
 
-                        <div className="gallery-modal-visual">
+                        <div className="gallery-modal-header">
+                            <div className="gallery-modal-icon-badge">
+                                {renderIcon(activeMoment.iconType)}
+                            </div>
+                            <div>
+                                <span className="gallery-card-category-tag">{activeMoment.category}</span>
+                                <h2>{activeMoment.title}</h2>
+                                <span className="gallery-modal-dept">{activeMoment.department} • {activeMoment.date}</span>
+                            </div>
+                        </div>
 
-                            <div className="gallery-modal-icon">
-                                {selectedItem.icon}
+                        <div className="gallery-modal-content">
+                            <p className="gallery-modal-full-text">{activeMoment.fullDetails}</p>
+
+                            <div className="gallery-modal-system-box">
+                                <QrCode size={20} className="system-box-icon" />
+                                <div>
+                                    <strong>EPIC Church Management System Integration:</strong>
+                                    <p>{activeMoment.systemConnection}</p>
+                                </div>
                             </div>
 
+                            <div className="gallery-modal-actions">
+                                <button
+                                    type="button"
+                                    className="events-primary-button"
+                                    onClick={() => {
+                                        setActiveMoment(null);
+                                        onNavigate?.("events");
+                                    }}
+                                >
+                                    View Related Events
+                                </button>
+                                <button
+                                    type="button"
+                                    className="events-secondary-button"
+                                    onClick={() => {
+                                        setActiveMoment(null);
+                                        onNavigate?.("contact");
+                                    }}
+                                >
+                                    Connect With This Ministry
+                                </button>
+                            </div>
                         </div>
-
-                        <div className="gallery-modal-body">
-
-                            <span className="gallery-modal-category">
-                                {selectedItem.category}
-                            </span>
-
-                            <h2>
-                                {selectedItem.title}
-                            </h2>
-
-                            <p>
-                                {selectedItem.description}
-                            </p>
-
-                            <button
-                                type="button"
-                                className="gallery-primary-button"
-                                onClick={() => {
-                                    setSelectedItem(null);
-                                    handleNavigate("contact");
-                                }}
-                            >
-                                Connect With Us
-                                <span>→</span>
-                            </button>
-
-                        </div>
-
                     </div>
-
                 </div>
-
             )}
 
+            {/* CTA */}
+            <section className="gallery-cta">
+                <div className="gallery-container">
+                    <div className="gallery-cta-card">
+                        <span className="gallery-section-label">YOUR STORY MATTERS</span>
+                        <h2>Be Part of What God Is Doing at EPIC</h2>
+                        <p>
+                            Every smile, volunteer, and testimony represents a life transformed by the Gospel.
+                            We would love to welcome you to our church family this Sunday.
+                        </p>
+                        <div className="events-hero-actions">
+                            <button
+                                type="button"
+                                className="events-primary-button"
+                                onClick={() => onNavigate?.("contact")}
+                            >
+                                Plan Your Sunday Visit <ArrowRight size={16} />
+                            </button>
+                            <button
+                                type="button"
+                                className="events-secondary-button"
+                                onClick={() => onNavigate?.("about")}
+                            >
+                                Learn About Our Mission
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
         </div>
     );
 };
 
 export default GalleryPage;
-

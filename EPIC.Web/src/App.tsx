@@ -21,11 +21,14 @@ import EpicSystemPage from "./pages/public/EpicSystemPage";
 import EpicLearningPage from "./pages/public/EpicLearningPage";
 import EPICBusinessHomePage from "./pages/public/EPICBusinessHomePage";
 import PlatformPage from "./pages/public/business/PlatformPage";
-import AcademyPage from "./pages/public/business/AcademyPage";
 import StorePage from "./pages/public/business/StorePage";
 import WhatsNewPage from "./pages/public/business/WhatsNewPage";
 import ResourcesPage from "./pages/public/business/ResourcesPage";
 import DemoPage from "./pages/public/business/DemoPage";
+import EventsPage from "./pages/public/EventsPage";
+import GalleryPage from "./pages/public/GalleryPage";
+import AnnouncementsPage from "./pages/public/AnnouncementsPage";
+import GivingPage from "./pages/public/GivingPage";
 
 // =========================================================
 // ADMIN AUTH
@@ -159,7 +162,13 @@ type PublicPage =
   | "offer"
   | "checkout"
   | "payment"
-  | "thank-you";
+  | "thank-you"
+  | "events"
+  | "gallery"
+  | "announcements"
+  | "ministry-evaluation"
+  | "giving"
+  | "financials";
 
 // =========================================================
 // DYNAMIC PUBLIC ROUTES
@@ -203,10 +212,10 @@ const PAGE_ROUTES: Record<Page, string> = {
     "member-attendance-report": "/member-attendance-report",
 
     services: "/services",
-    events: "/events",
+    events: "/cms/events",
     ministries: "/cms/ministries",
  visitors: "/visitors",
-    giving: "/giving",
+    giving: "/cms/giving",
     income: "/income",
     expenses: "/expenses",
     settings: "/settings",
@@ -236,6 +245,12 @@ const PAGE_ROUTES: Record<Page, string> = {
   demo: "/demo",
   "whats-new": "/whats-new",
   "blog-detail": "/blog-detail",
+  events: "/events",
+  gallery: "/gallery",
+  announcements: "/announcements",
+  "ministry-evaluation": "/ministry-evaluation",
+  giving: "/giving",
+  financials: "/financials",
 };
 
 const ADMIN_LOGIN_ROUTE = "/login";
@@ -258,7 +273,7 @@ const PAGE_TITLES: Record<Page, string> = {
         "Attendance by Date",
 
     "demo-requests":
-        "Demo Requests",
+        "Contact Requests",
 
     "subscription-dashboard":
         "Subscription Dashboard",
@@ -1014,54 +1029,10 @@ const isPublicPath = (
 
 
 
-    return [
-
-        PUBLIC_ROUTES.landing,
-
-        PUBLIC_ROUTES.home,
-
-        PUBLIC_ROUTES.about,
-
-        PUBLIC_ROUTES.ministries,
-
-        PUBLIC_ROUTES["epic-system"],
-
-        PUBLIC_ROUTES.learning,
-
-        PUBLIC_ROUTES.contact,
-
-
-        PUBLIC_ROUTES["business-home"],
-
-        PUBLIC_ROUTES.platform,
-
-        PUBLIC_ROUTES.academy,
-
-        PUBLIC_ROUTES.store,
-
-        PUBLIC_ROUTES["whats-new"],
-
-        PUBLIC_ROUTES.resources,
-
-        PUBLIC_ROUTES.demo,
-        PUBLIC_ROUTES.blog,
-
-
-        PUBLIC_ROUTES["opt-in"],
-
-        PUBLIC_ROUTES.offer,
-
-        PUBLIC_ROUTES.checkout,
-
-        PUBLIC_ROUTES.payment,
-
-        PUBLIC_ROUTES["thank-you"],
-
-
-        PAGE_ROUTES["client-payment"],
-
-
-    ].includes(normalized);
+    return (
+        Object.values(PUBLIC_ROUTES).includes(normalized) ||
+        normalized === PAGE_ROUTES["client-payment"]
+    );
 
 };
 // =========================================================
@@ -1264,10 +1235,10 @@ const NAVIGATION_SECTIONS:
                 "demo-requests",
 
             label:
-                "Demo Requests",
+                "Contact Request",
 
             icon:
-                "🎯",
+                "📩",
 
             permission:
                 "Demo Requests",
@@ -1531,8 +1502,10 @@ const App: React.FC = () => {
         PUBLIC_ROUTES["opt-in"];
 
     const isOfferPage =
-        normalizedPath ===
-        PUBLIC_ROUTES.offer;
+        normalizedPath === PUBLIC_ROUTES.offer ||
+        normalizedPath === "/pricing" ||
+        normalizedPath === "/plans" ||
+        normalizedPath === "/packages";
 
     const isCheckoutPage =
         normalizedPath ===
@@ -1559,12 +1532,35 @@ const App: React.FC = () => {
         PUBLIC_ROUTES["epic-system"];
 
     const isEpicLearningPage =
-        normalizedPath ===
-        PUBLIC_ROUTES.learning;
+        normalizedPath === PUBLIC_ROUTES.learning ||
+        normalizedPath === PUBLIC_ROUTES.academy ||
+        normalizedPath === "/academy";
 
     const isContactPage =
         normalizedPath ===
         PUBLIC_ROUTES.contact;
+
+    const isEventsPublicPage =
+        normalizedPath ===
+        PUBLIC_ROUTES.events;
+
+    const isGalleryPublicPage =
+        normalizedPath ===
+        PUBLIC_ROUTES.gallery;
+
+    const isAnnouncementsPublicPage =
+        normalizedPath ===
+        PUBLIC_ROUTES.announcements;
+
+    const isMinistryEvaluationPublicPage =
+        normalizedPath ===
+        PUBLIC_ROUTES["ministry-evaluation"];
+
+    const isGivingPublicPage =
+        normalizedPath === PUBLIC_ROUTES.giving ||
+        normalizedPath === PUBLIC_ROUTES.financials ||
+        normalizedPath === "/giving-financials" ||
+        normalizedPath === "/stewardship";
 
     const isClientPaymentPage =
         normalizedPath ===
@@ -2091,6 +2087,16 @@ useCallback(
 
             return;
 
+        }
+
+        if (page.startsWith("/")) {
+            navigateToUrl(page);
+            return;
+        }
+
+        if (page in PUBLIC_ROUTES) {
+            navigatePublic(page as PublicPage);
+            return;
         }
 
 
@@ -2938,17 +2944,6 @@ if (
 
             );
 
-
-case "blog-management":
-
-    return (
-
-        <BlogManagement />
-
-    );
-
-
-
         case "services":
 
             return renderProtectedPage(
@@ -3364,7 +3359,7 @@ if (normalizedPath === "/platform") {
 }
 if (normalizedPath === "/academy") {
     return (
-        <AcademyPage
+        <EpicLearningPage
             onNavigate={handlePublicNavigate}
         />
     );
@@ -3393,6 +3388,34 @@ if (normalizedPath === "/resources") {
 if (normalizedPath === "/demo") {
     return (
         <DemoPage
+            onNavigate={handlePublicNavigate}
+        />
+    );
+}
+if (normalizedPath === "/events") {
+    return (
+        <EventsPage
+            onNavigate={handlePublicNavigate}
+        />
+    );
+}
+if (normalizedPath === "/gallery") {
+    return (
+        <GalleryPage
+            onNavigate={handlePublicNavigate}
+        />
+    );
+}
+if (normalizedPath === "/announcements") {
+    return (
+        <AnnouncementsPage
+            onNavigate={handlePublicNavigate}
+        />
+    );
+}
+if (normalizedPath === "/ministry-evaluation") {
+    return (
+        <MinistryEvaluationPage
             onNavigate={handlePublicNavigate}
         />
     );
@@ -3535,6 +3558,46 @@ if (isThankYouPage) {
                 onNavigate={
                     handlePublicNavigate
                 }
+            />
+        );
+    }
+
+    if (isEventsPublicPage) {
+        return (
+            <EventsPage
+                onNavigate={handlePublicNavigate}
+            />
+        );
+    }
+
+    if (isGalleryPublicPage) {
+        return (
+            <GalleryPage
+                onNavigate={handlePublicNavigate}
+            />
+        );
+    }
+
+    if (isAnnouncementsPublicPage) {
+        return (
+            <AnnouncementsPage
+                onNavigate={handlePublicNavigate}
+            />
+        );
+    }
+
+    if (isMinistryEvaluationPublicPage) {
+        return (
+            <MinistryEvaluationPage
+                onNavigate={handlePublicNavigate}
+            />
+        );
+    }
+
+    if (isGivingPublicPage) {
+        return (
+            <GivingPage
+                onNavigate={handlePublicNavigate}
             />
         );
     }

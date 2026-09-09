@@ -21,7 +21,14 @@ public class PublicCheckoutController : ControllerBase
         {
             ["starter"] = "EPIC Starter",
             ["growth"] = "EPIC Growth",
-            ["complete"] = "EPIC Complete"
+            ["complete"] = "EPIC Complete",
+            ["course-foundations"] = "EPIC Starter",
+            ["course-leadership"] = "EPIC Growth",
+            ["course-all-access"] = "EPIC Complete",
+            ["product-admin-suite"] = "EPIC Starter",
+            ["product-media-pack"] = "EPIC Starter",
+            ["product-financial-suite"] = "EPIC Growth",
+            ["product-launch-bundle"] = "EPIC Growth",
         };
 
     public PublicCheckoutController(ApplicationDbContext context, ResendEmailService email)
@@ -88,7 +95,9 @@ public class PublicCheckoutController : ControllerBase
                 return Conflict(new { message = "This email already has an active or pending EPIC subscription." });
 
             var now = DateTime.UtcNow;
-            var amount = cycle == "Annual" ? plan.AnnualPrice : plan.MonthlyPrice;
+            var amount = request.CustomAmount.HasValue && request.CustomAmount.Value > 0
+                ? request.CustomAmount.Value
+                : (cycle == "Annual" ? plan.AnnualPrice : plan.MonthlyPrice);
             var subscription = new Subscription
             {
                 CustomerId = customer.CustomerId,
@@ -176,7 +185,8 @@ public class PublicCheckoutController : ControllerBase
             SubscriptionId = subscription.SubscriptionId,
             Amount = subscription.Amount,
             Currency = subscription.Currency,
-            PaymentMethod = request.PaymentMethod?.Equals("gotyme", StringComparison.OrdinalIgnoreCase) == true ? "GoTyme" : "GCash",
+            PaymentMethod = request.PaymentMethod?.Equals("gotyme", StringComparison.OrdinalIgnoreCase) == true ? "GoTyme" :
+                            request.PaymentMethod?.Equals("maya", StringComparison.OrdinalIgnoreCase) == true ? "Maya" : "GCash",
             Status = "PENDING",
             ReferenceNumber = reference,
             PaymentProofFileName = Path.GetFileName(request.Proof.FileName),
@@ -187,7 +197,7 @@ public class PublicCheckoutController : ControllerBase
             BillingPeriodEnd = subscription.BillingCycle.Equals("Annual", StringComparison.OrdinalIgnoreCase) ? now.AddYears(1) : now.AddMonths(1),
             CreatedDate = now,
             UpdatedDate = now,
-            Notes = "Submitted through public checkout."
+            Notes = !string.IsNullOrWhiteSpace(request.Notes) ? request.Notes : "Submitted through public checkout."
         };
         _context.Payments.Add(payment);
         await _context.SaveChangesAsync();
@@ -214,6 +224,9 @@ public class PublicSubscribeRequest
     [Required] public string Phone { get; set; } = "";
     [Required] public string PlanId { get; set; } = "";
     [Required] public string BillingCycle { get; set; } = "monthly";
+    public decimal? CustomAmount { get; set; }
+    public string? ItemType { get; set; }
+    public string? ItemTitle { get; set; }
 }
 
 public class PublicPaymentRequest
@@ -222,4 +235,5 @@ public class PublicPaymentRequest
     [Required] public string ReferenceNumber { get; set; } = "";
     public string PaymentMethod { get; set; } = "gcash";
     [Required] public IFormFile? Proof { get; set; }
+    public string? Notes { get; set; }
 }

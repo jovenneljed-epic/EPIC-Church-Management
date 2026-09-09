@@ -1,5 +1,46 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import {
+    Activity,
+    ArrowRight,
+    BarChart3,
+    Bell,
+    BookOpen,
+    Calendar,
+    CalendarCheck,
+    CalendarDays,
+    Camera,
+    Check,
+    ChevronDown,
+    ChevronRight,
+    Church,
+    Clock,
+    EyeOff,
+    FileText,
+    GraduationCap,
+    HeartHandshake,
+    Info,
+    Laptop,
+    Layers,
+    Lock,
+    Maximize2,
+    Menu,
+    Pause,
+    Phone,
+    Play,
+    RotateCcw,
+    Server,
+    ShieldCheck,
+    ShoppingBag,
+    Sparkles,
+    Tag,
+    UserPlus,
+    Users,
+    Volume2,
+    VolumeX,
+    Wallet,
+    X,
+} from "lucide-react";
 import "./SalesLandingPage.css";
 import { API_BASE_URL } from "../config";
 
@@ -7,14 +48,42 @@ interface SalesLandingPageProps {
     onNavigate?: (page: string) => void;
 }
 
+interface MenuItem {
+    title: string;
+    description: string;
+    page: string;
+    fallback: string;
+    icon: React.ReactNode;
+    badge?: string;
+}
+
+interface MenuColumn {
+    heading: string;
+    items: MenuItem[];
+}
+
+interface MenuCategory {
+    id: string;
+    label: string;
+    columns: MenuColumn[];
+    featured?: {
+        title: string;
+        description: string;
+        actionText: string;
+        page: string;
+        fallback: string;
+        icon: React.ReactNode;
+    };
+}
+
 interface Feature {
-    icon: string;
+    icon: React.ReactNode;
     title: string;
     description: string;
 }
 
 interface Problem {
-    icon: string;
+    icon: React.ReactNode;
     title: string;
     description: string;
 }
@@ -43,10 +112,328 @@ const INITIAL_FORM_DATA: DemoFormData = {
     message: "",
 };
 
+const MENU_CATEGORIES: MenuCategory[] = [
+    {
+        id: "platform",
+        label: "Platform",
+        columns: [
+            {
+                heading: "EXPLORE PLATFORM",
+                items: [
+                    {
+                        title: "EPIC System Overview",
+                        description: "Complete ministry operating system",
+                        page: "epic-system",
+                        fallback: "/epic-system",
+                        icon: <Layers size={18} />,
+                    },
+                    {
+                        title: "Platform Architecture",
+                        description: "Enterprise-grade cloud technology",
+                        page: "platform",
+                        fallback: "/platform",
+                        icon: <Server size={18} />,
+                    },
+                    {
+                        title: "What's New",
+                        description: "Latest updates and feature releases",
+                        page: "whats-new",
+                        fallback: "/whats-new",
+                        icon: <Sparkles size={18} />,
+                        badge: "New",
+                    },
+                    {
+                        title: "Interactive Demo",
+                        description: "Experience the system in real-time",
+                        page: "demo",
+                        fallback: "/demo",
+                        icon: <Play size={18} />,
+                    },
+                ],
+            },
+            {
+                heading: "CORE CAPABILITIES",
+                items: [
+                    {
+                        title: "Members & Directory",
+                        description: "Centralized profiles & pastoral notes",
+                        page: "home",
+                        fallback: "/home",
+                        icon: <Users size={18} />,
+                    },
+                    {
+                        title: "Attendance Tracking",
+                        description: "Service participation and check-in",
+                        page: "home",
+                        fallback: "/home",
+                        icon: <CalendarCheck size={18} />,
+                    },
+                    {
+                        title: "Giving & Financials",
+                        description: "Tithes, offerings & biblical stewardship",
+                        page: "giving",
+                        fallback: "/giving",
+                        icon: <Wallet size={18} />,
+                    },
+                    {
+                        title: "Ministries & Teams",
+                        description: "Schedules, volunteers & assignments",
+                        page: "ministries",
+                        fallback: "/ministries",
+                        icon: <HeartHandshake size={18} />,
+                    },
+                ],
+            },
+        ],
+        featured: {
+            title: "See EPIC in Action",
+            description: "Request a personalized walkthrough tailored for your church leadership team.",
+            actionText: "Schedule Demo",
+            page: "demo",
+            fallback: "/demo",
+            icon: <Laptop size={24} />,
+        },
+    },
+    {
+        id: "church",
+        label: "Church Life",
+        columns: [
+            {
+                heading: "COMMUNITY & WORSHIP",
+                items: [
+                    {
+                        title: "Church Community Home",
+                        description: "Member welcome, worship & announcements",
+                        page: "home",
+                        fallback: "/home",
+                        icon: <Church size={18} />,
+                    },
+                    {
+                        title: "About EPIC Church",
+                        description: "Our identity, vision, mission & leadership",
+                        page: "about",
+                        fallback: "/about",
+                        icon: <Info size={18} />,
+                    },
+                    {
+                        title: "Ministries & Programs",
+                        description: "Worship, youth, discipleship & outreach",
+                        page: "ministries",
+                        fallback: "/ministries",
+                        icon: <HeartHandshake size={18} />,
+                    },
+                    {
+                        title: "Connect & Contact",
+                        description: "Service times, locations & prayer requests",
+                        page: "contact",
+                        fallback: "/contact",
+                        icon: <Phone size={18} />,
+                    },
+                    {
+                        title: "Giving & Stewardship",
+                        description: "Tithes, offerings, missions & building fund",
+                        page: "giving",
+                        fallback: "/giving",
+                        icon: <Wallet size={18} />,
+                    },
+                ],
+            },
+            {
+                heading: "GATHERINGS & EVALUATION",
+                items: [
+                    {
+                        title: "Church Events & Gatherings",
+                        description: "Sunday worship, youth camp & outreaches",
+                        page: "events",
+                        fallback: "/events",
+                        icon: <Calendar size={18} />,
+                    },
+                    {
+                        title: "Church Life Gallery",
+                        description: "Moments, people, and community stories",
+                        page: "gallery",
+                        fallback: "/gallery",
+                        icon: <Camera size={18} />,
+                    },
+                    {
+                        title: "Church Announcements",
+                        description: "Official bulletins, updates & registrations",
+                        page: "announcements",
+                        fallback: "/announcements",
+                        icon: <Bell size={18} />,
+                    },
+                    {
+                        title: "Ministry Health Evaluation",
+                        description: "Assess department operational health & rubrics",
+                        page: "ministry-evaluation",
+                        fallback: "/ministry-evaluation",
+                        icon: <Activity size={18} />,
+                        badge: "Free",
+                    },
+                    {
+                        title: "Discipleship Pathway",
+                        description: "Guide members from seeker to servant",
+                        page: "learning",
+                        fallback: "/learning",
+                        icon: <Sparkles size={18} />,
+                    },
+                ],
+            },
+        ],
+        featured: {
+            title: "Engaging People Into Christ",
+            description: "Discover our heart for reaching people, building disciples, and serving God's kingdom.",
+            actionText: "About EPIC",
+            page: "about",
+            fallback: "/about",
+            icon: <Church size={24} />,
+        },
+    },
+    {
+        id: "learning",
+        label: "Academy & Learning",
+        columns: [
+            {
+                heading: "EDUCATION & TRAINING",
+                items: [
+                    {
+                        title: "EPIC Learning",
+                        description: "Biblical discipleship tracks & lessons",
+                        page: "learning",
+                        fallback: "/learning",
+                        icon: <BookOpen size={18} />,
+                    },
+                    {
+                        title: "Leadership Academy",
+                        description: "Training for pastors and ministry leaders",
+                        page: "academy",
+                        fallback: "/academy",
+                        icon: <GraduationCap size={18} />,
+                    },
+                    {
+                        title: "Resources & Toolkits",
+                        description: "Downloadable guides, templates & forms",
+                        page: "resources",
+                        fallback: "/resources",
+                        icon: <FileText size={18} />,
+                    },
+                    {
+                        title: "Church Blog & Insights",
+                        description: "Articles on church health and leadership",
+                        page: "blog",
+                        fallback: "/blog",
+                        icon: <Layers size={18} />,
+                    },
+                ],
+            },
+        ],
+        featured: {
+            title: "Foundations of Faith",
+            description: "Enroll your congregation in structured, interactive discipleship courses.",
+            actionText: "Start Learning",
+            page: "learning",
+            fallback: "/learning",
+            icon: <GraduationCap size={24} />,
+        },
+    },
+    {
+        id: "pricing",
+        label: "Plans & Pricing",
+        columns: [
+            {
+                heading: "INVESTMENT & SOLUTIONS",
+                items: [
+                    {
+                        title: "Plans & Packages",
+                        description: "Transparent pricing tiers for churches of all sizes",
+                        page: "offer",
+                        fallback: "/offer",
+                        icon: <Tag size={18} />,
+                    },
+                    {
+                        title: "Ministry Store",
+                        description: "Curated ministry resources, books & tools",
+                        page: "store",
+                        fallback: "/store",
+                        icon: <ShoppingBag size={18} />,
+                    },
+                    {
+                        title: "Special Launch Offer",
+                        description: "Exclusive discounts and church starter perks",
+                        page: "opt-in",
+                        fallback: "/opt-in",
+                        icon: <Sparkles size={18} />,
+                        badge: "Special",
+                    },
+                ],
+            },
+        ],
+        featured: {
+            title: "30-Day Free Trial",
+            description: "Get full access to all EPIC Church Management features with zero setup fees.",
+            actionText: "View Plans",
+            page: "offer",
+            fallback: "/offer",
+            icon: <Tag size={24} />,
+        },
+    },
+];
+
 const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
     onNavigate,
 }) => {
     const [menuOpen, setMenuOpen] = useState(false);
+    const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+    const [mobileExpanded, setMobileExpanded] = useState<string | null>(null);
+    const headerRef = useRef<HTMLElement>(null);
+    const hoverTimerRef = useRef<number | null>(null);
+
+    const handleDropdownTrigger = (categoryId: string) => {
+        if (hoverTimerRef.current) {
+            clearTimeout(hoverTimerRef.current);
+            hoverTimerRef.current = null;
+        }
+        setActiveDropdown((current) => (current === categoryId ? null : categoryId));
+    };
+
+    const handleDropdownHover = (categoryId: string) => {
+        if (hoverTimerRef.current) {
+            clearTimeout(hoverTimerRef.current);
+            hoverTimerRef.current = null;
+        }
+        setActiveDropdown(categoryId);
+    };
+
+    const handleDropdownLeave = () => {
+        if (hoverTimerRef.current) {
+            clearTimeout(hoverTimerRef.current);
+        }
+        hoverTimerRef.current = window.setTimeout(() => {
+            setActiveDropdown(null);
+        }, 180);
+    };
+
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === "Escape") {
+                setActiveDropdown(null);
+            }
+        };
+
+        const handleClickOutside = (event: MouseEvent) => {
+            if (headerRef.current && !headerRef.current.contains(event.target as Node)) {
+                setActiveDropdown(null);
+            }
+        };
+
+        window.addEventListener("keydown", handleKeyDown);
+        document.addEventListener("mousedown", handleClickOutside);
+
+        return () => {
+            window.removeEventListener("keydown", handleKeyDown);
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
 
     // =========================================================
     // DEMO REQUEST STATE
@@ -61,6 +448,102 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
 
     const [formData, setFormData] =
         useState<DemoFormData>(INITIAL_FORM_DATA);
+
+    // =========================================================
+    // REAL PRODUCT VIDEO AUTOPLAY ON SCROLL STATE
+    // =========================================================
+    const videoRef = useRef<HTMLVideoElement | null>(null);
+    const videoContainerRef = useRef<HTMLDivElement | null>(null);
+    const [isVideoPlaying, setIsVideoPlaying] = useState<boolean>(false);
+    const [isVideoMuted, setIsVideoMuted] = useState<boolean>(true);
+    const [videoProgress, setVideoProgress] = useState<number>(0);
+    const [videoDuration, setVideoDuration] = useState<number>(0);
+    const [currentTime, setCurrentTime] = useState<number>(0);
+
+    // Scroll-based auto play/pause: plays when scrolling in, pauses when scrolling out
+    useEffect(() => {
+        const videoElement = videoRef.current;
+        const container = videoContainerRef.current;
+        if (!videoElement || !container) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting && entry.intersectionRatio >= 0.25) {
+                        videoElement.play().then(() => {
+                            setIsVideoPlaying(true);
+                        }).catch(() => {
+                            // Autoplay policies silently handled if needed
+                        });
+                    } else if (!entry.isIntersecting || entry.intersectionRatio < 0.15) {
+                        videoElement.pause();
+                        setIsVideoPlaying(false);
+                    }
+                });
+            },
+            {
+                threshold: [0, 0.15, 0.25, 0.5, 0.75]
+            }
+        );
+
+        observer.observe(container);
+
+        return () => {
+            observer.disconnect();
+        };
+    }, []);
+
+    const handleVideoTimeUpdate = () => {
+        if (videoRef.current) {
+            const current = videoRef.current.currentTime;
+            const dur = videoRef.current.duration || 1;
+            setCurrentTime(current);
+            setVideoDuration(dur);
+            setVideoProgress((current / dur) * 100);
+        }
+    };
+
+    const togglePlayPause = (e?: React.MouseEvent) => {
+        e?.stopPropagation();
+        if (!videoRef.current) return;
+        if (videoRef.current.paused) {
+            videoRef.current.play().then(() => setIsVideoPlaying(true)).catch(() => {});
+        } else {
+            videoRef.current.pause();
+            setIsVideoPlaying(false);
+        }
+    };
+
+    const toggleMute = (e?: React.MouseEvent) => {
+        e?.stopPropagation();
+        if (!videoRef.current) return;
+        const nextMuted = !isVideoMuted;
+        videoRef.current.muted = nextMuted;
+        setIsVideoMuted(nextMuted);
+    };
+
+    const toggleFullscreen = (e?: React.MouseEvent) => {
+        e?.stopPropagation();
+        if (!videoContainerRef.current) return;
+        if (!document.fullscreenElement) {
+            videoContainerRef.current.requestFullscreen().catch(() => {});
+        } else {
+            document.exitFullscreen().catch(() => {});
+        }
+    };
+
+    const handleRestartVideo = (e?: React.MouseEvent) => {
+        e?.stopPropagation();
+        if (!videoRef.current) return;
+        videoRef.current.currentTime = 0;
+        videoRef.current.play().then(() => setIsVideoPlaying(true)).catch(() => {});
+    };
+
+    const formatVideoTime = (seconds: number) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+    };
 
     // =========================================================
     // PAGE REVEAL ANIMATION
@@ -363,25 +846,25 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
 
     const problems: Problem[] = [
         {
-            icon: "▦",
+            icon: <Layers size={22} />,
             title: "Scattered Records",
             description:
                 "Member information, attendance, giving and ministry records are often spread across spreadsheets, notebooks and files.",
         },
         {
-            icon: "◷",
+            icon: <Clock size={22} />,
             title: "Wasted Time",
             description:
                 "Church administrators spend valuable hours searching for information and repeating manual tasks.",
         },
         {
-            icon: "⌁",
+            icon: <EyeOff size={22} />,
             title: "Limited Visibility",
             description:
                 "Important church information can be difficult to track, understand and turn into useful decisions.",
         },
         {
-            icon: "◈",
+            icon: <ShieldCheck size={22} />,
             title: "Security Concerns",
             description:
                 "Church information deserves a centralized system with controlled access and organized records.",
@@ -394,49 +877,49 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
 
     const features: Feature[] = [
         {
-            icon: "♟",
+            icon: <Users size={22} />,
             title: "Members",
             description:
                 "Centralize member profiles, personal information and church records in one organized system.",
         },
         {
-            icon: "✓",
+            icon: <CalendarCheck size={22} />,
             title: "Attendance",
             description:
                 "Record attendance and gain a clearer picture of participation across your church services.",
         },
         {
-            icon: "₱",
+            icon: <Wallet size={22} />,
             title: "Giving",
             description:
                 "Organize tithes, offerings and giving records while keeping financial information easier to manage.",
         },
         {
-            icon: "⛪",
+            icon: <Church size={22} />,
             title: "Church Services",
             description:
                 "Create and manage church services, schedules and service information from one place.",
         },
         {
-            icon: "◆",
+            icon: <CalendarDays size={22} />,
             title: "Events",
             description:
                 "Plan church events, programs, assignments and activities without relying on disconnected tools.",
         },
         {
-            icon: "♫",
+            icon: <HeartHandshake size={22} />,
             title: "Ministries",
             description:
                 "Manage ministries, ministry members and assignments while keeping everything organized.",
         },
         {
-            icon: "●",
+            icon: <UserPlus size={22} />,
             title: "Visitors",
             description:
                 "Track visitors and follow-up information so your church can build meaningful connections.",
         },
         {
-            icon: "▤",
+            icon: <BarChart3 size={22} />,
             title: "Reports",
             description:
                 "Access useful church reports and information to help leaders understand what is happening.",
@@ -486,110 +969,285 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
                 NAVIGATION
             ================================================= */}
 
-         <header className="sales-navbar">
-
-    {/* BRAND */}
-    <div
-        className="sales-brand"
-        onClick={() =>
-            window.scrollTo({
-                top: 0,
-                behavior: "smooth",
-            })
-        }
-    >
-        <div className="sales-brand-logo">
-            EPIC
-        </div>
-
-        <div className="sales-brand-text">
-            <strong>
-                EPIC CHURCH
-            </strong>
-
-            <span>
-                MANAGEMENT SYSTEM
-            </span>
-        </div>
-    </div>
-
-    {/* MOBILE ACTIONS */}
-    <div className="sales-mobile-actions">
-
-     
-
-        <button
-            type="button"
-            className="sales-mobile-menu"
-            onClick={() =>
-                setMenuOpen((value) => !value)
-            }
-            aria-label="Toggle navigation"
-            aria-expanded={menuOpen}
+         <header
+            ref={headerRef}
+            className="sales-header"
+            onMouseLeave={handleDropdownLeave}
         >
-            {menuOpen ? "×" : "☰"}
-        </button>
+            <div className="sales-header-content">
+                {/* BRAND */}
+                <div
+                    className="sales-brand"
+                    onClick={() =>
+                        window.scrollTo({
+                            top: 0,
+                            behavior: "smooth",
+                        })
+                    }
+                >
+                    <div className="sales-brand-logo">
+                        EPIC
+                    </div>
 
-    </div>
+                    <div className="sales-brand-text">
+                        <strong>
+                            EPIC CHURCH
+                        </strong>
+                        <span>
+                            MANAGEMENT SYSTEM
+                        </span>
+                    </div>
+                </div>
 
-    {/* NAVIGATION */}
-    <nav
-        className={`sales-nav ${
-            menuOpen ? "sales-nav-open" : ""
-        }`}
-    >
+                {/* DESKTOP APPLE-STYLE NAVIGATION */}
+                <nav className="sales-nav" aria-label="Main Navigation">
+                    {MENU_CATEGORIES.map((category) => (
+                        <button
+                            key={category.id}
+                            type="button"
+                            className={`sales-nav-category-btn ${
+                                activeDropdown === category.id ? "active" : ""
+                            }`}
+                            onClick={() => handleDropdownTrigger(category.id)}
+                            onMouseEnter={() => handleDropdownHover(category.id)}
+                            aria-expanded={activeDropdown === category.id}
+                        >
+                            <span>{category.label}</span>
+                            <ChevronDown
+                                size={14}
+                                className={`sales-chevron ${
+                                    activeDropdown === category.id ? "rotated" : ""
+                                }`}
+                            />
+                        </button>
+                    ))}
 
-        <a
-            href="#features"
-            onClick={() => setMenuOpen(false)}
-        >
-            Features
-        </a>
+                    <a
+                        href="#features"
+                        className="sales-nav-link"
+                        onClick={() => setActiveDropdown(null)}
+                    >
+                        Features
+                    </a>
 
-        <a
-            href="#how-it-works"
-            onClick={() => setMenuOpen(false)}
-        >
-            How It Works
-        </a>
+                    <a
+                        href="#how-it-works"
+                        className="sales-nav-link"
+                        onClick={() => setActiveDropdown(null)}
+                    >
+                        How It Works
+                    </a>
 
-        <a
-            href="#learning"
-            onClick={() => setMenuOpen(false)}
-        >
-            EPIC Learning
-        </a>
+                    <div className="sales-nav-actions">
+                        <button
+                            type="button"
+                            className="sales-login-button"
+                            onClick={goToClientLogin}
+                        >
+                            Client Login
+                        </button>
 
-        <a
-            href="#pricing"
-            onClick={() => setMenuOpen(false)}
-        >
-            Pricing
-        </a>
+                        <button
+                            type="button"
+                            className="sales-primary-button sales-nav-cta"
+                            onClick={openDemoForm}
+                        >
+                            Get Started
+                        </button>
+                    </div>
+                </nav>
 
-        {/* EPIC MAIN WEBSITE */}
-      <button
-    type="button"
-    className="sales-login-button"
-    onClick={() =>
-        navigate("home", "/")
-    }
->
-    EPIC Website
-</button>
+                {/* MOBILE ACTIONS */}
+                <div className="sales-mobile-actions">
+                    <button
+                        type="button"
+                        className="sales-mobile-menu"
+                        onClick={() => setMenuOpen((value) => !value)}
+                        aria-label="Toggle navigation"
+                        aria-expanded={menuOpen}
+                    >
+                        {menuOpen ? <X size={20} /> : <Menu size={20} />}
+                    </button>
+                </div>
+            </div>
 
-        {/* CLIENT LOGIN */}
-        <button
-            type="button"
-            className="sales-login-button"
-            onClick={goToClientLogin}
-        >
-            Client Login
-        </button>
+            {/* APPLE-STYLE MEGA DROPDOWN PANEL */}
+            {activeDropdown && (
+                <div
+                    className="sales-mega-dropdown"
+                    onMouseEnter={() => {
+                        if (hoverTimerRef.current) {
+                            clearTimeout(hoverTimerRef.current);
+                            hoverTimerRef.current = null;
+                        }
+                    }}
+                    onMouseLeave={handleDropdownLeave}
+                >
+                    {(() => {
+                        const currentCat = MENU_CATEGORIES.find(
+                            (c) => c.id === activeDropdown
+                        );
+                        if (!currentCat) return null;
 
-    </nav>
+                        return (
+                            <div className="sales-mega-dropdown-inner">
+                                <div className="sales-mega-columns">
+                                    {currentCat.columns.map((col, idx) => (
+                                        <div key={idx} className="sales-mega-column">
+                                            <span className="sales-mega-heading">
+                                                {col.heading}
+                                            </span>
 
-</header>
+                                            <div className="sales-mega-items">
+                                                {col.items.map((item) => (
+                                                    <button
+                                                        key={item.title}
+                                                        type="button"
+                                                        className="sales-mega-item"
+                                                        onClick={() => {
+                                                            setActiveDropdown(null);
+                                                            navigate(item.page, item.fallback);
+                                                        }}
+                                                    >
+                                                        <div className="sales-mega-icon">
+                                                            {item.icon}
+                                                        </div>
+
+                                                        <div className="sales-mega-text">
+                                                            <div className="sales-mega-title-row">
+                                                                <strong>{item.title}</strong>
+                                                                {item.badge && (
+                                                                    <span className="sales-mega-badge">
+                                                                        {item.badge}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <span>{item.description}</span>
+                                                        </div>
+
+                                                        <ChevronRight size={14} className="sales-mega-arrow" />
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {currentCat.featured && (
+                                    <div className="sales-mega-featured">
+                                        <div className="sales-mega-featured-icon">
+                                            {currentCat.featured.icon}
+                                        </div>
+                                        <h4>{currentCat.featured.title}</h4>
+                                        <p>{currentCat.featured.description}</p>
+                                        <button
+                                            type="button"
+                                            className="sales-mega-featured-btn"
+                                            onClick={() => {
+                                                setActiveDropdown(null);
+                                                navigate(
+                                                    currentCat.featured!.page,
+                                                    currentCat.featured!.fallback
+                                                );
+                                            }}
+                                        >
+                                            {currentCat.featured.actionText} <ArrowRight size={14} />
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })()}
+                </div>
+            )}
+
+            {/* MOBILE ACCORDION DRAWER */}
+            {menuOpen && (
+                <div className="sales-mobile-drawer">
+                    <div className="sales-mobile-drawer-content">
+                        {MENU_CATEGORIES.map((cat) => (
+                            <div key={cat.id} className="sales-mobile-cat">
+                                <button
+                                    type="button"
+                                    className="sales-mobile-cat-header"
+                                    onClick={() =>
+                                        setMobileExpanded((curr) =>
+                                            curr === cat.id ? null : cat.id
+                                        )
+                                    }
+                                >
+                                    <span>{cat.label}</span>
+                                    <ChevronDown
+                                        size={16}
+                                        className={`sales-chevron ${
+                                            mobileExpanded === cat.id ? "rotated" : ""
+                                        }`}
+                                    />
+                                </button>
+
+                                {mobileExpanded === cat.id && (
+                                    <div className="sales-mobile-cat-items">
+                                        {cat.columns.flatMap((c) => c.items).map((item) => (
+                                            <button
+                                                key={item.title}
+                                                type="button"
+                                                className="sales-mobile-subitem"
+                                                onClick={() => {
+                                                    setMenuOpen(false);
+                                                    navigate(item.page, item.fallback);
+                                                }}
+                                            >
+                                                <div className="sales-mega-icon">
+                                                    {item.icon}
+                                                </div>
+                                                <div className="sales-mega-text">
+                                                    <strong>{item.title}</strong>
+                                                    <span>{item.description}</span>
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+
+                        <div className="sales-mobile-direct-links">
+                            <a
+                                href="#features"
+                                onClick={() => setMenuOpen(false)}
+                            >
+                                Features
+                            </a>
+                            <a
+                                href="#how-it-works"
+                                onClick={() => setMenuOpen(false)}
+                            >
+                                How It Works
+                            </a>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setMenuOpen(false);
+                                    goToClientLogin();
+                                }}
+                            >
+                                Client Login
+                            </button>
+                            <button
+                                type="button"
+                                className="sales-primary-button"
+                                onClick={() => {
+                                    setMenuOpen(false);
+                                    openDemoForm();
+                                }}
+                            >
+                                Get Started
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </header>
             {/* =================================================
                 HERO
             ================================================= */}
@@ -631,9 +1289,7 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
                                     Get Started
                                 </span>
 
-                                <b>
-                                    →
-                                </b>
+                                <ArrowRight size={16} />
                             </button>
 
                             <a
@@ -641,7 +1297,7 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
                                 className="sales-video-button"
                             >
                                 <span className="sales-play-icon">
-                                    ▶
+                                    <Play size={14} />
                                 </span>
 
                                 <span>
@@ -653,19 +1309,19 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
 
                         <div className="sales-trust-row">
                             <span>
-                                ✓ Cloud-Based
+                                <Check size={14} /> Cloud-Based
                             </span>
 
                             <span>
-                                ✓ Secure
+                                <Check size={14} /> Secure
                             </span>
 
                             <span>
-                                ✓ Church-Focused
+                                <Check size={14} /> Church-Focused
                             </span>
 
                             <span>
-                                ✓ Easy to Use
+                                <Check size={14} /> Easy to Use
                             </span>
                         </div>
 
@@ -710,12 +1366,12 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
                                         E
                                     </div>
 
-                                    <span>⌂</span>
-                                    <span>♟</span>
-                                    <span>✓</span>
-                                    <span>₱</span>
-                                    <span>♫</span>
-                                    <span>⚙</span>
+                                    <span><Church size={16} /></span>
+                                    <span><Users size={16} /></span>
+                                    <span><CalendarCheck size={16} /></span>
+                                    <span><Wallet size={16} /></span>
+                                    <span><Sparkles size={16} /></span>
+                                    <span><BarChart3 size={16} /></span>
 
                                 </aside>
 
@@ -856,33 +1512,133 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
 
                     </div>
 
-                    <div className="sales-video-wrapper sales-reveal">
+                    <div className="sales-video-wrapper sales-reveal" ref={videoContainerRef}>
 
                         <div className="sales-video-frame">
 
-                            <div className="sales-video-screen">
+                            <div className="sales-real-video-container" onClick={togglePlayPause}>
 
-                                <div className="sales-video-content">
+                                <video
+                                    ref={videoRef}
+                                    className="sales-real-video-player"
+                                    src="/videos/epic-overview.mp4"
+                                    playsInline
+                                    loop
+                                    muted={isVideoMuted}
+                                    preload="metadata"
+                                    onTimeUpdate={handleVideoTimeUpdate}
+                                    onPlay={() => setIsVideoPlaying(true)}
+                                    onPause={() => setIsVideoPlaying(false)}
+                                    onLoadedMetadata={() => {
+                                        if (videoRef.current) {
+                                            setVideoDuration(videoRef.current.duration);
+                                        }
+                                    }}
+                                />
 
-                                    <div className="sales-video-play-large">
-                                        ▶
+                                {/* Top status & sound badges */}
+                                <div className="sales-video-top-bar" onClick={(e) => e.stopPropagation()}>
+                                    <div className="sales-video-status-tag">
+                                        <span className={`status-beacon ${isVideoPlaying ? "is-live" : ""}`} />
+                                        <span>{isVideoPlaying ? "AUTOPLAYING ON SCROLL" : "PAUSED (SCROLL OR CLICK TO PLAY)"}</span>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        className={`sales-video-sound-chip ${!isVideoMuted ? "is-active" : ""}`}
+                                        onClick={toggleMute}
+                                        title={isVideoMuted ? "Click to unmute" : "Click to mute"}
+                                    >
+                                        {isVideoMuted ? (
+                                            <>
+                                                <VolumeX size={15} />
+                                                <span>Unmute Sound</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Volume2 size={15} />
+                                                <span>Sound On</span>
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+
+                                {/* Center Paused Overlay */}
+                                {!isVideoPlaying && (
+                                    <div className="sales-video-paused-overlay">
+                                        <div className="sales-video-play-large" onClick={togglePlayPause}>
+                                            <Play size={28} />
+                                        </div>
+                                        <strong>EPIC CHURCH MANAGEMENT PLATFORM</strong>
+                                        <span>PRODUCT PREVIEW &amp; WALKTHROUGH</span>
+                                        <small>Click to play with sound or scroll to watch automatically</small>
+                                    </div>
+                                )}
+
+                                {/* Bottom Controls Bar */}
+                                <div className="sales-video-controls-bar" onClick={(e) => e.stopPropagation()}>
+                                    <div
+                                        className="video-progress-bar-wrap"
+                                        onClick={(e) => {
+                                            const rect = e.currentTarget.getBoundingClientRect();
+                                            const clickX = e.clientX - rect.left;
+                                            const newPct = clickX / rect.width;
+                                            if (videoRef.current) {
+                                                videoRef.current.currentTime = newPct * (videoRef.current.duration || 1);
+                                            }
+                                        }}
+                                    >
+                                        <div
+                                            className="video-progress-bar-fill"
+                                            style={{ width: `${videoProgress}%` }}
+                                        />
                                     </div>
 
-                                    <strong>
-                                        EPIC CHURCH MANAGEMENT SYSTEM
-                                    </strong>
+                                    <div className="video-controls-row">
+                                        <div className="video-controls-left">
+                                            <button
+                                                type="button"
+                                                className="v-action-btn"
+                                                onClick={togglePlayPause}
+                                                title={isVideoPlaying ? "Pause" : "Play"}
+                                            >
+                                                {isVideoPlaying ? <Pause size={17} /> : <Play size={17} />}
+                                            </button>
 
-                                    <span>
-                                        PRODUCT OVERVIEW
-                                    </span>
+                                            <button
+                                                type="button"
+                                                className="v-action-btn"
+                                                onClick={handleRestartVideo}
+                                                title="Restart Video"
+                                            >
+                                                <RotateCcw size={16} />
+                                            </button>
 
-                                    <small>
-                                        Watch how EPIC helps
-                                        your church become
-                                        more organized and
-                                        connected.
-                                    </small>
+                                            <button
+                                                type="button"
+                                                className="v-action-btn"
+                                                onClick={toggleMute}
+                                                title={isVideoMuted ? "Unmute" : "Mute"}
+                                            >
+                                                {isVideoMuted ? <VolumeX size={17} /> : <Volume2 size={17} />}
+                                            </button>
 
+                                            <span className="video-time-display">
+                                                {formatVideoTime(currentTime)} / {formatVideoTime(videoDuration)}
+                                            </span>
+                                        </div>
+
+                                        <div className="video-controls-right">
+                                            <span className="video-badge-pill">HD 1080p</span>
+                                            <button
+                                                type="button"
+                                                className="v-action-btn"
+                                                onClick={toggleFullscreen}
+                                                title="Fullscreen"
+                                            >
+                                                <Maximize2 size={17} />
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
 
                             </div>
@@ -1019,10 +1775,7 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
                                     </p>
 
                                     <div className="sales-feature-link">
-                                        Learn more
-                                        <span>
-                                            →
-                                        </span>
+                                        Learn more <ArrowRight size={14} />
                                     </div>
 
                                 </div>
@@ -1096,7 +1849,7 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
                                     {index <
                                         steps.length - 1 && (
                                         <div className="sales-step-connector">
-                                            →
+                                            <ArrowRight size={18} />
                                         </div>
                                     )}
 
@@ -1139,22 +1892,22 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
                         <div className="sales-learning-list">
 
                             <div>
-                                <b>✓</b>
+                                <b><Check size={14} /></b>
                                 Self-paced courses
                             </div>
 
                             <div>
-                                <b>✓</b>
+                                <b><Check size={14} /></b>
                                 Structured lessons
                             </div>
 
                             <div>
-                                <b>✓</b>
+                                <b><Check size={14} /></b>
                                 Progress tracking
                             </div>
 
                             <div>
-                                <b>✓</b>
+                                <b><Check size={14} /></b>
                                 Certificates
                             </div>
 
@@ -1165,9 +1918,7 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
                             onClick={openDemoForm}
                         >
                             Explore EPIC Learning
-                            <b>
-                                →
-                            </b>
+                            <ArrowRight size={16} />
                         </button>
 
                     </div>
@@ -1283,9 +2034,7 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
                                 onClick={openDemoForm}
                             >
                                 Start Your EPIC Journey
-                                <b>
-                                    →
-                                </b>
+                                <ArrowRight size={16} />
                             </button>
 
                             <button
@@ -1299,9 +2048,7 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
                                 }
                             >
                                 View Plans & Pricing
-                                <b>
-                                    →
-                                </b>
+                                <ArrowRight size={16} />
                             </button>
 
                         </div>
@@ -1368,10 +2115,7 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
             <div className="sales-mobile-cta">
 
                 <button onClick={openDemoForm}>
-                    Get Started
-                    <span>
-                        →
-                    </span>
+                    Get Started <ArrowRight size={16} />
                 </button>
 
             </div>
@@ -1434,7 +2178,7 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
                                 disabled={submittingDemo}
                                 aria-label="Close"
                             >
-                                ×
+                                <X size={20} />
                             </button>
 
                         </div>
@@ -1446,7 +2190,7 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
                             <div className="sales-demo-success">
 
                                 <div className="sales-demo-success-icon">
-                                    ✓
+                                    <Check size={28} />
                                 </div>
 
                                 <h3>
@@ -1480,10 +2224,7 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
                                     className="sales-primary-button sales-demo-done-button"
                                     onClick={closeDemoForm}
                                 >
-                                    Done
-                                    <b>
-                                        ✓
-                                    </b>
+                                    Done <Check size={16} />
                                 </button>
 
                             </div>
@@ -1671,7 +2412,7 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
 
                                 <div className="sales-demo-agreement">
 
-                                    <span>✓</span>
+                                    <span><Check size={14} /></span>
 
                                     <p>
                                         By continuing,
@@ -1713,10 +2454,7 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
                                             </>
                                         ) : (
                                             <>
-                                                Continue to EPIC
-                                                <b>
-                                                    →
-                                                </b>
+                                                Continue to EPIC <ArrowRight size={16} />
                                             </>
                                         )}
 
@@ -1725,8 +2463,8 @@ const SalesLandingPage: React.FC<SalesLandingPageProps> = ({
                                 </div>
 
                                 <div className="sales-demo-security">
-                                    🔐 Your information is
-                                    kept secure.
+                                    <Lock size={13} style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} />
+                                    Your information is kept secure.
                                 </div>
 
                             </form>

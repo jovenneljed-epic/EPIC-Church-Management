@@ -1,5 +1,21 @@
 import React, { useState } from "react";
 import PublicHeader from "../../components/PublicHeader";
+import {
+    Mail,
+    Phone,
+    MapPin,
+    Clock,
+    Calendar,
+    Send,
+    CheckCircle2,
+    Sparkles,
+    Church,
+    HeartHandshake,
+    ArrowRight,
+    User,
+    AlertCircle,
+    MessageSquare
+} from "lucide-react";
 import "./ContactPage.css";
 import "./PublicUnisonTheme.css";
 import { API_BASE_URL } from "../../config";
@@ -16,142 +32,163 @@ interface ContactFormData {
     message: string;
 }
 
-const ContactPage: React.FC<ContactPageProps> = ({
-    onNavigate,
-}) => {
+interface SubmissionReceipt {
+    requestId: number;
+    name: string;
+    email: string;
+    phone: string;
+    department: string;
+    message: string;
+    submittedAt: string;
+}
+
+const GATHERING_TIMES = [
+    {
+        day: "SUN",
+        title: "Sunday Worship & Word Encounter",
+        time: "8:30 AM (1st Service) & 1:30 PM (2nd Service)",
+        detail: "Main Sanctuary & Livestream • Kids Church Available"
+    },
+    {
+        day: "SAT",
+        title: "NextGen Youth Encounter",
+        time: "4:00 PM – 6:30 PM",
+        detail: "Youth Pavilion • High School & College Students"
+    },
+    {
+        day: "WED",
+        title: "Midweek Prayer & Bible Study",
+        time: "7:00 PM – 8:30 PM",
+        detail: "Sanctuary Hall & Online Zoom Link"
+    },
+    {
+        day: "TUE",
+        title: "Discipleship Life Groups",
+        time: "7:30 PM",
+        detail: "District homes across Metro & Provincial Clusters"
+    }
+];
+
+export default function ContactPage({ onNavigate }: ContactPageProps) {
     const [form, setForm] = useState<ContactFormData>({
         name: "",
         email: "",
         phone: "",
-        subject: "",
-        message: "",
+        subject: "General Inquiry",
+        message: ""
     });
 
     const [submitted, setSubmitted] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState("");
-
-    // =========================================================
-    // FORM CHANGE
-    // =========================================================
+    const [submissionReceipt, setSubmissionReceipt] = useState<SubmissionReceipt | null>(null);
 
     const handleChange = (
         event: React.ChangeEvent<
-            HTMLInputElement |
-            HTMLTextAreaElement |
-            HTMLSelectElement
+            HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
         >
     ) => {
         const { name, value } = event.target;
-
-        setForm((previous) => ({
-            ...previous,
-            [name]: value,
+        setForm((prev) => ({
+            ...prev,
+            [name]: value
         }));
-
         setSubmitted(false);
         setError("");
     };
 
-    // =========================================================
-    // SUBMIT CONTACT FORM
-    //
-    // Uses the existing DemoRequests API.
-    //
-    // Contact Form -> DemoRequest
-    //
-    // name     -> FullName
-    // email    -> Email
-    // phone    -> Phone
-    // subject  -> Position
-    // message  -> Message
-    // automatic -> ChurchName = Website Contact Inquiry
-    // =========================================================
+    const handlePrayerSelect = () => {
+        setForm((prev) => ({
+            ...prev,
+            subject: "Pastoral Counseling & Prayer Request"
+        }));
+        document.getElementById("contact-form-section")?.scrollIntoView({ behavior: "smooth" });
+    };
 
-    const handleSubmit = async (
-        event: React.FormEvent
-    ) => {
+    const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
 
-        if (submitting) {
-            return;
-        }
+        if (submitting) return;
 
         setSubmitting(true);
         setSubmitted(false);
         setError("");
 
+        const payload = {
+            fullName: form.name.trim(),
+            churchName: "Website Contact Inquiry",
+            email: form.email.trim().toLowerCase(),
+            phone: form.phone.trim() || null,
+            position: form.subject.trim() || "General Church Inquiry",
+            message: form.message.trim()
+        };
+
         try {
-            const payload = {
-                fullName: form.name.trim(),
-
-                // Contact inquiries do not provide
-                // a church name, so we identify them
-                // clearly in the existing Demo Requests system.
-                churchName: "Website Contact Inquiry",
-
-                email: form.email.trim().toLowerCase(),
-
-                phone:
-                    form.phone.trim() ||
-                    null,
-
-                // Existing DemoRequest.Position
-                // stores the selected inquiry type.
-                position:
-                    form.subject.trim() ||
-                    "General Inquiry",
-
-                message:
-                    form.message.trim(),
-            };
-
-            const response = await fetch(
-                `${API_BASE_URL}/DemoRequests`,
-                {
+            let response: Response;
+            try {
+                response = await fetch(`${API_BASE_URL}/DemoRequests`, {
                     method: "POST",
                     headers: {
-                        "Content-Type":
-                            "application/json",
+                        "Content-Type": "application/json"
                     },
-                    body: JSON.stringify(payload),
+                    body: JSON.stringify(payload)
+                });
+            } catch (netErr) {
+                // If on localhost and primary fetch fails, attempt direct local fallback
+                if (
+                    typeof window !== "undefined" &&
+                    (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") &&
+                    !API_BASE_URL.includes("5109")
+                ) {
+                    response = await fetch("http://localhost:5109/api/DemoRequests", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify(payload)
+                    });
+                } else {
+                    throw netErr;
                 }
-            );
+            }
 
-            const data = await response
-                .json()
-                .catch(() => ({}));
+            const data = await response.json().catch(() => ({}));
 
             if (!response.ok) {
                 throw new Error(
                     data?.message ||
-                    "Unable to send your message. Please try again."
+                        "Unable to send your message. Please verify your details and try again."
                 );
             }
 
+            const reqId = Number(data?.demoRequestId) || 0;
+            setSubmissionReceipt({
+                requestId: reqId,
+                name: payload.fullName,
+                email: payload.email,
+                phone: payload.phone || "",
+                department: payload.position,
+                message: payload.message,
+                submittedAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+            });
             setSubmitted(true);
-
             setForm({
                 name: "",
                 email: "",
                 phone: "",
-                subject: "",
-                message: "",
+                subject: "General Inquiry",
+                message: ""
             });
-        }
-        catch (err) {
-            console.error(
-                "Contact form submission error:",
-                err
-            );
 
+            document.getElementById("contact-form-section")?.scrollIntoView({ behavior: "smooth" });
+        } catch (err) {
+            console.error("Contact form submission error:", err);
             setError(
                 err instanceof Error
                     ? err.message
                     : "Unable to send your message. Please try again."
             );
-        }
-        finally {
+        } finally {
             setSubmitting(false);
         }
     };
@@ -160,666 +197,413 @@ const ContactPage: React.FC<ContactPageProps> = ({
         <div className="epic-contact-page">
             <PublicHeader onNavigate={onNavigate} />
 
+            {/* HERO BANNER */}
             <section className="epic-contact-hero">
-
-                <div className="epic-contact-hero-glow" />
-
                 <div className="epic-contact-container">
-
-                    <div className="epic-contact-hero-content">
-
-                        <span className="epic-contact-label">
-                            GET IN TOUCH
+                    <div className="epic-contact-hero-inner">
+                        <span className="epic-contact-badge">
+                            <Sparkles size={14} /> WE'D LOVE TO CONNECT WITH YOU
                         </span>
-
                         <h1>
-                            Let's Connect
-                            <br />
-                            <span>With EPIC.</span>
+                            Let's Connect &amp; <span>Grow Together.</span>
                         </h1>
-
                         <p>
-                            Whether you want to learn more about
-                            EPIC Church, explore the EPIC Church
-                            Management System, request a demo, or
-                            simply connect with us — we'd love to
-                            hear from you.
+                            Whether you have questions about EPIC Church worship services, our discipleship
+                            programs, volunteering in ministry, or need assistance with the EPIC Church
+                            Management platform — our pastoral and support team is here for you.
                         </p>
 
-                        <div className="epic-contact-hero-actions">
-
-                            <button
-                                type="button"
-                                className="epic-contact-primary-button"
-                                onClick={() =>
-                                    document
-                                        .getElementById(
-                                            "contact-form"
-                                        )
-                                        ?.scrollIntoView({
-                                            behavior:
-                                                "smooth",
-                                        })
-                                }
-                            >
-                                Send Us a Message
-                                <span>→</span>
-                            </button>
-
-                            <button
-                                type="button"
-                                className="epic-contact-secondary-button"
-                                onClick={() =>
-                                    onNavigate("landing")
-                                }
-                            >
-                                Explore EPIC
-                            </button>
-
+                        <div className="epic-contact-quick-pills">
+                            <div className="epic-contact-pill">
+                                <MapPin size={16} /> San Vicente Church, Philippines
+                            </div>
+                            <div className="epic-contact-pill">
+                                <Calendar size={16} /> Sunday Worship: 8:30 AM &amp; 1:30 PM
+                            </div>
+                            <div className="epic-contact-pill">
+                                <Clock size={16} /> Office: Mon–Fri, 9:00 AM – 5:00 PM
+                            </div>
                         </div>
-
                     </div>
-
-                    <div className="epic-contact-hero-mark">
-
-                        <div className="epic-contact-cross">
-                            ✝
-                        </div>
-
-                        <strong>
-                            EPIC
-                        </strong>
-
-                        <span>
-                            Engaging People
-                            <br />
-                            Into Christ
-                        </span>
-
-                    </div>
-
                 </div>
-
             </section>
 
-            {/* =====================================================
-                CONTACT INFORMATION
-            ===================================================== */}
-
+            {/* 3 CONTACT INFO CARDS */}
             <section className="epic-contact-info-section">
-
                 <div className="epic-contact-container">
-
-                    <div className="epic-contact-section-heading">
-
-                        <span className="epic-contact-label">
-                            CONNECT WITH US
-                        </span>
-
-                        <h2>
-                            We're Here
-                            <br />
-                            <span>To Help.</span>
-                        </h2>
-
-                        <p>
-                            Have a question about our church,
-                            ministries, or EPIC technology?
-                            Reach out and our team will be happy
-                            to connect with you.
-                        </p>
-
-                    </div>
-
                     <div className="epic-contact-info-grid">
-
+                        {/* EMAIL */}
                         <article className="epic-contact-info-card">
-
-                            <div className="epic-contact-info-icon">
-                                ✉
+                            <div>
+                                <div className="epic-contact-info-icon">
+                                    <Mail size={24} />
+                                </div>
+                                <span className="epic-contact-info-label">DIGITAL CARE &amp; INQUIRIES</span>
+                                <h3>Email Pastoral Office</h3>
+                                <p>
+                                    Send us your questions, prayer requests, event registrations, or ministry
+                                    collaboration inquiries.
+                                </p>
                             </div>
-
-                            <span>
-                                EMAIL
-                            </span>
-
-                            <h3>
-                                Email Us
-                            </h3>
-
-                            <p>
-                                Send us your questions,
-                                inquiries or ministry concerns.
-                            </p>
-
-                            <a href="mailto:info@epicchurch.org">
-                                info@epicchurch.org
+                            <a href="mailto:info@epicchurch.org" className="epic-contact-link">
+                                info@epicchurch.org <ArrowRight size={14} />
                             </a>
-
                         </article>
 
+                        {/* PHONE */}
                         <article className="epic-contact-info-card">
-
-                            <div className="epic-contact-info-icon">
-                                ☎
+                            <div>
+                                <div className="epic-contact-info-icon">
+                                    <Phone size={24} />
+                                </div>
+                                <span className="epic-contact-info-label">PASTORAL HOTLINE</span>
+                                <h3>Call Church Office</h3>
+                                <p>
+                                    Speak directly with our ministry staff or schedule pastoral counseling and
+                                    family appointments.
+                                </p>
                             </div>
-
-                            <span>
-                                PHONE
-                            </span>
-
-                            <h3>
-                                Call Us
-                            </h3>
-
-                            <p>
-                                Speak with our team about EPIC
-                                Church or the EPIC platform.
-                            </p>
-
-                            <a href="tel:+630000000000">
-                                +63 000 000 0000
+                            <a href="tel:+639178493742" className="epic-contact-link">
+                                +63 917 849 3742 <ArrowRight size={14} />
                             </a>
-
                         </article>
 
+                        {/* CAMPUS */}
                         <article className="epic-contact-info-card">
-
-                            <div className="epic-contact-info-icon">
-                                ⛪
+                            <div>
+                                <div className="epic-contact-info-icon">
+                                    <Church size={24} />
+                                </div>
+                                <span className="epic-contact-info-label">WORSHIP SANCTUARY</span>
+                                <h3>Luke 4:18 Ministries</h3>
+                                <p>
+                                    San Vicente Church, Philippines. Welcoming atmosphere, secure kids nursery,
+                                    and free guest parking.
+                                </p>
                             </div>
-
-                            <span>
-                                CHURCH
-                            </span>
-
-                            <h3>
-                                Luke 4:18 Ministries
-                            </h3>
-
-                            <p>
-                                San Vicente Church
-                                <br />
-                                Philippines
-                            </p>
-
                             <button
                                 type="button"
-                                onClick={() =>
-                                    onNavigate(
-                                        "ministries"
-                                    )
-                                }
+                                className="epic-contact-link"
+                                style={{ background: "transparent", border: "none", padding: 0, cursor: "pointer" }}
+                                onClick={() => onNavigate("about")}
                             >
-                                Learn About Our Church →
+                                Learn About Our Heritage <ArrowRight size={14} />
                             </button>
-
                         </article>
-
                     </div>
-
                 </div>
-
             </section>
 
-            {/* =====================================================
-                CONTACT FORM
-            ===================================================== */}
-
-            <section
-                id="contact-form"
-                className="epic-contact-form-section"
-            >
-
-                <div className="epic-contact-container">
-
+            {/* MAIN GRID: FORM + GATHERING SCHEDULE & PRAYER */}
+            <div className="epic-contact-container" id="contact-form-section">
+                <div className="epic-contact-main-grid">
+                    {/* LEFT COLUMN: INTERACTIVE FORM */}
                     <div className="epic-contact-form-card">
-
-                        {/* =================================================
-                            FORM INTRO
-                        ================================================= */}
-
                         <div className="epic-contact-form-intro">
-
-                            <span className="epic-contact-label">
-                                SEND A MESSAGE
-                            </span>
-
-                            <h2>
-                                We'd Love To
-                                <br />
-                                <span>Hear From You.</span>
-                            </h2>
-
-                            <p>
-                                Fill out the form and let us know
-                                how we can help. Your inquiry will
-                                be received by the EPIC team and
-                                managed through our EPIC Demo
-                                Requests system.
+                            <span className="epic-contact-form-tag">DIRECT INQUIRY</span>
+                            <h2 className="epic-contact-form-title">Send Us a Message</h2>
+                            <p className="epic-contact-form-subtitle">
+                                Complete the form below and our team will get in touch with you shortly.
                             </p>
-
-                            <div className="epic-contact-form-points">
-
-                                <div>
-                                    <span>✓</span>
-                                    Church inquiries
-                                </div>
-
-                                <div>
-                                    <span>✓</span>
-                                    EPIC System questions
-                                </div>
-
-                                <div>
-                                    <span>✓</span>
-                                    Demo requests
-                                </div>
-
-                                <div>
-                                    <span>✓</span>
-                                    Ministry connections
-                                </div>
-
-                            </div>
-
                         </div>
 
-                        {/* =================================================
-                            FORM
-                        ================================================= */}
+                        {submitted && submissionReceipt ? (
+                            <div className="epic-contact-success-receipt">
+                                <div className="receipt-header">
+                                    <div className="receipt-check-icon">
+                                        <CheckCircle2 size={36} color="#1877f2" />
+                                    </div>
+                                    <span className="receipt-badge">RECORDED IN DATABASE</span>
+                                    <h3 className="receipt-title">Message Received &amp; Recorded!</h3>
+                                    <p className="receipt-subtitle">
+                                        Your inquiry has been successfully entered into the church database and queued for pastoral review.
+                                    </p>
+                                </div>
 
-                        <form
-                            className="epic-contact-form"
-                            onSubmit={handleSubmit}
-                        >
+                                <div className="receipt-box">
+                                    <div className="receipt-ref-row">
+                                        <span className="receipt-ref-label">Inquiry Reference Code</span>
+                                        <span className="receipt-ref-code">
+                                            #CR-{String(submissionReceipt.requestId).padStart(6, "0")}
+                                        </span>
+                                    </div>
 
-                            {/* SUCCESS */}
+                                    <div className="receipt-details-list">
+                                        <div className="receipt-detail-item">
+                                            <span className="detail-label">Requester Name:</span>
+                                            <strong className="detail-val">{submissionReceipt.name}</strong>
+                                        </div>
+                                        <div className="receipt-detail-item">
+                                            <span className="detail-label">Department / Topic:</span>
+                                            <strong className="detail-val" style={{ color: "#1877f2" }}>
+                                                {submissionReceipt.department}
+                                            </strong>
+                                        </div>
+                                        <div className="receipt-detail-item">
+                                            <span className="detail-label">Email Address:</span>
+                                            <strong className="detail-val">{submissionReceipt.email}</strong>
+                                        </div>
+                                        {submissionReceipt.phone && (
+                                            <div className="receipt-detail-item">
+                                                <span className="detail-label">Mobile / Phone:</span>
+                                                <strong className="detail-val">{submissionReceipt.phone}</strong>
+                                            </div>
+                                        )}
+                                        <div className="receipt-detail-item">
+                                            <span className="detail-label">Database Queue:</span>
+                                            <span className="detail-val receipt-status-tag">
+                                                Pending Pastoral Review (Active)
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
 
-                            {submitted && (
-                                <div
-                                    className="epic-contact-success"
-                                    role="alert"
+                                <div className="receipt-email-notice">
+                                    <Mail size={18} color="#1877f2" style={{ flexShrink: 0, marginTop: "2px" }} />
+                                    <div>
+                                        <strong>Dual Confirmation Dispatched</strong>
+                                        <p>
+                                            A confirmation email with your reference code was sent to <u>{submissionReceipt.email}</u>, and an immediate alert was sent to our pastoral team.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="receipt-verse">
+                                    &ldquo;Do not be anxious about anything, but in every situation, by prayer and petition, with thanksgiving, present your requests to God.&rdquo;
+                                    <br />
+                                    <strong>&mdash; Philippians 4:6</strong>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    className="epic-contact-submit"
+                                    style={{ width: "100%", marginTop: "16px" }}
+                                    onClick={() => {
+                                        setSubmitted(false);
+                                        setSubmissionReceipt(null);
+                                    }}
                                 >
-                                    ✓ Thank you for contacting
-                                    EPIC. Your message has been
-                                    received successfully. Our
-                                    team will contact you soon.
-                                </div>
-                            )}
-
-                            {/* ERROR */}
-
-                            {error && (
-                                <div
-                                    className="epic-contact-error"
-                                    role="alert"
-                                >
-                                    {error}
-                                </div>
-                            )}
-
-                            {/* =================================================
-                                REQUESTER + EMAIL
-                            ================================================= */}
-
-                            <div className="epic-contact-form-row">
-
-                                <div className="epic-contact-field">
-
-                                    <label htmlFor="name">
-                                        Requester Name
-                                    </label>
-
-                                    <input
-                                        id="name"
-                                        type="text"
-                                        name="name"
-                                        placeholder="Enter your full name"
-                                        value={form.name}
-                                        onChange={handleChange}
-                                        required
-                                        maxLength={150}
-                                    />
-
-                                </div>
-
-                                <div className="epic-contact-field">
-
-                                    <label htmlFor="email">
-                                        Email Address
-                                    </label>
-
-                                    <input
-                                        id="email"
-                                        type="email"
-                                        name="email"
-                                        placeholder="you@example.com"
-                                        value={form.email}
-                                        onChange={handleChange}
-                                        required
-                                        maxLength={150}
-                                    />
-
-                                </div>
-
+                                    <Send size={16} />
+                                    <span>Send Another Message</span>
+                                </button>
                             </div>
-
-                            {/* =================================================
-                                PHONE + POSITION / INQUIRY TYPE
-                            ================================================= */}
-
-                            <div className="epic-contact-form-row">
-
-                                <div className="epic-contact-field">
-
-                                    <label htmlFor="phone">
-                                        Phone Number
-                                    </label>
-
-                                    <input
-                                        id="phone"
-                                        type="tel"
-                                        name="phone"
-                                        placeholder="+63 9XX XXX XXXX"
-                                        value={form.phone}
-                                        onChange={handleChange}
-                                        maxLength={50}
-                                    />
-
-                                </div>
-
-                                <div className="epic-contact-field">
-
-                                    <label htmlFor="subject">
-                                        Position / Inquiry Type
-                                    </label>
-
-                                    <select
-                                        id="subject"
-                                        name="subject"
-                                        value={form.subject}
-                                        onChange={handleChange}
-                                        required
-                                    >
-
-                                        <option value="">
-                                            Select inquiry type
-                                        </option>
-
-                                        <option value="EPIC Church">
-                                            EPIC Church
-                                        </option>
-
-                                        <option value="EPIC Church Management System">
-                                            EPIC Church Management System
-                                        </option>
-
-                                        <option value="EPIC Learning">
-                                            EPIC Learning
-                                        </option>
-
-                                        <option value="Request a Demo">
-                                            Request a Demo
-                                        </option>
-
-                                        <option value="Partnership">
-                                            Partnership
-                                        </option>
-
-                                        <option value="Other">
-                                            Other
-                                        </option>
-
-                                    </select>
-
-                                </div>
-
-                            </div>
-
-                            {/* =================================================
-                                MESSAGE
-                            ================================================= */}
-
-                            <div className="epic-contact-field">
-
-                                <label htmlFor="message">
-                                    Message
-                                </label>
-
-                                <textarea
-                                    id="message"
-                                    name="message"
-                                    rows={7}
-                                    placeholder="Tell us how we can help..."
-                                    value={form.message}
-                                    onChange={handleChange}
-                                    required
-                                    maxLength={1000}
-                                />
-
-                            </div>
-
-                            {/* =================================================
-                                SUBMIT
-                            ================================================= */}
-
-                            <button
-                                type="submit"
-                                className="epic-contact-submit"
-                                disabled={submitting}
-                            >
-
-                                {submitting
-                                    ? "Sending Message..."
-                                    : "Send Message"}
-
-                                {!submitting && (
-                                    <span>→</span>
+                        ) : (
+                            <form className="epic-contact-form" onSubmit={handleSubmit}>
+                                {error && (
+                                    <div className="epic-contact-error" role="alert">
+                                        <AlertCircle size={20} style={{ verticalAlign: "middle", marginRight: "6px" }} />
+                                        {error}
+                                    </div>
                                 )}
 
-                            </button>
+                                {/* NAME & EMAIL */}
+                                <div className="epic-contact-form-row">
+                                    <div className="epic-contact-field">
+                                        <label htmlFor="contact-name">Requester Full Name *</label>
+                                        <div className="epic-contact-input-wrap">
+                                            <User size={16} className="epic-contact-input-icon" />
+                                            <input
+                                                id="contact-name"
+                                                type="text"
+                                                name="name"
+                                                className="epic-contact-input-with-icon"
+                                                placeholder="e.g. Maria Santos"
+                                                value={form.name}
+                                                onChange={handleChange}
+                                                required
+                                                maxLength={150}
+                                            />
+                                        </div>
+                                    </div>
 
-                            <small className="epic-contact-form-note">
-                                Your information will only be
-                                used to respond to your inquiry.
-                            </small>
+                                    <div className="epic-contact-field">
+                                        <label htmlFor="contact-email">Email Address *</label>
+                                        <div className="epic-contact-input-wrap">
+                                            <Mail size={16} className="epic-contact-input-icon" />
+                                            <input
+                                                id="contact-email"
+                                                type="email"
+                                                name="email"
+                                                className="epic-contact-input-with-icon"
+                                                placeholder="e.g. maria@example.com"
+                                                value={form.email}
+                                                onChange={handleChange}
+                                                required
+                                                maxLength={150}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
 
-                        </form>
+                                {/* PHONE & INQUIRY CATEGORY */}
+                                <div className="epic-contact-form-row">
+                                    <div className="epic-contact-field">
+                                        <label htmlFor="contact-phone">Mobile / Phone Number</label>
+                                        <div className="epic-contact-input-wrap">
+                                            <Phone size={16} className="epic-contact-input-icon" />
+                                            <input
+                                                id="contact-phone"
+                                                type="tel"
+                                                name="phone"
+                                                className="epic-contact-input-with-icon"
+                                                placeholder="+63 9XX XXX XXXX"
+                                                value={form.phone}
+                                                onChange={handleChange}
+                                                maxLength={50}
+                                            />
+                                        </div>
+                                    </div>
 
+                                    <div className="epic-contact-field">
+                                        <label htmlFor="contact-subject">Inquiry Type / Department *</label>
+                                        <select
+                                            id="contact-subject"
+                                            name="subject"
+                                            value={form.subject}
+                                            onChange={handleChange}
+                                            required
+                                        >
+                                            <option value="General Inquiry">General Church Inquiry</option>
+                                            <option value="Sunday Worship & Visitors">Sunday Worship &amp; Visitors</option>
+                                            <option value="Pastoral Counseling & Prayer Request">
+                                                Pastoral Counseling &amp; Prayer Request
+                                            </option>
+                                            <option value="Ministries & Volunteer Opportunities">
+                                                Ministries &amp; Volunteer Opportunities
+                                            </option>
+                                            <option value="EPIC Church Management Platform & Demo">
+                                                EPIC System Demo &amp; Technology
+                                            </option>
+                                            <option value="Giving, Tithing & Stewardship">
+                                                Giving, Tithing &amp; Stewardship
+                                            </option>
+                                            <option value="Youth & Campus Ministry">Youth &amp; Campus Ministry</option>
+                                            <option value="Water Baptism & Dedication">
+                                                Water Baptism &amp; Child Dedication
+                                            </option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {/* MESSAGE */}
+                                <div className="epic-contact-field">
+                                    <label htmlFor="contact-message">Message or Prayer Request *</label>
+                                    <div className="epic-contact-input-wrap" style={{ alignItems: "flex-start" }}>
+                                        <textarea
+                                            id="contact-message"
+                                            name="message"
+                                            rows={6}
+                                            placeholder="How can we pray for you or assist your ministry needs?"
+                                            value={form.message}
+                                            onChange={handleChange}
+                                            required
+                                            maxLength={1000}
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* SUBMIT */}
+                                <button type="submit" className="epic-contact-submit" disabled={submitting}>
+                                    <Send size={16} />
+                                    <span>{submitting ? "Sending Your Message..." : "Send Message"}</span>
+                                </button>
+
+                                <small className="epic-contact-form-note">
+                                    Your privacy is sacred to us. Information shared is handled with pastoral confidentiality.
+                                </small>
+                            </form>
+                        )}
                     </div>
 
-                </div>
-
-            </section>
-
-            {/* =====================================================
-                CTA
-            ===================================================== */}
-
-            <section className="epic-contact-cta">
-
-                <div className="epic-contact-container">
-
-                    <span className="epic-contact-cta-cross">
-                        ✝
-                    </span>
-
-                    <h2>
-                        Your Church Has A Mission.
-                    </h2>
-
-                    <h3>
-                        Let EPIC Help You Manage It.
-                    </h3>
-
-                    <p>
-                        Engaging People Into Christ.
-                        <br />
-                        Empowering Churches Through Technology.
-                    </p>
-
-                    <button
-                        type="button"
-                        className="epic-contact-primary-button"
-                        onClick={() =>
-                            onNavigate("landing")
-                        }
-                    >
-                        Explore EPIC
-                        <span>→</span>
-                    </button>
-
-                </div>
-
-            </section>
-
-            {/* =====================================================
-                FOOTER
-            ===================================================== */}
-
-            <footer className="epic-contact-footer">
-
-                <div className="epic-contact-container">
-
-                    <div className="epic-contact-footer-grid">
-
-                        <div>
-
-                            <div className="epic-contact-footer-logo">
-                                EPIC
+                    {/* RIGHT COLUMN: GATHERING TIMES & PRAYER SUPPORT */}
+                    <div className="epic-contact-sidebar">
+                        {/* SERVICE SCHEDULE CARD */}
+                        <div className="epic-contact-side-card">
+                            <h3 className="side-card-title">
+                                <Calendar size={20} /> Weekly Gatherings &amp; Services
+                            </h3>
+                            <div className="service-times-list">
+                                {GATHERING_TIMES.map((svc, idx) => (
+                                    <div key={idx} className="service-time-item">
+                                        <div className="service-time-badge">{svc.day}</div>
+                                        <div className="service-time-info">
+                                            <strong>{svc.title}</strong>
+                                            <span>
+                                                <Clock size={12} style={{ verticalAlign: "middle", marginRight: "4px" }} />
+                                                {svc.time}
+                                            </span>
+                                            <div style={{ fontSize: "11px", color: "#8a8d91", marginTop: "2px" }}>
+                                                {svc.detail}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
+                        </div>
 
-                            <strong>
-                                EPIC CHURCH
-                            </strong>
-
-                            <p>
-                                Engaging People Into Christ.
+                        {/* PRAYER SUPPORT CARD */}
+                        <div className="prayer-support-card">
+                            <div className="prayer-card-header">
+                                <HeartHandshake size={22} color="#1877f2" />
+                                <h3>Need Prayer Support?</h3>
+                            </div>
+                            <p className="prayer-card-verse">
+                                &ldquo;The prayer of a righteous person is powerful and effective.&rdquo;
+                                <br />
+                                <strong>&mdash; James 5:16</strong>
                             </p>
-
-                            <small>
-                                Church Management &
-                                Discipleship Platform
-                            </small>
-
+                            <p className="prayer-card-text">
+                                You do not have to walk through life's trials alone. Our intercessory team and pastors
+                                pray over every confidential prayer request.
+                            </p>
+                            <button
+                                type="button"
+                                className="prayer-hotline-btn"
+                                onClick={handlePrayerSelect}
+                            >
+                                <MessageSquare size={16} /> Submit Prayer Request
+                            </button>
                         </div>
-
-                        <div>
-
-                            <strong>
-                                EPIC CHURCH
-                            </strong>
-
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    onNavigate("about")
-                                }
-                            >
-                                About EPIC
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    onNavigate("ministries")
-                                }
-                            >
-                                Our Church
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    onNavigate("landing")
-                                }
-                            >
-                                Home
-                            </button>
-
-                        </div>
-
-                        <div>
-
-                            <strong>
-                                EPIC SYSTEM
-                            </strong>
-
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    onNavigate("system")
-                                }
-                            >
-                                Platform
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    onNavigate("pricing")
-                                }
-                            >
-                                Pricing
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    onNavigate("landing")
-                                }
-                            >
-                                Request Demo
-                            </button>
-
-                        </div>
-
-                        <div>
-
-                            <strong>
-                                CONNECT
-                            </strong>
-
-                            <button
-                                type="button"
-                                className="active"
-                            >
-                                Contact Us
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    onNavigate("about")
-                                }
-                            >
-                                About Us
-                            </button>
-
-                        </div>
-
                     </div>
-
-                    <div className="epic-contact-footer-bottom">
-
-                        <span>
-                            © {new Date().getFullYear()} EPIC
-                            Church Management System
-                        </span>
-
-                        <span>
-                            Engaging People Into Christ
-                        </span>
-
-                    </div>
-
                 </div>
 
-            </footer>
+                {/* CALL TO ACTION BANNER */}
+                <section className="epic-contact-cta">
+                    <h2>Your Church Has A Divine Mission.</h2>
+                    <p>
+                        Engaging People Into Christ. Empowering pastors, staff, and volunteers through
+                        compassionate leadership and world-class management technology.
+                    </p>
+                    <div className="epic-contact-cta-actions">
+                        <button
+                            type="button"
+                            className="cta-btn-white"
+                            onClick={() => onNavigate("ministries")}
+                        >
+                            <Church size={16} /> Explore Ministries
+                        </button>
+                        <button
+                            type="button"
+                            className="cta-btn-outline"
+                            onClick={() => onNavigate("giving")}
+                        >
+                            Giving &amp; Stewardship <ArrowRight size={14} style={{ verticalAlign: "middle" }} />
+                        </button>
+                    </div>
+                </section>
+            </div>
 
+            {/* PUBLIC FOOTER */}
+            <footer className="epic-contact-footer">
+                <div className="epic-contact-container">
+                    <p className="epic-contact-footer-copy">
+                        &copy; {new Date().getFullYear()} EPIC Church Management &bull; Engaging People Into Christ &bull; Luke 4:18 Ministries
+                    </p>
+                    <p className="epic-contact-footer-tagline">
+                        San Vicente Church, Philippines &bull; Dedicated to preaching good news and serving our community.
+                    </p>
+                </div>
+            </footer>
         </div>
     );
-};
-
-export default ContactPage;
+}
