@@ -3406,6 +3406,9 @@ if (isBlogDetailPublicPage || normalizedPath === "/blog-detail") {
         />
     );
 }
+if (normalizedPath === "/blog-management") {
+    return <BlogManagement />;
+}
 if (normalizedPath === "/demo") {
     return (
         <DemoPage
