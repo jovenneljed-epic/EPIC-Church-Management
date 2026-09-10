@@ -1,8 +1,9 @@
 /**
  * EPIC Worship Music Service
  * Pure Christian Praise & Worship Songs (Tagalog & English Only - No Worldly Songs)
- * Plays 100% Genuine Studio/Live Master Recordings via Official YouTube Integration
- * Includes Full Multi-Stanza Lyrics (Verse, Chorus, Bridge) & Scripture Anchors
+ * 100% Real Studio/Live Master Recordings via Official YouTube Integration
+ * Complete, Authentic Word-for-Word Lyrics (Verse, Chorus, Bridge, Pre-Chorus)
+ * Supports Admin Song Deletion & Storage
  */
 
 export type WorshipMood = "ALL" | "TAGALOG" | "ENGLISH";
@@ -42,33 +43,52 @@ export const WORSHIP_PLAYLIST: WorshipSong[] = [
         moodLabel: "🇵🇭 Tagalog Worship Anthem",
         youtubeId: "X2DWxYpTQpQ",
         scriptureTheme: "Awit 46:1 — 'Ang Diyos ang ating kanlungan at kalakasan, handang saklolo sa mga kabagabagan.'",
-        lyricsSnippet: "Diyos Ka sa amin, tapat at totoo, noon, ngayon at magpakailanman! Sa bawat sandali, Ikaw ang aming sandigan.",
+        lyricsSnippet: "Sa lahat ng panahon, Diyos Ka sa amin! Sa lahat ng oras, nariyan para sa amin!",
         chordsKey: "G",
         fullLyrics: `[Verse 1]
-Panginoon, aming Diyos
-Dakila Ka sa buong mundo
-Ang Iyong mga gawa'y kahanga-hanga
-Lahat ng tuhod ay luluhod
-Lahat ng dila'y magsasabi
-Ikaw lamang ang Panginoon
-
-[Chorus]
-Diyos Ka sa amin, tapat at totoo
-Noon, ngayon at magpakailanman
-Diyos Ka sa amin, lakas at kublihan
-Aming sasambahin magpakailanman
+O Diyos, Ikaw ang tunay na dakila sa mundo
+Ikaw ang Haring nagmahal ng tulad ko
+Ginawa Mo'ng lahat
+Pag-ibig Mo ay tapat at wagas
 
 [Verse 2]
-Kahit dumaan man sa pagsubok
-Hindi Mo kami pababayaan
-Ang Iyong biyaya ay sumasapat
-Sa aming kahinaan, Ikaw ang lakas
+O Diyos, walang papantay sa kabutihan Mo
+Ang ngalan Mo'y itataas sa buhay ko
+Sundin ang loob Mo
+Iparinig ang nais Mo
+
+[Chorus]
+Sa lahat ng panahon, Diyos Ka sa amin
+Sa lahat ng oras, nariyan para sa amin
+Panginoong Hesus, purihin Ka!
+Dakilain Ka sa buhay ko
+Aming Ama
+
+[Verse 3]
+O Diyos, Ikaw ang tunay na dakila sa mundo
+Ikaw ang Haring nagmahal ng tulad ko
+Sundin ang loob Mo
+Iparinig ang nais Mo
+
+[Chorus]
+Sa lahat ng panahon, Diyos Ka sa amin
+Sa lahat ng oras, nariyan para sa amin
+Panginoong Hesus, purihin Ka!
+Dakilain Ka sa buhay ko
+Aming Ama
 
 [Bridge]
-Walang katulad Mo, O Diyos
-Walang kapantay ang Iyong pag-ibig
-Walang katulad Mo, O Diyos
-Dakila Ka kailanpaman!`
+Di nagbabago, Diyos Ka sa amin
+Tanging sandigan, nariyan para sa amin
+Panginoong Hesus, maghari Ka
+Magliwanag Ka sa buhay ko
+
+[Chorus]
+Sa lahat ng panahon, Diyos Ka sa amin
+Sa lahat ng oras, nariyan para sa amin
+Panginoong Hesus, purihin Ka!
+Dakilain Ka sa buhay ko
+Aming Ama`
     },
     {
         id: "song-tagalog-2",
@@ -82,31 +102,64 @@ Dakila Ka kailanpaman!`
         moodLabel: "🇵🇭 Tagalog Pasasalamat",
         youtubeId: "BMZmyvr5IAM",
         scriptureTheme: "1 Tesalonica 5:18 — 'Magpasalamat kayo sa lahat ng pagkakataon; sapagkat ito ang kalooban ng Diyos sa inyo.'",
-        lyricsSnippet: "Salamat, salamat O Hesus sa pag-ibig Mo! Walang ibang nagmahal sa akin nang katulad Mo.",
+        lyricsSnippet: "Salamat, salamat O Hesus sa pag-ibig Mo! Walang ibang nagmahal sa akin ng katulad Mo!",
         chordsKey: "E",
         fullLyrics: `[Verse 1]
 Kung aking mamasdan ang kalawakan
-Hindi ko maunawaan ang Iyong kadakilaan
-Bakit Mo ako pinili at inibig
-Sa kabila ng aking mga pagkukulang
+Hindi ko maunawaan
+Ang Iyong dahilan kung bakit ako'y
+Pinili Mo't inalagaan
+
+[Pre-Chorus]
+'Di ko kayang isipin
+Hinding-hindi ko kayang sukatin
+Ang pag-ibig Mo Hesus
+Na Iyong ibinigay sa akin
 
 [Chorus]
-Salamat, salamat O Hesus sa pag-ibig Mo
-Walang ibang nagmahal sa akin nang katulad Mo
-Salamat, salamat O Hesus sa pag-ibig Mo
-Buhay ko'y alay sa Iyo
+Salamat, salamat
+O Hesus sa pag-ibig Mo
+Walang ibang nagmahal sa akin
+Ng katulad Mo
+Salamat, salamat
+O Hesus sa pag-ibig Mo
+Ako'y magsasaya sa piling Mo
 
 [Verse 2]
-Sa bawat tibok ng aking puso
-Dalangin ko'y maglingkod sa Iyo
-Gamitin Mo ang aking buhay
-Sa kapurihan ng Iyong banal na pangalan
+Kung may pagsubok man o kagipitan
+Ako ay may lalapitan
+Ikaw Hesus ang aking sandigan
+Hindi Mo ako pababayaan
+
+[Pre-Chorus]
+'Di ko kayang isipin
+Hinding-hindi ko kayang sukatin
+Ang pag-ibig Mo Hesus
+Na Iyong ibinigay sa akin
+
+[Chorus]
+Salamat, salamat
+O Hesus sa pag-ibig Mo
+Walang ibang nagmahal sa akin
+Ng katulad Mo
+Salamat, salamat
+O Hesus sa pag-ibig Mo
+Ako'y magsasaya sa piling Mo
 
 [Bridge]
-Walang hanggang pasasalamat
-Ang alay ko sa 'Yo Hesus
-Mula ngayon hanggang kailanman
-Sa 'Yo ang pagsamba!`
+Buhay ko na ang purihin Ka
+Buhay ko na ang sa 'Yo'y sumamba
+Wala ng ibang nanaisin pa
+Kundi pasalamatan Ka
+
+[Chorus]
+Salamat, salamat
+O Hesus sa pag-ibig Mo
+Walang ibang nagmahal sa akin
+Ng katulad Mo
+Salamat, salamat
+O Hesus sa pag-ibig Mo
+Ako'y magsasaya sa piling Mo`
     },
     {
         id: "song-tagalog-3",
@@ -120,31 +173,37 @@ Sa 'Yo ang pagsamba!`
         moodLabel: "🇵🇭 Tagalog Soaking",
         youtubeId: "zjVBIQfnYhQ",
         scriptureTheme: "Awit 84:10 — 'Sapagkat ang isang araw sa Iyong mga looban ay higit na mabuti kaysa sanlibong araw sa iba.'",
-        lyricsSnippet: "Ang puso ko'y dinudulog sa Iyo, nagpapakumbaba, nagsusumamo, dalangin ko'y patnubayan Mo sa banal Mong tahanan.",
+        lyricsSnippet: "Loobin Mong ang buhay ko'y maging banal Mong tahanan, luklukan ng Iyong wagas na pagsinta.",
         chordsKey: "D",
-        fullLyrics: `[Verse 1]
-Ang puso ko'y dinudulog sa Iyo
+        fullLyrics: `[Verse]
+Ang puso ko ay dinudulog sa Iyo
 Nagpapakumbaba, nagsusumamo
-Maging kalugud-lugod sa Iyong paningin
-Ang bawat panalangin at pagsamba
+Pagindapatin Mo Ikaw ay mamasdan
+Makaniig Ka at sa Iyo ay pumisan
 
 [Chorus]
-Dalangin ko'y patnubayan Mo
-Sa banal Mong tahanan
-Nais kong manahan sa Iyong piling
-Panginoon, O Diyos ng buhay ko
+Loobin Mong ang buhay ko'y
+Maging banal Mong tahanan
+Luklukan ng Iyong wagas na pagsinta
+Daluyan ng walang hanggang
+Mga papuri't pagsamba
+Maghari Ka O Diyos
+Ngayon at kailanman
 
-[Verse 2]
-Ang Iyong presensya ang tanging hanap ko
-Kapayapaan Mo'y bumabalot sa puso ko
-Wala nang ibang hahangarin pa
-Kundi ang manatili sa Iyong harapan
+[Verse]
+Ang puso ko ay dinudulog sa Iyo
+Nagpapakumbaba, nagsusumamo
+Pagindapatin Mo Ikaw ay mamasdan
+Makaniig Ka at sa Iyo ay pumisan
 
-[Bridge]
-Sapagkat sa Iyong looban
-Isang araw ay higit kaysa sanlibo
-Banal Ka, O Diyos, aming Hari
-Magpakailanpaman!`
+[Chorus]
+Loobin Mong ang buhay ko'y
+Maging banal Mong tahanan
+Luklukan ng Iyong wagas na pagsinta
+Daluyan ng walang hanggang
+Mga papuri't pagsamba
+Maghari Ka O Diyos
+Ngayon at kailanman`
     },
     {
         id: "song-tagalog-4",
@@ -158,30 +217,37 @@ Magpakailanpaman!`
         moodLabel: "🇵🇭 Tagalog Hymn",
         youtubeId: "v4-ihovxjtE",
         scriptureTheme: "Panaghoy 3:22-23 — 'Dakila ang Iyong katapatan; bago tuwina ang Iyong habag tuwing umaga.'",
-        lyricsSnippet: "Dakila Ka, O Diyos, tapat Ka ngang tunay! Magmula pa sa ugat ng aming buhay, katapatan Mo'y walang kapantay.",
+        lyricsSnippet: "Dakila Ka, O Diyos, tapat Ka ngang tunay! Magmula pa sa ugat ng aming lahi, katapatan Mo'y laging totoo.",
         chordsKey: "D",
         fullLyrics: `[Verse 1]
 Sadyang kay buti ng ating Panginoon
 Magtatapat sa habang panahon
-Maging sa kabila ng ating pagkukulang
-Biyaya Niya'y patuloy na bubuhos
+Maging sa kabila ng aking pagkukulang
+Biyaya Niya'y patuloy na laan
+
+[Verse 2]
+Katulad ng pagsinag ng gintong araw
+Patuloy Siyang nagbibigay tanglaw
+Kaya sa puso ko't damdamin
+Katapatan Niya'y aking pupurihin
 
 [Chorus]
 Dakila Ka, O Diyos, tapat Ka ngang tunay
-Magmula pa sa ugat ng aming buhay
-Kahit magbago ang lahat sa mundo
-Katapatan Mo'y laging totoo
-
-[Verse 2]
-Kailanma'y hindi Niya tayo iniwan
-Sa gitna ng unos at kadiliman
-Kanyang pangako ay ating sandigan
-Liwanag Niya'y ating tanglaw
+Magmula pa sa ugat ng aming lahi
+Mundo'y magunaw man, maaasahan Kang lagi
+Maging hanggang wakas nitong buhay
+Kaya O Diyos, ika'y aking pupurihin
+Sa buong mundo'y aking aawitin
+Dakila ang Iyong katapatan
+Pag-ibig Mo'y walang hanggan
 
 [Bridge]
-Biyaya't awa'y laging bago tuwing umaga
-Katapatan Mo, O Diyos, walang kapantay
-Dakila ang Iyong katapatan!`
+Dakila Ka, O Diyos, sa habang panahon
+Katapatan Mo'y matibay na sandigan
+Sa bawat pighati, tagumpay man ay naroon
+Daluyan ng pag-asa kung kailangan ay hinahon
+Pag-ibig Mong alay sa 'min, noon hanggang ngayon
+Dakila Ka, O Diyos!`
     },
     {
         id: "song-tagalog-5",
@@ -195,30 +261,41 @@ Dakila ang Iyong katapatan!`
         moodLabel: "🇵🇭 Tagalog Pagdakila",
         youtubeId: "J72zkfMGA_s",
         scriptureTheme: "Awit 86:8 — 'Walang katulad Mo sa mga diyos, O Panginoon; wala ring mga gawang tulad ng Iyong mga gawa.'",
-        lyricsSnippet: "Awitin ko man lahat ng awit sa mundo, ay di kayang ilarawan ang kadakilaan Mo, Wala Kang katulad O Diyos!",
+        lyricsSnippet: "Wala Kang katulad, wala nang hihigit sa 'Yo! Ikaw ang Diyos noon pa man, maging ngayon at kailanman!",
         chordsKey: "C",
         fullLyrics: `[Verse 1]
 Awitin ko man lahat ng awit sa mundo
-Ay di kayang ilarawan ang kadakilaan Mo
-Kulang ang lahat ng salita
-Upang sambitin ang Iyong kabutihan
+Ay 'di kayang ilarawan ang kadakilaan Mo
+Kulang ang lahat ng tula
+Kulang maging mga salita
+Upang ihayag ang kabutihan Mo
 
 [Chorus]
-Wala Kang katulad, wala nang hihigit sa Iyo
-Wala Kang katulad, wala nang papantay sa Iyo
-Ikaw ang Diyos noon, ngayon at kailanman
-Sa Iyo ang papuri at pagsamba
+Wala Kang katulad
+Wala nang hihigit sa 'Yo
+Wala Kang katulad
+Wala nang papantay sa 'Yo
+Ikaw ang Diyos noon pa man
+Maging ngayon at kailanman
+Sa habang panahon
+Wala Kang katulad
 
-[Verse 2]
-Sa bawat paggising sa umaga
-Biyaya Mo'y laging nadarama
-Walang hanggang pag-ibig at katapatan
-Ang siyang laging aking nararanasan
+[Verse 1]
+Awitin ko man lahat ng awit sa mundo
+Ay 'di kayang ilarawan ang kadakilaan Mo
+Kulang ang lahat ng tula
+Kulang maging mga salita
+Upang ihayag ang kabutihan Mo
 
-[Bridge]
-Hesus, Ikaw ang Hari ng mga hari
-Panginoon ng lahat ng panginoon
-Wala Kang katulad O Diyos!`
+[Chorus]
+Wala Kang katulad
+Wala nang hihigit sa 'Yo
+Wala Kang katulad
+Wala nang papantay sa 'Yo
+Ikaw ang Diyos noon pa man
+Maging ngayon at kailanman
+Sa habang panahon
+Wala Kang katulad`
     },
     {
         id: "song-tagalog-6",
@@ -232,25 +309,37 @@ Wala Kang katulad O Diyos!`
         moodLabel: "🇵🇭 Tagalog Papuri",
         youtubeId: "4p-zsjuvanE",
         scriptureTheme: "Awit 100:5 — 'Sapagkat ang Panginoon ay mabuti; ang Kanyang kagandahang-loob ay magpakailanman.'",
-        lyricsSnippet: "Kay buti-buti Mo, Panginoon! Sa lahat ng oras, sa bawat araw, Ika'y laging tapat at maaasahan.",
-        chordsKey: "G",
-        fullLyrics: `[Verse 1]
-Katapatan Mo, O Diyos, mababanaag sa kabutihan Mo
-Ang Iyong habag at awa'y magpawalang hanggan
-Pinupuri't sinasamba ang Iyong pangalan
-Lahat ng nilalang ay magpupuri sa Iyo
-
-[Chorus]
+        lyricsSnippet: "Kay buti-buti Mo, Panginoon! Sa lahat ng oras, sa bawat araw, Ika'y laging tapat kung magmahal.",
+        chordsKey: "C",
+        fullLyrics: `[Verse]
 Kay buti-buti Mo, Panginoon
 Sa lahat ng oras, sa bawat araw
 Ika'y laging tapat kung magmahal
-Ang Iyong kaawaan ay magpawalang hanggan
+Ang Iyong kaawaan
+Ay magpawalang-hanggan
 
-[Verse 2]
-Kahit ako'y nagkukulang at nagkakasala
-Biyaya Mo'y patuloy na umaapaw
-Walang hanggang pasasalamat ang aking alay
-Sa Iyo, Panginoon, O Diyos na buhay!`
+[Chorus]
+Pinupuri't sinasamba Kita
+Dakilang Diyos at Panginoon
+Tunay ngang Ika'y walang katulad
+Tunay ngang Ika'y di nagbabago
+Mabuting Diyos
+Na sa ami'y nagmamahal
+
+[Verse]
+Kay buti-buti Mo, Panginoon
+Sa lahat ng oras, sa bawat araw
+Ika'y laging tapat kung magmahal
+Ang Iyong kaawaan
+Ay magpawalang-hanggan
+
+[Chorus]
+Pinupuri't sinasamba Kita
+Dakilang Diyos at Panginoon
+Tunay ngang Ika'y walang katulad
+Tunay ngang Ika'y di nagbabago
+Mabuting Diyos
+Na sa ami'y nagmamahal`
     },
 
     // ==========================================
@@ -271,9 +360,11 @@ Sa Iyo, Panginoon, O Diyos na buhay!`
         lyricsSnippet: "All my life You have been faithful, All my life You have been so, so good! With every breath that I am able, I will sing of the goodness of God.",
         chordsKey: "G",
         fullLyrics: `[Verse 1]
-I love You, Lord, for Your mercy never fails me
+I love You, Lord
+For Your mercy never fails me
 All my days, I've been held in Your hands
-From the moment that I wake up until I lay my head
+From the moment that I wake up
+Until I lay my head
 Oh, I will sing of the goodness of God
 
 [Chorus]
@@ -283,16 +374,31 @@ With every breath that I am able
 Oh, I will sing of the goodness of God
 
 [Verse 2]
-I love Your voice, You have led me through the fire
+I love Your voice
+You have led me through the fire
 In darkest night You are close like no other
-I've known You as a Father, I've known You as a Friend
+I've known You as a Father
+I've known You as a Friend
 And I have lived in the goodness of God
+
+[Chorus]
+'Cause all my life You have been faithful
+And all my life You have been so, so good
+With every breath that I am able
+Oh, I will sing of the goodness of God
 
 [Bridge]
 Your goodness is running after, it's running after me
 Your goodness is running after, it's running after me
-With my life laid down, I'm surrendered now, I give You everything
-Your goodness is running after, it's running after me!`
+With my life laid down, I'm surrendered now
+I give You everything
+'Cause Your goodness is running after, it's running after me
+
+[Chorus]
+'Cause all my life You have been faithful
+And all my life You have been so, so good
+With every breath that I am able
+Oh, I will sing of the goodness of God`
     },
     {
         id: "song-eng-2",
@@ -325,12 +431,22 @@ You are here, touching every heart
 I worship You, I worship You
 You are here, healing every life
 I worship You, I worship You
+You are here, turning lives around
+I worship You, I worship You
+You are here, mending every heart
+I worship You, I worship You
+
+[Chorus]
+You are Way Maker, Miracle Worker, Promise Keeper
+Light in the darkness, my God, that is who You are
+Way Maker, Miracle Worker, Promise Keeper
+Light in the darkness, my God, that is who You are
 
 [Bridge]
 Even when I don't see it, You're working
 Even when I don't feel it, You're working
 You never stop, You never stop working
-You never stop, You never stop working!`
+You never stop, You never stop working`
     },
     {
         id: "song-eng-3",
@@ -358,6 +474,12 @@ It's time to sing Your song again
 Whatever may pass, and whatever lies before me
 Let me be singing when the evening comes
 
+[Chorus]
+Bless the Lord, O my soul, O my soul
+Worship His holy name
+Sing like never before, O my soul
+I'll worship Your holy name
+
 [Verse 2]
 You're rich in love, and You're slow to anger
 Your name is great, and Your heart is kind
@@ -368,7 +490,13 @@ Ten thousand reasons for my heart to find
 And on that day when my strength is failing
 The end draws near and my time has come
 Still my soul will sing Your praise unending
-Ten thousand years and then forevermore!`
+Ten thousand years and then forevermore
+
+[Chorus]
+Bless the Lord, O my soul, O my soul
+Worship His holy name
+Sing like never before, O my soul
+I'll worship Your holy name`
     },
     {
         id: "song-eng-4",
@@ -412,9 +540,11 @@ What a wonderful Name it is, the Name of Jesus
 Death could not hold You, the veil tore before You
 You silence the boast of sin and grave
 The heavens are roaring the praise of Your glory
-For You are raised to life again!
+For You are raised to life again
 You have no rival, You have no equal
-Now and forever God You reign!`
+Now and forever God You reign
+Yours is the kingdom, Yours is the glory
+Yours is the Name above all names`
     },
     {
         id: "song-eng-5",
@@ -452,16 +582,22 @@ Unending love, amazing grace
 The Lord has promised good to me
 His word my hope secures
 He will my shield and portion be
-As long as life endures`
+As long as life endures
+
+[Verse 4]
+The earth shall soon dissolve like snow
+The sun forbear to shine
+But God, who called me here below
+Will be forever mine`
     },
     {
         id: "song-eng-6",
         title: "How Great Thou Art",
-        artist: "Matt Redman, Chris Tomlin & Friends",
+        artist: "Carrie Underwood",
         language: "English",
         albumCover: "https://images.unsplash.com/photo-1499209974431-9dddcece7f88?auto=format&fit=crop&w=400&q=80",
-        duration: "5:10",
-        durationSeconds: 310,
+        duration: "4:50",
+        durationSeconds: 290,
         mood: "ENGLISH",
         moodLabel: "🌐 English Majestic Hymn",
         youtubeId: "Yf6C0L_7-CA",
@@ -476,9 +612,9 @@ Thy power throughout the universe displayed
 
 [Chorus]
 Then sings my soul, my Savior God, to Thee
-How great Thou art! How great Thou art!
+How great Thou art, how great Thou art
 Then sings my soul, my Savior God, to Thee
-How great Thou art! How great Thou art!
+How great Thou art, how great Thou art
 
 [Verse 2]
 And when I think that God, His Son not sparing
@@ -486,11 +622,11 @@ Sent Him to die, I scarce can take it in
 That on the cross, my burden gladly bearing
 He bled and died to take away my sin
 
-[Bridge]
-Until that day, when no more tears of sorrow
-Until that day, when every eye shall see
-With one great shout of acclamation
-We'll sing: How great Thou art!`
+[Verse 3]
+When Christ shall come, with shout of acclamation
+And take me home, what joy shall fill my heart
+Then I shall bow in humble adoration
+And then proclaim: My God, how great Thou art`
     }
 ];
 
@@ -501,6 +637,48 @@ export const MOOD_CATEGORIES: { key: WorshipMood; label: string; icon: string }[
 ];
 
 const CUSTOM_SONGS_STORAGE_KEY = "epic_community_custom_worship_songs";
+const DELETED_SONGS_STORAGE_KEY = "epic_community_deleted_songs";
+
+/**
+ * Get IDs of songs deleted by Administrator
+ */
+export function getDeletedSongIds(): string[] {
+    try {
+        const stored = localStorage.getItem(DELETED_SONGS_STORAGE_KEY);
+        if (stored) {
+            return JSON.parse(stored);
+        }
+    } catch {}
+    return [];
+}
+
+/**
+ * Administrator delete song (removes from active playlist)
+ */
+export function adminDeleteSong(songId: string): void {
+    const deleted = getDeletedSongIds();
+    if (!deleted.includes(songId)) {
+        deleted.push(songId);
+        try {
+            localStorage.setItem(DELETED_SONGS_STORAGE_KEY, JSON.stringify(deleted));
+        } catch {}
+    }
+
+    // Also remove from custom songs if present
+    const custom = getCustomWorshipSongs().filter(s => s.id !== songId);
+    try {
+        localStorage.setItem(CUSTOM_SONGS_STORAGE_KEY, JSON.stringify(custom));
+    } catch {}
+}
+
+/**
+ * Administrator restore all deleted songs
+ */
+export function adminRestoreAllSongs(): void {
+    try {
+        localStorage.removeItem(DELETED_SONGS_STORAGE_KEY);
+    } catch {}
+}
 
 export function getCustomWorshipSongs(): WorshipSong[] {
     try {
@@ -543,7 +721,7 @@ export function saveCustomWorshipSong(song: {
         durationSeconds: 300,
         mood: lang === "Tagalog" ? "TAGALOG" : "ENGLISH",
         moodLabel: lang === "Tagalog" ? "🇵🇭 Custom Tagalog Worship" : "🌐 Custom English Worship",
-        youtubeId: yId || "n0GEOqpH938",
+        youtubeId: yId || "n0FBb6hnwTo",
         scriptureTheme: song.scriptureTheme?.trim() || "Colossians 3:16 — 'Singing to God with thanksgiving in your hearts.'",
         lyricsSnippet: song.lyricsSnippet?.trim() || "Worship the Lord with gladness; come before Him with joyful songs!",
         fullLyrics: song.fullLyrics?.trim() || "[Worship Song]\nCome let us worship and bow down before the Lord our Maker.",

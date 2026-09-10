@@ -25,7 +25,9 @@ import {
     Plus,
     FileText,
     Tv,
-    Copy
+    Copy,
+    Trash2,
+    RotateCcw
 } from "lucide-react";
 import {
     type WorshipSong,
@@ -33,8 +35,12 @@ import {
     WORSHIP_PLAYLIST,
     MOOD_CATEGORIES,
     getCustomWorshipSongs,
-    saveCustomWorshipSong
+    saveCustomWorshipSong,
+    getDeletedSongIds,
+    adminDeleteSong,
+    adminRestoreAllSongs
 } from "../../services/worshipService";
+import permissionService from "../../PermissionService";
 import {
     type CommunityPost,
     type CommunityStory,
@@ -140,6 +146,48 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
     const [showLyricsModal, setShowLyricsModal] = useState<boolean>(false);
     const [activeLyricsSong, setActiveLyricsSong] = useState<WorshipSong | null>(null);
     const [showVideoPlayer, setShowVideoPlayer] = useState<boolean>(false);
+
+    // EPIC Community Account Role: ADMIN vs MEMBER (Just like EPIC CMS)
+    const [userRole, setUserRole] = useState<"ADMIN" | "MEMBER">(() => {
+        const saved = localStorage.getItem("epic_community_role");
+        if (saved === "ADMIN" || saved === "MEMBER") return saved;
+        return permissionService.isAdministrator() ? "ADMIN" : "ADMIN";
+    });
+
+    const [deletedSongIds, setDeletedSongIds] = useState<string[]>(() => getDeletedSongIds());
+
+    const handleToggleRole = () => {
+        const nextRole = userRole === "ADMIN" ? "MEMBER" : "ADMIN";
+        setUserRole(nextRole);
+        localStorage.setItem("epic_community_role", nextRole);
+    };
+
+    const handleAdminDeleteSong = (song: WorshipSong) => {
+        if (userRole !== "ADMIN") return;
+        if (window.confirm(`👑 Admin Action: Are you sure you want to delete "${song.title}" from the worship playlist?`)) {
+            adminDeleteSong(song.id);
+            const updated = getDeletedSongIds();
+            setDeletedSongIds(updated);
+
+            // If deleted song was currently playing, switch to next available
+            if (currentSong.id === song.id) {
+                const remaining = allSongs.filter((s) => s.id !== song.id);
+                if (remaining.length > 0) {
+                    setCurrentSong(remaining[0]);
+                } else {
+                    setIsPlaying(false);
+                }
+            }
+        }
+    };
+
+    const handleAdminRestoreAll = () => {
+        if (userRole !== "ADMIN") return;
+        if (window.confirm("👑 Admin Action: Restore all deleted worship songs back to the community playlist?")) {
+            adminRestoreAllSongs();
+            setDeletedSongIds([]);
+        }
+    };
 
     // Christian Worship Music Player State
     const [worshipMood, setWorshipMood] = useState<WorshipMood>("ALL");
@@ -255,7 +303,11 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
     }, [faithProfile.faithPoints, faithProfile.name]);
 
     // Combine preset worship catalog with user's custom added songs
-    const allSongs = useMemo(() => [...customSongs, ...WORSHIP_PLAYLIST], [customSongs]);
+    // Combine worship playlist with user's custom songs, filtering out Admin-deleted songs
+    const allSongs = useMemo(() => {
+        const full = [...customSongs, ...WORSHIP_PLAYLIST];
+        return full.filter((s) => !deletedSongIds.includes(s.id));
+    }, [customSongs, deletedSongIds]);
 
     // Filtered worship songs by mood and search query
     const filteredSongs = useMemo(() => {
@@ -543,6 +595,28 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
         <div className="epic-public-community">
             <PublicHeader onNavigate={onNavigate} />
 
+            {/* EPIC Community Role Bar (Admin vs Member Toggle - Like EPIC CMS) */}
+            <div className={`community-role-top-banner ${userRole.toLowerCase()}`}>
+                <div className="community-role-banner-content">
+                    <span className="community-role-tag">
+                        {userRole === "ADMIN" ? "👑 EPIC Administrator Mode" : "👤 EPIC Church Member Mode"}
+                    </span>
+                    <span className="community-role-desc">
+                        {userRole === "ADMIN"
+                            ? "Admin Privileges Active: You can delete songs, manage playlist, and moderate community content."
+                            : "Standard Fellowship Account: Listen, sing along with full lyrics, post reflections, and pray."}
+                    </span>
+                </div>
+                <button
+                    type="button"
+                    className={`community-role-switch-pill ${userRole.toLowerCase()}`}
+                    onClick={handleToggleRole}
+                    title={userRole === "ADMIN" ? "Switch to Member view" : "Switch to Admin view"}
+                >
+                    {userRole === "ADMIN" ? "👤 Switch to Member Mode" : "👑 Switch to Admin Mode"}
+                </button>
+            </div>
+
             {/* Hidden Photo File Picker */}
             <input
                 type="file"
@@ -632,6 +706,24 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                                         {ladderRank.icon} {ladderRank.title}
                                     </span>
                                 </div>
+                            </div>
+
+                            {/* EPIC Account Role Card */}
+                            <div className={`fb-user-role-card ${userRole.toLowerCase()}`}>
+                                <div className="fb-user-role-header">
+                                    <span className="fb-role-icon">{userRole === "ADMIN" ? "👑" : "👤"}</span>
+                                    <div>
+                                        <strong>{userRole === "ADMIN" ? "Administrator" : "Church Member"}</strong>
+                                        <small>{userRole === "ADMIN" ? "Full Admin Access" : "Member Fellowship"}</small>
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    className="fb-role-switch-action-btn"
+                                    onClick={handleToggleRole}
+                                >
+                                    {userRole === "ADMIN" ? "Switch to Member Mode" : "Switch to Admin Mode"}
+                                </button>
                             </div>
 
                             {/* Feed Navigation Shortcuts */}
@@ -767,7 +859,25 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                                     >
                                         ← Back to Feed
                                     </button>
-                                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                                        {userRole === "ADMIN" && deletedSongIds.length > 0 && (
+                                            <button
+                                                type="button"
+                                                className="worship-restore-btn"
+                                                onClick={handleAdminRestoreAll}
+                                                title="Admin: Restore all deleted songs"
+                                            >
+                                                <RotateCcw size={13} /> Restore Deleted ({deletedSongIds.length})
+                                            </button>
+                                        )}
+                                        <button
+                                            type="button"
+                                            className={`worship-role-indicator-btn ${userRole.toLowerCase()}`}
+                                            onClick={handleToggleRole}
+                                            title="Click to toggle Admin / Member mode"
+                                        >
+                                            {userRole === "ADMIN" ? "👑 Admin Mode" : "👤 Member Mode"}
+                                        </button>
                                         <button
                                             type="button"
                                             className="worship-add-song-top-btn"
@@ -859,6 +969,16 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                                                 >
                                                     <SkipForward size={16} /> Next Song
                                                 </button>
+                                                {userRole === "ADMIN" && (
+                                                    <button
+                                                        type="button"
+                                                        className="worship-action-delete-btn"
+                                                        onClick={() => handleAdminDeleteSong(currentSong)}
+                                                        title="Admin: Delete this song from community"
+                                                    >
+                                                        <Trash2 size={15} /> Delete Song
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -942,6 +1062,19 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                                                     >
                                                         <FileText size={13} /> Lyrics
                                                     </button>
+                                                    {userRole === "ADMIN" && (
+                                                        <button
+                                                            type="button"
+                                                            className="worship-song-row-delete-btn"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleAdminDeleteSong(song);
+                                                            }}
+                                                            title="Admin: Delete this song"
+                                                        >
+                                                            <Trash2 size={13} /> Delete
+                                                        </button>
+                                                    )}
                                                     <button
                                                         type="button"
                                                         className={`worship-song-row-play-btn ${isThisPlaying ? "playing" : ""}`}
