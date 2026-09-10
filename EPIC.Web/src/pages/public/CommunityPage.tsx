@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import PublicHeader from "../../components/PublicHeader";
 import {
     Heart,
@@ -6,14 +6,17 @@ import {
     Sparkles,
     MessageCircle,
     Share2,
-    Plus,
     Search,
     ShieldCheck,
     ChevronUp,
     ChevronDown,
-    Radio,
     User,
-    Check
+    Check,
+    Camera,
+    Trophy,
+    Award,
+    BookOpen,
+    Users
 } from "lucide-react";
 import {
     type CommunityPost,
@@ -21,6 +24,8 @@ import {
     type CommunityShort,
     type UserFaithProfile,
     type ReactionType,
+    type LeaderboardMember,
+    type LadderRankInfo,
     fetchCommunityFeed,
     createCommunityPost,
     reactToPost,
@@ -29,7 +34,10 @@ import {
     fetchCommunityStories,
     fetchCommunityShorts,
     getFaithProfile,
-    claimDailyChallenge
+    claimDailyChallenge,
+    getLadderRank,
+    getCommunityLeaderboard,
+    compressImage
 } from "../../services/communityService";
 import "./CommunityPage.css";
 import "./PublicUnisonTheme.css";
@@ -70,7 +78,7 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
     const [faithProfile, setFaithProfile] = useState<UserFaithProfile>(getFaithProfile());
     const [challengeClaimedToast, setChallengeClaimedToast] = useState<boolean>(false);
 
-    // Stories (Instagram style)
+    // Stories (Instagram / Facebook style)
     const [stories, setStories] = useState<CommunityStory[]>([]);
     const [activeStoryIdx, setActiveStoryIdx] = useState<number | null>(null);
 
@@ -82,7 +90,7 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
     const [isCreateOpen, setIsCreateOpen] = useState<boolean>(false);
     const [isStandardsOpen, setIsStandardsOpen] = useState<boolean>(false);
 
-    // Create post form state
+    // Create post form state with real Photo File Upload
     const [postType, setPostType] = useState<string>("PRAYER");
     const [authorName, setAuthorName] = useState<string>("");
     const [authorRole, setAuthorRole] = useState<string>("");
@@ -90,8 +98,10 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
     const [postTitle, setPostTitle] = useState<string>("");
     const [postContent, setPostContent] = useState<string>("");
     const [scriptureRef, setScriptureRef] = useState<string>("");
-    const [mediaUrl, setMediaUrl] = useState<string>("");
+    const [uploadedPhotoUrl, setUploadedPhotoUrl] = useState<string>("");
+    const [photoCompressing, setPhotoCompressing] = useState<boolean>(false);
     const [submittingPost, setSubmittingPost] = useState<boolean>(false);
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
 
     // Comment state
     const [expandedComments, setExpandedComments] = useState<Record<number, boolean>>({});
@@ -180,6 +190,15 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
         });
     }, [posts, activeTab, activeGroup, searchQuery]);
 
+    // Ladder of Success rank & Leaderboard
+    const ladderRank: LadderRankInfo = useMemo(() => {
+        return getLadderRank(faithProfile.faithPoints);
+    }, [faithProfile.faithPoints]);
+
+    const leaderboard: LeaderboardMember[] = useMemo(() => {
+        return getCommunityLeaderboard(faithProfile.faithPoints, faithProfile.name);
+    }, [faithProfile.faithPoints, faithProfile.name]);
+
     // Claim daily challenge
     const handleClaimChallenge = () => {
         const updated = claimDailyChallenge();
@@ -236,6 +255,41 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
         setFaithProfile(getFaithProfile());
     };
 
+    // Photo selection and compression
+    const handlePhotoSelect = async (files: FileList | null) => {
+        if (!files || files.length === 0) return;
+        const file = files[0];
+        if (!file.type.startsWith("image/")) {
+            alert("Please select a valid image file (JPEG, PNG, WebP).");
+            return;
+        }
+
+        try {
+            setPhotoCompressing(true);
+            const compressed = await compressImage(file, 1600, 1200, 0.85);
+            setUploadedPhotoUrl(compressed);
+        } catch (err) {
+            console.error("Compression error:", err);
+            alert("Failed to process photo.");
+        } finally {
+            setPhotoCompressing(false);
+        }
+    };
+
+    // Quick open composer for a specific post type
+    const openComposerForType = (type: string) => {
+        setPostType(type);
+        setIsCreateOpen(true);
+    };
+
+    // Quick open composer and trigger photo picker
+    const openComposerWithPhoto = () => {
+        setIsCreateOpen(true);
+        setTimeout(() => {
+            fileInputRef.current?.click();
+        }, 200);
+    };
+
     // Submit post
     const handleSubmitPost = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -254,7 +308,7 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                 title: postTitle.trim() || undefined,
                 content: postContent.trim(),
                 scriptureRef: scriptureRef.trim() || undefined,
-                mediaUrl: mediaUrl.trim() || undefined
+                mediaUrl: uploadedPhotoUrl || undefined
             });
 
             setPosts((prev) => [created, ...prev]);
@@ -262,7 +316,7 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
             setPostTitle("");
             setPostContent("");
             setScriptureRef("");
-            setMediaUrl("");
+            setUploadedPhotoUrl("");
             setFaithProfile(getFaithProfile());
         } catch {
             alert("Unable to publish post. Please check your network.");
@@ -302,41 +356,239 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
         <div className="epic-public-community">
             <PublicHeader onNavigate={onNavigate} />
 
-            {/* 1. HERO SECTION */}
-            <section className="community-hero">
-                <div className="community-hero-content">
-                    <span className="community-eyebrow">
-                        <Radio size={13} /> EPIC KINGDOM FELLOWSHIP
-                    </span>
-                    <h1>
-                        EPIC <span>Community</span>
-                    </h1>
-                    <p>
-                        A sacred digital space to connect, encourage, and grow spiritually together.
-                        Borrowing the best ideas of social connection, dedicated to Christ.
-                    </p>
-                </div>
-            </section>
+            {/* Hidden Photo File Picker */}
+            <input
+                type="file"
+                ref={fileInputRef}
+                style={{ display: "none" }}
+                accept="image/*"
+                onChange={(e) => handlePhotoSelect(e.target.files)}
+            />
 
-            <main className="community-container">
-                {/* 2. DAILY FAITH BANNER & CHALLENGE HUD */}
-                <section className="daily-faith-hud-card">
-                    <div className="daily-faith-left">
-                        <h3>
-                            <Sparkles size={18} color="#38bdf8" /> Daily Bread &amp; Encouragement
-                        </h3>
-                        <div className="verse-of-day-box">
-                            <p className="verse-quote">
-                                "Be strong and courageous. Do not be afraid; do not be discouraged, for
-                                the Lord your God will be with you wherever you go."
-                            </p>
-                            <span className="verse-reference">— Joshua 1:9</span>
+            <main className="community-dashboard-container">
+                {/* 3-COLUMN FACEBOOK DASHBOARD GRID */}
+                <div className="community-fb-grid">
+                    {/* =========================================================
+                        COLUMN 1: LEFT SIDEBAR (Shortcuts & Ministry Groups)
+                        ========================================================= */}
+                    <aside className="fb-left-sidebar">
+                        <div className="fb-sidebar-card">
+                            {/* User Profile Mini Badge */}
+                            <div className="fb-user-badge-widget">
+                                <div className="fb-user-badge-avatar">
+                                    <User size={22} />
+                                </div>
+                                <div className="fb-user-badge-info">
+                                    <strong>{faithProfile.name}</strong>
+                                    <span className="fb-user-badge-tier">
+                                        {ladderRank.icon} {ladderRank.title}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Feed Navigation Shortcuts */}
+                            <div className="fb-nav-links-list">
+                                <button
+                                    type="button"
+                                    className={`fb-nav-item-btn ${activeTab === "ALL" && activeGroup === "ALL" ? "active" : ""}`}
+                                    onClick={() => {
+                                        setActiveTab("ALL");
+                                        setActiveGroup("ALL");
+                                    }}
+                                >
+                                    <span className="fb-nav-icon">📰</span>
+                                    <span>Main Fellowship Feed</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    className={`fb-nav-item-btn ${activeTab === "PRAYER" ? "active" : ""}`}
+                                    onClick={() => setActiveTab("PRAYER")}
+                                >
+                                    <span className="fb-nav-icon">🙏</span>
+                                    <span>Prayer Wall</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    className={`fb-nav-item-btn ${activeTab === "TESTIMONY" ? "active" : ""}`}
+                                    onClick={() => setActiveTab("TESTIMONY")}
+                                >
+                                    <span className="fb-nav-icon">❤️</span>
+                                    <span>Testimonies &amp; Praise</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    className={`fb-nav-item-btn ${activeTab === "VERSE" ? "active" : ""}`}
+                                    onClick={() => setActiveTab("VERSE")}
+                                >
+                                    <span className="fb-nav-icon">📖</span>
+                                    <span>Scriptures &amp; Devotionals</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    className="fb-nav-item-btn"
+                                    onClick={() => setActiveShortIdx(0)}
+                                >
+                                    <span className="fb-nav-icon">🎥</span>
+                                    <span>EPIC Shorts Theater</span>
+                                </button>
+                            </div>
+
+                            {/* Ministry Groups List */}
+                            <div className="fb-sidebar-section-title">
+                                <Users size={13} style={{ display: "inline", marginRight: 4 }} />
+                                Ministry Circles
+                            </div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                                {MINISTRY_GROUPS.map((grp) => (
+                                    <button
+                                        key={grp}
+                                        type="button"
+                                        className={`fb-group-pill-link ${activeGroup === grp ? "active" : ""}`}
+                                        onClick={() => setActiveGroup(grp)}
+                                    >
+                                        <span>{grp}</span>
+                                        <span style={{ fontSize: "0.7rem", color: "#64748b" }}>•</span>
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Standards Link */}
+                            <div style={{ marginTop: 16, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsStandardsOpen(true)}
+                                    style={{
+                                        background: "none",
+                                        border: "none",
+                                        color: "#94a3b8",
+                                        fontSize: "0.75rem",
+                                        cursor: "pointer",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 6
+                                    }}
+                                >
+                                    <ShieldCheck size={14} color="#38bdf8" /> Community Standards
+                                </button>
+                            </div>
+                        </div>
+                    </aside>
+
+                    {/* =========================================================
+                        COLUMN 2: CENTER SOCIAL FEED (Facebook Style)
+                        ========================================================= */}
+                    <section className="fb-center-feed">
+                        {/* Stories Carousel */}
+                        {stories.length > 0 && (
+                            <div className="fb-stories-strip">
+                                <div className="stories-carousel-track">
+                                    {stories.map((story, idx) => (
+                                        <button
+                                            key={story.id}
+                                            type="button"
+                                            className="story-circle-item"
+                                            onClick={() => setActiveStoryIdx(idx)}
+                                        >
+                                            <div className={`story-ring-wrapper ${story.hasUnseen ? "" : "seen"}`}>
+                                                <img
+                                                    src={story.avatarUrl}
+                                                    alt={story.title}
+                                                    className="story-ring-inner-img"
+                                                />
+                                            </div>
+                                            <span className="story-circle-title">{story.title}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Facebook-Style "What's On Your Mind?" Post Composer Box */}
+                        <div className="fb-composer-box">
+                            <div className="fb-composer-top-row">
+                                <div className="fb-composer-avatar">
+                                    <User size={20} />
+                                </div>
+                                <button
+                                    type="button"
+                                    className="fb-composer-trigger-btn"
+                                    onClick={() => setIsCreateOpen(true)}
+                                >
+                                    Share what God is doing, a prayer request, or scripture...
+                                </button>
+                            </div>
+
+                            {/* Action Buttons with Real Photo Upload */}
+                            <div className="fb-composer-action-buttons">
+                                <button
+                                    type="button"
+                                    className="fb-action-tab-btn photo-upload"
+                                    onClick={openComposerWithPhoto}
+                                    title="Upload a photo from your phone or computer"
+                                >
+                                    <Camera size={18} />
+                                    <span>Photo Upload</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    className="fb-action-tab-btn prayer"
+                                    onClick={() => openComposerForType("PRAYER")}
+                                >
+                                    <span style={{ fontSize: 16 }}>🙏</span>
+                                    <span>Prayer Request</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    className="fb-action-tab-btn testimony"
+                                    onClick={() => openComposerForType("TESTIMONY")}
+                                >
+                                    <span style={{ fontSize: 16 }}>❤️</span>
+                                    <span>Testimony</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    className="fb-action-tab-btn verse"
+                                    onClick={() => openComposerForType("VERSE")}
+                                >
+                                    <BookOpen size={17} />
+                                    <span>Scripture</span>
+                                </button>
+                            </div>
                         </div>
 
-                        <div className="daily-challenge-box">
-                            <span style={{ fontSize: "0.85rem", color: "#cbd5e1", fontWeight: 600 }}>
-                                Today's Faith Challenge: Encourage 1 person in the community.
-                            </span>
+                        {/* Daily Faith Banner */}
+                        <div
+                            style={{
+                                background: "linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(30, 27, 75, 0.6) 100%)",
+                                border: "1px solid rgba(56, 189, 248, 0.25)",
+                                borderRadius: 16,
+                                padding: "16px 20px",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                gap: 14,
+                                flexWrap: "wrap"
+                            }}
+                        >
+                            <div>
+                                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                                    <Sparkles size={16} color="#38bdf8" />
+                                    <strong style={{ color: "#ffffff", fontSize: "0.9rem" }}>
+                                        Today's Encouragement: Joshua 1:9
+                                    </strong>
+                                </div>
+                                <span style={{ fontSize: "0.82rem", color: "#cbd5e1" }}>
+                                    "Be strong and courageous... the Lord your God is with you wherever you go."
+                                </span>
+                            </div>
+
                             <button
                                 type="button"
                                 className={`daily-challenge-btn ${
@@ -347,414 +599,520 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                             >
                                 {faithProfile.dailyChallengeCompleted ? (
                                     <>
-                                        <Check size={16} /> Challenge Completed (+10 Pts)
+                                        <Check size={14} /> Completed (+10 Pts)
                                     </>
                                 ) : (
                                     <>
-                                        <Heart size={16} fill="#ffffff" /> I Encouraged Someone Today (+10 Pts)
+                                        <Heart size={14} fill="#ffffff" /> I Encouraged Someone (+10 Pts)
                                     </>
                                 )}
                             </button>
                         </div>
 
-                        {challengeClaimedToast && (
-                            <span style={{ color: "#34d399", fontSize: "0.8rem", fontWeight: 700, marginTop: 6, display: "block" }}>
-                                ✨ Praise God! +10 Faith Points added to your journey!
-                            </span>
-                        )}
-                    </div>
-
-                    {/* Faith Journey Stats HUD */}
-                    <div className="faith-profile-hud-right">
-                        <div className="faith-hud-stat">
-                            <span className="faith-stat-val streak">🔥 {faithProfile.streakDays}d</span>
-                            <span className="faith-stat-lbl">Faith Streak</span>
-                        </div>
-                        <div className="faith-hud-stat">
-                            <span className="faith-stat-val points">⭐ {faithProfile.faithPoints}</span>
-                            <span className="faith-stat-lbl">Faith Points</span>
-                        </div>
-                        <div className="faith-hud-stat">
-                            <span className="faith-stat-val prayers">🙏 {faithProfile.prayersOffered}</span>
-                            <span className="faith-stat-lbl">Prayers Lifted</span>
-                        </div>
-                        <div className="faith-hud-stat">
-                            <span className="faith-stat-val encouraged">❤️ {faithProfile.peopleEncouraged}</span>
-                            <span className="faith-stat-lbl">Encouraged</span>
-                        </div>
-                    </div>
-                </section>
-
-                {/* 3. INSTAGRAM-STYLE EPIC STORIES CAROUSEL */}
-                {stories.length > 0 && (
-                    <section className="epic-stories-strip">
-                        <div className="stories-carousel-track">
-                            {stories.map((story, idx) => (
-                                <button
-                                    key={story.id}
-                                    type="button"
-                                    className="story-circle-item"
-                                    onClick={() => setActiveStoryIdx(idx)}
-                                >
-                                    <div className={`story-ring-wrapper ${story.hasUnseen ? "" : "seen"}`}>
-                                        <img
-                                            src={story.avatarUrl}
-                                            alt={story.title}
-                                            className="story-ring-inner-img"
-                                        />
-                                    </div>
-                                    <span className="story-circle-title">{story.title}</span>
-                                    <span className="story-circle-ministry">{story.ministry}</span>
-                                </button>
-                            ))}
-                        </div>
-                    </section>
-                )}
-
-                {/* 4. FEED CONTROLS BAR & FILTER TABS */}
-                <section className="community-controls-bar">
-                    <div className="community-controls-top">
-                        {/* Feed Tabs */}
-                        <div className="community-feed-tabs">
-                            <button
-                                type="button"
-                                className={`comm-tab-btn ${activeTab === "ALL" ? "active" : ""}`}
-                                onClick={() => setActiveTab("ALL")}
-                            >
-                                <Radio size={14} /> All Fellowship
-                            </button>
-                            <button
-                                type="button"
-                                className={`comm-tab-btn prayer-tab ${activeTab === "PRAYER" ? "active" : ""}`}
-                                onClick={() => setActiveTab("PRAYER")}
-                            >
-                                🙏 Prayer Wall
-                            </button>
-                            <button
-                                type="button"
-                                className={`comm-tab-btn ${activeTab === "TESTIMONY" ? "active" : ""}`}
-                                onClick={() => setActiveTab("TESTIMONY")}
-                            >
-                                ❤️ Testimonies
-                            </button>
-                            <button
-                                type="button"
-                                className={`comm-tab-btn ${activeTab === "VERSE" ? "active" : ""}`}
-                                onClick={() => setActiveTab("VERSE")}
-                            >
-                                📖 Verses &amp; Devotionals
-                            </button>
-                            <button
-                                type="button"
-                                className="comm-tab-btn shorts-tab"
-                                onClick={() => setActiveShortIdx(0)}
-                            >
-                                🎥 EPIC Shorts
-                            </button>
+                        {/* Feed Search HUD */}
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                            <div className="community-search-box" style={{ maxWidth: "100%" }}>
+                                <Search size={15} className="community-search-icon" />
+                                <input
+                                    type="text"
+                                    placeholder="Search prayer requests, testimonies, or members..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                            </div>
                         </div>
 
-                        {/* Search HUD */}
-                        <div className="community-search-box">
-                            <Search size={15} className="community-search-icon" />
-                            <input
-                                type="text"
-                                placeholder="Search prayer, verse, name..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                            />
-                        </div>
+                        {/* Social Feed Posts Cards */}
+                        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+                            {loading ? (
+                                <div style={{ textAlign: "center", padding: "40px 20px", color: "#94a3b8" }}>
+                                    <div style={{ fontSize: "2rem", marginBottom: 10 }}>🕊️</div>
+                                    <p>Loading fellowship posts...</p>
+                                </div>
+                            ) : filteredPosts.length === 0 ? (
+                                <div style={{ textAlign: "center", padding: "40px 20px", color: "#94a3b8" }}>
+                                    <p>No posts found in this filter.</p>
+                                </div>
+                            ) : (
+                                filteredPosts.map((post) => {
+                                const isPrayer = post.postType === "PRAYER";
+                                const isTestimony = post.postType === "TESTIMONY";
+                                const isExpanded = !!expandedComments[post.id];
 
-                        {/* Share Button */}
-                        <button
-                            type="button"
-                            className="community-create-post-trigger"
-                            onClick={() => setIsCreateOpen(true)}
-                        >
-                            <Plus size={15} /> Share Encouragement
-                        </button>
-                    </div>
+                                return (
+                                    <article
+                                        key={post.id}
+                                        className={`fb-feed-card ${
+                                            isPrayer ? "prayer" : isTestimony ? "testimony" : ""
+                                        }`}
+                                    >
+                                        {/* Card Header */}
+                                        <div className="fb-card-header">
+                                            <div className="fb-card-author">
+                                                <div
+                                                    className="fb-card-avatar"
+                                                    style={{ background: post.avatarBg }}
+                                                >
+                                                    {post.authorName.charAt(0).toUpperCase()}
+                                                </div>
+                                                <div className="fb-card-author-meta">
+                                                    <strong>{post.authorName}</strong>
+                                                    <span>
+                                                        {post.authorRole} • {post.ministryGroup} •{" "}
+                                                        {new Date(post.createdAt).toLocaleDateString(undefined, {
+                                                            month: "short",
+                                                            day: "numeric"
+                                                        })}
+                                                    </span>
+                                                </div>
+                                            </div>
 
-                    {/* Ministry Group Filter Pills */}
-                    <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingTop: 4 }}>
-                        <span style={{ fontSize: "0.75rem", color: "#64748b", fontWeight: 700, alignSelf: "center", textTransform: "uppercase" }}>
-                            Groups:
-                        </span>
-                        {["ALL", ...MINISTRY_GROUPS].map((grp) => (
-                            <button
-                                key={grp}
-                                type="button"
-                                className={`type-select-pill ${activeGroup === grp ? "active" : ""}`}
-                                onClick={() => setActiveGroup(grp)}
-                            >
-                                {grp === "ALL" ? "All Groups" : grp}
-                            </button>
-                        ))}
-                    </div>
-                </section>
-
-                {/* 5. QUICK COMPOSER CARD */}
-                <div className="quick-composer-card" onClick={() => setIsCreateOpen(true)}>
-                    <div className="composer-user-avatar">
-                        <User size={22} />
-                    </div>
-                    <div className="composer-fake-input">
-                        Share what God has done, a prayer request, or a scripture encouragement...
-                    </div>
-                    <div className="composer-quick-actions">
-                        <span className="quick-action-pill">🙏 Prayer</span>
-                        <span className="quick-action-pill">❤️ Testimony</span>
-                        <span className="quick-action-pill">📖 Verse</span>
-                    </div>
-                </div>
-
-                {/* 6. COMMUNITY FEED GRID */}
-                <section className="community-feed-grid">
-                    {filteredPosts.map((post) => {
-                        const isPrayer = post.postType === "PRAYER";
-                        const isTestimony = post.postType === "TESTIMONY";
-                        const isExpanded = !!expandedComments[post.id];
-
-                        return (
-                            <article
-                                key={post.id}
-                                className={`comm-post-card ${
-                                    isPrayer ? "prayer-card" : isTestimony ? "testimony-card" : ""
-                                }`}
-                            >
-                                {/* Header */}
-                                <div className="comm-post-header">
-                                    <div className="comm-author-info">
-                                        <div
-                                            className="comm-author-avatar"
-                                            style={{ background: post.avatarBg }}
-                                        >
-                                            {post.authorName.charAt(0).toUpperCase()}
-                                        </div>
-                                        <div className="comm-author-text">
-                                            <strong>{post.authorName}</strong>
-                                            <span>
-                                                {post.authorRole} • {post.ministryGroup} •{" "}
-                                                {new Date(post.createdAt).toLocaleDateString(undefined, {
-                                                    month: "short",
-                                                    day: "numeric"
-                                                })}
+                                            <span className={`fb-card-type-tag ${post.postType.toLowerCase()}`}>
+                                                {post.postType}
                                             </span>
                                         </div>
-                                    </div>
 
-                                    <div className="comm-post-badges">
-                                        <span className={`comm-type-pill ${post.postType.toLowerCase()}`}>
-                                            {post.postType}
-                                        </span>
-                                    </div>
-                                </div>
+                                        {/* Title & Body */}
+                                        {post.title && <h3 className="fb-card-title">{post.title}</h3>}
+                                        <p className="fb-card-text">{post.content}</p>
 
-                                {/* Title & Body */}
-                                {post.title && <h3 className="comm-post-title">{post.title}</h3>}
-                                <p className="comm-post-body">{post.content}</p>
-
-                                {/* Scripture Highlight */}
-                                {post.scriptureRef && (
-                                    <div className="comm-scripture-highlight">
-                                        <strong>Scripture Reference:</strong> {post.scriptureRef}
-                                    </div>
-                                )}
-
-                                {/* Media Attachment */}
-                                {post.mediaUrl && (
-                                    <div className="comm-post-media-wrap">
-                                        <img src={post.mediaUrl} alt="Community Moment" loading="lazy" />
-                                    </div>
-                                )}
-
-                                {/* Reactions Dock */}
-                                <div className="comm-reactions-dock">
-                                    <div className="faith-reaction-group">
-                                        <button
-                                            type="button"
-                                            className={`faith-react-btn encourage ${
-                                                post.myReaction === "ENCOURAGE" ? "active" : ""
-                                            }`}
-                                            onClick={() => handleReact(post.id, "ENCOURAGE")}
-                                        >
-                                            <Heart size={14} fill={post.myReaction === "ENCOURAGE" ? "#f43f5e" : "none"} />
-                                            <span>❤️ Encourage ({post.encouragesCount})</span>
-                                        </button>
-
-                                        <button
-                                            type="button"
-                                            className={`faith-react-btn praying ${
-                                                post.myReaction === "PRAYING" ? "active" : ""
-                                            }`}
-                                            onClick={() => handleReact(post.id, "PRAYING")}
-                                        >
-                                            <span>🙏 Praying ({post.prayingCount})</span>
-                                        </button>
-
-                                        <button
-                                            type="button"
-                                            className={`faith-react-btn strengthened ${
-                                                post.myReaction === "STRENGTHENED" ? "active" : ""
-                                            }`}
-                                            onClick={() => handleReact(post.id, "STRENGTHENED")}
-                                        >
-                                            <span>💪 Strengthened ({post.strengthenedCount})</span>
-                                        </button>
-
-                                        <button
-                                            type="button"
-                                            className={`faith-react-btn celebrate ${
-                                                post.myReaction === "CELEBRATE" ? "active" : ""
-                                            }`}
-                                            onClick={() => handleReact(post.id, "CELEBRATE")}
-                                        >
-                                            <span>🎉 Celebrate ({post.celebratesCount})</span>
-                                        </button>
-                                    </div>
-
-                                    {/* Direct Prayer Wall Button */}
-                                    {isPrayer && (
-                                        <button
-                                            type="button"
-                                            className={`prayer-wall-direct-btn ${post.myPrayed ? "prayed" : ""}`}
-                                            onClick={() => handleDirectPray(post.id)}
-                                        >
-                                            {post.myPrayed ? (
-                                                <>
-                                                    <Check size={14} /> You Prayed for This
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <span>🙏</span> I'm Praying For You
-                                                </>
-                                            )}
-                                        </button>
-                                    )}
-
-                                    {/* Comment Count Trigger */}
-                                    <button
-                                        type="button"
-                                        className="comm-comment-toggle-btn"
-                                        onClick={() =>
-                                            setExpandedComments((prev) => ({
-                                                ...prev,
-                                                [post.id]: !prev[post.id]
-                                            }))
-                                        }
-                                    >
-                                        <MessageCircle size={15} />
-                                        <span>{post.commentsCount || 0} Reflections</span>
-                                    </button>
-                                </div>
-
-                                {/* Comments Drawer */}
-                                {isExpanded && (
-                                    <div className="comm-comments-drawer">
-                                        {post.comments && post.comments.length > 0 && (
-                                            <div className="comm-comment-list">
-                                                {post.comments.map((c) => (
-                                                    <div key={c.id} className="comm-comment-bubble">
-                                                        <div
-                                                            className="comment-avatar"
-                                                            style={{ background: c.avatarBg || "#0284c7" }}
-                                                        >
-                                                            {c.authorName.charAt(0).toUpperCase()}
-                                                        </div>
-                                                        <div className="comment-body-wrap">
-                                                            <div className="comment-author-name">
-                                                                {c.authorName}
-                                                            </div>
-                                                            <div className="comment-text">{c.content}</div>
-                                                        </div>
-                                                    </div>
-                                                ))}
+                                        {/* Scripture Highlight */}
+                                        {post.scriptureRef && (
+                                            <div className="fb-card-scripture-highlight">
+                                                📖 <strong>{post.scriptureRef}</strong>
                                             </div>
                                         )}
 
-                                        {/* Input Row */}
-                                        <div className="comm-comment-input-row">
-                                            <input
-                                                type="text"
-                                                style={{ maxWidth: 130 }}
-                                                placeholder="Your Name..."
-                                                value={commentAuthor}
-                                                onChange={(e) => setCommentAuthor(e.target.value)}
-                                            />
-                                            <input
-                                                type="text"
-                                                placeholder="Write an encouraging reflection or prayer..."
-                                                value={commentInputs[post.id] || ""}
-                                                onChange={(e) =>
-                                                    setCommentInputs((prev) => ({
-                                                        ...prev,
-                                                        [post.id]: e.target.value
-                                                    }))
-                                                }
-                                                onKeyDown={(e) => {
-                                                    if (e.key === "Enter") handleAddComment(post.id);
-                                                }}
-                                            />
+                                        {/* Photo Upload Attachment */}
+                                        {post.mediaUrl && (
+                                            <div className="fb-card-media-wrap">
+                                                <img src={post.mediaUrl} alt="Moment" loading="lazy" />
+                                            </div>
+                                        )}
+
+                                        {/* Facebook Reactions Bar */}
+                                        <div className="fb-card-reactions-bar">
+                                            <div className="fb-reactions-left">
+                                                <button
+                                                    type="button"
+                                                    className={`fb-reaction-btn ${
+                                                        post.myReaction === "ENCOURAGE" ? "active encourage" : ""
+                                                    }`}
+                                                    onClick={() => handleReact(post.id, "ENCOURAGE")}
+                                                    title="Encourage (+5 Pts)"
+                                                >
+                                                    <Heart size={14} fill={post.myReaction === "ENCOURAGE" ? "#f43f5e" : "none"} />
+                                                    <span>❤️ {post.encouragesCount}</span>
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    className={`fb-reaction-btn ${
+                                                        post.myReaction === "PRAYING" ? "active praying" : ""
+                                                    }`}
+                                                    onClick={() => handleReact(post.id, "PRAYING")}
+                                                    title="Praying (+5 Pts)"
+                                                >
+                                                    <span>🙏 {post.prayingCount}</span>
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    className={`fb-reaction-btn ${
+                                                        post.myReaction === "STRENGTHENED" ? "active strengthened" : ""
+                                                    }`}
+                                                    onClick={() => handleReact(post.id, "STRENGTHENED")}
+                                                    title="Strengthened (+5 Pts)"
+                                                >
+                                                    <span>💪 {post.strengthenedCount}</span>
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    className={`fb-reaction-btn ${
+                                                        post.myReaction === "CELEBRATE" ? "active celebrate" : ""
+                                                    }`}
+                                                    onClick={() => handleReact(post.id, "CELEBRATE")}
+                                                    title="Celebrate (+5 Pts)"
+                                                >
+                                                    <span>🎉 {post.celebratesCount}</span>
+                                                </button>
+                                            </div>
+
+                                            {/* Direct Prayer Wall Action */}
+                                            {isPrayer && (
+                                                <button
+                                                    type="button"
+                                                    className={`fb-pray-now-btn ${post.myPrayed ? "prayed" : ""}`}
+                                                    onClick={() => handleDirectPray(post.id)}
+                                                >
+                                                    {post.myPrayed ? (
+                                                        <>
+                                                            <Check size={14} /> You Prayed (+10 Pts)
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <span>🙏</span> Pray for This (+10 Pts)
+                                                        </>
+                                                    )}
+                                                </button>
+                                            )}
+
                                             <button
                                                 type="button"
-                                                className="comm-comment-submit-btn"
-                                                onClick={() => handleAddComment(post.id)}
+                                                className="fb-comment-btn"
+                                                onClick={() =>
+                                                    setExpandedComments((prev) => ({
+                                                        ...prev,
+                                                        [post.id]: !prev[post.id]
+                                                    }))
+                                                }
                                             >
-                                                Send
+                                                <MessageCircle size={15} />
+                                                <span>{post.commentsCount || 0} Reflections</span>
                                             </button>
                                         </div>
-                                    </div>
-                                )}
-                            </article>
-                        );
-                    })}
 
-                    {filteredPosts.length === 0 && !loading && (
-                        <div style={{ textAlign: "center", padding: "60px 20px" }}>
-                            <Heart size={44} color="#38bdf8" style={{ margin: "0 auto 14px" }} />
-                            <h3 style={{ fontSize: "1.3rem", fontWeight: 800, marginBottom: 8 }}>
-                                No fellowship posts found
-                            </h3>
-                            <p style={{ color: "#94a3b8", marginBottom: 18 }}>
-                                Be the first to share an encouragement or prayer request with the church!
-                            </p>
-                            <button
-                                type="button"
-                                className="community-create-post-trigger"
-                                onClick={() => setIsCreateOpen(true)}
-                            >
-                                <Plus size={15} /> Share First Encouragement
-                            </button>
+                                        {/* Comments Drawer */}
+                                        {isExpanded && (
+                                            <div className="comm-comments-drawer">
+                                                {post.comments && post.comments.length > 0 && (
+                                                    <div className="comm-comment-list">
+                                                        {post.comments.map((c) => (
+                                                            <div key={c.id} className="comm-comment-bubble">
+                                                                <div
+                                                                    className="comment-avatar"
+                                                                    style={{ background: c.avatarBg || "#0284c7" }}
+                                                                >
+                                                                    {c.authorName.charAt(0).toUpperCase()}
+                                                                </div>
+                                                                <div className="comment-body-wrap">
+                                                                    <div className="comment-author-name">
+                                                                        {c.authorName}
+                                                                    </div>
+                                                                    <div className="comment-text">{c.content}</div>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+
+                                                {/* Reflection Input */}
+                                                <div className="comm-comment-input-row">
+                                                    <input
+                                                        type="text"
+                                                        style={{ maxWidth: 130 }}
+                                                        placeholder="Your Name..."
+                                                        value={commentAuthor}
+                                                        onChange={(e) => setCommentAuthor(e.target.value)}
+                                                    />
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Write an encouraging reflection or prayer..."
+                                                        value={commentInputs[post.id] || ""}
+                                                        onChange={(e) =>
+                                                            setCommentInputs((prev) => ({
+                                                                ...prev,
+                                                                [post.id]: e.target.value
+                                                            }))
+                                                        }
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === "Enter") handleAddComment(post.id);
+                                                        }}
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        className="comm-comment-submit-btn"
+                                                        onClick={() => handleAddComment(post.id)}
+                                                    >
+                                                        Send
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </article>
+                                );
+                            }))}
                         </div>
-                    )}
-                </section>
+                    </section>
 
-                {/* 7. COMMUNITY STANDARDS SHIELD FOOTER */}
-                <div style={{ textAlign: "center", marginTop: 45, paddingBottom: 40 }}>
-                    <button
-                        type="button"
-                        onClick={() => setIsStandardsOpen(true)}
-                        style={{
-                            background: "none",
-                            border: "none",
-                            color: "#94a3b8",
-                            fontSize: "0.82rem",
-                            cursor: "pointer",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 6
-                        }}
-                    >
-                        <ShieldCheck size={16} color="#38bdf8" />
-                        EPIC Kingdom Community Standards &amp; Anti-Bullying Pledge
-                    </button>
+                    {/* =========================================================
+                        COLUMN 3: RIGHT SIDEBAR — LADDER OF SUCCESS & POINTS SYSTEM
+                        ========================================================= */}
+                    <aside className="fb-right-sidebar">
+                        {/* Ladder of Success Card */}
+                        <div className="ladder-card">
+                            <div className="ladder-card-header">
+                                <div className="ladder-title-strip">
+                                    <Trophy size={18} color="#fbbf24" />
+                                    <h3>Ladder of Success</h3>
+                                </div>
+                                <span className="ladder-streak-badge">
+                                    🔥 {faithProfile.streakDays}d Streak
+                                </span>
+                            </div>
+
+                            {/* Current User Tier Progress Box */}
+                            <div className="ladder-level-box">
+                                <div className="ladder-level-top">
+                                    <span className="ladder-level-badge">
+                                        <span>{ladderRank.icon}</span>
+                                        <span>{ladderRank.title}</span>
+                                    </span>
+                                    <span className="ladder-points-total">
+                                        ⭐ {ladderRank.currentPoints} Pts
+                                    </span>
+                                </div>
+
+                                <div className="ladder-progress-track">
+                                    <div
+                                        className="ladder-progress-bar"
+                                        style={{ width: `${ladderRank.progressPct}%` }}
+                                    ></div>
+                                </div>
+
+                                <div className="ladder-milestone-text">
+                                    <span>Level {ladderRank.level}</span>
+                                    <span>{ladderRank.nextMilestone} Pts for Next Tier</span>
+                                </div>
+                            </div>
+
+                            {/* Community Leaderboard Rankings */}
+                            <div style={{ fontSize: "0.78rem", fontWeight: 800, color: "#cbd5e1", marginBottom: 8 }}>
+                                🌟 Community Faith Rankings
+                            </div>
+
+                            <div className="ladder-rankings-list">
+                                {leaderboard.map((m) => (
+                                    <div
+                                        key={m.name}
+                                        className={`ladder-ranking-row ${m.isCurrentUser ? "current-user" : ""}`}
+                                    >
+                                        <div className="ladder-rank-left">
+                                            <span
+                                                className={`ladder-rank-pos ${
+                                                    m.rank === 1
+                                                        ? "gold"
+                                                        : m.rank === 2
+                                                        ? "silver"
+                                                        : m.rank === 3
+                                                        ? "bronze"
+                                                        : ""
+                                                }`}
+                                            >
+                                                {m.rank === 1 ? "🥇" : m.rank === 2 ? "🥈" : m.rank === 3 ? "🥉" : `#${m.rank}`}
+                                            </span>
+                                            <div
+                                                className="ladder-member-avatar"
+                                                style={{ background: m.avatarBg }}
+                                            >
+                                                {m.name.charAt(0)}
+                                            </div>
+                                            <div className="ladder-member-name">
+                                                <strong>{m.name}</strong>
+                                                <span>{m.tier}</span>
+                                            </div>
+                                        </div>
+
+                                        <span className="ladder-member-pts">{m.points}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Points System Breakdown Guide Card */}
+                        <div className="points-guide-card">
+                            <div className="points-guide-title">
+                                <Award size={15} color="#38bdf8" /> Points System Rewards
+                            </div>
+                            <div className="points-guide-list">
+                                <div className="points-guide-item">
+                                    <span>Post a Testimony / Story</span>
+                                    <span className="points-reward-pill">+15 Pts</span>
+                                </div>
+                                <div className="points-guide-item">
+                                    <span>Pray for Someone's Request</span>
+                                    <span className="points-reward-pill">+10 Pts</span>
+                                </div>
+                                <div className="points-guide-item">
+                                    <span>Encourage / React to a Post</span>
+                                    <span className="points-reward-pill">+5 Pts</span>
+                                </div>
+                                <div className="points-guide-item">
+                                    <span>Add Encouraging Reflection</span>
+                                    <span className="points-reward-pill">+5 Pts</span>
+                                </div>
+                                <div className="points-guide-item">
+                                    <span>Complete Daily Challenge</span>
+                                    <span className="points-reward-pill">+10 Pts</span>
+                                </div>
+                            </div>
+                        </div>
+                    </aside>
                 </div>
             </main>
 
-            {/* 8. INSTAGRAM-STYLE STORY VIEWER MODAL */}
+            {/* =========================================================
+                CREATE POST MODAL WITH REAL PHOTO FILE UPLOAD
+                ========================================================= */}
+            {isCreateOpen && (
+                <div className="comm-modal-overlay" onClick={() => setIsCreateOpen(false)}>
+                    <div className="comm-modal-card" onClick={(e) => e.stopPropagation()}>
+                        <div className="comm-modal-header">
+                            <h2>
+                                <Heart size={20} color="#f43f5e" /> Create Fellowship Post
+                            </h2>
+                            <button
+                                type="button"
+                                className="comm-modal-close"
+                                onClick={() => setIsCreateOpen(false)}
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleSubmitPost}>
+                            {/* Post Type Selector */}
+                            <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, marginBottom: 8, color: "#cbd5e1" }}>
+                                SELECT POST TYPE
+                            </label>
+                            <div className="comm-type-selector-row">
+                                {POST_TYPES.map((pt) => (
+                                    <button
+                                        key={pt.type}
+                                        type="button"
+                                        className={`type-select-pill ${postType === pt.type ? "active" : ""}`}
+                                        onClick={() => setPostType(pt.type)}
+                                    >
+                                        {pt.label}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Author Name & Role */}
+                            <div className="comm-form-row">
+                                <div className="comm-form-group">
+                                    <label>Your Name *</label>
+                                    <input
+                                        type="text"
+                                        placeholder="e.g. Sister Maria"
+                                        value={authorName}
+                                        onChange={(e) => setAuthorName(e.target.value)}
+                                        required
+                                    />
+                                </div>
+
+                                <div className="comm-form-group">
+                                    <label>Role / Ministry Note</label>
+                                    <input
+                                        type="text"
+                                        placeholder="e.g. Believer, Youth Leader, Volunteer"
+                                        value={authorRole}
+                                        onChange={(e) => setAuthorRole(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Ministry Group */}
+                            <div className="comm-form-group">
+                                <label>Ministry / Fellowship Group</label>
+                                <select
+                                    value={ministryGroup}
+                                    onChange={(e) => setMinistryGroup(e.target.value)}
+                                >
+                                    {MINISTRY_GROUPS.map((grp) => (
+                                        <option key={grp} value={grp}>
+                                            {grp}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Optional Title */}
+                            <div className="comm-form-group">
+                                <label>Title (Optional)</label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. Praise Report: God Answered Our Prayers!"
+                                    value={postTitle}
+                                    onChange={(e) => setPostTitle(e.target.value)}
+                                />
+                            </div>
+
+                            {/* Content */}
+                            <div className="comm-form-group">
+                                <label>Your Reflection, Prayer Request, or Testimony *</label>
+                                <textarea
+                                    rows={4}
+                                    placeholder="Share your encouraging word, prayer request, or praise report..."
+                                    value={postContent}
+                                    onChange={(e) => setPostContent(e.target.value)}
+                                    required
+                                />
+                            </div>
+
+                            {/* Scripture Reference */}
+                            <div className="comm-form-group">
+                                <label>Scripture Reference (Optional)</label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. Psalm 23:1, Romans 8:28, Joshua 1:9"
+                                    value={scriptureRef}
+                                    onChange={(e) => setScriptureRef(e.target.value)}
+                                />
+                            </div>
+
+                            {/* REAL PHOTO UPLOAD BUTTON & THUMBNAIL (No text URL needed!) */}
+                            <div className="comm-form-group">
+                                <label>Attach Photo (Upload from Phone or Computer)</label>
+                                {!uploadedPhotoUrl ? (
+                                    <div
+                                        className="comm-photo-upload-dropzone"
+                                        onClick={() => fileInputRef.current?.click()}
+                                    >
+                                        <Camera size={26} color="#38bdf8" style={{ margin: "0 auto 8px" }} />
+                                        <strong style={{ display: "block", color: "#ffffff", fontSize: "0.85rem" }}>
+                                            {photoCompressing
+                                                ? "Optimizing Photo..."
+                                                : "Click to Select & Upload Photo"}
+                                        </strong>
+                                        <span style={{ fontSize: "0.74rem", color: "#94a3b8" }}>
+                                            Automatically compressed for fast loading
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <div className="comm-photo-preview-thumbnail">
+                                        <img src={uploadedPhotoUrl} alt="Attached Preview" />
+                                        <button
+                                            type="button"
+                                            className="comm-photo-remove-btn"
+                                            onClick={() => setUploadedPhotoUrl("")}
+                                        >
+                                            ✕ Remove Photo
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+
+                            <button
+                                type="submit"
+                                className="community-create-post-trigger"
+                                style={{ width: "100%", justifyContent: "center", marginTop: 8 }}
+                                disabled={submittingPost || photoCompressing}
+                            >
+                                {submittingPost ? "Publishing to Fellowship..." : "Publish Post (+15 Pts)"}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* =========================================================
+                INSTAGRAM-STYLE STORY VIEWER MODAL
+                ========================================================= */}
             {activeStoryIdx !== null && stories[activeStoryIdx] && (
                 <div className="story-viewer-overlay" onClick={() => setActiveStoryIdx(null)}>
                     <div className="story-viewer-hud" onClick={(e) => e.stopPropagation()}>
-                        {/* Progress Bar */}
                         <div className="story-progress-bar-container">
                             {stories.map((s, i) => (
                                 <div key={s.id} className="story-progress-bar-segment">
@@ -768,7 +1126,6 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                             ))}
                         </div>
 
-                        {/* Top Bar */}
                         <div className="story-header-bar">
                             <div className="story-header-user">
                                 <img
@@ -792,7 +1149,6 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                             </button>
                         </div>
 
-                        {/* Story Stage */}
                         <div
                             className="story-image-stage"
                             onClick={() => {
@@ -818,11 +1174,12 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                 </div>
             )}
 
-            {/* 9. TIKTOK-STYLE EPIC SHORTS THEATER */}
+            {/* =========================================================
+                TIKTOK-STYLE EPIC SHORTS THEATER
+                ========================================================= */}
             {activeShortIdx !== null && shorts[activeShortIdx] && (
                 <div className="shorts-theater-overlay" onClick={() => setActiveShortIdx(null)}>
                     <div className="shorts-theater-card" onClick={(e) => e.stopPropagation()}>
-                        {/* Media Stage */}
                         <div className="shorts-stage-media">
                             <img
                                 src={shorts[activeShortIdx].videoUrl}
@@ -831,7 +1188,6 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                             />
                             <div className="shorts-gradient-overlay"></div>
 
-                            {/* Top Header */}
                             <div className="shorts-header-top">
                                 <span className="shorts-badge-pill">
                                     <Flame size={12} style={{ display: "inline", marginRight: 4 }} />
@@ -846,7 +1202,6 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                                 </button>
                             </div>
 
-                            {/* Floating Right Reactions */}
                             <div className="shorts-floating-actions">
                                 <button
                                     type="button"
@@ -901,7 +1256,6 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                                 </button>
                             </div>
 
-                            {/* Bottom Info Overlay */}
                             <div className="shorts-info-bottom">
                                 <div className="shorts-speaker-strip">
                                     <strong>{shorts[activeShortIdx].speaker}</strong>
@@ -916,7 +1270,6 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                             </div>
                         </div>
 
-                        {/* Navigation Dock */}
                         <div className="shorts-nav-dock">
                             <button
                                 type="button"
@@ -946,140 +1299,9 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                 </div>
             )}
 
-            {/* 10. POST COMPOSER MODAL */}
-            {isCreateOpen && (
-                <div className="comm-modal-overlay" onClick={() => setIsCreateOpen(false)}>
-                    <div className="comm-modal-card" onClick={(e) => e.stopPropagation()}>
-                        <div className="comm-modal-header">
-                            <h2>
-                                <Heart size={20} color="#f43f5e" /> Share an Encouragement
-                            </h2>
-                            <button
-                                type="button"
-                                className="comm-modal-close"
-                                onClick={() => setIsCreateOpen(false)}
-                            >
-                                ✕
-                            </button>
-                        </div>
-
-                        <form onSubmit={handleSubmitPost}>
-                            {/* Post Type Selector */}
-                            <label style={{ display: "block", fontSize: "0.78rem", fontWeight: 700, marginBottom: 8, color: "#cbd5e1" }}>
-                                SELECT POST TYPE
-                            </label>
-                            <div className="comm-type-selector-row">
-                                {POST_TYPES.map((pt) => (
-                                    <button
-                                        key={pt.type}
-                                        type="button"
-                                        className={`type-select-pill ${postType === pt.type ? "active" : ""}`}
-                                        onClick={() => setPostType(pt.type)}
-                                    >
-                                        {pt.label}
-                                    </button>
-                                ))}
-                            </div>
-
-                            {/* Author Name & Role */}
-                            <div className="comm-form-row">
-                                <div className="comm-form-group">
-                                    <label>Your Name *</label>
-                                    <input
-                                        type="text"
-                                        placeholder="e.g. Sister Maria"
-                                        value={authorName}
-                                        onChange={(e) => setAuthorName(e.target.value)}
-                                        required
-                                    />
-                                </div>
-
-                                <div className="comm-form-group">
-                                    <label>Role / Ministry Note</label>
-                                    <input
-                                        type="text"
-                                        placeholder="e.g. Believer, Youth Member, Leader"
-                                        value={authorRole}
-                                        onChange={(e) => setAuthorRole(e.target.value)}
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Ministry Group */}
-                            <div className="comm-form-group">
-                                <label>Ministry / Fellowship Group</label>
-                                <select
-                                    value={ministryGroup}
-                                    onChange={(e) => setMinistryGroup(e.target.value)}
-                                >
-                                    {MINISTRY_GROUPS.map((grp) => (
-                                        <option key={grp} value={grp}>
-                                            {grp}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            {/* Optional Title */}
-                            <div className="comm-form-group">
-                                <label>Title (Optional)</label>
-                                <input
-                                    type="text"
-                                    placeholder="e.g. Grateful for God's Healing Provision"
-                                    value={postTitle}
-                                    onChange={(e) => setPostTitle(e.target.value)}
-                                />
-                            </div>
-
-                            {/* Content */}
-                            <div className="comm-form-group">
-                                <label>Your Reflection, Prayer Request, or Testimony *</label>
-                                <textarea
-                                    rows={4}
-                                    placeholder="Write your encouraging word, praise report, or intercession request..."
-                                    value={postContent}
-                                    onChange={(e) => setPostContent(e.target.value)}
-                                    required
-                                />
-                            </div>
-
-                            {/* Scripture Reference & Image URL */}
-                            <div className="comm-form-row">
-                                <div className="comm-form-group">
-                                    <label>Scripture Reference (Optional)</label>
-                                    <input
-                                        type="text"
-                                        placeholder="e.g. Psalm 23:1, Romans 8:28"
-                                        value={scriptureRef}
-                                        onChange={(e) => setScriptureRef(e.target.value)}
-                                    />
-                                </div>
-
-                                <div className="comm-form-group">
-                                    <label>Photo URL (Optional)</label>
-                                    <input
-                                        type="url"
-                                        placeholder="https://images.unsplash.com/..."
-                                        value={mediaUrl}
-                                        onChange={(e) => setMediaUrl(e.target.value)}
-                                    />
-                                </div>
-                            </div>
-
-                            <button
-                                type="submit"
-                                className="community-create-post-trigger"
-                                style={{ width: "100%", justifyContent: "center", marginTop: 10 }}
-                                disabled={submittingPost}
-                            >
-                                {submittingPost ? "Publishing to Fellowship..." : "Publish Encouragement (+15 Pts)"}
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            )}
-
-            {/* 11. COMMUNITY STANDARDS MODAL */}
+            {/* =========================================================
+                COMMUNITY STANDARDS MODAL
+                ========================================================= */}
             {isStandardsOpen && (
                 <div className="comm-modal-overlay" onClick={() => setIsStandardsOpen(false)}>
                     <div className="comm-modal-card" onClick={(e) => e.stopPropagation()}>
@@ -1132,6 +1354,29 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                             </button>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {/* Daily Challenge Earned Toast Notification */}
+            {challengeClaimedToast && (
+                <div
+                    style={{
+                        position: "fixed",
+                        bottom: 24,
+                        right: 24,
+                        background: "linear-gradient(135deg, #10b981, #059669)",
+                        color: "#ffffff",
+                        padding: "12px 20px",
+                        borderRadius: 12,
+                        fontWeight: 700,
+                        boxShadow: "0 10px 25px rgba(0,0,0,0.5)",
+                        zIndex: 9999,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8
+                    }}
+                >
+                    <Check size={18} /> +10 Faith Points Earned! Keep shining!
                 </div>
             )}
         </div>

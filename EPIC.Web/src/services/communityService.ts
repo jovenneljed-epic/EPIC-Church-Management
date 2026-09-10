@@ -1,7 +1,7 @@
 /**
  * EPIC Church Management System - Public Community Service
  * Connects members, visitors, and believers worldwide to the EPIC Spiritual Social Network.
- * Supports Faith Points gamification, prayer wall counters, stories, and short-form encouragement.
+ * Supports Faith Points gamification, Ladder of Success leaderboard, prayer wall counters, stories, and short-form encouragement.
  */
 
 import { API_BASE_URL } from "../config";
@@ -83,6 +83,25 @@ export interface UserFaithProfile {
     dailyChallengeCompleted: boolean;
 }
 
+export interface LadderRankInfo {
+    level: number;
+    title: string;
+    icon: string;
+    currentPoints: number;
+    nextMilestone: number;
+    progressPct: number;
+}
+
+export interface LeaderboardMember {
+    rank: number;
+    name: string;
+    role: string;
+    points: number;
+    avatarBg: string;
+    isCurrentUser?: boolean;
+    tier: string;
+}
+
 const FAITH_PROFILE_KEY = "epic_community_faith_profile_v1";
 const USER_TOKEN_KEY = "epic_community_user_token_v1";
 const CACHED_FEED_KEY = "epic_community_cached_feed_v1";
@@ -160,6 +179,174 @@ export function claimDailyChallenge(): UserFaithProfile {
     return profile;
 }
 
+/**
+ * Calculates current rank tier and progress on the Ladder of Success
+ */
+export function getLadderRank(points: number): LadderRankInfo {
+    if (points >= 3000) {
+        return {
+            level: 5,
+            title: "Kingdom Pillar",
+            icon: "👑",
+            currentPoints: points,
+            nextMilestone: 5000,
+            progressPct: Math.min(100, Math.round(((points - 3000) / 2000) * 100))
+        };
+    }
+    if (points >= 2000) {
+        return {
+            level: 4,
+            title: "Prayer Champion",
+            icon: "🛡️",
+            currentPoints: points,
+            nextMilestone: 3000,
+            progressPct: Math.round(((points - 2000) / 1000) * 100)
+        };
+    }
+    if (points >= 1000) {
+        return {
+            level: 3,
+            title: "Community Encourager",
+            icon: "❤️",
+            currentPoints: points,
+            nextMilestone: 2000,
+            progressPct: Math.round(((points - 1000) / 1000) * 100)
+        };
+    }
+    if (points >= 500) {
+        return {
+            level: 2,
+            title: "Faithful Disciple",
+            icon: "💡",
+            currentPoints: points,
+            nextMilestone: 1000,
+            progressPct: Math.round(((points - 500) / 500) * 100)
+        };
+    }
+    return {
+        level: 1,
+        title: "Seedling Believer",
+        icon: "🌱",
+        currentPoints: points,
+        nextMilestone: 500,
+        progressPct: Math.round((points / 500) * 100)
+    };
+}
+
+/**
+ * Returns community leaderboard rankings dynamically placing current user
+ */
+export function getCommunityLeaderboard(userPoints: number, userName: string): LeaderboardMember[] {
+    const baseMembers: Omit<LeaderboardMember, "rank">[] = [
+        {
+            name: "Pastor Ronnel",
+            role: "Senior Pastor",
+            points: 2840,
+            avatarBg: "#7c3aed",
+            tier: "Kingdom Pillar"
+        },
+        {
+            name: "Sister Grace Villanueva",
+            role: "Outreach Servant",
+            points: 2390,
+            avatarBg: "#059669",
+            tier: "Prayer Champion"
+        },
+        {
+            name: "Brother Mark Anthony",
+            role: "Life Group Leader",
+            points: 1980,
+            avatarBg: "#0284c7",
+            tier: "Community Encourager"
+        },
+        {
+            name: "Hannah Joy",
+            role: "Worship Leader",
+            points: 1640,
+            avatarBg: "#ea580c",
+            tier: "Community Encourager"
+        },
+        {
+            name: "Joshua David",
+            role: "Youth Fellow",
+            points: 1420,
+            avatarBg: "#db2777",
+            tier: "Community Encourager"
+        },
+        {
+            name: userName || "You (Faith Champion)",
+            role: "Believer",
+            points: userPoints,
+            avatarBg: "#00f2fe",
+            isCurrentUser: true,
+            tier: getLadderRank(userPoints).title
+        }
+    ];
+
+    // Sort by points descending and assign rank
+    const sorted = baseMembers.sort((a, b) => b.points - a.points);
+    return sorted.map((m, idx) => ({
+        ...m,
+        rank: idx + 1
+    }));
+}
+
+/**
+ * High-performance client-side image compression
+ * Converts large multi-MB camera photos into lightweight, crisp WebP/JPEG (approx 150-250KB)
+ */
+export function compressImage(
+    file: File,
+    maxWidth = 1600,
+    maxHeight = 1200,
+    quality = 0.85
+): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                let { width, height } = img;
+                if (width > maxWidth) {
+                    height = Math.round((height * maxWidth) / width);
+                    width = maxWidth;
+                }
+                if (height > maxHeight) {
+                    width = Math.round((width * maxHeight) / height);
+                    height = maxHeight;
+                }
+
+                const canvas = document.createElement("canvas");
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext("2d");
+                if (!ctx) {
+                    resolve(e.target?.result as string);
+                    return;
+                }
+
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = "high";
+                ctx.drawImage(img, 0, 0, width, height);
+
+                try {
+                    const dataUrl = canvas.toDataURL("image/webp", quality);
+                    if (dataUrl.startsWith("data:image/webp")) {
+                        resolve(dataUrl);
+                        return;
+                    }
+                } catch {}
+
+                resolve(canvas.toDataURL("image/jpeg", quality));
+            };
+            img.onerror = reject;
+            img.src = e.target?.result as string;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
 function getUserReactions(): Record<number, ReactionType> {
     try {
         const raw = localStorage.getItem(USER_REACTIONS_KEY);
@@ -218,7 +405,6 @@ export async function fetchCommunityFeed(
         console.warn("Could not fetch community feed from cloud, using cache.", e);
     }
 
-    // Return cached if API fails
     try {
         const raw = localStorage.getItem(CACHED_FEED_KEY);
         if (raw) return JSON.parse(raw);
@@ -256,7 +442,6 @@ export async function createCommunityPost(req: {
         console.warn("Could not sync post to cloud API, generating local post.", e);
     }
 
-    // Fallback optimistic post
     const fallback: CommunityPost = {
         id: Date.now(),
         authorName: req.authorName.trim() || "Church Member",
@@ -304,7 +489,6 @@ export async function reactToPost(
     }
     saveUserReactions(reactions);
 
-    // Sync to Cloud
     fetch(`${API_BASE_URL}/public-community/react`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -324,7 +508,7 @@ export async function prayForPost(postId: number): Promise<{ postId: number }> {
     if (!prayed[postId]) {
         prayed[postId] = true;
         saveUserPrayed(prayed);
-        awardFaithPoints(5, "PRAYED");
+        awardFaithPoints(10, "PRAYED");
 
         fetch(`${API_BASE_URL}/public-community/pray`, {
             method: "POST",
