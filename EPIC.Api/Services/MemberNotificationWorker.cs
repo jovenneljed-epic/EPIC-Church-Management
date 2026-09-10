@@ -18,7 +18,7 @@ public sealed class MemberNotificationWorker(IServiceScopeFactory scopes, IHttpC
             {
                 await PublishDueAnnouncements(stoppingToken);
                 await ExpandInbox(stoppingToken);
-                if (configuration.GetValue<bool>("PushNotifications:Enabled")) await Deliver(stoppingToken);
+                if (configuration.GetValue<bool>("PushNotifications:Enabled", true)) await Deliver(stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
             catch (Exception exception) { logger.LogError(exception, "Notification worker cycle failed; saved work will be retried."); }
@@ -105,10 +105,22 @@ public sealed class MemberNotificationWorker(IServiceScopeFactory scopes, IHttpC
                     var accessToken = configuration["PushNotifications:AccessToken"];
                     if (!string.IsNullOrWhiteSpace(accessToken)) request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
                     request.Content = receipt ? JsonContent.Create(new { ids = new[] { delivery.TicketId } }) : JsonContent.Create(new {
-                        to = device!.Token, title = "EPIC Church", sound = "default", channelId = "epic-updates",
-                        // Avoid revealing another account's attendance on a shared phone lock screen.
-                        body = notice.Kind == "CHAT" ? "You have a new chat message. Open EPIC to read it." : notice.Kind == "ANNOUNCEMENT" ? "A church announcement is available. Open EPIC to read it." : "Your attendance has been updated. Open EPIC to view it.",
-                        data = new { notificationId = notice.Id, memberId = notice.MemberId, kind = notice.Kind, roomId = notice.Kind == "CHAT" ? notice.ReferenceId : null }
+                        to = device!.Token,
+                        title = string.IsNullOrWhiteSpace(notice.Title) ? "EPIC Church" : notice.Title,
+                        sound = "default",
+                        priority = "high",
+                        channelId = "epic-updates",
+                        body = notice.Kind == "CHAT"
+                            ? "You have a new chat message. Open EPIC to read it."
+                            : (string.IsNullOrWhiteSpace(notice.Body) ? "A church update is available. Open EPIC to read it." : notice.Body),
+                        data = new {
+                            notificationId = notice.Id,
+                            memberId = notice.MemberId,
+                            kind = notice.Kind,
+                            roomId = notice.Kind == "CHAT" ? notice.ReferenceId : null,
+                            title = notice.Title,
+                            body = notice.Body
+                        }
                     });
                     using var response = await client.SendAsync(request, ct);
                     if (!response.IsSuccessStatusCode)

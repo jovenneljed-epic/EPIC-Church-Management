@@ -76,10 +76,16 @@ builder.Services.AddHttpClient("ExpoPush", client => {
     client.BaseAddress = new Uri("https://exp.host/--/api/v2/push/");
     client.Timeout = TimeSpan.FromSeconds(20);
 });
+builder.Services.AddHttpClient("Semaphore", client => {
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+builder.Services.AddScoped<ISmsGatewayService, SemaphoreSmsService>();
 builder.Services.AddHostedService<MemberNotificationWorker>();
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<Microsoft.AspNetCore.SignalR.IUserIdProvider, ChatUserIdProvider>();
 builder.Services.AddSingleton<NotificationWakeSignal>();
+builder.Services.AddSingleton<CampaignAutomationService>();
+builder.Services.AddSingleton<ICampaignAutomationService>(sp => sp.GetRequiredService<CampaignAutomationService>());
 builder.Services.AddHostedService<AutomaticAttendanceWorker>();
 
 // ============================================================
