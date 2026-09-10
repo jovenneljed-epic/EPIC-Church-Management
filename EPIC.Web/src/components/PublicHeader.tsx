@@ -85,15 +85,6 @@ const PublicHeader: React.FC<PublicHeaderProps> = ({
 
                     <button
                         type="button"
-                        className="epic-community-nav-btn"
-                        onClick={() => navigateTo("community")}
-                    >
-                        <span className="community-nav-dot"></span>
-                        Community
-                    </button>
-
-                    <button
-                        type="button"
                         onClick={() => navigateTo("announcements")}
                     >
                         Announcements
@@ -125,6 +116,16 @@ const PublicHeader: React.FC<PublicHeaderProps> = ({
                         onClick={() => navigateTo("contact")}
                     >
                         Contact
+                    </button>
+
+                    <button
+                        type="button"
+                        className="epic-community-nav-pill"
+                        onClick={() => navigateTo("community")}
+                        title="Enter EPIC Community Fellowship & Prayer Wall"
+                    >
+                        <span className="community-pill-heart">❤️</span>
+                        <span>Community</span>
                     </button>
 
                     {/* MOBILE COMMUNITY */}
@@ -160,17 +161,6 @@ const PublicHeader: React.FC<PublicHeaderProps> = ({
 
                 {/* DESKTOP ACTIONS */}
                 <div className="epic-public-nav-actions">
-                    {/* EPIC COMMUNITY TITLE HEADER BUTTON */}
-                    <button
-                        type="button"
-                        className="epic-community-header-pill"
-                        onClick={() => navigateTo("community")}
-                        title="Enter EPIC Community Fellowship & Prayer Wall"
-                    >
-                        <span className="community-pill-heart">❤️</span>
-                        <span>EPIC COMMUNITY</span>
-                    </button>
-
                     <button
                         type="button"
                         className="epic-client-login-button"

@@ -339,32 +339,35 @@
    EPIC COMMUNITY HEADER BUTTONS
    ========================================================= */
 
-.epic-community-nav-btn {
+.epic-community-nav-pill {
     display: inline-flex !important;
     align-items: center !important;
     gap: 6px !important;
+    background: linear-gradient(135deg, rgba(2, 132, 199, 0.1) 0%, rgba(225, 29, 72, 0.12) 100%) !important;
+    border: 1px solid rgba(2, 132, 199, 0.35) !important;
     color: #0284c7 !important;
+    padding: 6px 12px !important;
+    border-radius: 18px !important;
+    font-size: 13px !important;
     font-weight: 800 !important;
-    position: relative;
+    letter-spacing: 0.02em !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    margin-left: 2px !important;
+    white-space: nowrap !important;
 }
 
-.epic-community-nav-btn:hover {
-    color: #0369a1 !important;
+.epic-community-nav-pill:hover {
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+    color: #ffffff !important;
+    border-color: #0284c7 !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3) !important;
 }
 
-.community-nav-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: #00f2fe;
-    box-shadow: 0 0 8px #00f2fe;
-    animation: communityPulse 1.8s infinite;
-}
-
-@keyframes communityPulse {
-    0% { transform: scale(0.9); opacity: 0.8; }
-    50% { transform: scale(1.3); opacity: 1; }
-    100% { transform: scale(0.9); opacity: 0.8; }
+.community-pill-heart {
+    font-size: 0.9rem;
+    animation: communityPulse 2s infinite ease-in-out;
 }
 
 .epic-community-header-pill {
