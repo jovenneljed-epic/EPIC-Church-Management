@@ -21,7 +21,6 @@ import {
     Play,
     Pause,
     SkipForward,
-    SkipBack,
     Plus,
     FileText,
     Tv,
@@ -35,16 +34,11 @@ import {
     CheckCircle2
 } from "lucide-react";
 import { login } from "../../auth/authService";
+import { useWorshipAudio } from "../../context/WorshipAudioContext";
 import {
     type WorshipSong,
-    type WorshipMood,
-    WORSHIP_PLAYLIST,
     MOOD_CATEGORIES,
-    getCustomWorshipSongs,
     saveCustomWorshipSong,
-    getDeletedSongIds,
-    adminDeleteSong,
-    adminRestoreAllSongs
 } from "../../services/worshipService";
 import permissionService from "../../PermissionService";
 import {
@@ -151,10 +145,7 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
     // Mobile Responsive Active Tab (FEED, PRAYER, LADDER, WORSHIP)
     const [mobileTab, setMobileTab] = useState<"FEED" | "SHORTS" | "PRAYER" | "LADDER" | "WORSHIP">("FEED");
 
-    // Lyrics & Video State for Real Christian Worship Songs
-    const [showLyricsModal, setShowLyricsModal] = useState<boolean>(false);
-    const [activeLyricsSong, setActiveLyricsSong] = useState<WorshipSong | null>(null);
-    const [showVideoPlayer, setShowVideoPlayer] = useState<boolean>(false);
+
 
     // EPIC Community Account Role: ADMIN vs MEMBER (Authenticated - Just like EPIC CMS)
     const [userRole, setUserRole] = useState<"ADMIN" | "MEMBER">(() => {
@@ -166,7 +157,6 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
         return "MEMBER";
     });
 
-    const [deletedSongIds, setDeletedSongIds] = useState<string[]>(() => getDeletedSongIds());
     const [toastNotification, setToastNotification] = useState<string>("");
 
     // Admin Authentication Modal State
@@ -283,43 +273,43 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
         }
     };
 
+    // Global Worship Audio Hook (Continuous Background Audio across Dashboard & CMS)
+    const {
+        currentSong,
+        isPlaying,
+        worshipMood,
+        allSongs,
+        deletedSongIds,
+        showVideoPlayer,
+        playSong: handleSelectSong,
+        togglePlay: handleTogglePlay,
+        nextSong: handleNextSong,
+        setWorshipMood,
+        setShowVideoPlayer,
+        openLyrics,
+        deleteSong: handleAdminDeleteSongHook,
+        restoreAllSongs: handleAdminRestoreAllHook
+    } = useWorshipAudio();
+
     const handleAdminDeleteSong = (song: WorshipSong) => {
         if (userRole !== "ADMIN") return;
         if (window.confirm(`👑 Admin Action: Are you sure you want to delete "${song.title}" from the worship playlist?`)) {
-            adminDeleteSong(song.id);
-            const updated = getDeletedSongIds();
-            setDeletedSongIds(updated);
-
-            // If deleted song was currently playing, switch to next available
-            if (currentSong.id === song.id) {
-                const remaining = allSongs.filter((s) => s.id !== song.id);
-                if (remaining.length > 0) {
-                    setCurrentSong(remaining[0]);
-                } else {
-                    setIsPlaying(false);
-                }
-            }
+            handleAdminDeleteSongHook(song.id);
+            setToastNotification(`✓ "${song.title}" removed from worship playlist by Administrator.`);
+            setTimeout(() => setToastNotification(""), 4000);
         }
     };
 
     const handleAdminRestoreAll = () => {
         if (userRole !== "ADMIN") return;
         if (window.confirm("👑 Admin Action: Restore all deleted worship songs back to the community playlist?")) {
-            adminRestoreAllSongs();
-            setDeletedSongIds([]);
+            handleAdminRestoreAllHook();
+            setToastNotification("✓ All deleted worship songs restored to playlist.");
+            setTimeout(() => setToastNotification(""), 4000);
         }
     };
 
-    // Christian Worship Music Player State
-    const [worshipMood, setWorshipMood] = useState<WorshipMood>("ALL");
-    const [currentSong, setCurrentSong] = useState<WorshipSong>(WORSHIP_PLAYLIST[0]);
-    const [isPlaying, setIsPlaying] = useState<boolean>(false);
-
-
-    // Custom Songs, Player Dock Minimize, and Worship Search
-    const [customSongs, setCustomSongs] = useState<WorshipSong[]>(() => getCustomWorshipSongs());
-    const [isDockMinimized, setIsDockMinimized] = useState<boolean>(false);
-    const [isDockClosed, setIsDockClosed] = useState<boolean>(false);
+    // Worship Search and Custom Songs Modal State
     const [worshipSearchQuery, setWorshipSearchQuery] = useState<string>("");
     const [isAddSongOpen, setIsAddSongOpen] = useState<boolean>(false);
     const [customTitle, setCustomTitle] = useState<string>("");
@@ -423,13 +413,6 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
         return getCommunityLeaderboard(faithProfile.faithPoints, faithProfile.name);
     }, [faithProfile.faithPoints, faithProfile.name]);
 
-    // Combine preset worship catalog with user's custom added songs
-    // Combine worship playlist with user's custom songs, filtering out Admin-deleted songs
-    const allSongs = useMemo(() => {
-        const full = [...customSongs, ...WORSHIP_PLAYLIST];
-        return full.filter((s) => !deletedSongIds.includes(s.id));
-    }, [customSongs, deletedSongIds]);
-
     // Filtered worship songs by mood and search query
     const filteredSongs = useMemo(() => {
         let list = allSongs;
@@ -448,37 +431,10 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
         return list;
     }, [allSongs, worshipMood, worshipSearchQuery]);
 
-    // Play selected song automatically (Guaranteed Real Master Track via YouTube)
-    const handleSelectSong = (song: WorshipSong) => {
-        setCurrentSong(song);
-        setIsPlaying(true);
-        setIsDockClosed(false);
-        setIsDockMinimized(false);
-    };
-
-    // Toggle Play / Pause
-    const handleTogglePlay = () => {
-        setIsPlaying((prev) => !prev);
-    };
-
-    // Next Track
-    const handleNextSong = () => {
-        const idx = allSongs.findIndex((s) => s.id === currentSong.id);
-        const nextIdx = (idx + 1) % allSongs.length;
-        handleSelectSong(allSongs[nextIdx]);
-    };
-
-    // Previous Track
-    const handlePrevSong = () => {
-        const idx = allSongs.findIndex((s) => s.id === currentSong.id);
-        const prevIdx = (idx - 1 + allSongs.length) % allSongs.length;
-        handleSelectSong(allSongs[prevIdx]);
-    };
-
     // Open Shorts Theater safely: pause worship audio so videos don't overlap!
     const handleOpenShort = (idx: number) => {
         if (isPlaying) {
-            setIsPlaying(false);
+            handleTogglePlay();
         }
         setActiveShortIdx(idx);
     };
@@ -496,7 +452,6 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
             audioUrl: customAudioUrl.trim(),
             scriptureTheme: customScripture.trim() || undefined
         });
-        setCustomSongs((prev) => [created, ...prev]);
         setIsAddSongOpen(false);
         setCustomTitle("");
         setCustomArtist("");
@@ -1053,15 +1008,32 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                                 {/* Active Song Hero Stage */}
                                 <div className="worship-hero-stage real-player-stage">
                                     <div className="worship-hero-top">
-                                        {/* Real Official Christian Worship YouTube Video & Master Audio */}
-                                        <div className="worship-video-frame-box">
-                                            <iframe
-                                                src={`https://www.youtube.com/embed/${currentSong.youtubeId}?autoplay=${isPlaying ? 1 : 0}&playsinline=1&rel=0`}
-                                                title={currentSong.title}
-                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                                allowFullScreen
-                                                className="worship-main-youtube-iframe"
+                                        {/* Real Official Christian Worship Artwork Stage with Play Overlay */}
+                                        <div className="worship-video-frame-box worship-stage-art-box">
+                                            <img
+                                                src={currentSong.albumCover}
+                                                alt={currentSong.title}
+                                                className={`worship-stage-art-img ${isPlaying ? "playing" : ""}`}
                                             />
+                                            <div className="worship-stage-art-overlay">
+                                                <button
+                                                    type="button"
+                                                    className="worship-stage-center-play-btn"
+                                                    onClick={handleTogglePlay}
+                                                    title={isPlaying ? "Pause Worship" : "Play Worship"}
+                                                >
+                                                    {isPlaying ? <Pause size={28} /> : <Play size={28} style={{ marginLeft: 3 }} />}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className={`worship-stage-video-toggle-btn ${showVideoPlayer ? "active" : ""}`}
+                                                    onClick={() => setShowVideoPlayer((v) => !v)}
+                                                    title="Toggle Video Player"
+                                                >
+                                                    <Tv size={14} />
+                                                    <span>{showVideoPlayer ? "Hide Video" : "📺 Watch Official Video"}</span>
+                                                </button>
+                                            </div>
                                         </div>
 
                                         <div className="worship-hero-info">
@@ -1086,10 +1058,7 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                                                 <button
                                                     type="button"
                                                     className="worship-action-lyrics-btn"
-                                                    onClick={() => {
-                                                        setActiveLyricsSong(currentSong);
-                                                        setShowLyricsModal(true);
-                                                    }}
+                                                    onClick={() => openLyrics(currentSong)}
                                                 >
                                                     <FileText size={16} /> View Full Lyrics & Sing-Along
                                                 </button>
@@ -1186,8 +1155,7 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                                                         className="worship-song-row-lyrics-btn"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            setActiveLyricsSong(song);
-                                                            setShowLyricsModal(true);
+                                                            openLyrics(song);
                                                         }}
                                                         title="View full lyrics"
                                                     >
@@ -2344,161 +2312,6 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                 </div>
             )}
 
-            {/* =========================================================
-                FLOATING CHRISTIAN WORSHIP MUSIC MINI-DOCK (Automatic Audio)
-                ========================================================= */}
-            {/* Global Floating Worship Audio Dock / Minimized Music Bubble */}
-            {isDockClosed ? (
-                <div
-                    className="worship-floating-closed-badge"
-                    onClick={() => setIsDockClosed(false)}
-                    title="Tap to Open Worship Music Player"
-                >
-                    <Music size={16} color="#38bdf8" />
-                    <span>Music</span>
-                </div>
-            ) : isDockMinimized ? (
-                <div
-                    className="worship-floating-min-bubble"
-                    onClick={() => setIsDockMinimized(false)}
-                    title="Tap to expand Worship Player"
-                >
-                    <div className={`worship-dock-disc ${isPlaying ? "spinning" : ""}`} style={{ width: 28, height: 28, minWidth: 28 }}>
-                        <img src={currentSong.albumCover} alt="Cover" />
-                    </div>
-                    <span className="worship-min-title">{currentSong.title}</span>
-                    <button
-                        type="button"
-                        className="worship-min-play-btn"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            handleTogglePlay();
-                        }}
-                    >
-                        {isPlaying ? <Pause size={12} /> : <Play size={12} />}
-                    </button>
-                    <button
-                        type="button"
-                        className="worship-min-close-btn"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            setIsDockClosed(true);
-                        }}
-                        title="Close Player"
-                    >
-                        ✕
-                    </button>
-                </div>
-            ) : (
-                <div className="worship-floating-dock">
-                    <div className="worship-dock-inner">
-                        <div
-                            className="worship-dock-song-meta"
-                            onClick={() => {
-                                setActiveTab("WORSHIP");
-                                setMobileTab("WORSHIP");
-                            }}
-                            title="Click to view full Worship Sanctuary"
-                        >
-                            <div className={`worship-dock-disc ${isPlaying ? "spinning" : ""}`}>
-                                <img src={currentSong.albumCover} alt="Cover" />
-                            </div>
-                            <div className="worship-dock-text">
-                                <strong>{currentSong.title}</strong>
-                                <span>{currentSong.artist} • {currentSong.moodLabel}</span>
-                            </div>
-                        </div>
-
-                        <div className="worship-dock-actions">
-                            <button
-                                type="button"
-                                className="worship-dock-lyrics-btn"
-                                onClick={() => {
-                                    setActiveLyricsSong(currentSong);
-                                    setShowLyricsModal(true);
-                                }}
-                                title="View Full Lyrics"
-                            >
-                                <FileText size={15} />
-                                <span className="worship-dock-btn-label">Lyrics</span>
-                            </button>
-
-                            <button
-                                type="button"
-                                className={`worship-dock-video-toggle ${showVideoPlayer ? "active" : ""}`}
-                                onClick={() => setShowVideoPlayer((v) => !v)}
-                                title="Toggle Video Player"
-                            >
-                                <Tv size={15} />
-                                <span className="worship-dock-btn-label">{showVideoPlayer ? "Hide Video" : "Video"}</span>
-                            </button>
-                            <button
-                                type="button"
-                                className="worship-dock-ctrl-btn"
-                                onClick={handlePrevSong}
-                                title="Previous Worship Song"
-                            >
-                                <SkipBack size={16} />
-                            </button>
-
-                            <button
-                                type="button"
-                                className="worship-dock-play-btn"
-                                onClick={handleTogglePlay}
-                                title={isPlaying ? "Pause" : "Auto-Play"}
-                            >
-                                {isPlaying ? <Pause size={17} /> : <Play size={17} style={{ marginLeft: 2 }} />}
-                            </button>
-
-                            <button
-                                type="button"
-                                className="worship-dock-ctrl-btn"
-                                onClick={handleNextSong}
-                                title="Next Worship Song"
-                            >
-                                <SkipForward size={16} />
-                            </button>
-
-                            <button
-                                type="button"
-                                className="worship-dock-playlist-btn"
-                                onClick={() => {
-                                    setActiveTab("WORSHIP");
-                                    setMobileTab("WORSHIP");
-                                }}
-                                title="Open Christian Songs Playlist"
-                            >
-                                <Music size={14} />
-                                <span className="worship-dock-btn-label">Songs</span>
-                            </button>
-
-                            <button
-                                type="button"
-                                className="worship-dock-min-btn"
-                                onClick={() => setIsDockMinimized(true)}
-                                title="Minimize Player"
-                            >
-                                ⌵
-                            </button>
-
-                            <button
-                                type="button"
-                                className="worship-dock-close-cross-btn"
-                                onClick={() => {
-                                    setIsPlaying(false);
-                                                                        setIsDockClosed(true);
-                                }}
-                                title="Close Player"
-                            >
-                                ✕
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            
-            
             {/* Admin Authentication Modal */}
             {isAdminAuthModalOpen && (
                 <div className="comm-modal-overlay" onClick={() => setIsAdminAuthModalOpen(false)}>
@@ -2596,68 +2409,7 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                 </div>
             )}
 
-            {/* Full Lyrics & Sing-Along Sheet Modal */}
-            {showLyricsModal && activeLyricsSong && (
-                <div className="comm-modal-overlay" onClick={() => setShowLyricsModal(false)}>
-                    <div className="worship-lyrics-modal-card" onClick={(e) => e.stopPropagation()}>
-                        <div className="worship-lyrics-modal-header">
-                            <div className="worship-lyrics-header-title">
-                                <FileText size={22} color="#38bdf8" />
-                                <div>
-                                    <h2>{activeLyricsSong.title}</h2>
-                                    <span>{activeLyricsSong.artist} • {activeLyricsSong.moodLabel}</span>
-                                </div>
-                            </div>
-                            <button
-                                type="button"
-                                className="comm-modal-close-btn"
-                                onClick={() => setShowLyricsModal(false)}
-                            >
-                                ✕
-                            </button>
-                        </div>
 
-                        <div className="worship-lyrics-modal-body">
-                            <div className="worship-lyrics-scripture-box">
-                                <strong>📖 Scripture Anchor:</strong> {activeLyricsSong.scriptureTheme}
-                            </div>
-
-                            <div className="worship-lyrics-meta-bar">
-                                <span>⏱️ Duration: {activeLyricsSong.duration}</span>
-                                <span>🎼 Original Key: {activeLyricsSong.chordsKey}</span>
-                                <span>🌐 Language: {activeLyricsSong.language}</span>
-                            </div>
-
-                            <div className="worship-lyrics-scroll-container">
-                                <pre className="worship-full-lyrics-text">{activeLyricsSong.fullLyrics}</pre>
-                            </div>
-                        </div>
-
-                        <div className="worship-lyrics-modal-footer">
-                            <button
-                                type="button"
-                                className="worship-lyrics-copy-action-btn"
-                                onClick={() => {
-                                    navigator.clipboard.writeText(`${activeLyricsSong.title} - ${activeLyricsSong.artist}\n\n${activeLyricsSong.fullLyrics}`);
-                                    alert("Lyrics copied to clipboard!");
-                                }}
-                            >
-                                <Copy size={16} /> Copy Full Lyrics
-                            </button>
-                            <button
-                                type="button"
-                                className="worship-lyrics-play-action-btn"
-                                onClick={() => {
-                                    handleSelectSong(activeLyricsSong);
-                                    setShowLyricsModal(false);
-                                }}
-                            >
-                                <Play size={16} /> Play Real Song Now
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {/* Modal: Add Custom Worship Song to Personal Device */}
             {isAddSongOpen && (
