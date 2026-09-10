@@ -32,8 +32,22 @@ import {
     KeyRound,
     AlertCircle,
     CheckCircle2,
-    Repeat
+    Repeat,
+    Volume2,
+    VolumeX,
+    Disc,
+    UploadCloud,
+    Link2
 } from "lucide-react";
+import {
+    parseShortMedia,
+    CHRISTIAN_SOUND_TRACKS,
+    INSPIRING_SHORT_PRESETS
+} from "../../utils/shortMediaUtils";
+import {
+    storeShortVideoBlob,
+    getShortVideoBlob
+} from "../../services/videoStorage";
 import { login } from "../../auth/authService";
 import { useWorshipAudio } from "../../context/WorshipAudioContext";
 import { UploadWorshipSongModal } from "../../components/UploadWorshipSongModal";
@@ -142,6 +156,23 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
     const [shortDuration, setShortDuration] = useState<string>("0:30");
     const [shortCompressing, setShortCompressing] = useState<boolean>(false);
     const shortFileInputRef = useRef<HTMLInputElement | null>(null);
+
+    // New Video & Sound Upload States
+    const [shortUploadMode, setShortUploadMode] = useState<"file" | "link" | "preset">("file");
+    const [uploadedVideoFile, setUploadedVideoFile] = useState<File | null>(null);
+    const [videoFileInfo, setVideoFileInfo] = useState<{ name: string; sizeMb: string; duration?: string } | null>(null);
+    const [shortSoundTitle, setShortSoundTitle] = useState<string>("Original Sound");
+    const [selectedSoundTrackId, setSelectedSoundTrackId] = useState<string>("orig");
+    const [previewMuted, setPreviewMuted] = useState<boolean>(false);
+
+    // Shorts Theater States
+    const [theaterMuted, setTheaterMuted] = useState<boolean>(false);
+    const [theaterPlaying, setTheaterPlaying] = useState<boolean>(true);
+    const [theaterProgress, setTheaterProgress] = useState<number>(0);
+    const [showPlayPauseFeedback, setShowPlayPauseFeedback] = useState<boolean>(false);
+    const [lastAction, setLastAction] = useState<"play" | "pause" | null>(null);
+    const [resolvedTheaterMediaUrl, setResolvedTheaterMediaUrl] = useState<string>("");
+    const theaterVideoRef = useRef<HTMLVideoElement | null>(null);
 
     // Mobile Responsive Active Tab (FEED, PRAYER, LADDER, WORSHIP)
     const [mobileTab, setMobileTab] = useState<"FEED" | "SHORTS" | "PRAYER" | "LADDER" | "WORSHIP">("FEED");
@@ -442,6 +473,103 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
         setActiveShortIdx(idx);
     };
 
+    // Resolve user-uploaded videos from IndexedDB when viewing short
+    useEffect(() => {
+        if (activeShortIdx === null || !shorts[activeShortIdx]) {
+            setResolvedTheaterMediaUrl("");
+            setTheaterProgress(0);
+            return;
+        }
+        const activeShort = shorts[activeShortIdx];
+        let cancelled = false;
+
+        if (activeShort.videoUrl.startsWith("idb:")) {
+            const shortId = activeShort.videoUrl.replace("idb:", "");
+            getShortVideoBlob(shortId).then((blob) => {
+                if (!cancelled && blob) {
+                    const objectUrl = URL.createObjectURL(blob);
+                    setResolvedTheaterMediaUrl(objectUrl);
+                }
+            });
+        } else {
+            setResolvedTheaterMediaUrl(activeShort.videoUrl);
+        }
+
+        setTheaterPlaying(true);
+        setTheaterProgress(0);
+
+        return () => {
+            cancelled = true;
+        };
+    }, [activeShortIdx, shorts]);
+
+    // Keyboard navigation for Shorts Theater (ArrowUp / ArrowDown / Spacebar / Mute)
+    useEffect(() => {
+        if (activeShortIdx === null) return;
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+            if (e.key === "ArrowDown") {
+                e.preventDefault();
+                if (activeShortIdx < shorts.length - 1) setActiveShortIdx(activeShortIdx + 1);
+            } else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                if (activeShortIdx > 0) setActiveShortIdx(activeShortIdx - 1);
+            } else if (e.key === " " || e.key === "Spacebar") {
+                e.preventDefault();
+                toggleTheaterPlayPause();
+            } else if (e.key === "m" || e.key === "M") {
+                e.preventDefault();
+                setTheaterMuted((prev) => !prev);
+            } else if (e.key === "Escape") {
+                setActiveShortIdx(null);
+            }
+        };
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [activeShortIdx, shorts.length]);
+
+    const toggleTheaterPlayPause = () => {
+        if (theaterVideoRef.current) {
+            if (theaterVideoRef.current.paused) {
+                theaterVideoRef.current.play().catch(() => {});
+                setTheaterPlaying(true);
+                setLastAction("play");
+            } else {
+                theaterVideoRef.current.pause();
+                setTheaterPlaying(false);
+                setLastAction("pause");
+            }
+            setShowPlayPauseFeedback(true);
+            setTimeout(() => setShowPlayPauseFeedback(false), 700);
+        } else {
+            setTheaterPlaying((prev) => !prev);
+            setLastAction(theaterPlaying ? "pause" : "play");
+            setShowPlayPauseFeedback(true);
+            setTimeout(() => setShowPlayPauseFeedback(false), 700);
+        }
+    };
+
+    const handleVideoTimeUpdate = () => {
+        if (theaterVideoRef.current) {
+            const current = theaterVideoRef.current.currentTime;
+            const dur = theaterVideoRef.current.duration || 1;
+            setTheaterProgress((current / dur) * 100);
+        }
+    };
+
+    const handleApplyPreset = (preset: typeof INSPIRING_SHORT_PRESETS[0]) => {
+        setShortTitle(preset.title);
+        setShortSpeaker(preset.speaker);
+        setShortMinistry(preset.ministry);
+        setShortScripture(preset.scripture);
+        setShortScriptureText(preset.scriptureText);
+        setShortVideoUrl(preset.videoUrl);
+        setShortSoundTitle(preset.soundTitle);
+        setShortDuration(preset.duration);
+        setUploadedVideoFile(null);
+        setVideoFileInfo(null);
+    };
+
     // Claim daily challenge
     const handleClaimChallenge = () => {
         const updated = claimDailyChallenge();
@@ -600,30 +728,72 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
         if (!files || files.length === 0) return;
         const file = files[0];
         if (file.type.startsWith("video/")) {
-            const url = URL.createObjectURL(file);
-            setShortVideoUrl(url);
+            setShortCompressing(true);
+            try {
+                const url = URL.createObjectURL(file);
+                setUploadedVideoFile(file);
+                setShortVideoUrl(url);
+
+                const tempVideo = document.createElement("video");
+                tempVideo.src = url;
+                tempVideo.onloadedmetadata = () => {
+                    const durSec = Math.round(tempVideo.duration || 30);
+                    const mins = Math.floor(durSec / 60);
+                    const secs = durSec % 60;
+                    const durFormatted = `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+                    setShortDuration(durFormatted);
+                    setVideoFileInfo({
+                        name: file.name,
+                        sizeMb: (file.size / (1024 * 1024)).toFixed(1) + " MB",
+                        duration: durFormatted
+                    });
+                };
+            } finally {
+                setShortCompressing(false);
+            }
         } else if (file.type.startsWith("image/")) {
             try {
                 setShortCompressing(true);
                 const compressed = await compressImage(file, 1080, 1920, 0.85);
+                setUploadedVideoFile(null);
                 setShortVideoUrl(compressed);
+                setVideoFileInfo({
+                    name: file.name,
+                    sizeMb: (file.size / (1024 * 1024)).toFixed(1) + " MB"
+                });
             } catch {
                 alert("Failed to process image.");
             } finally {
                 setShortCompressing(false);
             }
         } else {
-            alert("Please choose a video file (MP4, WebM) or high-res vertical image.");
+            alert("Please choose a video file (MP4, WebM, MOV) or high-res vertical image.");
         }
     };
 
     // Submit new EPIC Short
-    const handleSubmitShort = (e: React.FormEvent) => {
+    const handleSubmitShort = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!shortTitle.trim() || !shortScriptureText.trim()) {
             alert("Please enter a short title and encouraging scripture/message.");
             return;
         }
+
+        let finalVideoUrl = shortVideoUrl.trim();
+        const shortId = `short-${Date.now()}`;
+
+        if (uploadedVideoFile) {
+            await storeShortVideoBlob(shortId, uploadedVideoFile);
+            finalVideoUrl = `idb:${shortId}`;
+        } else if (!finalVideoUrl) {
+            finalVideoUrl = "https://www.youtube.com/watch?v=n0FBb6hnwTo";
+        }
+
+        const parsed = parseShortMedia(finalVideoUrl);
+        const selectedTrack = CHRISTIAN_SOUND_TRACKS.find((t) => t.id === selectedSoundTrackId);
+        const finalSound = selectedTrack && selectedTrack.id !== "orig"
+            ? `${selectedTrack.title} • ${selectedTrack.artist}`
+            : (shortSoundTitle.trim() || "Original Sound");
 
         const created = createCommunityShort({
             title: shortTitle.trim(),
@@ -632,8 +802,12 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
             scripture: shortScripture.trim() || "Scripture Encouragement",
             scriptureText: shortScriptureText.trim(),
             videoPlaceholderBg: "linear-gradient(135deg, #1e1b4b 0%, #4c1d95 50%, #0284c7 100%)",
-            videoUrl: shortVideoUrl.trim() || "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=800&q=80",
-            duration: shortDuration.trim() || "0:30"
+            videoUrl: finalVideoUrl,
+            duration: shortDuration.trim() || "0:30",
+            mediaType: parsed.type,
+            youtubeId: parsed.youtubeId,
+            soundTitle: finalSound,
+            isUserUploaded: !!uploadedVideoFile
         });
 
         setShorts((prev) => [created, ...prev]);
@@ -643,6 +817,8 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
         setShortScripture("");
         setShortScriptureText("");
         setShortVideoUrl("");
+        setUploadedVideoFile(null);
+        setVideoFileInfo(null);
         setFaithProfile(getFaithProfile());
         handleOpenShort(0); // Launch theater immediately!
     };
@@ -1916,177 +2092,265 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
             {/* =========================================================
                 TIKTOK-STYLE EPIC SHORTS THEATER
                 ========================================================= */}
-            {activeShortIdx !== null && shorts[activeShortIdx] && (
-                <div className="shorts-theater-overlay" onClick={() => setActiveShortIdx(null)}>
-                    <div className="shorts-theater-card" onClick={(e) => e.stopPropagation()}>
-                        <div className="shorts-stage-media">
-                            <img
-                                src={shorts[activeShortIdx].videoUrl}
-                                alt="Short Background"
-                                className="shorts-video-bg"
-                            />
-                            <div className="shorts-gradient-overlay"></div>
+            {activeShortIdx !== null && shorts[activeShortIdx] && (() => {
+                const currentShort = shorts[activeShortIdx];
+                const parsedTheaterMedia = parseShortMedia(resolvedTheaterMediaUrl || currentShort.videoUrl);
 
-                            <div className="shorts-header-top">
-                                <span className="shorts-badge-pill">
-                                    <Flame size={12} style={{ display: "inline", marginRight: 4 }} />
-                                    EPIC SHORT
-                                </span>
-                                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                    <button
-                                        type="button"
-                                        className="shorts-create-top-btn"
-                                        onClick={() => {
-                                            setActiveShortIdx(null);
-                                            setIsCreateShortOpen(true);
-                                        }}
-                                    >
-                                        ➕ Upload Short
-                                    </button>
-                                    <button
-                                        type="button"
-                                        className="shorts-close-btn"
-                                        onClick={() => setActiveShortIdx(null)}
-                                    >
-                                        ✕
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div className="shorts-floating-actions">
-                                <button
-                                    type="button"
-                                    className="shorts-action-bubble"
-                                    onClick={() => {
-                                        setShorts((prev) =>
-                                            prev.map((s, idx) =>
-                                                idx === activeShortIdx
-                                                    ? { ...s, likes: s.likes + 1 }
-                                                    : s
-                                            )
-                                        );
-                                    }}
-                                >
-                                    <div className="shorts-action-icon-wrap">
-                                        <Heart size={20} fill="#f43f5e" color="#f43f5e" />
-                                    </div>
-                                    <span>{shorts[activeShortIdx].likes}</span>
-                                </button>
-
-                                <button
-                                    type="button"
-                                    className="shorts-action-bubble"
-                                    onClick={() => {
-                                        setShorts((prev) =>
-                                            prev.map((s, idx) =>
-                                                idx === activeShortIdx
-                                                    ? { ...s, prayers: s.prayers + 1 }
-                                                    : s
-                                            )
-                                        );
-                                    }}
-                                >
-                                    <div className="shorts-action-icon-wrap">
-                                        <span style={{ fontSize: 18 }}>🙏</span>
-                                    </div>
-                                    <span>{shorts[activeShortIdx].prayers}</span>
-                                </button>
-
-                                <button
-                                    type="button"
-                                    className="shorts-action-bubble"
-                                    onClick={() => {
-                                        navigator.clipboard?.writeText(window.location.href);
-                                        alert("Short link copied!");
-                                    }}
-                                >
-                                    <div className="shorts-action-icon-wrap">
-                                        <Share2 size={18} />
-                                    </div>
-                                    <span>Share</span>
-                                </button>
-                            </div>
-
-                            <div className="shorts-info-bottom">
-                                <div className="shorts-speaker-strip">
-                                    <strong>{shorts[activeShortIdx].speaker}</strong>
-                                    <span>• {shorts[activeShortIdx].ministry}</span>
-                                </div>
-                                <p className="shorts-scripture-quote">
-                                    "{shorts[activeShortIdx].scriptureText}"
-                                </p>
-                                <span className="shorts-scripture-tag">
-                                    📖 {shorts[activeShortIdx].scripture}
-                                </span>
-                                {userRole === "ADMIN" && (
-                                    <button
-                                        type="button"
-                                        className="shorts-stage-admin-delete-btn"
-                                        onClick={() => handleAdminDeleteShort(shorts[activeShortIdx].id, shorts[activeShortIdx].title)}
-                                        title="Admin Moderation: Delete this short"
-                                    >
-                                        <Trash2 size={13} /> Delete Short (Admin)
-                                    </button>
+                return (
+                    <div className="shorts-theater-overlay" onClick={() => setActiveShortIdx(null)}>
+                        <div className="shorts-theater-card" onClick={(e) => e.stopPropagation()}>
+                            <div className="shorts-stage-media">
+                                {/* YouTube Shorts or Video Embed Player */}
+                                {parsedTheaterMedia.type === "youtube" && (
+                                    <iframe
+                                        key={currentShort.id}
+                                        src={`https://www.youtube.com/embed/${parsedTheaterMedia.youtubeId}?autoplay=1&mute=${theaterMuted ? 1 : 0}&controls=0&loop=1&playlist=${parsedTheaterMedia.youtubeId}&playsinline=1&modestbranding=1&rel=0&enablejsapi=1`}
+                                        title={currentShort.title}
+                                        className="shorts-video-bg shorts-iframe-player"
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                        allowFullScreen
+                                    />
                                 )}
+
+                                {/* Direct HTML5 Video Player */}
+                                {parsedTheaterMedia.type === "video" && (
+                                    <video
+                                        key={currentShort.id}
+                                        ref={theaterVideoRef}
+                                        src={resolvedTheaterMediaUrl || currentShort.videoUrl}
+                                        autoPlay
+                                        loop
+                                        playsInline
+                                        muted={theaterMuted}
+                                        className="shorts-video-bg shorts-video-element"
+                                        onTimeUpdate={handleVideoTimeUpdate}
+                                        onClick={toggleTheaterPlayPause}
+                                    />
+                                )}
+
+                                {/* Image with Ken Burns animation */}
+                                {parsedTheaterMedia.type === "image" && (
+                                    <div className="shorts-video-bg" style={{ overflow: "hidden" }} onClick={toggleTheaterPlayPause}>
+                                        <img
+                                            src={currentShort.videoUrl}
+                                            alt="Short Background"
+                                            style={{
+                                                width: "100%",
+                                                height: "100%",
+                                                objectFit: "cover",
+                                                animation: "kenBurnsZoom 10s infinite alternate ease-in-out"
+                                            }}
+                                        />
+                                    </div>
+                                )}
+
+                                {/* Center Play/Pause Ripple Overlay */}
+                                {showPlayPauseFeedback && (
+                                    <div className="shorts-center-play-indicator">
+                                        {lastAction === "pause" ? <Pause size={38} /> : <Play size={38} />}
+                                    </div>
+                                )}
+
+                                <div className="shorts-gradient-overlay" onClick={toggleTheaterPlayPause}></div>
+
+                                {/* Top Header */}
+                                <div className="shorts-header-top">
+                                    <span className="shorts-badge-pill">
+                                        <Flame size={12} style={{ display: "inline", marginRight: 4 }} />
+                                        EPIC SHORT
+                                    </span>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                        <button
+                                            type="button"
+                                            className={`shorts-theater-sound-pill ${theaterMuted ? "muted" : "unmuted"}`}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setTheaterMuted(!theaterMuted);
+                                            }}
+                                            title={theaterMuted ? "Turn Sound ON" : "Mute Sound"}
+                                        >
+                                            {theaterMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
+                                            <span>{theaterMuted ? "Muted" : "Sound ON"}</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="shorts-create-top-btn"
+                                            onClick={() => {
+                                                setActiveShortIdx(null);
+                                                setIsCreateShortOpen(true);
+                                            }}
+                                        >
+                                            ➕ Upload Short
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="shorts-close-btn"
+                                            onClick={() => setActiveShortIdx(null)}
+                                            title="Close Theater"
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Floating Right TikTok Controls */}
+                                <div className="shorts-floating-actions">
+                                    <button
+                                        type="button"
+                                        className="shorts-action-bubble"
+                                        onClick={() => {
+                                            setShorts((prev) =>
+                                                prev.map((s, idx) =>
+                                                    idx === activeShortIdx
+                                                        ? { ...s, likes: s.likes + 1 }
+                                                        : s
+                                                )
+                                            );
+                                        }}
+                                        title="Praise God / Amen"
+                                    >
+                                        <div className="shorts-action-icon-wrap">
+                                            <Heart size={20} fill="#f43f5e" color="#f43f5e" />
+                                        </div>
+                                        <span>{currentShort.likes}</span>
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        className="shorts-action-bubble"
+                                        onClick={() => {
+                                            setShorts((prev) =>
+                                                prev.map((s, idx) =>
+                                                    idx === activeShortIdx
+                                                        ? { ...s, prayers: s.prayers + 1 }
+                                                        : s
+                                                )
+                                            );
+                                        }}
+                                        title="Offer Prayer"
+                                    >
+                                        <div className="shorts-action-icon-wrap">
+                                            <span style={{ fontSize: 18 }}>🙏</span>
+                                        </div>
+                                        <span>{currentShort.prayers}</span>
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        className="shorts-action-bubble"
+                                        onClick={() => {
+                                            navigator.clipboard?.writeText(window.location.href);
+                                            alert("Short link copied to clipboard!");
+                                        }}
+                                        title="Share Short"
+                                    >
+                                        <div className="shorts-action-icon-wrap">
+                                            <Share2 size={18} />
+                                        </div>
+                                        <span>Share</span>
+                                    </button>
+
+                                    {/* TikTok Spinning Vinyl Disc */}
+                                    <div className="shorts-action-bubble">
+                                        <div className={`shorts-sound-vinyl ${theaterPlaying ? "spinning" : ""}`}>
+                                            <Disc size={20} color="#38bdf8" />
+                                        </div>
+                                        <span>Sound</span>
+                                    </div>
+                                </div>
+
+                                {/* Bottom Info Strip */}
+                                <div className="shorts-info-bottom">
+                                    <div className="shorts-speaker-strip">
+                                        <strong>{currentShort.speaker}</strong>
+                                        <span>• {currentShort.ministry}</span>
+                                    </div>
+                                    <p className="shorts-scripture-quote">
+                                        "{currentShort.scriptureText}"
+                                    </p>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                                        <span className="shorts-scripture-tag">
+                                            📖 {currentShort.scripture}
+                                        </span>
+                                        <div className="shorts-sound-marquee">
+                                            <Volume2 size={13} style={{ minWidth: 13 }} />
+                                            <span>♫ {currentShort.soundTitle || "Original Christian Sound • " + currentShort.speaker}</span>
+                                        </div>
+                                    </div>
+                                    {userRole === "ADMIN" && (
+                                        <button
+                                            type="button"
+                                            className="shorts-stage-admin-delete-btn"
+                                            onClick={() => handleAdminDeleteShort(currentShort.id, currentShort.title)}
+                                            title="Admin Moderation: Delete this short"
+                                        >
+                                            <Trash2 size={13} /> Delete Short (Admin)
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Bottom Video Timeline Bar */}
+                                <div className="shorts-progress-bar-wrap">
+                                    <div className="shorts-progress-bar-fill" style={{ width: `${theaterProgress}%` }}></div>
+                                </div>
+
+                                {/* Mobile In-Screen Quick Navigation Arrows */}
+                                <div className="shorts-mobile-onscreen-nav">
+                                    <button
+                                        type="button"
+                                        className="shorts-mob-nav-btn prev"
+                                        disabled={activeShortIdx === 0}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (activeShortIdx > 0) setActiveShortIdx(activeShortIdx - 1);
+                                        }}
+                                        title="Previous Short"
+                                    >
+                                        <ChevronUp size={20} />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="shorts-mob-nav-btn next"
+                                        disabled={activeShortIdx === shorts.length - 1}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (activeShortIdx < shorts.length - 1) setActiveShortIdx(activeShortIdx + 1);
+                                        }}
+                                        title="Next Short"
+                                    >
+                                        <ChevronDown size={20} />
+                                    </button>
+                                </div>
                             </div>
 
-                            {/* Mobile In-Screen Quick Navigation Arrows */}
-                            <div className="shorts-mobile-onscreen-nav">
+                            <div className="shorts-nav-dock">
                                 <button
                                     type="button"
-                                    className="shorts-mob-nav-btn prev"
-                                    disabled={activeShortIdx === 0}
-                                    onClick={(e) => {
-                                        e.stopPropagation();
+                                    className="shorts-nav-arrow-btn"
+                                    onClick={() => {
                                         if (activeShortIdx > 0) setActiveShortIdx(activeShortIdx - 1);
                                     }}
-                                    title="Previous Short"
+                                    disabled={activeShortIdx === 0}
+                                    title="Previous Short (Up Arrow)"
                                 >
-                                    <ChevronUp size={20} />
+                                    <ChevronUp size={24} />
                                 </button>
                                 <button
                                     type="button"
-                                    className="shorts-mob-nav-btn next"
-                                    disabled={activeShortIdx === shorts.length - 1}
-                                    onClick={(e) => {
-                                        e.stopPropagation();
+                                    className="shorts-nav-arrow-btn"
+                                    onClick={() => {
                                         if (activeShortIdx < shorts.length - 1) setActiveShortIdx(activeShortIdx + 1);
                                     }}
-                                    title="Next Short"
+                                    disabled={activeShortIdx === shorts.length - 1}
+                                    title="Next Short (Down Arrow)"
                                 >
-                                    <ChevronDown size={20} />
+                                    <ChevronDown size={24} />
                                 </button>
                             </div>
                         </div>
-
-                        <div className="shorts-nav-dock">
-                            <button
-                                type="button"
-                                className="shorts-nav-arrow-btn"
-                                onClick={() => {
-                                    if (activeShortIdx > 0) setActiveShortIdx(activeShortIdx - 1);
-                                }}
-                                disabled={activeShortIdx === 0}
-                                title="Previous Short (Up Arrow)"
-                            >
-                                <ChevronUp size={24} />
-                            </button>
-                            <button
-                                type="button"
-                                className="shorts-nav-arrow-btn"
-                                onClick={() => {
-                                    if (activeShortIdx < shorts.length - 1)
-                                        setActiveShortIdx(activeShortIdx + 1);
-                                }}
-                                disabled={activeShortIdx === shorts.length - 1}
-                                title="Next Encouragement (Down Arrow)"
-                            >
-                                <ChevronDown size={24} />
-                            </button>
-                        </div>
                     </div>
-                </div>
-            )}
+                );
+            })()}
 
             {/* =========================================================
                 COMMUNITY STANDARDS MODAL
@@ -2253,48 +2517,225 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                                 />
                             </div>
 
-                            {/* Video / Media Upload */}
+                            {/* User-Friendly Media Source Tabs (Upload File, Video Link, Presets) */}
                             <div className="comm-form-group">
-                                <label>Video Clip or Vertical Background (Upload File)</label>
-                                {!shortVideoUrl ? (
-                                    <div
-                                        className="comm-photo-upload-dropzone"
-                                        onClick={() => shortFileInputRef.current?.click()}
+                                <label>Video Media Source (Upload or Link) *</label>
+                                <div className="shorts-modal-tab-row">
+                                    <button
+                                        type="button"
+                                        className={`shorts-modal-tab-btn ${shortUploadMode === "file" ? "active" : ""}`}
+                                        onClick={() => setShortUploadMode("file")}
                                     >
-                                        <Camera size={26} color="#38bdf8" style={{ margin: "0 auto 8px" }} />
-                                        <strong style={{ display: "block", color: "#ffffff", fontSize: "0.85rem" }}>
-                                            {shortCompressing
-                                                ? "Processing Media..."
-                                                : "Click to Select Video or Photo Clip"}
-                                        </strong>
-                                        <span style={{ fontSize: "0.74rem", color: "#94a3b8" }}>
-                                            Supports MP4, WebM, or vertical JPEG/PNG (9:16 recommended)
-                                        </span>
+                                        <UploadCloud size={16} /> 📁 Upload Video File
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`shorts-modal-tab-btn ${shortUploadMode === "link" ? "active" : ""}`}
+                                        onClick={() => setShortUploadMode("link")}
+                                    >
+                                        <Link2 size={16} /> 🔗 Paste Video Link
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`shorts-modal-tab-btn ${shortUploadMode === "preset" ? "active" : ""}`}
+                                        onClick={() => setShortUploadMode("preset")}
+                                    >
+                                        <Sparkles size={16} /> ⚡ Quick Presets
+                                    </button>
+                                </div>
+
+                                {shortUploadMode === "file" && (
+                                    <div>
+                                        {!shortVideoUrl ? (
+                                            <div
+                                                className="comm-photo-upload-dropzone"
+                                                onClick={() => shortFileInputRef.current?.click()}
+                                            >
+                                                <Camera size={26} color="#38bdf8" style={{ margin: "0 auto 8px" }} />
+                                                <strong style={{ display: "block", color: "#ffffff", fontSize: "0.88rem" }}>
+                                                    {shortCompressing ? "Processing Video File..." : "Click to Select or Drag Video File"}
+                                                </strong>
+                                                <span style={{ fontSize: "0.76rem", color: "#94a3b8" }}>
+                                                    Accepts MP4, WebM, QuickTime MOV, MKV or high-res vertical photo
+                                                </span>
+                                            </div>
+                                        ) : (
+                                            videoFileInfo && (
+                                                <div className="shorts-file-info-chip">
+                                                    <div>
+                                                        <strong>🎬 {videoFileInfo.name}</strong> ({videoFileInfo.sizeMb})
+                                                    </div>
+                                                    <span style={{ color: "#34d399", fontWeight: 700 }}>
+                                                        ⏱️ {videoFileInfo.duration || shortDuration}
+                                                    </span>
+                                                </div>
+                                            )
+                                        )}
                                     </div>
-                                ) : (
-                                    <div className="comm-photo-preview-thumbnail">
-                                        <img src={shortVideoUrl} alt="Short Visual Preview" />
-                                        <button
-                                            type="button"
-                                            className="comm-photo-remove-btn"
-                                            onClick={() => setShortVideoUrl("")}
-                                        >
-                                            ✕ Remove Media
-                                        </button>
+                                )}
+
+                                {shortUploadMode === "link" && (
+                                    <div>
+                                        <input
+                                            type="url"
+                                            placeholder="Paste YouTube Shorts, YouTube URL, TikTok, or direct MP4 link..."
+                                            value={shortVideoUrl}
+                                            onChange={(e) => setShortVideoUrl(e.target.value)}
+                                            style={{ marginBottom: 6 }}
+                                        />
+                                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 4 }}>
+                                            <button
+                                                type="button"
+                                                style={{ fontSize: "0.72rem", background: "rgba(56, 189, 248, 0.15)", border: "1px solid rgba(56, 189, 248, 0.3)", color: "#38bdf8", borderRadius: 6, padding: "3px 8px", cursor: "pointer" }}
+                                                onClick={() => setShortVideoUrl("https://www.youtube.com/watch?v=n0FBb6hnwTo")}
+                                            >
+                                                Try Goodness of God
+                                            </button>
+                                            <button
+                                                type="button"
+                                                style={{ fontSize: "0.72rem", background: "rgba(56, 189, 248, 0.15)", border: "1px solid rgba(56, 189, 248, 0.3)", color: "#38bdf8", borderRadius: 6, padding: "3px 8px", cursor: "pointer" }}
+                                                onClick={() => setShortVideoUrl("https://www.youtube.com/watch?v=X2DWxYpTQpQ")}
+                                            >
+                                                Try Diyos Ka Sa Amin
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {shortUploadMode === "preset" && (
+                                    <div className="shorts-preset-grid">
+                                        {INSPIRING_SHORT_PRESETS.map((preset, pIdx) => (
+                                            <div
+                                                key={pIdx}
+                                                className="shorts-preset-card"
+                                                onClick={() => {
+                                                    handleApplyPreset(preset);
+                                                    setShortUploadMode("link");
+                                                }}
+                                            >
+                                                <strong>{preset.label}</strong>
+                                                <span>{preset.speaker} • {preset.scripture}</span>
+                                            </div>
+                                        ))}
                                     </div>
                                 )}
                             </div>
 
-                            {/* Or paste Video URL */}
+                            {/* Sound Track Selector (TikTok Sound Format) */}
                             <div className="comm-form-group">
-                                <label>Or Paste Video / Image URL (Optional)</label>
-                                <input
-                                    type="url"
-                                    placeholder="https://images.unsplash.com/... or video link"
-                                    value={shortVideoUrl}
-                                    onChange={(e) => setShortVideoUrl(e.target.value)}
-                                />
+                                <label>Audio & Worship Sound Track (TikTok Style) *</label>
+                                <select
+                                    value={selectedSoundTrackId}
+                                    onChange={(e) => setSelectedSoundTrackId(e.target.value)}
+                                    style={{
+                                        background: "rgba(15, 23, 42, 0.8)",
+                                        border: "1px solid rgba(56, 189, 248, 0.3)",
+                                        color: "#ffffff",
+                                        padding: "8px 12px",
+                                        borderRadius: 10,
+                                        width: "100%",
+                                        fontSize: "0.85rem"
+                                    }}
+                                >
+                                    {CHRISTIAN_SOUND_TRACKS.map((track) => (
+                                        <option key={track.id} value={track.id}>
+                                            {track.id === "orig" ? "🎤 " + track.title : "🎵 " + track.title + " – " + track.artist}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
+
+                            {/* Live 9:16 Vertical TikTok Preview with Real Sound & Overlay */}
+                            {shortVideoUrl && (() => {
+                                const parsedPreview = parseShortMedia(shortVideoUrl);
+                                return (
+                                    <div className="shorts-modal-preview-wrapper">
+                                        <div className="shorts-modal-preview-header">
+                                            <div className="preview-label-badge">
+                                                <Flame size={14} color="#f43f5e" />
+                                                <strong>LIVE 9:16 TIKTOK FORMAT PREVIEW</strong>
+                                            </div>
+                                            <div className="preview-sound-controls">
+                                                <button
+                                                    type="button"
+                                                    className={`preview-sound-toggle-btn ${previewMuted ? "muted" : "unmuted"}`}
+                                                    onClick={() => setPreviewMuted(!previewMuted)}
+                                                    title={previewMuted ? "Turn Sound ON" : "Mute Sound"}
+                                                >
+                                                    {previewMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
+                                                    <span>{previewMuted ? "Sound Muted" : "🔊 Sound Playing"}</span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="preview-remove-media-btn"
+                                                    onClick={() => {
+                                                        setShortVideoUrl("");
+                                                        setUploadedVideoFile(null);
+                                                        setVideoFileInfo(null);
+                                                    }}
+                                                >
+                                                    ✕ Remove Media
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div className="shorts-preview-stage">
+                                            {/* YouTube Embed Player */}
+                                            {parsedPreview.type === "youtube" && (
+                                                <iframe
+                                                    src={`https://www.youtube.com/embed/${parsedPreview.youtubeId}?autoplay=1&mute=${previewMuted ? 1 : 0}&controls=1&loop=1&playlist=${parsedPreview.youtubeId}&playsinline=1&modestbranding=1&rel=0`}
+                                                    title="Short Preview Player"
+                                                    className="shorts-preview-media-player"
+                                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                    allowFullScreen
+                                                />
+                                            )}
+
+                                            {/* HTML5 Video Player */}
+                                            {parsedPreview.type === "video" && (
+                                                <video
+                                                    src={shortVideoUrl}
+                                                    autoPlay
+                                                    loop
+                                                    playsInline
+                                                    muted={previewMuted}
+                                                    controls
+                                                    className="shorts-preview-media-player"
+                                                />
+                                            )}
+
+                                            {/* Photo / Image */}
+                                            {parsedPreview.type === "image" && (
+                                                <div className="shorts-preview-photo-wrap">
+                                                    <img src={shortVideoUrl} alt="Preview" className="shorts-preview-photo-img" />
+                                                </div>
+                                            )}
+
+                                            {/* Live TikTok Overlaid Text Information */}
+                                            <div className="shorts-preview-overlay-info">
+                                                <div className="preview-pill-tag">📱 9:16 EPIC SHORT</div>
+                                                <div className="preview-speaker-tag">
+                                                    <strong>{shortSpeaker || faithProfile.name || "Believer"}</strong>
+                                                    <span>• {shortMinistry}</span>
+                                                </div>
+                                                <p className="preview-scripture-quote">
+                                                    "{shortScriptureText || 'Your encouraging scripture verse will appear here...'}"
+                                                </p>
+                                                <div className="preview-bottom-bar">
+                                                    <span className="preview-scripture-pill">
+                                                        📖 {shortScripture || "Scripture Reference"}
+                                                    </span>
+                                                    <span className="preview-sound-pill">
+                                                        🎵 {selectedSoundTrackId !== "orig"
+                                                            ? CHRISTIAN_SOUND_TRACKS.find((t) => t.id === selectedSoundTrackId)?.title
+                                                            : (shortSoundTitle || "Original Sound")}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
 
                             <button
                                 type="submit"

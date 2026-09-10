@@ -71,6 +71,10 @@ export interface CommunityShort {
     duration: string;
     likes: number;
     prayers: number;
+    mediaType?: "video" | "youtube" | "image";
+    youtubeId?: string;
+    soundTitle?: string;
+    isUserUploaded?: boolean;
 }
 
 export interface UserFaithProfile {
@@ -669,8 +673,11 @@ export async function fetchCommunityShorts(): Promise<CommunityShort[]> {
             scripture: "Exodus 14:14",
             scriptureText: "The Lord will fight for you; you need only to be still.",
             videoPlaceholderBg: "linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0284c7 100%)",
-            videoUrl: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=800&q=80",
-            duration: "0:35",
+            videoUrl: "https://www.youtube.com/watch?v=n0FBb6hnwTo",
+            mediaType: "youtube",
+            youtubeId: "n0FBb6hnwTo",
+            soundTitle: "Goodness of God • Bethel Music",
+            duration: "0:45",
             likes: 284,
             prayers: 112
         },
@@ -682,8 +689,11 @@ export async function fetchCommunityShorts(): Promise<CommunityShort[]> {
             scripture: "Psalm 103:1",
             scriptureText: "Praise the Lord, my soul; all my inmost being, praise his holy name.",
             videoPlaceholderBg: "linear-gradient(135deg, #1e1b4b 0%, #4c1d95 50%, #db2777 100%)",
-            videoUrl: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=800&q=80",
-            duration: "0:42",
+            videoUrl: "https://www.youtube.com/watch?v=X2DWxYpTQpQ",
+            mediaType: "youtube",
+            youtubeId: "X2DWxYpTQpQ",
+            soundTitle: "Diyos Ka Sa Amin • Hope Filipino Worship",
+            duration: "0:50",
             likes: 341,
             prayers: 89
         },
@@ -695,8 +705,11 @@ export async function fetchCommunityShorts(): Promise<CommunityShort[]> {
             scripture: "1 Peter 5:7",
             scriptureText: "Cast all your anxiety on him because he cares for you.",
             videoPlaceholderBg: "linear-gradient(135deg, #064e3b 0%, #047857 50%, #10b981 100%)",
-            videoUrl: "https://images.unsplash.com/photo-1504052434569-70ad5836ab65?auto=format&fit=crop&w=800&q=80",
-            duration: "0:30",
+            videoUrl: "https://www.youtube.com/watch?v=QM8jQHE5AAk",
+            mediaType: "youtube",
+            youtubeId: "QM8jQHE5AAk",
+            soundTitle: "Way Maker • Sinach",
+            duration: "0:40",
             likes: 219,
             prayers: 145
         },
@@ -708,7 +721,10 @@ export async function fetchCommunityShorts(): Promise<CommunityShort[]> {
             scripture: "Jeremiah 29:11",
             scriptureText: "'For I know the plans I have for you,' declares the Lord, 'plans to prosper you and not to harm you, plans to give you hope and a future.'",
             videoPlaceholderBg: "linear-gradient(135deg, #7c2d12 0%, #c2410c 50%, #f97316 100%)",
-            videoUrl: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=800&q=80",
+            videoUrl: "https://www.youtube.com/watch?v=BMZmyvr5IAM",
+            mediaType: "youtube",
+            youtubeId: "BMZmyvr5IAM",
+            soundTitle: "Salamat, Salamat • Malayang Pilipino",
             duration: "0:48",
             likes: 405,
             prayers: 178
