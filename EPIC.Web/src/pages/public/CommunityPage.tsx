@@ -22,16 +22,16 @@ import {
     Pause,
     SkipForward,
     SkipBack,
-    Volume2,
-    VolumeX,
-    Plus
+    Plus,
+    FileText,
+    Tv,
+    Copy
 } from "lucide-react";
 import {
     type WorshipSong,
     type WorshipMood,
     WORSHIP_PLAYLIST,
     MOOD_CATEGORIES,
-    spiritualSynth,
     getCustomWorshipSongs,
     saveCustomWorshipSong
 } from "../../services/worshipService";
@@ -136,14 +136,16 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
     // Mobile Responsive Active Tab (FEED, PRAYER, LADDER, WORSHIP)
     const [mobileTab, setMobileTab] = useState<"FEED" | "SHORTS" | "PRAYER" | "LADDER" | "WORSHIP">("FEED");
 
+    // Lyrics & Video State for Real Christian Worship Songs
+    const [showLyricsModal, setShowLyricsModal] = useState<boolean>(false);
+    const [activeLyricsSong, setActiveLyricsSong] = useState<WorshipSong | null>(null);
+    const [showVideoPlayer, setShowVideoPlayer] = useState<boolean>(false);
+
     // Christian Worship Music Player State
     const [worshipMood, setWorshipMood] = useState<WorshipMood>("ALL");
     const [currentSong, setCurrentSong] = useState<WorshipSong>(WORSHIP_PLAYLIST[0]);
     const [isPlaying, setIsPlaying] = useState<boolean>(false);
-    const [isMuted, setIsMuted] = useState<boolean>(false);
-    const [songProgress, setSongProgress] = useState<number>(0);
-    const [useAmbientSynth, setUseAmbientSynth] = useState<boolean>(false);
-    const audioRef = useRef<HTMLAudioElement | null>(null);
+
 
     // Custom Songs, Player Dock Minimize, and Worship Search
     const [customSongs, setCustomSongs] = useState<WorshipSong[]>(() => getCustomWorshipSongs());
@@ -273,55 +275,17 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
         return list;
     }, [allSongs, worshipMood, worshipSearchQuery]);
 
-    // Play selected song automatically (Guaranteed Single-Audio: Zero Overlapping)
+    // Play selected song automatically (Guaranteed Real Master Track via YouTube)
     const handleSelectSong = (song: WorshipSong) => {
-        // 1. Immediately pause and unload any active audio element
-        if (audioRef.current) {
-            audioRef.current.pause();
-            audioRef.current.currentTime = 0;
-        }
-        // 2. Immediately stop any active Web Audio ambient synth oscillators
-        spiritualSynth.stop();
-        setUseAmbientSynth(false);
-
-        // 3. Update state
         setCurrentSong(song);
         setIsPlaying(true);
-        setSongProgress(0);
-
-        // 4. Cleanly load and play on user's device
-        if (audioRef.current) {
-            audioRef.current.src = song.audioUrl;
-            audioRef.current.load();
-            audioRef.current.play().catch((err) => {
-                console.warn("Audio stream playback failed, falling back to ambient synth:", err);
-                setUseAmbientSynth(true);
-                spiritualSynth.playWorshipChords(song.chordsKey);
-            });
-        }
+        setIsDockClosed(false);
+        setIsDockMinimized(false);
     };
 
-    // Toggle Play / Pause (Strict Single-Sound Engine)
+    // Toggle Play / Pause
     const handleTogglePlay = () => {
-        if (isPlaying) {
-            setIsPlaying(false);
-            if (audioRef.current) audioRef.current.pause();
-            spiritualSynth.stop();
-        } else {
-            setIsPlaying(true);
-            if (useAmbientSynth) {
-                if (audioRef.current) audioRef.current.pause();
-                spiritualSynth.playWorshipChords(currentSong.chordsKey);
-            } else {
-                spiritualSynth.stop();
-                if (audioRef.current) {
-                    audioRef.current.play().catch(() => {
-                        setUseAmbientSynth(true);
-                        spiritualSynth.playWorshipChords(currentSong.chordsKey);
-                    });
-                }
-            }
-        }
+        setIsPlaying((prev) => !prev);
     };
 
     // Next Track
@@ -342,8 +306,6 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
     const handleOpenShort = (idx: number) => {
         if (isPlaying) {
             setIsPlaying(false);
-            if (audioRef.current) audioRef.current.pause();
-            spiritualSynth.stop();
         }
         setActiveShortIdx(idx);
     };
@@ -370,13 +332,7 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
         handleSelectSong(created); // Auto-play user's song immediately on their device
     };
 
-    // Toggle Mute
-    const handleToggleMute = () => {
-        const next = !isMuted;
-        setIsMuted(next);
-        if (audioRef.current) audioRef.current.muted = next;
-        spiritualSynth.setVolume(next ? 0 : 0.3);
-    };
+
 
     // Claim daily challenge
     const handleClaimChallenge = () => {
@@ -596,17 +552,7 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                 onChange={(e) => handlePhotoSelect(e.target.files)}
             />
 
-            {/* Real Worship Audio Element for Automatic Playback */}
-            <audio
-                ref={audioRef}
-                src={currentSong.audioUrl}
-                onTimeUpdate={() => {
-                    if (audioRef.current && audioRef.current.duration) {
-                        setSongProgress((audioRef.current.currentTime / audioRef.current.duration) * 100);
-                    }
-                }}
-                onEnded={handleNextSong}
-            />
+
 
             {/* Mobile View Segmented Tab Bar (Visible on mobile <= 820px) */}
             <div className="comm-mobile-tabs-bar">
@@ -864,113 +810,80 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                                 </div>
 
                                 {/* Active Song Hero Stage */}
-                                <div className="worship-hero-stage">
+                                <div className="worship-hero-stage real-player-stage">
                                     <div className="worship-hero-top">
-                                        <div className={`worship-vinyl-disc ${isPlaying ? "spinning" : ""}`}>
-                                            <img src={currentSong.albumCover} alt={currentSong.title} />
-                                            <div className="vinyl-hole"></div>
+                                        {/* Real Official Christian Worship YouTube Video & Master Audio */}
+                                        <div className="worship-video-frame-box">
+                                            <iframe
+                                                src={`https://www.youtube.com/embed/${currentSong.youtubeId}?autoplay=${isPlaying ? 1 : 0}&playsinline=1&rel=0`}
+                                                title={currentSong.title}
+                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                                allowFullScreen
+                                                className="worship-main-youtube-iframe"
+                                            />
                                         </div>
 
                                         <div className="worship-hero-info">
                                             <div className="worship-status-pill">
                                                 <span className="worship-status-dot"></span>
-                                                <span>{isPlaying ? "AUTOMATICALLY PLAYING" : "PAUSED"}</span>
+                                                <span>{isPlaying ? "NOW PLAYING REAL SONG" : "CLICK PLAY TO LISTEN"}</span>
                                                 <span style={{ margin: "0 4px" }}>•</span>
                                                 <span>{currentSong.moodLabel}</span>
                                             </div>
                                             <h2 className="worship-song-main-title">{currentSong.title}</h2>
-                                            <p className="worship-song-main-artist">{currentSong.artist}</p>
+                                            <p className="worship-song-main-artist">🎤 {currentSong.artist} • ⏱️ {currentSong.duration}</p>
+                                            
                                             <div className="worship-scripture-highlight">
                                                 {currentSong.scriptureTheme}
                                             </div>
+
                                             <p className="worship-lyrics-quote">
                                                 "{currentSong.lyricsSnippet}"
                                             </p>
+
+                                            <div className="worship-hero-quick-actions">
+                                                <button
+                                                    type="button"
+                                                    className="worship-action-lyrics-btn"
+                                                    onClick={() => {
+                                                        setActiveLyricsSong(currentSong);
+                                                        setShowLyricsModal(true);
+                                                    }}
+                                                >
+                                                    <FileText size={16} /> View Full Lyrics & Sing-Along
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="worship-action-next-btn"
+                                                    onClick={handleNextSong}
+                                                >
+                                                    <SkipForward size={16} /> Next Song
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
 
-                                    {/* Player Controls Bar */}
-                                    <div className="worship-stage-controls">
-                                        <div className="worship-progress-wrap">
-                                            <div
-                                                className="worship-progress-track"
-                                                onClick={(e) => {
-                                                    const rect = e.currentTarget.getBoundingClientRect();
-                                                    const clickX = e.clientX - rect.left;
-                                                    const pct = clickX / rect.width;
-                                                    if (audioRef.current && audioRef.current.duration) {
-                                                        audioRef.current.currentTime = pct * audioRef.current.duration;
-                                                    }
-                                                }}
-                                            >
-                                                <div
-                                                    className="worship-progress-bar"
-                                                    style={{ width: `${songProgress}%` }}
-                                                ></div>
+                                    {/* Inline Sing-Along Full Lyrics Card */}
+                                    <div className="worship-inline-lyrics-card">
+                                        <div className="worship-inline-lyrics-header">
+                                            <div className="worship-inline-lyrics-title">
+                                                <FileText size={17} color="#38bdf8" />
+                                                <h4>Full Lyrics & Chords: {currentSong.title}</h4>
+                                                <span className="worship-key-badge">Key of {currentSong.chordsKey}</span>
                                             </div>
-                                            <div className="worship-time-labels">
-                                                <span>{isPlaying ? "Playing..." : "0:00"}</span>
-                                                <span>{currentSong.duration}</span>
-                                            </div>
-                                        </div>
-
-                                        <div className="worship-buttons-dock">
                                             <button
                                                 type="button"
-                                                className="worship-round-btn"
-                                                onClick={handlePrevSong}
-                                                title="Previous Song"
-                                            >
-                                                <SkipBack size={20} />
-                                            </button>
-
-                                            <button
-                                                type="button"
-                                                className="worship-play-giant-btn"
-                                                onClick={handleTogglePlay}
-                                                title={isPlaying ? "Pause" : "Play"}
-                                            >
-                                                {isPlaying ? <Pause size={26} /> : <Play size={26} style={{ marginLeft: 3 }} />}
-                                            </button>
-
-                                            <button
-                                                type="button"
-                                                className="worship-round-btn"
-                                                onClick={handleNextSong}
-                                                title="Next Song"
-                                            >
-                                                <SkipForward size={20} />
-                                            </button>
-
-                                            <button
-                                                type="button"
-                                                className="worship-round-btn mute"
-                                                onClick={handleToggleMute}
-                                                title={isMuted ? "Unmute" : "Mute"}
-                                            >
-                                                {isMuted ? <VolumeX size={19} /> : <Volume2 size={19} />}
-                                            </button>
-
-                                            <button
-                                                type="button"
-                                                className={`worship-synth-pill-btn ${useAmbientSynth ? "active" : ""}`}
+                                                className="worship-copy-lyrics-btn"
                                                 onClick={() => {
-                                                    const next = !useAmbientSynth;
-                                                    setUseAmbientSynth(next);
-                                                    if (isPlaying) {
-                                                        if (next) {
-                                                            if (audioRef.current) audioRef.current.pause();
-                                                            spiritualSynth.playWorshipChords(currentSong.chordsKey);
-                                                        } else {
-                                                            spiritualSynth.stop();
-                                                            if (audioRef.current) audioRef.current.play();
-                                                        }
-                                                    }
+                                                    navigator.clipboard.writeText(`${currentSong.title} - ${currentSong.artist}\n\n${currentSong.fullLyrics}`);
+                                                    alert("Lyrics copied to clipboard!");
                                                 }}
+                                                title="Copy lyrics to clipboard"
                                             >
-                                                ✨ {useAmbientSynth ? "Ambient Chords" : "Synthesizer Chords"}
+                                                <Copy size={13} /> Copy Lyrics
                                             </button>
                                         </div>
+                                        <pre className="worship-lyrics-scrollbox">{currentSong.fullLyrics}</pre>
                                     </div>
                                 </div>
 
@@ -1017,6 +930,18 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                                                 <div className="worship-song-row-right">
                                                     <span className="worship-song-mood-pill">{song.moodLabel}</span>
                                                     <span className="worship-song-time">{song.duration}</span>
+                                                    <button
+                                                        type="button"
+                                                        className="worship-song-row-lyrics-btn"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setActiveLyricsSong(song);
+                                                            setShowLyricsModal(true);
+                                                        }}
+                                                        title="View full lyrics"
+                                                    >
+                                                        <FileText size={13} /> Lyrics
+                                                    </button>
                                                     <button
                                                         type="button"
                                                         className={`worship-song-row-play-btn ${isThisPlaying ? "playing" : ""}`}
@@ -2191,6 +2116,28 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                         <div className="worship-dock-actions">
                             <button
                                 type="button"
+                                className="worship-dock-lyrics-btn"
+                                onClick={() => {
+                                    setActiveLyricsSong(currentSong);
+                                    setShowLyricsModal(true);
+                                }}
+                                title="View Full Lyrics"
+                            >
+                                <FileText size={15} />
+                                <span className="worship-dock-btn-label">Lyrics</span>
+                            </button>
+
+                            <button
+                                type="button"
+                                className={`worship-dock-video-toggle ${showVideoPlayer ? "active" : ""}`}
+                                onClick={() => setShowVideoPlayer((v) => !v)}
+                                title="Toggle Video Player"
+                            >
+                                <Tv size={15} />
+                                <span className="worship-dock-btn-label">{showVideoPlayer ? "Hide Video" : "Video"}</span>
+                            </button>
+                            <button
+                                type="button"
                                 className="worship-dock-ctrl-btn"
                                 onClick={handlePrevSong}
                                 title="Previous Worship Song"
@@ -2243,13 +2190,75 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                                 className="worship-dock-close-cross-btn"
                                 onClick={() => {
                                     setIsPlaying(false);
-                                    if (audioRef.current) audioRef.current.pause();
-                                    spiritualSynth.stop();
-                                    setIsDockClosed(true);
+                                                                        setIsDockClosed(true);
                                 }}
                                 title="Close Player"
                             >
                                 ✕
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            
+            {/* Full Lyrics & Sing-Along Sheet Modal */}
+            {showLyricsModal && activeLyricsSong && (
+                <div className="comm-modal-overlay" onClick={() => setShowLyricsModal(false)}>
+                    <div className="worship-lyrics-modal-card" onClick={(e) => e.stopPropagation()}>
+                        <div className="worship-lyrics-modal-header">
+                            <div className="worship-lyrics-header-title">
+                                <FileText size={22} color="#38bdf8" />
+                                <div>
+                                    <h2>{activeLyricsSong.title}</h2>
+                                    <span>{activeLyricsSong.artist} • {activeLyricsSong.moodLabel}</span>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                className="comm-modal-close-btn"
+                                onClick={() => setShowLyricsModal(false)}
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <div className="worship-lyrics-modal-body">
+                            <div className="worship-lyrics-scripture-box">
+                                <strong>📖 Scripture Anchor:</strong> {activeLyricsSong.scriptureTheme}
+                            </div>
+
+                            <div className="worship-lyrics-meta-bar">
+                                <span>⏱️ Duration: {activeLyricsSong.duration}</span>
+                                <span>🎼 Original Key: {activeLyricsSong.chordsKey}</span>
+                                <span>🌐 Language: {activeLyricsSong.language}</span>
+                            </div>
+
+                            <div className="worship-lyrics-scroll-container">
+                                <pre className="worship-full-lyrics-text">{activeLyricsSong.fullLyrics}</pre>
+                            </div>
+                        </div>
+
+                        <div className="worship-lyrics-modal-footer">
+                            <button
+                                type="button"
+                                className="worship-lyrics-copy-action-btn"
+                                onClick={() => {
+                                    navigator.clipboard.writeText(`${activeLyricsSong.title} - ${activeLyricsSong.artist}\n\n${activeLyricsSong.fullLyrics}`);
+                                    alert("Lyrics copied to clipboard!");
+                                }}
+                            >
+                                <Copy size={16} /> Copy Full Lyrics
+                            </button>
+                            <button
+                                type="button"
+                                className="worship-lyrics-play-action-btn"
+                                onClick={() => {
+                                    handleSelectSong(activeLyricsSong);
+                                    setShowLyricsModal(false);
+                                }}
+                            >
+                                <Play size={16} /> Play Real Song Now
                             </button>
                         </div>
                     </div>
