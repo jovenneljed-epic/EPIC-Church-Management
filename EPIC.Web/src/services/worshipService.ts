@@ -1,6 +1,7 @@
 /**
  * EPIC Worship Music Service
  * Curated Christian Worship Songs & Auto-Play Audio Engine
+ * Client-side isolated audio sessions (zero cross-user overlap)
  */
 
 export type WorshipMood = "ALL" | "PRAISE" | "SOAKING" | "PEACE" | "WARFARE" | "HYMN";
@@ -18,6 +19,7 @@ export interface WorshipSong {
     scriptureTheme: string;
     lyricsSnippet: string;
     chordsKey: "C" | "G" | "D" | "E" | "A";
+    isCustom?: boolean;
 }
 
 export const WORSHIP_PLAYLIST: WorshipSong[] = [
@@ -146,6 +148,48 @@ export const WORSHIP_PLAYLIST: WorshipSong[] = [
         scriptureTheme: "Romans 8:1 — 'Therefore, there is now no condemnation for those who are in Christ Jesus.'",
         lyricsSnippet: "My chains are gone, I've been set free! My God, my Savior has ransomed me. And like a flood His mercy rains, unending love, amazing grace.",
         chordsKey: "E"
+    },
+    {
+        id: "song-10",
+        title: "I Speak Jesus",
+        artist: "Charity Gayle",
+        albumCover: "https://images.unsplash.com/photo-1438232992991-995b7058bbb3?auto=format&fit=crop&w=400&q=80",
+        duration: "5:15",
+        durationSeconds: 315,
+        mood: "WARFARE",
+        moodLabel: "🔥 Power in His Name",
+        audioUrl: "https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=ambient-piano-amp-strings-10711.mp3",
+        scriptureTheme: "Acts 4:12 — 'Salvation is found in no one else, for there is no other name under heaven given to mankind by which we must be saved.'",
+        lyricsSnippet: "I just wanna speak the name of Jesus over every heart and every mind, 'Cause I know there is peace within Your presence, I speak Jesus!",
+        chordsKey: "D"
+    },
+    {
+        id: "song-11",
+        title: "Jireh (You Are Enough)",
+        artist: "Elevation Worship & Maverick City",
+        albumCover: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=400&q=80",
+        duration: "5:45",
+        durationSeconds: 345,
+        mood: "PRAISE",
+        moodLabel: "🙌 Lord Our Provider",
+        audioUrl: "https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73467.mp3?filename=inspiring-cinematic-ambient-116199.mp3",
+        scriptureTheme: "Philippians 4:19 — 'And my God will meet all your needs according to the riches of His glory in Christ Jesus.'",
+        lyricsSnippet: "Jireh, You are enough! Jireh, You are enough! And I will be content in every circumstance, You are enough!",
+        chordsKey: "C"
+    },
+    {
+        id: "song-12",
+        title: "Reckless Love",
+        artist: "Cory Asbury",
+        albumCover: "https://images.unsplash.com/photo-1499209974431-9dddcece7f88?auto=format&fit=crop&w=400&q=80",
+        duration: "5:32",
+        durationSeconds: 332,
+        mood: "SOAKING",
+        moodLabel: "💖 Overwhelming Love",
+        audioUrl: "https://cdn.pixabay.com/download/audio/2021/08/04/audio_3341ab738e.mp3?filename=the-cradle-of-your-soul-5753.mp3",
+        scriptureTheme: "Luke 15:4 — 'Does he not leave the ninety-nine in the open country and go after the lost sheep until he finds it?'",
+        lyricsSnippet: "Oh, the overwhelming, never-ending, reckless love of God! Oh, it chases me down, fights 'til I'm found, leaves the ninety-nine.",
+        chordsKey: "G"
     }
 ];
 
@@ -157,6 +201,59 @@ export const MOOD_CATEGORIES: { key: WorshipMood; label: string; icon: string }[
     { key: "WARFARE", label: "Faith & Breakthrough", icon: "⚔️" },
     { key: "HYMN", label: "Classic Hymns", icon: "✝️" }
 ];
+
+const CUSTOM_SONGS_STORAGE_KEY = "epic_community_custom_worship_songs";
+
+/**
+ * Get user's custom added worship songs from local storage
+ * Guaranteed 100% private to this device/browser
+ */
+export function getCustomWorshipSongs(): WorshipSong[] {
+    try {
+        const stored = localStorage.getItem(CUSTOM_SONGS_STORAGE_KEY);
+        if (stored) {
+            return JSON.parse(stored);
+        }
+    } catch {
+        // storage disabled or unavailable
+    }
+    return [];
+}
+
+/**
+ * Add a custom worship song to this user's personal device playlist
+ */
+export function saveCustomWorshipSong(song: {
+    title: string;
+    artist: string;
+    audioUrl: string;
+    mood?: WorshipMood;
+    scriptureTheme?: string;
+    lyricsSnippet?: string;
+}): WorshipSong {
+    const list = getCustomWorshipSongs();
+    const newSong: WorshipSong = {
+        id: `custom-${Date.now()}`,
+        title: song.title.trim(),
+        artist: song.artist.trim() || "Worship Team",
+        albumCover: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=400&q=80",
+        duration: "4:00",
+        durationSeconds: 240,
+        mood: song.mood || "PRAISE",
+        moodLabel: "🎵 Custom Worship Song",
+        audioUrl: song.audioUrl.trim(),
+        scriptureTheme: song.scriptureTheme?.trim() || "Colossians 3:16 — 'Singing to God with thanksgiving in your hearts.'",
+        lyricsSnippet: song.lyricsSnippet?.trim() || "Worship the Lord with gladness; come before Him with joyful songs!",
+        chordsKey: "G",
+        isCustom: true
+    };
+
+    list.unshift(newSong);
+    try {
+        localStorage.setItem(CUSTOM_SONGS_STORAGE_KEY, JSON.stringify(list));
+    } catch {}
+    return newSong;
+}
 
 /**
  * Web Audio API Spiritual Ambient Synthesizer

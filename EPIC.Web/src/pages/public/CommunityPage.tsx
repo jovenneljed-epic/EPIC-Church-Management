@@ -24,14 +24,17 @@ import {
     SkipForward,
     SkipBack,
     Volume2,
-    VolumeX
+    VolumeX,
+    Plus
 } from "lucide-react";
 import {
     type WorshipSong,
     type WorshipMood,
     WORSHIP_PLAYLIST,
     MOOD_CATEGORIES,
-    spiritualSynth
+    spiritualSynth,
+    getCustomWorshipSongs,
+    saveCustomWorshipSong
 } from "../../services/worshipService";
 import {
     type CommunityPost,
@@ -143,6 +146,16 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
     const [useAmbientSynth, setUseAmbientSynth] = useState<boolean>(false);
     const audioRef = useRef<HTMLAudioElement | null>(null);
 
+    // Custom Songs, Player Dock Minimize, and Worship Search
+    const [customSongs, setCustomSongs] = useState<WorshipSong[]>(() => getCustomWorshipSongs());
+    const [isDockMinimized, setIsDockMinimized] = useState<boolean>(false);
+    const [worshipSearchQuery, setWorshipSearchQuery] = useState<string>("");
+    const [isAddSongOpen, setIsAddSongOpen] = useState<boolean>(false);
+    const [customTitle, setCustomTitle] = useState<string>("");
+    const [customArtist, setCustomArtist] = useState<string>("");
+    const [customAudioUrl, setCustomAudioUrl] = useState<string>("");
+    const [customScripture, setCustomScripture] = useState<string>("");
+
     // Comment state
     const [expandedComments, setExpandedComments] = useState<Record<number, boolean>>({});
     const [commentInputs, setCommentInputs] = useState<Record<number, string>>({});
@@ -239,33 +252,56 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
         return getCommunityLeaderboard(faithProfile.faithPoints, faithProfile.name);
     }, [faithProfile.faithPoints, faithProfile.name]);
 
-    // Filtered worship songs by mood
-    const filteredSongs = useMemo(() => {
-        if (worshipMood === "ALL") return WORSHIP_PLAYLIST;
-        return WORSHIP_PLAYLIST.filter((s) => s.mood === worshipMood);
-    }, [worshipMood]);
+    // Combine preset worship catalog with user's custom added songs
+    const allSongs = useMemo(() => [...customSongs, ...WORSHIP_PLAYLIST], [customSongs]);
 
-    // Play selected song automatically
+    // Filtered worship songs by mood and search query
+    const filteredSongs = useMemo(() => {
+        let list = allSongs;
+        if (worshipMood !== "ALL") {
+            list = list.filter((s) => s.mood === worshipMood);
+        }
+        if (worshipSearchQuery.trim()) {
+            const q = worshipSearchQuery.toLowerCase();
+            list = list.filter(
+                (s) =>
+                    s.title.toLowerCase().includes(q) ||
+                    s.artist.toLowerCase().includes(q) ||
+                    s.scriptureTheme.toLowerCase().includes(q)
+            );
+        }
+        return list;
+    }, [allSongs, worshipMood, worshipSearchQuery]);
+
+    // Play selected song automatically (Guaranteed Single-Audio: Zero Overlapping)
     const handleSelectSong = (song: WorshipSong) => {
+        // 1. Immediately pause and unload any active audio element
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
+        }
+        // 2. Immediately stop any active Web Audio ambient synth oscillators
+        spiritualSynth.stop();
+        setUseAmbientSynth(false);
+
+        // 3. Update state
         setCurrentSong(song);
         setIsPlaying(true);
         setSongProgress(0);
 
-        if (useAmbientSynth) {
-            spiritualSynth.playWorshipChords(song.chordsKey);
-        } else {
-            if (audioRef.current) {
-                audioRef.current.src = song.audioUrl;
-                audioRef.current.currentTime = 0;
-                audioRef.current.play().catch(() => {
-                    setUseAmbientSynth(true);
-                    spiritualSynth.playWorshipChords(song.chordsKey);
-                });
-            }
+        // 4. Cleanly load and play on user's device
+        if (audioRef.current) {
+            audioRef.current.src = song.audioUrl;
+            audioRef.current.load();
+            audioRef.current.play().catch((err) => {
+                console.warn("Audio stream playback failed, falling back to ambient synth:", err);
+                setUseAmbientSynth(true);
+                spiritualSynth.playWorshipChords(song.chordsKey);
+            });
         }
     };
 
-    // Toggle Play / Pause
+    // Toggle Play / Pause (Strict Single-Sound Engine)
     const handleTogglePlay = () => {
         if (isPlaying) {
             setIsPlaying(false);
@@ -274,8 +310,10 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
         } else {
             setIsPlaying(true);
             if (useAmbientSynth) {
+                if (audioRef.current) audioRef.current.pause();
                 spiritualSynth.playWorshipChords(currentSong.chordsKey);
             } else {
+                spiritualSynth.stop();
                 if (audioRef.current) {
                     audioRef.current.play().catch(() => {
                         setUseAmbientSynth(true);
@@ -288,16 +326,48 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
 
     // Next Track
     const handleNextSong = () => {
-        const idx = WORSHIP_PLAYLIST.findIndex((s) => s.id === currentSong.id);
-        const nextIdx = (idx + 1) % WORSHIP_PLAYLIST.length;
-        handleSelectSong(WORSHIP_PLAYLIST[nextIdx]);
+        const idx = allSongs.findIndex((s) => s.id === currentSong.id);
+        const nextIdx = (idx + 1) % allSongs.length;
+        handleSelectSong(allSongs[nextIdx]);
     };
 
     // Previous Track
     const handlePrevSong = () => {
-        const idx = WORSHIP_PLAYLIST.findIndex((s) => s.id === currentSong.id);
-        const prevIdx = (idx - 1 + WORSHIP_PLAYLIST.length) % WORSHIP_PLAYLIST.length;
-        handleSelectSong(WORSHIP_PLAYLIST[prevIdx]);
+        const idx = allSongs.findIndex((s) => s.id === currentSong.id);
+        const prevIdx = (idx - 1 + allSongs.length) % allSongs.length;
+        handleSelectSong(allSongs[prevIdx]);
+    };
+
+    // Open Shorts Theater safely: pause worship audio so videos don't overlap!
+    const handleOpenShort = (idx: number) => {
+        if (isPlaying) {
+            setIsPlaying(false);
+            if (audioRef.current) audioRef.current.pause();
+            spiritualSynth.stop();
+        }
+        setActiveShortIdx(idx);
+    };
+
+    // Handle adding custom song to user's personal device playlist
+    const handleAddCustomSong = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!customTitle.trim() || !customAudioUrl.trim()) {
+            alert("Please provide at least a song title and audio stream URL.");
+            return;
+        }
+        const created = saveCustomWorshipSong({
+            title: customTitle.trim(),
+            artist: customArtist.trim() || "Worship Team",
+            audioUrl: customAudioUrl.trim(),
+            scriptureTheme: customScripture.trim() || undefined
+        });
+        setCustomSongs((prev) => [created, ...prev]);
+        setIsAddSongOpen(false);
+        setCustomTitle("");
+        setCustomArtist("");
+        setCustomAudioUrl("");
+        setCustomScripture("");
+        handleSelectSong(created); // Auto-play user's song immediately on their device
     };
 
     // Toggle Mute
@@ -510,7 +580,7 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
         setShortScriptureText("");
         setShortVideoUrl("");
         setFaithProfile(getFaithProfile());
-        setActiveShortIdx(0); // Launch theater immediately!
+        handleOpenShort(0); // Launch theater immediately!
     };
 
     return (
@@ -651,7 +721,7 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                                 <button
                                     type="button"
                                     className="fb-nav-item-btn"
-                                    onClick={() => setActiveShortIdx(0)}
+                                    onClick={() => handleOpenShort(0)}
                                 >
                                     <span className="fb-nav-icon">🎥</span>
                                     <span>EPIC Shorts Theater</span>
@@ -738,12 +808,48 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                                             setMobileTab("FEED");
                                         }}
                                     >
-                                        ← Back to Fellowship Feed
+                                        ← Back to Feed
                                     </button>
-                                    <span className="worship-hub-tag">
-                                        <Music size={14} style={{ display: "inline", marginRight: 4 }} />
-                                        Spiritual Sanctuary &amp; Auto-Player
-                                    </span>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                        <button
+                                            type="button"
+                                            className="worship-add-song-top-btn"
+                                            onClick={() => setIsAddSongOpen(true)}
+                                            title="Add your own custom worship song to play on your device"
+                                        >
+                                            <Plus size={14} /> Add My Song
+                                        </button>
+                                        <span className="worship-hub-tag">
+                                            <Music size={14} style={{ display: "inline", marginRight: 4 }} />
+                                            Worship Sanctuary
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Worship Song Search & Personal Privacy Bar */}
+                                <div className="worship-search-and-notice-bar">
+                                    <div className="worship-search-box">
+                                        <Search size={15} color="#38bdf8" />
+                                        <input
+                                            type="text"
+                                            placeholder="Search worship songs, artists, or scriptures..."
+                                            value={worshipSearchQuery}
+                                            onChange={(e) => setWorshipSearchQuery(e.target.value)}
+                                        />
+                                        {worshipSearchQuery && (
+                                            <button
+                                                type="button"
+                                                className="worship-search-clear-btn"
+                                                onClick={() => setWorshipSearchQuery("")}
+                                            >
+                                                ✕
+                                            </button>
+                                        )}
+                                    </div>
+                                    <div className="worship-privacy-badge">
+                                        <ShieldCheck size={13} color="#34d399" />
+                                        <span>Private Device Audio — Only you hear this music</span>
+                                    </div>
                                 </div>
 
                                 {/* Active Song Hero Stage */}
@@ -971,7 +1077,7 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                                     title="Upload a photo from your phone or computer"
                                 >
                                     <Camera size={18} />
-                                    <span>Photo Upload</span>
+                                    <span>Photo</span>
                                 </button>
 
                                 <button
@@ -980,7 +1086,7 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                                     onClick={() => openComposerForType("PRAYER")}
                                 >
                                     <span style={{ fontSize: 16 }}>🙏</span>
-                                    <span>Prayer Request</span>
+                                    <span>Prayer</span>
                                 </button>
 
                                 <button
@@ -1987,68 +2093,177 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
             {/* =========================================================
                 FLOATING CHRISTIAN WORSHIP MUSIC MINI-DOCK (Automatic Audio)
                 ========================================================= */}
-            <div className="worship-floating-dock">
-                <div className="worship-dock-inner">
-                    <div
-                        className="worship-dock-song-meta"
-                        onClick={() => {
-                            setActiveTab("WORSHIP");
-                            setMobileTab("WORSHIP");
-                        }}
-                        title="Click to view full Worship Sanctuary"
-                    >
-                        <div className={`worship-dock-disc ${isPlaying ? "spinning" : ""}`}>
-                            <img src={currentSong.albumCover} alt="Cover" />
-                        </div>
-                        <div className="worship-dock-text">
-                            <strong>{currentSong.title}</strong>
-                            <span>{currentSong.artist} • {currentSong.moodLabel}</span>
-                        </div>
+            {/* Global Floating Worship Audio Dock / Minimized Music Bubble */}
+            {isDockMinimized ? (
+                <div
+                    className="worship-floating-min-bubble"
+                    onClick={() => setIsDockMinimized(false)}
+                    title="Tap to expand Worship Player"
+                >
+                    <div className={`worship-dock-disc ${isPlaying ? "spinning" : ""}`} style={{ width: 28, height: 28, minWidth: 28 }}>
+                        <img src={currentSong.albumCover} alt="Cover" />
                     </div>
-
-                    <div className="worship-dock-actions">
-                        <button
-                            type="button"
-                            className="worship-dock-ctrl-btn"
-                            onClick={handlePrevSong}
-                            title="Previous Worship Song"
-                        >
-                            <SkipBack size={16} />
-                        </button>
-
-                        <button
-                            type="button"
-                            className="worship-dock-play-btn"
-                            onClick={handleTogglePlay}
-                            title={isPlaying ? "Pause" : "Auto-Play"}
-                        >
-                            {isPlaying ? <Pause size={17} /> : <Play size={17} style={{ marginLeft: 2 }} />}
-                        </button>
-
-                        <button
-                            type="button"
-                            className="worship-dock-ctrl-btn"
-                            onClick={handleNextSong}
-                            title="Next Worship Song"
-                        >
-                            <SkipForward size={16} />
-                        </button>
-
-                        <button
-                            type="button"
-                            className="worship-dock-playlist-btn"
+                    <span className="worship-min-title">{currentSong.title}</span>
+                    <button
+                        type="button"
+                        className="worship-min-play-btn"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            handleTogglePlay();
+                        }}
+                    >
+                        {isPlaying ? <Pause size={12} /> : <Play size={12} />}
+                    </button>
+                    <span className="worship-min-expand-icon">⤢</span>
+                </div>
+            ) : (
+                <div className="worship-floating-dock">
+                    <div className="worship-dock-inner">
+                        <div
+                            className="worship-dock-song-meta"
                             onClick={() => {
                                 setActiveTab("WORSHIP");
                                 setMobileTab("WORSHIP");
                             }}
-                            title="Open Christian Songs Playlist"
+                            title="Click to view full Worship Sanctuary"
                         >
-                            <Music size={14} />
-                            <span className="worship-dock-btn-label">Songs</span>
-                        </button>
+                            <div className={`worship-dock-disc ${isPlaying ? "spinning" : ""}`}>
+                                <img src={currentSong.albumCover} alt="Cover" />
+                            </div>
+                            <div className="worship-dock-text">
+                                <strong>{currentSong.title}</strong>
+                                <span>{currentSong.artist} • {currentSong.moodLabel}</span>
+                            </div>
+                        </div>
+
+                        <div className="worship-dock-actions">
+                            <button
+                                type="button"
+                                className="worship-dock-ctrl-btn"
+                                onClick={handlePrevSong}
+                                title="Previous Worship Song"
+                            >
+                                <SkipBack size={16} />
+                            </button>
+
+                            <button
+                                type="button"
+                                className="worship-dock-play-btn"
+                                onClick={handleTogglePlay}
+                                title={isPlaying ? "Pause" : "Auto-Play"}
+                            >
+                                {isPlaying ? <Pause size={17} /> : <Play size={17} style={{ marginLeft: 2 }} />}
+                            </button>
+
+                            <button
+                                type="button"
+                                className="worship-dock-ctrl-btn"
+                                onClick={handleNextSong}
+                                title="Next Worship Song"
+                            >
+                                <SkipForward size={16} />
+                            </button>
+
+                            <button
+                                type="button"
+                                className="worship-dock-playlist-btn"
+                                onClick={() => {
+                                    setActiveTab("WORSHIP");
+                                    setMobileTab("WORSHIP");
+                                }}
+                                title="Open Christian Songs Playlist"
+                            >
+                                <Music size={14} />
+                                <span className="worship-dock-btn-label">Songs</span>
+                            </button>
+
+                            <button
+                                type="button"
+                                className="worship-dock-min-btn"
+                                onClick={() => setIsDockMinimized(true)}
+                                title="Minimize Player"
+                            >
+                                ⌵
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
+            )}
+
+            {/* Modal: Add Custom Worship Song to Personal Device */}
+            {isAddSongOpen && (
+                <div className="comm-modal-overlay" onClick={() => setIsAddSongOpen(false)}>
+                    <div className="comm-modal-card" onClick={(e) => e.stopPropagation()}>
+                        <div className="comm-modal-header">
+                            <h2>
+                                <Music size={20} color="#ec4899" /> Add Custom Worship Song
+                            </h2>
+                            <button
+                                type="button"
+                                className="comm-modal-close"
+                                onClick={() => setIsAddSongOpen(false)}
+                            >
+                                ✕
+                            </button>
+                        </div>
+                        <p style={{ fontSize: "0.82rem", color: "#94a3b8", marginBottom: 14 }}>
+                            Add your favorite worship track to your personal device playlist. It plays privately only on your device without overlapping with anyone else!
+                        </p>
+                        <form onSubmit={handleAddCustomSong}>
+                            <div className="comm-form-group">
+                                <label>Song Title *</label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. In Jesus Name (God of Possible)"
+                                    value={customTitle}
+                                    onChange={(e) => setCustomTitle(e.target.value)}
+                                    required
+                                />
+                            </div>
+                            <div className="comm-form-group">
+                                <label>Artist / Worship Team</label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. Katy Nichole"
+                                    value={customArtist}
+                                    onChange={(e) => setCustomArtist(e.target.value)}
+                                />
+                            </div>
+                            <div className="comm-form-group">
+                                <label>Audio Stream URL (MP3 / HTTPS Audio Link) *</label>
+                                <input
+                                    type="url"
+                                    placeholder="https://.../song.mp3"
+                                    value={customAudioUrl}
+                                    onChange={(e) => setCustomAudioUrl(e.target.value)}
+                                    required
+                                />
+                            </div>
+                            <div className="comm-form-group">
+                                <label>Scripture / Heart Theme (Optional)</label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. Jeremiah 32:17 - 'Ah, Sovereign Lord... nothing is too hard for You.'"
+                                    value={customScripture}
+                                    onChange={(e) => setCustomScripture(e.target.value)}
+                                />
+                            </div>
+                            <div className="comm-modal-footer">
+                                <button
+                                    type="button"
+                                    className="comm-btn-cancel"
+                                    onClick={() => setIsAddSongOpen(false)}
+                                >
+                                    Cancel
+                                </button>
+                                <button type="submit" className="comm-btn-submit">
+                                    Save &amp; Play on My Device ▶
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
 
             {/* Daily Challenge Earned Toast Notification */}
             {challengeClaimedToast && (

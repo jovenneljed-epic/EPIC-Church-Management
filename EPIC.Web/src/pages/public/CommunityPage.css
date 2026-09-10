@@ -2399,56 +2399,298 @@
     color: #ffffff;
 }
 
+
+/* Worship Top Actions & Search Bar */
+.worship-add-song-top-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, rgba(236, 72, 153, 0.25) 0%, rgba(244, 63, 94, 0.3) 100%);
+    border: 1px solid rgba(244, 63, 94, 0.5);
+    color: #f43f5e;
+    padding: 6px 12px;
+    border-radius: 12px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.worship-add-song-top-btn:hover {
+    background: #f43f5e;
+    color: #ffffff;
+    transform: scale(1.03);
+}
+
+.worship-search-and-notice-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: 4px 0 10px;
+}
+
+.worship-search-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    border-radius: 12px;
+    padding: 8px 12px;
+    flex: 1;
+    min-width: 220px;
+}
+
+.worship-search-box input {
+    background: transparent;
+    border: none;
+    color: #ffffff;
+    font-size: 0.82rem;
+    width: 100%;
+    outline: none;
+}
+
+.worship-search-box input::placeholder {
+    color: #64748b;
+}
+
+.worship-search-clear-btn {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    font-size: 0.85rem;
+    cursor: pointer;
+    padding: 2px 4px;
+}
+
+.worship-privacy-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(52, 211, 153, 0.1);
+    border: 1px solid rgba(52, 211, 153, 0.3);
+    color: #34d399;
+    font-size: 0.74rem;
+    font-weight: 700;
+    padding: 6px 12px;
+    border-radius: 20px;
+    white-space: nowrap;
+}
+
+/* Minimize Floating Dock Button */
+.worship-dock-min-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #cbd5e1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: bold;
+    transition: all 0.2s;
+    margin-left: 2px;
+}
+
+.worship-dock-min-btn:hover {
+    background: rgba(255, 255, 255, 0.18);
+    color: #ffffff;
+}
+
+/* Floating Minimized Worship Bubble */
+.worship-floating-min-bubble {
+    position: fixed;
+    bottom: 18px;
+    right: 18px;
+    z-index: 1000;
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(16px);
+    border: 1.5px solid #38bdf8;
+    border-radius: 30px;
+    padding: 5px 12px 5px 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #ffffff;
+    cursor: pointer;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65), 0 0 16px rgba(56, 189, 248, 0.35);
+    transition: all 0.2s ease;
+    animation: fadeIn 0.25s ease-out;
+}
+
+.worship-floating-min-bubble:hover {
+    transform: scale(1.05);
+    border-color: #f43f5e;
+}
+
+.worship-min-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #ffffff;
+    max-width: 140px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.worship-min-play-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #0284c7;
+    border: none;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.worship-min-expand-icon {
+    font-size: 0.8rem;
+    color: #38bdf8;
+    font-weight: bold;
+}
+
 /* =========================================================================
    16. ENHANCED MOBILE RESPONSIVENESS (< 640px)
    ========================================================================= */
 @media (max-width: 640px) {
     .community-dashboard-container {
-        padding: 8px 10px 90px 10px !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 6px 8px 130px 8px !important;
+        margin: 6px auto !important;
+        box-sizing: border-box !important;
     }
 
+    .fb-center-feed {
+        gap: 14px !important;
+    }
+
+    /* Mobile Tabs Bar */
+    .comm-mobile-tabs-bar {
+        padding: 6px 4px 10px !important;
+        gap: 6px !important;
+        overflow-x: auto !important;
+    }
+
+    .comm-mobile-tab-btn {
+        padding: 7px 4px !important;
+        font-size: 0.75rem !important;
+        min-width: 70px !important;
+        border-radius: 10px !important;
+    }
+
+    /* Stories */
+    .fb-stories-strip {
+        padding: 10px 10px !important;
+        border-radius: 14px !important;
+        margin-bottom: 2px !important;
+    }
+
+    .story-ring-wrapper {
+        width: 54px !important;
+        height: 54px !important;
+    }
+
+    .story-circle-title {
+        font-size: 0.7rem !important;
+        max-width: 62px !important;
+    }
+
+    /* Composer Box & Actions - PERFECT MOBILE GRID FIT */
+    .fb-composer-box {
+        padding: 12px 12px !important;
+        border-radius: 14px !important;
+    }
+
+    .fb-composer-avatar {
+        width: 36px !important;
+        height: 36px !important;
+    }
+
+    .fb-composer-trigger-btn {
+        padding: 9px 12px !important;
+        font-size: 0.82rem !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+
+    .fb-composer-action-buttons {
+        display: grid !important;
+        grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)) !important;
+        gap: 6px !important;
+        padding-top: 10px !important;
+        width: 100% !important;
+    }
+
+    .fb-action-tab-btn {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 5px !important;
+        padding: 7px 4px !important;
+        font-size: 0.73rem !important;
+        border-radius: 8px !important;
+        background: rgba(255, 255, 255, 0.04) !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        white-space: nowrap !important;
+    }
+
+    /* Daily Challenge Card */
+    .daily-challenge-banner {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        padding: 12px 14px !important;
+        gap: 10px !important;
+        border-radius: 14px !important;
+    }
+
+    .daily-challenge-banner button {
+        width: 100% !important;
+        justify-content: center !important;
+    }
+
+    /* Feed Post Cards */
     .fb-feed-card {
-        padding: 16px 14px !important;
+        padding: 14px 12px !important;
         border-radius: 14px !important;
     }
 
     .fb-card-title {
-        font-size: 1.05rem !important;
+        font-size: 1rem !important;
     }
 
     .fb-card-text {
-        font-size: 0.88rem !important;
+        font-size: 0.86rem !important;
     }
 
     .fb-card-reactions-bar {
-        gap: 6px !important;
+        gap: 4px !important;
+        flex-wrap: wrap !important;
     }
 
     .fb-reaction-btn {
-        padding: 5px 9px !important;
-        font-size: 0.74rem !important;
-    }
-
-    .fb-composer-box {
-        padding: 14px 12px !important;
-    }
-
-    .fb-composer-action-buttons {
-        gap: 6px !important;
-    }
-
-    .fb-action-tab-btn {
-        padding: 6px 8px !important;
+        padding: 5px 8px !important;
         font-size: 0.72rem !important;
     }
 
+    /* Worship Stage & Player */
     .worship-hero-stage {
-        padding: 16px 14px !important;
+        padding: 16px 12px !important;
+        border-radius: 16px !important;
     }
 
     .worship-song-row {
-        padding: 10px 12px !important;
-        gap: 10px !important;
+        padding: 10px 10px !important;
+        gap: 8px !important;
     }
 
     .worship-song-mood-pill {
@@ -2456,8 +2698,8 @@
     }
 
     .worship-floating-dock {
-        bottom: 10px !important;
-        width: 96% !important;
+        bottom: 8px !important;
+        width: calc(100% - 16px) !important;
         padding: 6px 10px !important;
     }
 
@@ -2465,6 +2707,20 @@
         display: none !important;
     }
 
+    .worship-dock-text strong {
+        max-width: 110px !important;
+    }
+
+    .worship-dock-text span {
+        max-width: 110px !important;
+    }
+
+    .worship-floating-min-bubble {
+        bottom: 12px !important;
+        right: 12px !important;
+    }
+
+    /* Modals */
     .comm-modal-card {
         width: 100% !important;
         padding: 18px 14px !important;
