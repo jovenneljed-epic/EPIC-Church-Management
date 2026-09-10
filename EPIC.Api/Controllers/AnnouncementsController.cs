@@ -14,17 +14,20 @@ public class AnnouncementsController : ControllerBase
     private readonly ApplicationDbContext _context;
     private readonly ISmsGatewayService _smsService;
     private readonly ICampaignAutomationService _campaignService;
+    private readonly IDailyReminderService _dailyReminderService;
     private readonly NotificationWakeSignal? _wake;
 
     public AnnouncementsController(
         ApplicationDbContext context,
         ISmsGatewayService smsService,
         ICampaignAutomationService campaignService,
+        IDailyReminderService dailyReminderService,
         NotificationWakeSignal? wake = null)
     {
         _context = context;
         _smsService = smsService;
         _campaignService = campaignService;
+        _dailyReminderService = dailyReminderService;
         _wake = wake;
     }
 
@@ -496,6 +499,57 @@ public class AnnouncementsController : ControllerBase
     public async Task<IActionResult> TriggerNextStep()
     {
         var result = await _campaignService.TriggerNextStepAsync();
+        return Ok(result);
+    }
+
+    // ============================================================
+    // SCHEDULED DAILY REMINDERS (ADMIN)
+    // ============================================================
+
+    [Authorize(Roles = "ADMIN")]
+    [HttpGet("daily-reminders")]
+    public IActionResult GetDailyReminders()
+    {
+        var list = _dailyReminderService.GetAll();
+        return Ok(list);
+    }
+
+    [Authorize(Roles = "ADMIN")]
+    [HttpPost("daily-reminders")]
+    public IActionResult UpsertDailyReminder([FromBody] DailyReminderItem item)
+    {
+        if (string.IsNullOrWhiteSpace(item.Title) || string.IsNullOrWhiteSpace(item.Message))
+        {
+            return BadRequest(new { message = "Title and Message are required." });
+        }
+        var saved = _dailyReminderService.Upsert(item);
+        return Ok(saved);
+    }
+
+    [Authorize(Roles = "ADMIN")]
+    [HttpDelete("daily-reminders/{id}")]
+    public IActionResult DeleteDailyReminder(string id)
+    {
+        var deleted = _dailyReminderService.Delete(id);
+        if (!deleted) return NotFound(new { message = "Reminder schedule not found." });
+        return Ok(new { success = true });
+    }
+
+    [Authorize(Roles = "ADMIN")]
+    [HttpPost("daily-reminders/{id}/toggle")]
+    public IActionResult ToggleDailyReminder(string id)
+    {
+        var updated = _dailyReminderService.Toggle(id);
+        if (updated == null) return NotFound(new { message = "Reminder schedule not found." });
+        return Ok(updated);
+    }
+
+    [Authorize(Roles = "ADMIN")]
+    [HttpPost("daily-reminders/{id}/test")]
+    public async Task<IActionResult> TestDailyReminder(string id)
+    {
+        var result = await _dailyReminderService.TriggerNowAsync(id);
+        if (result == null) return NotFound(new { message = "Reminder schedule not found." });
         return Ok(result);
     }
 }

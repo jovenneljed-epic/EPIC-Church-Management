@@ -86,6 +86,9 @@ builder.Services.AddSingleton<Microsoft.AspNetCore.SignalR.IUserIdProvider, Chat
 builder.Services.AddSingleton<NotificationWakeSignal>();
 builder.Services.AddSingleton<CampaignAutomationService>();
 builder.Services.AddSingleton<ICampaignAutomationService>(sp => sp.GetRequiredService<CampaignAutomationService>());
+builder.Services.AddSingleton<DailyReminderService>();
+builder.Services.AddSingleton<IDailyReminderService>(sp => sp.GetRequiredService<DailyReminderService>());
+builder.Services.AddHostedService(sp => sp.GetRequiredService<DailyReminderService>());
 builder.Services.AddHostedService<AutomaticAttendanceWorker>();
 
 // ============================================================
