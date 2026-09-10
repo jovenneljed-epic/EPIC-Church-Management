@@ -15,7 +15,6 @@ import {
     Camera,
     Trophy,
     Award,
-    BookOpen,
     Users,
     Video,
     Music,
@@ -149,6 +148,7 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
     // Custom Songs, Player Dock Minimize, and Worship Search
     const [customSongs, setCustomSongs] = useState<WorshipSong[]>(() => getCustomWorshipSongs());
     const [isDockMinimized, setIsDockMinimized] = useState<boolean>(false);
+    const [isDockClosed, setIsDockClosed] = useState<boolean>(false);
     const [worshipSearchQuery, setWorshipSearchQuery] = useState<string>("");
     const [isAddSongOpen, setIsAddSongOpen] = useState<boolean>(false);
     const [customTitle, setCustomTitle] = useState<string>("");
@@ -1074,9 +1074,9 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                                     type="button"
                                     className="fb-action-tab-btn photo-upload"
                                     onClick={openComposerWithPhoto}
-                                    title="Upload a photo from your phone or computer"
+                                    title="Upload a photo"
                                 >
-                                    <Camera size={18} />
+                                    <Camera size={18} color="#34d399" />
                                     <span>Photo</span>
                                 </button>
 
@@ -1084,6 +1084,7 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                                     type="button"
                                     className="fb-action-tab-btn prayer"
                                     onClick={() => openComposerForType("PRAYER")}
+                                    title="Share a prayer request"
                                 >
                                     <span style={{ fontSize: 16 }}>🙏</span>
                                     <span>Prayer</span>
@@ -1091,29 +1092,12 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
 
                                 <button
                                     type="button"
-                                    className="fb-action-tab-btn testimony"
-                                    onClick={() => openComposerForType("TESTIMONY")}
-                                >
-                                    <span style={{ fontSize: 16 }}>❤️</span>
-                                    <span>Testimony</span>
-                                </button>
-
-                                <button
-                                    type="button"
-                                    className="fb-action-tab-btn verse"
-                                    onClick={() => openComposerForType("VERSE")}
-                                >
-                                    <BookOpen size={17} />
-                                    <span>Scripture</span>
-                                </button>
-
-                                <button
-                                    type="button"
-                                    className="fb-action-tab-btn"
+                                    className="fb-action-tab-btn short"
                                     style={{ color: "#38bdf8" }}
                                     onClick={() => setIsCreateShortOpen(true)}
+                                    title="Create EPIC Short"
                                 >
-                                    <Video size={17} />
+                                    <Video size={18} color="#38bdf8" />
                                     <span>EPIC Short</span>
                                 </button>
                             </div>
@@ -1247,76 +1231,14 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                                         )}
 
                                         {/* Facebook Reactions Bar */}
-                                        <div className="fb-card-reactions-bar">
-                                            <div className="fb-reactions-left">
-                                                <button
-                                                    type="button"
-                                                    className={`fb-reaction-btn ${
-                                                        post.myReaction === "ENCOURAGE" ? "active encourage" : ""
-                                                    }`}
-                                                    onClick={() => handleReact(post.id, "ENCOURAGE")}
-                                                    title="Encourage (+5 Pts)"
-                                                >
-                                                    <Heart size={14} fill={post.myReaction === "ENCOURAGE" ? "#f43f5e" : "none"} />
-                                                    <span>❤️ {post.encouragesCount}</span>
-                                                </button>
-
-                                                <button
-                                                    type="button"
-                                                    className={`fb-reaction-btn ${
-                                                        post.myReaction === "PRAYING" ? "active praying" : ""
-                                                    }`}
-                                                    onClick={() => handleReact(post.id, "PRAYING")}
-                                                    title="Praying (+5 Pts)"
-                                                >
-                                                    <span>🙏 {post.prayingCount}</span>
-                                                </button>
-
-                                                <button
-                                                    type="button"
-                                                    className={`fb-reaction-btn ${
-                                                        post.myReaction === "STRENGTHENED" ? "active strengthened" : ""
-                                                    }`}
-                                                    onClick={() => handleReact(post.id, "STRENGTHENED")}
-                                                    title="Strengthened (+5 Pts)"
-                                                >
-                                                    <span>💪 {post.strengthenedCount}</span>
-                                                </button>
-
-                                                <button
-                                                    type="button"
-                                                    className={`fb-reaction-btn ${
-                                                        post.myReaction === "CELEBRATE" ? "active celebrate" : ""
-                                                    }`}
-                                                    onClick={() => handleReact(post.id, "CELEBRATE")}
-                                                    title="Celebrate (+5 Pts)"
-                                                >
-                                                    <span>🎉 {post.celebratesCount}</span>
-                                                </button>
+                                        {/* Facebook Post Stats Summary Row */}
+                                        <div className="fb-post-stats-row">
+                                            <div className="fb-stats-icons">
+                                                <span className="fb-stat-icon-pill">❤️ 🙏 {post.encouragesCount + post.prayingCount + post.strengthenedCount + post.celebratesCount}</span>
                                             </div>
-
-                                            {/* Direct Prayer Wall Action */}
-                                            {isPrayer && (
-                                                <button
-                                                    type="button"
-                                                    className={`fb-pray-now-btn ${post.myPrayed ? "prayed" : ""}`}
-                                                    onClick={() => handleDirectPray(post.id)}
-                                                >
-                                                    {post.myPrayed ? (
-                                                        <>
-                                                            <Check size={14} /> You Prayed (+10 Pts)
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <span>🙏</span> Pray for This (+10 Pts)
-                                                        </>
-                                                    )}
-                                                </button>
-                                            )}
-
                                             <button
                                                 type="button"
-                                                className="fb-comment-btn"
+                                                className="fb-stats-reflections-link"
                                                 onClick={() =>
                                                     setExpandedComments((prev) => ({
                                                         ...prev,
@@ -1324,8 +1246,66 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                                                     }))
                                                 }
                                             >
-                                                <MessageCircle size={15} />
-                                                <span>{post.commentsCount || 0} Reflections</span>
+                                                {post.commentsCount || 0} reflections
+                                            </button>
+                                        </div>
+
+                                        {/* Facebook 4-Action Buttons Bar */}
+                                        <div className="fb-card-actions-bar">
+                                            <button
+                                                type="button"
+                                                className={`fb-action-btn ${post.myReaction === "ENCOURAGE" ? "active" : ""}`}
+                                                onClick={() => handleReact(post.id, "ENCOURAGE")}
+                                                title="Encourage (+5 Pts)"
+                                            >
+                                                <Heart size={16} fill={post.myReaction === "ENCOURAGE" ? "#f43f5e" : "none"} color={post.myReaction === "ENCOURAGE" ? "#f43f5e" : "#cbd5e1"} />
+                                                <span>Encourage</span>
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                className={`fb-action-btn ${post.myPrayed || post.myReaction === "PRAYING" ? "prayed" : ""}`}
+                                                onClick={() => (isPrayer ? handleDirectPray(post.id) : handleReact(post.id, "PRAYING"))}
+                                                title="I Prayed (+10 Pts)"
+                                            >
+                                                <span style={{ fontSize: 16 }}>🙏</span>
+                                                <span>{post.myPrayed ? "Prayed" : "Pray"}</span>
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                className="fb-action-btn"
+                                                onClick={() =>
+                                                    setExpandedComments((prev) => ({
+                                                        ...prev,
+                                                        [post.id]: !prev[post.id]
+                                                    }))
+                                                }
+                                                title="Add Reflection (+5 Pts)"
+                                            >
+                                                <MessageCircle size={16} />
+                                                <span>Reflect</span>
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                className="fb-action-btn"
+                                                onClick={() => {
+                                                    if (navigator.share) {
+                                                        navigator.share({
+                                                            title: post.title || "EPIC Community Encouragement",
+                                                            text: post.content,
+                                                            url: window.location.href
+                                                        }).catch(() => {});
+                                                    } else {
+                                                        navigator.clipboard.writeText(window.location.href);
+                                                        alert("Post link copied to clipboard!");
+                                                    }
+                                                }}
+                                                title="Share Post"
+                                            >
+                                                <Share2 size={16} />
+                                                <span>Share</span>
                                             </button>
                                         </div>
 
@@ -2094,7 +2074,16 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                 FLOATING CHRISTIAN WORSHIP MUSIC MINI-DOCK (Automatic Audio)
                 ========================================================= */}
             {/* Global Floating Worship Audio Dock / Minimized Music Bubble */}
-            {isDockMinimized ? (
+            {isDockClosed ? (
+                <div
+                    className="worship-floating-closed-badge"
+                    onClick={() => setIsDockClosed(false)}
+                    title="Tap to Open Worship Music Player"
+                >
+                    <Music size={16} color="#38bdf8" />
+                    <span>Music</span>
+                </div>
+            ) : isDockMinimized ? (
                 <div
                     className="worship-floating-min-bubble"
                     onClick={() => setIsDockMinimized(false)}
@@ -2114,7 +2103,17 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                     >
                         {isPlaying ? <Pause size={12} /> : <Play size={12} />}
                     </button>
-                    <span className="worship-min-expand-icon">⤢</span>
+                    <button
+                        type="button"
+                        className="worship-min-close-btn"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setIsDockClosed(true);
+                        }}
+                        title="Close Player"
+                    >
+                        ✕
+                    </button>
                 </div>
             ) : (
                 <div className="worship-floating-dock">
@@ -2184,6 +2183,20 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                                 title="Minimize Player"
                             >
                                 ⌵
+                            </button>
+
+                            <button
+                                type="button"
+                                className="worship-dock-close-cross-btn"
+                                onClick={() => {
+                                    setIsPlaying(false);
+                                    if (audioRef.current) audioRef.current.pause();
+                                    spiritualSynth.stop();
+                                    setIsDockClosed(true);
+                                }}
+                                title="Close Player"
+                            >
+                                ✕
                             </button>
                         </div>
                     </div>

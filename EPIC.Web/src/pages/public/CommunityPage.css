@@ -2557,100 +2557,300 @@
     font-weight: bold;
 }
 
+
+
 /* =========================================================================
-   16. ENHANCED MOBILE RESPONSIVENESS (< 640px)
+   FACEBOOK-STYLE POST STATS & 4-ACTION BAR (Universal Desktop & Mobile)
    ========================================================================= */
-@media (max-width: 640px) {
+.fb-post-stats-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0 8px;
+    margin-top: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    font-size: 0.82rem;
+    color: #94a3b8;
+}
+
+.fb-stats-icons {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.fb-stat-icon-pill {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: #f1f5f9;
+}
+
+.fb-stats-reflections-link {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.fb-stats-reflections-link:hover {
+    color: #38bdf8;
+    text-decoration: underline;
+}
+
+.fb-card-actions-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 6px;
+    width: 100%;
+    gap: 4px;
+}
+
+.fb-action-btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 9px 6px;
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: #cbd5e1;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.fb-action-btn:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: #38bdf8;
+}
+
+.fb-action-btn.active {
+    color: #f43f5e;
+}
+
+.fb-action-btn.prayed {
+    color: #fbbf24;
+}
+
+/* Close buttons on floating dock */
+.worship-dock-close-cross-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #cbd5e1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: bold;
+    transition: all 0.2s;
+    margin-left: 2px;
+}
+
+.worship-dock-close-cross-btn:hover {
+    background: #ef4444;
+    color: #ffffff;
+    border-color: #ef4444;
+}
+
+.worship-floating-closed-badge {
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    z-index: 1000;
+    background: rgba(15, 23, 42, 0.95);
+    border: 1.5px solid #38bdf8;
+    border-radius: 25px;
+    padding: 8px 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #38bdf8;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+    transition: transform 0.2s;
+}
+
+.worship-floating-closed-badge:hover {
+    transform: scale(1.08);
+}
+
+.worship-min-close-btn {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    font-size: 0.75rem;
+    cursor: pointer;
+    padding: 2px 4px;
+    margin-left: 4px;
+}
+.worship-min-close-btn:hover {
+    color: #ef4444;
+}
+
+
+/* =========================================================================
+   16. AUTHENTIC FACEBOOK MOBILE EXPERIENCE (< 768px)
+   Edge-to-Edge Full Bleed, Zero Side Margin Clutter, 8px Feed Dividers
+   ========================================================================= */
+@media (max-width: 768px) {
     .community-dashboard-container {
         width: 100% !important;
         max-width: 100% !important;
-        padding: 6px 8px 130px 8px !important;
-        margin: 6px auto !important;
+        margin: 0 auto !important;
+        padding: 0 0 95px 0 !important;
         box-sizing: border-box !important;
     }
 
-    .fb-center-feed {
-        gap: 14px !important;
+    .community-fb-grid {
+        display: block !important;
+        width: 100% !important;
+        gap: 0 !important;
     }
 
-    /* Mobile Tabs Bar */
+    .fb-center-feed {
+        width: 100% !important;
+        gap: 8px !important;
+        background: #070b14 !important;
+    }
+
+    /* Sticky Facebook Mobile Tabs Bar */
     .comm-mobile-tabs-bar {
-        padding: 6px 4px 10px !important;
-        gap: 6px !important;
-        overflow-x: auto !important;
+        display: flex !important;
+        position: sticky !important;
+        top: 56px !important;
+        z-index: 100 !important;
+        width: 100% !important;
+        background: #0f172a !important;
+        border-bottom: 2px solid rgba(255, 255, 255, 0.08) !important;
+        padding: 0 !important;
+        margin: 0 0 8px 0 !important;
+        gap: 0 !important;
     }
 
     .comm-mobile-tab-btn {
-        padding: 7px 4px !important;
-        font-size: 0.75rem !important;
-        min-width: 70px !important;
-        border-radius: 10px !important;
+        flex: 1 !important;
+        border-radius: 0 !important;
+        border: none !important;
+        border-bottom: 3px solid transparent !important;
+        padding: 12px 2px !important;
+        font-size: 0.8rem !important;
+        background: transparent !important;
+        color: #94a3b8 !important;
+        justify-content: center !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 5px !important;
     }
 
-    /* Stories */
+    .comm-mobile-tab-btn.active {
+        border-bottom: 3px solid #38bdf8 !important;
+        color: #38bdf8 !important;
+        background: rgba(56, 189, 248, 0.06) !important;
+        box-shadow: none !important;
+    }
+
+    /* Full Bleed Cards (Edge-to-Edge like Facebook) */
+    .fb-feed-card,
+    .fb-composer-box,
+    .fb-stories-strip,
+    .daily-challenge-banner,
+    .worship-hero-stage {
+        border-radius: 0 !important;
+        border-left: none !important;
+        border-right: none !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+        margin: 0 0 8px 0 !important;
+        width: 100% !important;
+        padding: 14px 16px !important;
+        box-sizing: border-box !important;
+        background: #0f172a !important;
+        box-shadow: none !important;
+    }
+
+    /* Facebook Stories Strip */
     .fb-stories-strip {
-        padding: 10px 10px !important;
-        border-radius: 14px !important;
-        margin-bottom: 2px !important;
+        padding: 12px 14px !important;
     }
 
     .story-ring-wrapper {
-        width: 54px !important;
-        height: 54px !important;
+        width: 58px !important;
+        height: 58px !important;
     }
 
     .story-circle-title {
-        font-size: 0.7rem !important;
-        max-width: 62px !important;
+        font-size: 0.72rem !important;
+        max-width: 66px !important;
     }
 
-    /* Composer Box & Actions - PERFECT MOBILE GRID FIT */
-    .fb-composer-box {
-        padding: 12px 12px !important;
-        border-radius: 14px !important;
+    /* Facebook Composer ("What's on your mind?") */
+    .fb-composer-top-row {
+        padding-bottom: 10px !important;
     }
 
     .fb-composer-avatar {
-        width: 36px !important;
-        height: 36px !important;
+        width: 38px !important;
+        height: 38px !important;
     }
 
     .fb-composer-trigger-btn {
-        padding: 9px 12px !important;
-        font-size: 0.82rem !important;
+        padding: 9px 14px !important;
+        font-size: 0.84rem !important;
         white-space: nowrap !important;
         overflow: hidden !important;
         text-overflow: ellipsis !important;
     }
 
+    /* Facebook 3-Action Equal Tabs Row with dividers */
     .fb-composer-action-buttons {
-        display: grid !important;
-        grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)) !important;
-        gap: 6px !important;
-        padding-top: 10px !important;
+        display: flex !important;
         width: 100% !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+        padding: 8px 0 0 0 !important;
+        margin-top: 10px !important;
+        gap: 0 !important;
     }
 
     .fb-action-tab-btn {
+        flex: 1 !important;
         display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
-        gap: 5px !important;
-        padding: 7px 4px !important;
-        font-size: 0.73rem !important;
-        border-radius: 8px !important;
-        background: rgba(255, 255, 255, 0.04) !important;
-        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        gap: 6px !important;
+        padding: 8px 4px !important;
+        font-size: 0.82rem !important;
+        border: none !important;
+        background: transparent !important;
+        border-radius: 6px !important;
         white-space: nowrap !important;
+    }
+
+    .fb-action-tab-btn:not(:last-child) {
+        border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
     }
 
     /* Daily Challenge Card */
     .daily-challenge-banner {
         flex-direction: column !important;
         align-items: stretch !important;
-        padding: 12px 14px !important;
+        padding: 14px 16px !important;
         gap: 10px !important;
-        border-radius: 14px !important;
     }
 
     .daily-challenge-banner button {
@@ -2658,49 +2858,47 @@
         justify-content: center !important;
     }
 
-    /* Feed Post Cards */
-    .fb-feed-card {
-        padding: 14px 12px !important;
-        border-radius: 14px !important;
-    }
-
+    /* Feed Post Cards - Authentic Facebook Details */
     .fb-card-title {
-        font-size: 1rem !important;
+        font-size: 1.05rem !important;
+        line-height: 1.35 !important;
     }
 
     .fb-card-text {
-        font-size: 0.86rem !important;
+        font-size: 0.92rem !important;
+        line-height: 1.55 !important;
+        word-break: break-word !important;
+        overflow: visible !important;
     }
 
-    .fb-card-reactions-bar {
-        gap: 4px !important;
-        flex-wrap: wrap !important;
+    .fb-card-media-wrap {
+        margin-left: -16px !important;
+        margin-right: -16px !important;
+        width: calc(100% + 32px) !important;
+        border-radius: 0 !important;
+        border-left: none !important;
+        border-right: none !important;
     }
 
-    .fb-reaction-btn {
-        padding: 5px 8px !important;
-        font-size: 0.72rem !important;
-    }
-
-    /* Worship Stage & Player */
-    .worship-hero-stage {
-        padding: 16px 12px !important;
-        border-radius: 16px !important;
-    }
-
-    .worship-song-row {
-        padding: 10px 10px !important;
-        gap: 8px !important;
-    }
-
-    .worship-song-mood-pill {
-        display: none !important;
-    }
-
+    /* Docked Bottom Audio Bar (Flat 100% width, zero floating overlap) */
     .worship-floating-dock {
-        bottom: 8px !important;
-        width: calc(100% - 16px) !important;
-        padding: 6px 10px !important;
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        border-radius: 0 !important;
+        border-left: none !important;
+        border-right: none !important;
+        border-bottom: none !important;
+        border-top: 1px solid rgba(56, 189, 248, 0.4) !important;
+        background: rgba(11, 15, 25, 0.98) !important;
+        backdrop-filter: blur(20px) !important;
+        padding: 8px 12px !important;
+        z-index: 999 !important;
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.7) !important;
+        animation: none !important;
     }
 
     .worship-dock-btn-label {
@@ -2708,22 +2906,22 @@
     }
 
     .worship-dock-text strong {
-        max-width: 110px !important;
+        max-width: 120px !important;
     }
 
     .worship-dock-text span {
-        max-width: 110px !important;
+        max-width: 120px !important;
     }
 
     .worship-floating-min-bubble {
-        bottom: 12px !important;
-        right: 12px !important;
+        bottom: 14px !important;
+        right: 14px !important;
     }
 
     /* Modals */
     .comm-modal-card {
         width: 100% !important;
-        padding: 18px 14px !important;
+        padding: 20px 16px !important;
         border-radius: 16px !important;
     }
 
