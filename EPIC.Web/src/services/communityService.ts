@@ -606,16 +606,46 @@ export async function fetchCommunityStories(): Promise<CommunityStory[]> {
     ];
 }
 
+const CUSTOM_SHORTS_KEY = "epic_custom_shorts";
+
+export function getCustomShorts(): CommunityShort[] {
+    try {
+        const stored = localStorage.getItem(CUSTOM_SHORTS_KEY);
+        if (stored) return JSON.parse(stored);
+    } catch {}
+    return [];
+}
+
+export function createCommunityShort(shortData: Omit<CommunityShort, "id" | "likes" | "prayers">): CommunityShort {
+    const newShort: CommunityShort = {
+        ...shortData,
+        id: `short-${Date.now()}`,
+        likes: 1,
+        prayers: 1
+    };
+
+    const existing = getCustomShorts();
+    const updated = [newShort, ...existing];
+    localStorage.setItem(CUSTOM_SHORTS_KEY, JSON.stringify(updated));
+
+    // Award +20 faith points for creating a short
+    awardFaithPoints(20, "CREATED_SHORT");
+
+    return newShort;
+}
+
 /**
  * Fetch TikTok-Style Shorts
  */
 export async function fetchCommunityShorts(): Promise<CommunityShort[]> {
+    const customShorts = getCustomShorts();
+    let apiShorts: CommunityShort[] = [];
     try {
         const res = await fetch(`${API_BASE_URL}/public-community/shorts`);
-        if (res.ok) return await res.json();
+        if (res.ok) apiShorts = await res.json();
     } catch {}
 
-    return [
+    const defaults: CommunityShort[] = [
         {
             id: "short-1",
             title: "God Is Fighting For You",
@@ -654,6 +684,22 @@ export async function fetchCommunityShorts(): Promise<CommunityShort[]> {
             duration: "0:30",
             likes: 219,
             prayers: 145
+        },
+        {
+            id: "short-4",
+            title: "From Brokenness to Restoration",
+            speaker: "Brother Mark Anthony",
+            ministry: "Life Testimonies",
+            scripture: "Jeremiah 29:11",
+            scriptureText: "'For I know the plans I have for you,' declares the Lord, 'plans to prosper you and not to harm you, plans to give you hope and a future.'",
+            videoPlaceholderBg: "linear-gradient(135deg, #7c2d12 0%, #c2410c 50%, #f97316 100%)",
+            videoUrl: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=800&q=80",
+            duration: "0:48",
+            likes: 405,
+            prayers: 178
         }
     ];
+
+    const base = apiShorts.length > 0 ? apiShorts : defaults;
+    return [...customShorts, ...base];
 }

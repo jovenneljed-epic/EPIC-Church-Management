@@ -16,7 +16,8 @@ import {
     Trophy,
     Award,
     BookOpen,
-    Users
+    Users,
+    Video
 } from "lucide-react";
 import {
     type CommunityPost,
@@ -33,6 +34,7 @@ import {
     addPostComment,
     fetchCommunityStories,
     fetchCommunityShorts,
+    createCommunityShort,
     getFaithProfile,
     claimDailyChallenge,
     getLadderRank,
@@ -102,6 +104,18 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
     const [photoCompressing, setPhotoCompressing] = useState<boolean>(false);
     const [submittingPost, setSubmittingPost] = useState<boolean>(false);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+    // Create EPIC Short form state
+    const [isCreateShortOpen, setIsCreateShortOpen] = useState<boolean>(false);
+    const [shortTitle, setShortTitle] = useState<string>("");
+    const [shortSpeaker, setShortSpeaker] = useState<string>("");
+    const [shortMinistry, setShortMinistry] = useState<string>("Youth Encounters");
+    const [shortScripture, setShortScripture] = useState<string>("");
+    const [shortScriptureText, setShortScriptureText] = useState<string>("");
+    const [shortVideoUrl, setShortVideoUrl] = useState<string>("");
+    const [shortDuration, setShortDuration] = useState<string>("0:30");
+    const [shortCompressing, setShortCompressing] = useState<boolean>(false);
+    const shortFileInputRef = useRef<HTMLInputElement | null>(null);
 
     // Comment state
     const [expandedComments, setExpandedComments] = useState<Record<number, boolean>>({});
@@ -352,6 +366,58 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
         setFaithProfile(getFaithProfile());
     };
 
+    // Media selector for EPIC Short (vertical video or image)
+    const handleShortMediaSelect = async (files: FileList | null) => {
+        if (!files || files.length === 0) return;
+        const file = files[0];
+        if (file.type.startsWith("video/")) {
+            const url = URL.createObjectURL(file);
+            setShortVideoUrl(url);
+        } else if (file.type.startsWith("image/")) {
+            try {
+                setShortCompressing(true);
+                const compressed = await compressImage(file, 1080, 1920, 0.85);
+                setShortVideoUrl(compressed);
+            } catch {
+                alert("Failed to process image.");
+            } finally {
+                setShortCompressing(false);
+            }
+        } else {
+            alert("Please choose a video file (MP4, WebM) or high-res vertical image.");
+        }
+    };
+
+    // Submit new EPIC Short
+    const handleSubmitShort = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!shortTitle.trim() || !shortScriptureText.trim()) {
+            alert("Please enter a short title and encouraging scripture/message.");
+            return;
+        }
+
+        const created = createCommunityShort({
+            title: shortTitle.trim(),
+            speaker: shortSpeaker.trim() || faithProfile.name || "Believer",
+            ministry: shortMinistry,
+            scripture: shortScripture.trim() || "Scripture Encouragement",
+            scriptureText: shortScriptureText.trim(),
+            videoPlaceholderBg: "linear-gradient(135deg, #1e1b4b 0%, #4c1d95 50%, #0284c7 100%)",
+            videoUrl: shortVideoUrl.trim() || "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=800&q=80",
+            duration: shortDuration.trim() || "0:30"
+        });
+
+        setShorts((prev) => [created, ...prev]);
+        setIsCreateShortOpen(false);
+        setShortTitle("");
+        setShortSpeaker("");
+        setShortScripture("");
+        setShortScriptureText("");
+        setShortVideoUrl("");
+        setFaithProfile(getFaithProfile());
+        setActiveShortIdx(0); // Launch theater immediately!
+    };
+
     return (
         <div className="epic-public-community">
             <PublicHeader onNavigate={onNavigate} />
@@ -434,6 +500,16 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                                 >
                                     <span className="fb-nav-icon">🎥</span>
                                     <span>EPIC Shorts Theater</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    className="fb-nav-item-btn"
+                                    style={{ color: "#38bdf8", fontWeight: 700 }}
+                                    onClick={() => setIsCreateShortOpen(true)}
+                                >
+                                    <span className="fb-nav-icon">➕</span>
+                                    <span>Create EPIC Short (+20 Pts)</span>
                                 </button>
                             </div>
 
@@ -559,6 +635,16 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                                 >
                                     <BookOpen size={17} />
                                     <span>Scripture</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    className="fb-action-tab-btn"
+                                    style={{ color: "#38bdf8" }}
+                                    onClick={() => setIsCreateShortOpen(true)}
+                                >
+                                    <Video size={17} />
+                                    <span>EPIC Short</span>
                                 </button>
                             </div>
                         </div>
@@ -1193,13 +1279,25 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                                     <Flame size={12} style={{ display: "inline", marginRight: 4 }} />
                                     EPIC SHORT
                                 </span>
-                                <button
-                                    type="button"
-                                    className="shorts-close-btn"
-                                    onClick={() => setActiveShortIdx(null)}
-                                >
-                                    ✕
-                                </button>
+                                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                    <button
+                                        type="button"
+                                        className="shorts-create-top-btn"
+                                        onClick={() => {
+                                            setActiveShortIdx(null);
+                                            setIsCreateShortOpen(true);
+                                        }}
+                                    >
+                                        ➕ Upload Short
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="shorts-close-btn"
+                                        onClick={() => setActiveShortIdx(null)}
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="shorts-floating-actions">
@@ -1353,6 +1451,169 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                                 I Agree &amp; Pledge to Support This Fellowship
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Hidden Short Media Picker */}
+            <input
+                type="file"
+                ref={shortFileInputRef}
+                style={{ display: "none" }}
+                accept="video/*,image/*"
+                onChange={(e) => handleShortMediaSelect(e.target.files)}
+            />
+
+            {/* =========================================================
+                CREATE EPIC SHORT MODAL
+                ========================================================= */}
+            {isCreateShortOpen && (
+                <div className="comm-modal-overlay" onClick={() => setIsCreateShortOpen(false)}>
+                    <div className="comm-modal-card" onClick={(e) => e.stopPropagation()}>
+                        <div className="comm-modal-header">
+                            <h2>
+                                <Flame size={20} color="#f43f5e" /> Create &amp; Upload EPIC Short
+                            </h2>
+                            <button
+                                type="button"
+                                className="comm-modal-close"
+                                onClick={() => setIsCreateShortOpen(false)}
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleSubmitShort}>
+                            <div style={{ background: "rgba(56, 189, 248, 0.1)", border: "1px solid rgba(56, 189, 248, 0.25)", borderRadius: 12, padding: "10px 14px", marginBottom: 14, fontSize: "0.8rem", color: "#e0f2fe" }}>
+                                💡 <strong>Spiritual Short Tip:</strong> Share a 30–60s uplifting scripture declaration, sermon soundbite, prayer point, or acoustic praise.
+                            </div>
+
+                            {/* Title */}
+                            <div className="comm-form-group">
+                                <label>Short Title / Theme *</label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. God Is Fighting For You, Morning Grace"
+                                    value={shortTitle}
+                                    onChange={(e) => setShortTitle(e.target.value)}
+                                    required
+                                />
+                            </div>
+
+                            {/* Speaker & Ministry */}
+                            <div className="comm-form-row">
+                                <div className="comm-form-group">
+                                    <label>Speaker / Believer Name *</label>
+                                    <input
+                                        type="text"
+                                        placeholder="e.g. Pastor Ronnel, Sister Grace"
+                                        value={shortSpeaker}
+                                        onChange={(e) => setShortSpeaker(e.target.value)}
+                                        required
+                                    />
+                                </div>
+
+                                <div className="comm-form-group">
+                                    <label>Ministry / Fellowship Group</label>
+                                    <select
+                                        value={shortMinistry}
+                                        onChange={(e) => setShortMinistry(e.target.value)}
+                                    >
+                                        {MINISTRY_GROUPS.map((grp) => (
+                                            <option key={grp} value={grp}>
+                                                {grp}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Scripture Verse & Duration */}
+                            <div className="comm-form-row">
+                                <div className="comm-form-group">
+                                    <label>Scripture Reference (Optional)</label>
+                                    <input
+                                        type="text"
+                                        placeholder="e.g. Exodus 14:14, Psalm 23:1"
+                                        value={shortScripture}
+                                        onChange={(e) => setShortScripture(e.target.value)}
+                                    />
+                                </div>
+
+                                <div className="comm-form-group">
+                                    <label>Duration (Optional)</label>
+                                    <input
+                                        type="text"
+                                        placeholder="e.g. 0:30, 0:45"
+                                        value={shortDuration}
+                                        onChange={(e) => setShortDuration(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="comm-form-group">
+                                <label>Encouraging Scripture Verse or Key Message *</label>
+                                <textarea
+                                    rows={3}
+                                    placeholder="The key message or verse believers will read as the short plays..."
+                                    value={shortScriptureText}
+                                    onChange={(e) => setShortScriptureText(e.target.value)}
+                                    required
+                                />
+                            </div>
+
+                            {/* Video / Media Upload */}
+                            <div className="comm-form-group">
+                                <label>Video Clip or Vertical Background (Upload File)</label>
+                                {!shortVideoUrl ? (
+                                    <div
+                                        className="comm-photo-upload-dropzone"
+                                        onClick={() => shortFileInputRef.current?.click()}
+                                    >
+                                        <Camera size={26} color="#38bdf8" style={{ margin: "0 auto 8px" }} />
+                                        <strong style={{ display: "block", color: "#ffffff", fontSize: "0.85rem" }}>
+                                            {shortCompressing
+                                                ? "Processing Media..."
+                                                : "Click to Select Video or Photo Clip"}
+                                        </strong>
+                                        <span style={{ fontSize: "0.74rem", color: "#94a3b8" }}>
+                                            Supports MP4, WebM, or vertical JPEG/PNG (9:16 recommended)
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <div className="comm-photo-preview-thumbnail">
+                                        <img src={shortVideoUrl} alt="Short Visual Preview" />
+                                        <button
+                                            type="button"
+                                            className="comm-photo-remove-btn"
+                                            onClick={() => setShortVideoUrl("")}
+                                        >
+                                            ✕ Remove Media
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Or paste Video URL */}
+                            <div className="comm-form-group">
+                                <label>Or Paste Video / Image URL (Optional)</label>
+                                <input
+                                    type="url"
+                                    placeholder="https://images.unsplash.com/... or video link"
+                                    value={shortVideoUrl}
+                                    onChange={(e) => setShortVideoUrl(e.target.value)}
+                                />
+                            </div>
+
+                            <button
+                                type="submit"
+                                className="community-create-post-trigger"
+                                style={{ width: "100%", justifyContent: "center", marginTop: 8 }}
+                                disabled={shortCompressing}
+                            >
+                                <Flame size={16} /> Publish to EPIC Shorts Theater (+20 Pts)
+                            </button>
+                        </form>
                     </div>
                 </div>
             )}
