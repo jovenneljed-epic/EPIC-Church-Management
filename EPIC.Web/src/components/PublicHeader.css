@@ -201,6 +201,7 @@
    MOBILE-ONLY MENU DRAWER ITEMS
    ========================================================= */
 
+.epic-mobile-community,
 .epic-mobile-login,
 .epic-mobile-connect {
     display: none;
@@ -270,6 +271,7 @@
         font-size: 14px;
     }
 
+    .epic-mobile-community,
     .epic-mobile-login,
     .epic-mobile-connect {
         display: flex !important;
@@ -406,7 +408,7 @@
     margin: 8px 0 !important;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1260px) {
     .epic-community-header-pill {
         display: none;
     }
