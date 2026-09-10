@@ -27,6 +27,7 @@ import ResourcesPage from "./pages/public/business/ResourcesPage";
 import DemoPage from "./pages/public/business/DemoPage";
 import EventsPage from "./pages/public/EventsPage";
 import GalleryPage from "./pages/public/GalleryPage";
+import CommunityPage from "./pages/public/CommunityPage";
 import AnnouncementsPage from "./pages/public/AnnouncementsPage";
 import GivingPage from "./pages/public/GivingPage";
 
@@ -165,6 +166,7 @@ type PublicPage =
   | "thank-you"
   | "events"
   | "gallery"
+  | "community"
   | "announcements"
   | "ministry-evaluation"
   | "giving"
@@ -247,6 +249,7 @@ const PAGE_ROUTES: Record<Page, string> = {
   "blog-detail": "/blog-detail",
   events: "/events",
   gallery: "/gallery",
+  community: "/community",
   announcements: "/announcements",
   "ministry-evaluation": "/ministry-evaluation",
   giving: "/giving",
@@ -1555,6 +1558,10 @@ const App: React.FC = () => {
     const isGalleryPublicPage =
         normalizedPath ===
         PUBLIC_ROUTES.gallery;
+
+    const isCommunityPublicPage =
+        normalizedPath ===
+        PUBLIC_ROUTES.community;
 
     const isAnnouncementsPublicPage =
         normalizedPath ===
@@ -3430,6 +3437,13 @@ if (normalizedPath === "/gallery") {
         />
     );
 }
+if (normalizedPath === "/community") {
+    return (
+        <CommunityPage
+            onNavigate={handlePublicNavigate}
+        />
+    );
+}
 if (normalizedPath === "/announcements") {
     return (
         <AnnouncementsPage
@@ -3597,6 +3611,14 @@ if (isThankYouPage) {
     if (isGalleryPublicPage) {
         return (
             <GalleryPage
+                onNavigate={handlePublicNavigate}
+            />
+        );
+    }
+
+    if (isCommunityPublicPage) {
+        return (
+            <CommunityPage
                 onNavigate={handlePublicNavigate}
             />
         );

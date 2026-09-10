@@ -1,0 +1,1372 @@
+/* =========================================================================
+   EPIC COMMUNITY — PRIVATE SPIRITUAL SOCIAL PLATFORM & FELLOWSHIP HUB
+   Futuristic Cyber-Glass Theme with Instagram Stories, TikTok Shorts,
+   Facebook Fellowship Feed, Prayer Wall & Faith Points Gamification
+   ========================================================================= */
+
+:root {
+    --comm-bg: #070b14;
+    --comm-card-bg: rgba(15, 23, 42, 0.78);
+    --comm-card-border: rgba(255, 255, 255, 0.09);
+    --comm-card-hover-border: rgba(56, 189, 248, 0.45);
+    --comm-neon-cyan: #00f2fe;
+    --comm-neon-blue: #38bdf8;
+    --comm-neon-indigo: #6366f1;
+    --comm-neon-rose: #f43f5e;
+    --comm-neon-amber: #fbbf24;
+    --comm-neon-emerald: #34d399;
+    --comm-text-main: #f8fafc;
+    --comm-text-muted: #94a3b8;
+}
+
+.epic-public-community {
+    width: 100%;
+    min-height: 100vh;
+    background: radial-gradient(circle at 15% 10%, rgba(0, 242, 254, 0.07) 0%, transparent 40%),
+                radial-gradient(circle at 85% 25%, rgba(244, 63, 94, 0.06) 0%, transparent 45%),
+                radial-gradient(circle at 50% 80%, rgba(56, 189, 248, 0.05) 0%, transparent 50%),
+                #070b14;
+    color: var(--comm-text-main);
+    overflow-x: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+}
+
+.community-container {
+    width: min(1200px, calc(100% - 36px));
+    margin: 0 auto;
+}
+
+/* =========================================================================
+   1. HERO SECTION & COMMUNITY BANNER
+   ========================================================================= */
+
+.community-hero {
+    position: relative;
+    padding: 50px 0 35px;
+    text-align: center;
+    overflow: hidden;
+}
+
+.community-hero::before {
+    content: "";
+    position: absolute;
+    top: -40px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 650px;
+    height: 320px;
+    background: radial-gradient(ellipse, rgba(56, 189, 248, 0.15) 0%, transparent 70%);
+    filter: blur(50px);
+    pointer-events: none;
+}
+
+.community-hero-content {
+    position: relative;
+    z-index: 2;
+    max-width: 860px;
+    margin: 0 auto;
+}
+
+.community-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(56, 189, 248, 0.12);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    color: var(--comm-neon-blue);
+    padding: 6px 16px;
+    border-radius: 30px;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 18px;
+    box-shadow: 0 0 20px rgba(56, 189, 248, 0.2);
+}
+
+.community-hero h1 {
+    font-size: clamp(2.4rem, 5vw, 3.8rem);
+    font-weight: 900;
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+    margin-bottom: 14px;
+    color: #ffffff;
+}
+
+.community-hero h1 span {
+    background: linear-gradient(135deg, #00f2fe 0%, #38bdf8 50%, #f43f5e 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 0 35px rgba(56, 189, 248, 0.35);
+}
+
+.community-hero p {
+    font-size: 1.1rem;
+    line-height: 1.6;
+    color: var(--comm-text-muted);
+    margin: 0 auto 28px;
+    max-width: 680px;
+}
+
+/* =========================================================================
+   2. DAILY FAITH BANNER & CHALLENGE HUD (Gamification)
+   ========================================================================= */
+
+.daily-faith-hud-card {
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 27, 75, 0.7) 100%);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    border-radius: 20px;
+    padding: 24px 28px;
+    margin-bottom: 36px;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5), 0 0 25px rgba(56, 189, 248, 0.1);
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr;
+    gap: 24px;
+    align-items: center;
+}
+
+.daily-faith-left h3 {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #ffffff;
+    margin: 0 0 8px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.verse-of-day-box {
+    background: rgba(7, 11, 20, 0.6);
+    border-left: 3px solid var(--comm-neon-cyan);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin: 10px 0 16px 0;
+}
+
+.verse-quote {
+    font-style: italic;
+    color: #e2e8f0;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin: 0 0 4px 0;
+}
+
+.verse-reference {
+    color: var(--comm-neon-cyan);
+    font-weight: 700;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.daily-challenge-box {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.daily-challenge-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+    color: #ffffff;
+    border: 1px solid rgba(244, 63, 94, 0.5);
+    padding: 9px 18px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 15px rgba(244, 63, 94, 0.35);
+}
+
+.daily-challenge-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 22px rgba(244, 63, 94, 0.55);
+}
+
+.daily-challenge-btn.completed {
+    background: rgba(52, 211, 153, 0.2);
+    border-color: #34d399;
+    color: #34d399;
+    cursor: default;
+    box-shadow: none;
+}
+
+/* Faith Profile HUD Right Column */
+.faith-profile-hud-right {
+    background: rgba(7, 11, 20, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: 18px 20px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+}
+
+.faith-hud-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.faith-stat-val {
+    font-size: 1.45rem;
+    font-weight: 900;
+    line-height: 1;
+    margin-bottom: 4px;
+    font-variant-numeric: tabular-nums;
+}
+
+.faith-stat-val.streak { color: #f59e0b; }
+.faith-stat-val.points { color: var(--comm-neon-cyan); }
+.faith-stat-val.prayers { color: #818cf8; }
+.faith-stat-val.encouraged { color: #f43f5e; }
+
+.faith-stat-lbl {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--comm-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* =========================================================
+   3. INSTAGRAM-STYLE EPIC STORIES CAROUSEL
+   ========================================================= */
+
+.epic-stories-strip {
+    background: rgba(15, 23, 42, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    padding: 18px 20px;
+    margin-bottom: 30px;
+    overflow-x: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(56, 189, 248, 0.3) transparent;
+}
+
+.stories-carousel-track {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    min-width: max-content;
+}
+
+.story-circle-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    background: none;
+    border: none;
+    padding: 0;
+}
+
+.story-circle-item:hover {
+    transform: translateY(-3px) scale(1.03);
+}
+
+.story-ring-wrapper {
+    width: 68px;
+    height: 68px;
+    border-radius: 50%;
+    padding: 3px;
+    background: linear-gradient(45deg, #f43f5e, #ec4899, #8b5cf6, #3b82f6);
+    box-shadow: 0 0 14px rgba(244, 63, 94, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.story-ring-wrapper.seen {
+    background: rgba(255, 255, 255, 0.15);
+    box-shadow: none;
+}
+
+.story-ring-inner-img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #070b14;
+}
+
+.story-circle-title {
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: #e2e8f0;
+    max-width: 80px;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.story-circle-ministry {
+    font-size: 0.68rem;
+    color: var(--comm-neon-blue);
+    font-weight: 600;
+}
+
+/* =========================================================
+   4. FEED CONTROLS & FILTER TABS
+   ========================================================= */
+
+.community-controls-bar {
+    background: rgba(15, 23, 42, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 18px;
+    padding: 16px 20px;
+    margin-bottom: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.community-controls-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.community-feed-tabs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.comm-tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--comm-text-muted);
+    padding: 7px 16px;
+    border-radius: 20px;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.comm-tab-btn:hover {
+    background: rgba(255, 255, 255, 0.09);
+    color: #ffffff;
+}
+
+.comm-tab-btn.active {
+    background: rgba(56, 189, 248, 0.18);
+    border-color: #38bdf8;
+    color: #38bdf8;
+    box-shadow: 0 0 16px rgba(56, 189, 248, 0.25);
+}
+
+.comm-tab-btn.prayer-tab.active {
+    background: rgba(251, 191, 36, 0.2);
+    border-color: #fbbf24;
+    color: #fbbf24;
+    box-shadow: 0 0 16px rgba(251, 191, 36, 0.25);
+}
+
+.comm-tab-btn.shorts-tab.active {
+    background: rgba(244, 63, 94, 0.2);
+    border-color: #f43f5e;
+    color: #f43f5e;
+    box-shadow: 0 0 16px rgba(244, 63, 94, 0.25);
+}
+
+.community-search-box {
+    position: relative;
+    flex: 1;
+    max-width: 320px;
+    min-width: 220px;
+}
+
+.community-search-box input {
+    width: 100%;
+    padding: 8px 36px 8px 38px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(7, 11, 20, 0.7);
+    color: #ffffff;
+    font-size: 0.85rem;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.community-search-box input:focus {
+    border-color: #38bdf8;
+    box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.25);
+}
+
+.community-search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #64748b;
+    pointer-events: none;
+}
+
+.community-create-post-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    border: 1px solid rgba(56, 189, 248, 0.5);
+    color: #ffffff;
+    padding: 8px 18px;
+    border-radius: 12px;
+    font-size: 0.84rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 4px 14px rgba(2, 132, 199, 0.3);
+}
+
+.community-create-post-trigger:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(2, 132, 199, 0.45);
+}
+
+/* =========================================================
+   5. POST COMPOSER QUICK CARD
+   ========================================================= */
+
+.quick-composer-card {
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 18px;
+    padding: 16px 20px;
+    margin-bottom: 28px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.quick-composer-card:hover {
+    border-color: rgba(56, 189, 248, 0.4);
+    background: rgba(15, 23, 42, 0.9);
+}
+
+.composer-user-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #0284c7;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.composer-fake-input {
+    flex: 1;
+    background: rgba(7, 11, 20, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 25px;
+    padding: 11px 18px;
+    color: var(--comm-text-muted);
+    font-size: 0.9rem;
+}
+
+.composer-quick-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.quick-action-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 6px 12px;
+    border-radius: 16px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #cbd5e1;
+}
+
+/* =========================================================
+   6. POST CARDS & CHRISTIAN REACTIONS DOCK
+   ========================================================= */
+
+.community-feed-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.comm-post-card {
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.comm-post-card:hover {
+    border-color: rgba(56, 189, 248, 0.35);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.45);
+}
+
+.comm-post-card.prayer-card {
+    border-left: 4px solid #fbbf24;
+}
+
+.comm-post-card.testimony-card {
+    border-left: 4px solid #f43f5e;
+}
+
+.comm-post-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.comm-author-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.comm-author-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.comm-author-text strong {
+    display: block;
+    color: #ffffff;
+    font-size: 0.95rem;
+}
+
+.comm-author-text span {
+    display: block;
+    color: var(--comm-text-muted);
+    font-size: 0.78rem;
+}
+
+.comm-post-badges {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.comm-type-pill {
+    padding: 4px 12px;
+    border-radius: 14px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.comm-type-pill.prayer {
+    background: rgba(251, 191, 36, 0.18);
+    border: 1px solid rgba(251, 191, 36, 0.5);
+    color: #fbbf24;
+}
+
+.comm-type-pill.testimony {
+    background: rgba(244, 63, 94, 0.18);
+    border: 1px solid rgba(244, 63, 94, 0.5);
+    color: #f43f5e;
+}
+
+.comm-type-pill.devotional {
+    background: rgba(129, 140, 248, 0.18);
+    border: 1px solid rgba(129, 140, 248, 0.5);
+    color: #818cf8;
+}
+
+.comm-type-pill.celebration {
+    background: rgba(52, 211, 153, 0.18);
+    border: 1px solid rgba(52, 211, 153, 0.5);
+    color: #34d399;
+}
+
+.comm-type-pill.moment {
+    background: rgba(56, 189, 248, 0.18);
+    border: 1px solid rgba(56, 189, 248, 0.5);
+    color: #38bdf8;
+}
+
+.comm-post-title {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #ffffff;
+    margin: 0 0 10px 0;
+    line-height: 1.35;
+}
+
+.comm-post-body {
+    font-size: 0.95rem;
+    line-height: 1.65;
+    color: #cbd5e1;
+    margin: 0 0 16px 0;
+    white-space: pre-line;
+}
+
+.comm-scripture-highlight {
+    background: rgba(7, 11, 20, 0.65);
+    border-left: 3px solid #38bdf8;
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin: 0 0 16px 0;
+    font-size: 0.85rem;
+    color: #e0f2fe;
+    font-style: italic;
+}
+
+.comm-post-media-wrap {
+    border-radius: 14px;
+    overflow: hidden;
+    max-height: 420px;
+    margin-bottom: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.comm-post-media-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* Reactions Dock */
+.comm-reactions-dock {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+    padding-top: 14px;
+}
+
+.faith-reaction-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.faith-react-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--comm-text-muted);
+    padding: 6px 12px;
+    border-radius: 18px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.faith-react-btn:hover {
+    background: rgba(255, 255, 255, 0.09);
+    color: #ffffff;
+}
+
+.faith-react-btn.active.encourage {
+    background: rgba(244, 63, 94, 0.2);
+    border-color: #f43f5e;
+    color: #f43f5e;
+}
+
+.faith-react-btn.active.praying {
+    background: rgba(251, 191, 36, 0.2);
+    border-color: #fbbf24;
+    color: #fbbf24;
+}
+
+.faith-react-btn.active.strengthened {
+    background: rgba(52, 211, 153, 0.2);
+    border-color: #34d399;
+    color: #34d399;
+}
+
+.faith-react-btn.active.celebrate {
+    background: rgba(168, 85, 247, 0.2);
+    border-color: #a855f7;
+    color: #a855f7;
+}
+
+.prayer-wall-direct-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.3) 100%);
+    border: 1px solid rgba(251, 191, 36, 0.6);
+    color: #fbbf24;
+    padding: 7px 16px;
+    border-radius: 20px;
+    font-size: 0.8125rem;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.prayer-wall-direct-btn:hover {
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.35) 0%, rgba(245, 158, 11, 0.5) 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(251, 191, 36, 0.3);
+}
+
+.prayer-wall-direct-btn.prayed {
+    background: rgba(52, 211, 153, 0.2);
+    border-color: #34d399;
+    color: #34d399;
+}
+
+.comm-comment-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: none;
+    color: var(--comm-text-muted);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.comm-comment-toggle-btn:hover {
+    color: #38bdf8;
+}
+
+/* Comments Drawer */
+.comm-comments-drawer {
+    margin-top: 18px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    padding-top: 16px;
+}
+
+.comm-comment-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.comm-comment-bubble {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+}
+
+.comment-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 800;
+    flex-shrink: 0;
+}
+
+.comment-body-wrap {
+    background: rgba(7, 11, 20, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 14px;
+    padding: 10px 14px;
+    flex: 1;
+}
+
+.comment-author-name {
+    font-size: 0.8125rem;
+    font-weight: 800;
+    color: #ffffff;
+    margin-bottom: 2px;
+}
+
+.comment-text {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    line-height: 1.45;
+}
+
+.comm-comment-input-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.comm-comment-input-row input {
+    flex: 1;
+    background: rgba(7, 11, 20, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 8px 16px;
+    color: #ffffff;
+    font-size: 0.85rem;
+    outline: none;
+}
+
+.comm-comment-input-row input:focus {
+    border-color: #38bdf8;
+}
+
+.comm-comment-submit-btn {
+    background: #0284c7;
+    color: #ffffff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.comm-comment-submit-btn:hover {
+    background: #0369a1;
+}
+
+/* =========================================================
+   7. INSTAGRAM-STYLE STORY VIEWER MODAL
+   ========================================================= */
+
+.story-viewer-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(3, 7, 18, 0.94);
+    backdrop-filter: blur(28px);
+    z-index: 2100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.story-viewer-hud {
+    position: relative;
+    width: 100%;
+    max-width: 440px;
+    height: 720px;
+    max-height: 90vh;
+    border-radius: 22px;
+    overflow: hidden;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(56, 189, 248, 0.25);
+    background: #000000;
+    display: flex;
+    flex-direction: column;
+}
+
+.story-progress-bar-container {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    right: 14px;
+    z-index: 10;
+    display: flex;
+    gap: 4px;
+}
+
+.story-progress-bar-segment {
+    flex: 1;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.35);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.story-progress-bar-fill {
+    height: 100%;
+    background: #ffffff;
+    width: 0%;
+    animation: storyProgress 5s linear forwards;
+}
+
+@keyframes storyProgress {
+    0% { width: 0%; }
+    100% { width: 100%; }
+}
+
+.story-header-bar {
+    position: absolute;
+    top: 28px;
+    left: 14px;
+    right: 14px;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.story-header-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.story-header-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2px solid #ffffff;
+    object-fit: cover;
+}
+
+.story-header-meta strong {
+    display: block;
+    color: #ffffff;
+    font-size: 0.85rem;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+}
+
+.story-header-meta span {
+    display: block;
+    color: #cbd5e1;
+    font-size: 0.72rem;
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+}
+
+.story-close-btn {
+    background: rgba(0, 0, 0, 0.5);
+    border: none;
+    color: #ffffff;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.story-image-stage {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    cursor: pointer;
+}
+
+.story-stage-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.story-bottom-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 40px 20px 20px;
+    background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.85) 100%);
+    color: #ffffff;
+}
+
+.story-caption-text {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin: 0 0 12px 0;
+}
+
+/* =========================================================
+   8. TIKTOK-STYLE EPIC SHORTS THEATER
+   ========================================================= */
+
+.shorts-theater-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(3, 7, 18, 0.95);
+    backdrop-filter: blur(28px);
+    z-index: 2200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.shorts-theater-card {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+    height: 750px;
+    max-height: 92vh;
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 25px 70px rgba(0, 0, 0, 0.9), 0 0 45px rgba(244, 63, 94, 0.25);
+    background: #000000;
+    display: flex;
+    flex-direction: column;
+}
+
+.shorts-stage-media {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.shorts-video-bg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.shorts-gradient-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        180deg,
+        rgba(7, 11, 20, 0.3) 0%,
+        transparent 40%,
+        rgba(7, 11, 20, 0.9) 100%
+    );
+}
+
+.shorts-header-top {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    right: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 10;
+}
+
+.shorts-badge-pill {
+    background: rgba(244, 63, 94, 0.25);
+    border: 1px solid rgba(244, 63, 94, 0.6);
+    color: #f43f5e;
+    padding: 4px 12px;
+    border-radius: 14px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.shorts-close-btn {
+    background: rgba(0, 0, 0, 0.5);
+    border: none;
+    color: #ffffff;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+/* Shorts Floating Right Reaction Bar */
+.shorts-floating-actions {
+    position: absolute;
+    right: 16px;
+    bottom: 120px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    align-items: center;
+    z-index: 10;
+}
+
+.shorts-action-bubble {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    background: none;
+    border: none;
+    color: #ffffff;
+    cursor: pointer;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.shorts-action-icon-wrap {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(7, 11, 20, 0.7);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.shorts-action-bubble:hover .shorts-action-icon-wrap {
+    background: #f43f5e;
+    transform: scale(1.1);
+}
+
+.shorts-action-bubble span {
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+/* Shorts Info Overlay Bottom */
+.shorts-info-bottom {
+    position: absolute;
+    bottom: 20px;
+    left: 18px;
+    right: 80px;
+    z-index: 10;
+}
+
+.shorts-speaker-strip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.shorts-speaker-strip strong {
+    color: #ffffff;
+    font-size: 0.95rem;
+}
+
+.shorts-speaker-strip span {
+    color: var(--comm-neon-cyan);
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.shorts-scripture-quote {
+    font-style: italic;
+    color: #f1f5f9;
+    font-size: 0.95rem;
+    line-height: 1.45;
+    margin: 0 0 8px 0;
+}
+
+.shorts-scripture-tag {
+    color: var(--comm-neon-amber);
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+/* Vertical Next / Prev Navigation Buttons */
+.shorts-nav-dock {
+    position: absolute;
+    right: -70px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.shorts-nav-arrow-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.shorts-nav-arrow-btn:hover {
+    background: #0284c7;
+    border-color: #38bdf8;
+    transform: scale(1.08);
+}
+
+/* =========================================================
+   9. MODAL DIALOGS: CREATE POST & COMMUNITY STANDARDS
+   ========================================================= */
+
+.comm-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(3, 7, 18, 0.85);
+    backdrop-filter: blur(20px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    padding: 20px;
+}
+
+.comm-modal-card {
+    background: #0b1120;
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    box-shadow: 0 25px 70px rgba(0, 0, 0, 0.8), 0 0 45px rgba(56, 189, 248, 0.2);
+    border-radius: 24px;
+    width: 100%;
+    max-width: 620px;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 28px;
+}
+
+.comm-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 14px;
+}
+
+.comm-modal-header h2 {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #ffffff;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.comm-modal-close {
+    background: rgba(255, 255, 255, 0.08);
+    border: none;
+    color: #ffffff;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.comm-type-selector-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+}
+
+.type-select-pill {
+    padding: 6px 14px;
+    border-radius: 16px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--comm-text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.type-select-pill.active {
+    background: rgba(56, 189, 248, 0.2);
+    border-color: #38bdf8;
+    color: #38bdf8;
+}
+
+.comm-form-group {
+    margin-bottom: 14px;
+}
+
+.comm-form-group label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #cbd5e1;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 6px;
+}
+
+.comm-form-group input,
+.comm-form-group select,
+.comm-form-group textarea {
+    width: 100%;
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    padding: 10px 14px;
+    color: #ffffff;
+    font-size: 0.875rem;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.comm-form-group input:focus,
+.comm-form-group select:focus,
+.comm-form-group textarea:focus {
+    border-color: #38bdf8;
+    box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+}
+
+.comm-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+/* =========================================================
+   10. RESPONSIVE DESIGN
+   ========================================================= */
+
+@media (max-width: 900px) {
+    .daily-faith-hud-card {
+        grid-template-columns: 1fr;
+    }
+
+    .shorts-nav-dock {
+        position: static;
+        transform: none;
+        flex-direction: row;
+        justify-content: center;
+        margin-top: 14px;
+    }
+}
+
+@media (max-width: 640px) {
+    .faith-profile-hud-right {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .comm-reactions-dock {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .quick-composer-card {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .composer-quick-actions {
+        width: 100%;
+        overflow-x: auto;
+    }
+}

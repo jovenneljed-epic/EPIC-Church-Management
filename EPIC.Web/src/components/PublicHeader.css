@@ -332,3 +332,82 @@
         font-size: 11.5px;
     }
 }
+
+/* =========================================================
+   EPIC COMMUNITY HEADER BUTTONS
+   ========================================================= */
+
+.epic-community-nav-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    color: #0284c7 !important;
+    font-weight: 800 !important;
+    position: relative;
+}
+
+.epic-community-nav-btn:hover {
+    color: #0369a1 !important;
+}
+
+.community-nav-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #00f2fe;
+    box-shadow: 0 0 8px #00f2fe;
+    animation: communityPulse 1.8s infinite;
+}
+
+@keyframes communityPulse {
+    0% { transform: scale(0.9); opacity: 0.8; }
+    50% { transform: scale(1.3); opacity: 1; }
+    100% { transform: scale(0.9); opacity: 0.8; }
+}
+
+.epic-community-header-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: linear-gradient(135deg, rgba(2, 132, 199, 0.1) 0%, rgba(225, 29, 72, 0.12) 100%);
+    border: 1px solid rgba(2, 132, 199, 0.35);
+    color: #0284c7;
+    padding: 7px 14px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    box-shadow: 0 2px 10px rgba(2, 132, 199, 0.12);
+}
+
+.epic-community-header-pill:hover {
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+    color: #ffffff;
+    border-color: #0284c7;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(2, 132, 199, 0.35);
+}
+
+.community-pill-heart {
+    font-size: 0.9rem;
+    animation: communityPulse 2s infinite ease-in-out;
+}
+
+.epic-mobile-community {
+    background: linear-gradient(135deg, rgba(2, 132, 199, 0.12) 0%, rgba(225, 29, 72, 0.12) 100%) !important;
+    border: 1px solid rgba(2, 132, 199, 0.3) !important;
+    color: #0284c7 !important;
+    font-weight: 800 !important;
+    text-align: center !important;
+    padding: 12px 16px !important;
+    border-radius: 12px !important;
+    margin: 8px 0 !important;
+}
+
+@media (max-width: 900px) {
+    .epic-community-header-pill {
+        display: none;
+    }
+}
