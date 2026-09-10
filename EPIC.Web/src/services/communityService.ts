@@ -393,11 +393,16 @@ export async function fetchCommunityFeed(
         const res = await fetch(`${API_BASE_URL}/public-community/feed?${params.toString()}`);
         if (res.ok) {
             const data: CommunityPost[] = await res.json();
-            const decorated = data.map((p) => ({
-                ...p,
-                myReaction: userReactions[p.id],
-                myPrayed: !!userPrayed[p.id]
-            }));
+            const deletedPosts = getDeletedPostIds();
+            const deletedComments = getDeletedCommentIds();
+            const decorated = data
+                .filter((p) => !deletedPosts.includes(p.id))
+                .map((p) => ({
+                    ...p,
+                    comments: (p.comments || []).filter((c) => !deletedComments.includes(c.id)),
+                    myReaction: userReactions[p.id],
+                    myPrayed: !!userPrayed[p.id]
+                }));
             localStorage.setItem(CACHED_FEED_KEY, JSON.stringify(decorated));
             return decorated;
         }
@@ -407,7 +412,17 @@ export async function fetchCommunityFeed(
 
     try {
         const raw = localStorage.getItem(CACHED_FEED_KEY);
-        if (raw) return JSON.parse(raw);
+        if (raw) {
+            const parsed: CommunityPost[] = JSON.parse(raw);
+            const deletedPosts = getDeletedPostIds();
+            const deletedComments = getDeletedCommentIds();
+            return parsed
+                .filter((p) => !deletedPosts.includes(p.id))
+                .map((p) => ({
+                    ...p,
+                    comments: (p.comments || []).filter((c) => !deletedComments.includes(c.id))
+                }));
+        }
     } catch {}
 
     return [];
@@ -701,5 +716,69 @@ export async function fetchCommunityShorts(): Promise<CommunityShort[]> {
     ];
 
     const base = apiShorts.length > 0 ? apiShorts : defaults;
-    return [...customShorts, ...base];
+    const all = [...customShorts, ...base];
+    const deletedShorts = getDeletedShortIds();
+    return all.filter((s) => !deletedShorts.includes(s.id));
+}
+
+
+// ============================================================
+// ADMIN COMMUNITY MODERATION SYSTEM (POSTS, COMMENTS, SHORTS)
+// ============================================================
+const DELETED_POSTS_KEY = "epic_community_deleted_posts";
+const DELETED_COMMENTS_KEY = "epic_community_deleted_comments";
+const DELETED_SHORTS_KEY = "epic_community_deleted_shorts";
+
+export function getDeletedPostIds(): number[] {
+    try {
+        const raw = localStorage.getItem(DELETED_POSTS_KEY);
+        if (raw) return JSON.parse(raw);
+    } catch {}
+    return [];
+}
+
+export function adminDeletePost(postId: number): void {
+    const deleted = getDeletedPostIds();
+    if (!deleted.includes(postId)) {
+        deleted.push(postId);
+        try {
+            localStorage.setItem(DELETED_POSTS_KEY, JSON.stringify(deleted));
+        } catch {}
+    }
+}
+
+export function getDeletedCommentIds(): number[] {
+    try {
+        const raw = localStorage.getItem(DELETED_COMMENTS_KEY);
+        if (raw) return JSON.parse(raw);
+    } catch {}
+    return [];
+}
+
+export function adminDeleteComment(commentId: number): void {
+    const deleted = getDeletedCommentIds();
+    if (!deleted.includes(commentId)) {
+        deleted.push(commentId);
+        try {
+            localStorage.setItem(DELETED_COMMENTS_KEY, JSON.stringify(deleted));
+        } catch {}
+    }
+}
+
+export function getDeletedShortIds(): string[] {
+    try {
+        const raw = localStorage.getItem(DELETED_SHORTS_KEY);
+        if (raw) return JSON.parse(raw);
+    } catch {}
+    return [];
+}
+
+export function adminDeleteShort(shortId: string): void {
+    const deleted = getDeletedShortIds();
+    if (!deleted.includes(shortId)) {
+        deleted.push(shortId);
+        try {
+            localStorage.setItem(DELETED_SHORTS_KEY, JSON.stringify(deleted));
+        } catch {}
+    }
 }

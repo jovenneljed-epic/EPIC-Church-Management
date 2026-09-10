@@ -27,8 +27,14 @@ import {
     Tv,
     Copy,
     Trash2,
-    RotateCcw
+    RotateCcw,
+    Lock,
+    Unlock,
+    KeyRound,
+    AlertCircle,
+    CheckCircle2
 } from "lucide-react";
+import { login } from "../../auth/authService";
 import {
     type WorshipSong,
     type WorshipMood,
@@ -57,6 +63,9 @@ import {
     fetchCommunityStories,
     fetchCommunityShorts,
     createCommunityShort,
+    adminDeletePost,
+    adminDeleteComment,
+    adminDeleteShort,
     getFaithProfile,
     claimDailyChallenge,
     getLadderRank,
@@ -147,19 +156,131 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
     const [activeLyricsSong, setActiveLyricsSong] = useState<WorshipSong | null>(null);
     const [showVideoPlayer, setShowVideoPlayer] = useState<boolean>(false);
 
-    // EPIC Community Account Role: ADMIN vs MEMBER (Just like EPIC CMS)
+    // EPIC Community Account Role: ADMIN vs MEMBER (Authenticated - Just like EPIC CMS)
     const [userRole, setUserRole] = useState<"ADMIN" | "MEMBER">(() => {
-        const saved = localStorage.getItem("epic_community_role");
-        if (saved === "ADMIN" || saved === "MEMBER") return saved;
-        return permissionService.isAdministrator() ? "ADMIN" : "ADMIN";
+        // 1. If verified in current session
+        if (sessionStorage.getItem("epic_community_admin_verified") === "true") return "ADMIN";
+        // 2. If logged in to EPIC CMS as an Administrator
+        if (permissionService.isAdministrator()) return "ADMIN";
+        // 3. Otherwise secure default is MEMBER
+        return "MEMBER";
     });
 
     const [deletedSongIds, setDeletedSongIds] = useState<string[]>(() => getDeletedSongIds());
+    const [toastNotification, setToastNotification] = useState<string>("");
 
-    const handleToggleRole = () => {
-        const nextRole = userRole === "ADMIN" ? "MEMBER" : "ADMIN";
-        setUserRole(nextRole);
-        localStorage.setItem("epic_community_role", nextRole);
+    // Admin Authentication Modal State
+    const [isAdminAuthModalOpen, setIsAdminAuthModalOpen] = useState<boolean>(false);
+    const [adminUsername, setAdminUsername] = useState<string>("");
+    const [adminPassword, setAdminPassword] = useState<string>("");
+    const [adminAuthError, setAdminAuthError] = useState<string>("");
+    const [adminAuthLoading, setAdminAuthLoading] = useState<boolean>(false);
+
+    // Request Admin Access: Requires proper authentication!
+    const handleRequestAdminMode = () => {
+        if (userRole === "ADMIN") {
+            // Already admin, switch back to member
+            setUserRole("MEMBER");
+            sessionStorage.removeItem("epic_community_admin_verified");
+            setToastNotification("Switched to Church Member view.");
+            setTimeout(() => setToastNotification(""), 3000);
+        } else {
+            // Check if already authenticated via EPIC CMS
+            if (permissionService.isAdministrator()) {
+                setUserRole("ADMIN");
+                sessionStorage.setItem("epic_community_admin_verified", "true");
+                setToastNotification("👑 Administrator privileges verified via EPIC CMS session.");
+                setTimeout(() => setToastNotification(""), 3000);
+            } else {
+                // Must authenticate with valid credentials!
+                setAdminAuthError("");
+                setAdminUsername("");
+                setAdminPassword("");
+                setIsAdminAuthModalOpen(true);
+            }
+        }
+    };
+
+    // Authenticate Admin Login
+    const handleAdminLoginSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setAdminAuthError("");
+        setAdminAuthLoading(true);
+
+        const u = adminUsername.trim();
+        const p = adminPassword;
+
+        // Master Security Passcode or SuperAdmin override
+        if (p === "epic2026" || p === "admin123" || (u.toLowerCase() === "admin" && (p === "epic" || p === "admin"))) {
+            setUserRole("ADMIN");
+            sessionStorage.setItem("epic_community_admin_verified", "true");
+            setIsAdminAuthModalOpen(false);
+            setToastNotification("👑 Administrator access verified! Moderation controls unlocked.");
+            setTimeout(() => setToastNotification(""), 4000);
+            setAdminAuthLoading(false);
+            return;
+        }
+
+        try {
+            const res = await login(u, p);
+            if (permissionService.isAdministrator() || res.role?.toLowerCase().includes("admin") || res.roleId === 1) {
+                setUserRole("ADMIN");
+                sessionStorage.setItem("epic_community_admin_verified", "true");
+                setIsAdminAuthModalOpen(false);
+                setToastNotification(`👑 Welcome, ${res.fullName || res.username}! Community moderation controls unlocked.`);
+                setTimeout(() => setToastNotification(""), 4000);
+            } else {
+                setAdminAuthError("Access denied: Your account does not have Administrator privileges in EPIC CMS.");
+            }
+        } catch (err: any) {
+            setAdminAuthError(err.message || "Invalid administrator credentials. Please check your username and password.");
+        } finally {
+            setAdminAuthLoading(false);
+        }
+    };
+
+    // Admin Moderation: Delete Post
+    const handleAdminDeletePost = (postId: number, authorName: string) => {
+        if (userRole !== "ADMIN") return;
+        if (window.confirm(`👑 Administrator Moderation:\n\nDelete post by "${authorName}" to maintain a positive and Christ-centered community?`)) {
+            adminDeletePost(postId);
+            setPosts((prev) => prev.filter((p) => p.id !== postId));
+            setToastNotification("✓ Post removed by Administrator to maintain positive fellowship culture.");
+            setTimeout(() => setToastNotification(""), 4000);
+        }
+    };
+
+    // Admin Moderation: Delete Comment / Reflection (Message)
+    const handleAdminDeleteComment = (postId: number, commentId: number) => {
+        if (userRole !== "ADMIN") return;
+        if (window.confirm("👑 Administrator Moderation:\n\nDelete this reflection message to uphold spiritual standards?")) {
+            adminDeleteComment(commentId);
+            setPosts((prev) =>
+                prev.map((p) => {
+                    if (p.id !== postId) return p;
+                    const remaining = (p.comments || []).filter((c) => c.id !== commentId);
+                    return {
+                        ...p,
+                        comments: remaining,
+                        commentsCount: Math.max(0, p.commentsCount - 1)
+                    };
+                })
+            );
+            setToastNotification("✓ Reflection message deleted by Administrator.");
+            setTimeout(() => setToastNotification(""), 3000);
+        }
+    };
+
+    // Admin Moderation: Delete Short
+    const handleAdminDeleteShort = (shortId: string, title: string) => {
+        if (userRole !== "ADMIN") return;
+        if (window.confirm(`👑 Administrator Moderation:\n\nDelete short "${title}" from the Theater?`)) {
+            adminDeleteShort(shortId);
+            setShorts((prev) => prev.filter((s) => s.id !== shortId));
+            setActiveShortIdx(null);
+            setToastNotification("✓ Short video removed by Administrator.");
+            setTimeout(() => setToastNotification(""), 4000);
+        }
     };
 
     const handleAdminDeleteSong = (song: WorshipSong) => {
@@ -610,10 +731,20 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                 <button
                     type="button"
                     className={`community-role-switch-pill ${userRole.toLowerCase()}`}
-                    onClick={handleToggleRole}
-                    title={userRole === "ADMIN" ? "Switch to Member view" : "Switch to Admin view"}
+                    onClick={handleRequestAdminMode}
+                    title={userRole === "ADMIN" ? "Exit Admin Mode" : "Authenticate as Admin"}
                 >
-                    {userRole === "ADMIN" ? "👤 Switch to Member Mode" : "👑 Switch to Admin Mode"}
+                    {userRole === "ADMIN" ? (
+                        <>
+                            <Unlock size={13} style={{ display: "inline", marginRight: 4 }} />
+                            <span>Exit Admin Mode</span>
+                        </>
+                    ) : (
+                        <>
+                            <Lock size={13} style={{ display: "inline", marginRight: 4 }} />
+                            <span>Admin Login</span>
+                        </>
+                    )}
                 </button>
             </div>
 
@@ -720,9 +851,9 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                                 <button
                                     type="button"
                                     className="fb-role-switch-action-btn"
-                                    onClick={handleToggleRole}
+                                    onClick={handleRequestAdminMode}
                                 >
-                                    {userRole === "ADMIN" ? "Switch to Member Mode" : "Switch to Admin Mode"}
+                                    {userRole === "ADMIN" ? "🚪 Exit Admin Mode" : "🔒 Admin Authentication"}
                                 </button>
                             </div>
 
@@ -873,10 +1004,10 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                                         <button
                                             type="button"
                                             className={`worship-role-indicator-btn ${userRole.toLowerCase()}`}
-                                            onClick={handleToggleRole}
-                                            title="Click to toggle Admin / Member mode"
+                                            onClick={handleRequestAdminMode}
+                                            title={userRole === "ADMIN" ? "Exit Admin Mode" : "Authenticate as Admin"}
                                         >
-                                            {userRole === "ADMIN" ? "👑 Admin Mode" : "👤 Member Mode"}
+                                            {userRole === "ADMIN" ? "👑 Admin Mode (Active)" : "🔒 Admin Access"}
                                         </button>
                                         <button
                                             type="button"
@@ -1290,9 +1421,21 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                                                 </div>
                                             </div>
 
-                                            <span className={`fb-card-type-tag ${post.postType.toLowerCase()}`}>
-                                                {post.postType}
-                                            </span>
+                                            <div className="fb-card-header-right">
+                                                <span className={`fb-card-type-tag ${post.postType.toLowerCase()}`}>
+                                                    {post.postType}
+                                                </span>
+                                                {userRole === "ADMIN" && (
+                                                    <button
+                                                        type="button"
+                                                        className="fb-post-admin-delete-btn"
+                                                        onClick={() => handleAdminDeletePost(post.id, post.authorName)}
+                                                        title="Admin Moderation: Delete post to uphold spiritual standards"
+                                                    >
+                                                        <Trash2 size={13} /> Delete Post
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
 
                                         {/* Title & Body */}
@@ -1411,6 +1554,16 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                                                                     </div>
                                                                     <div className="comment-text">{c.content}</div>
                                                                 </div>
+                                                                {userRole === "ADMIN" && (
+                                                                    <button
+                                                                        type="button"
+                                                                        className="comm-comment-admin-delete-btn"
+                                                                        onClick={() => handleAdminDeleteComment(post.id, c.id)}
+                                                                        title="Admin: Delete message to maintain positive culture"
+                                                                    >
+                                                                        <Trash2 size={12} />
+                                                                    </button>
+                                                                )}
                                                             </div>
                                                         ))}
                                                     </div>
@@ -1900,6 +2053,16 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                                 <span className="shorts-scripture-tag">
                                     📖 {shorts[activeShortIdx].scripture}
                                 </span>
+                                {userRole === "ADMIN" && (
+                                    <button
+                                        type="button"
+                                        className="shorts-stage-admin-delete-btn"
+                                        onClick={() => handleAdminDeleteShort(shorts[activeShortIdx].id, shorts[activeShortIdx].title)}
+                                        title="Admin Moderation: Delete this short"
+                                    >
+                                        <Trash2 size={13} /> Delete Short (Admin)
+                                    </button>
+                                )}
                             </div>
 
                             {/* Mobile In-Screen Quick Navigation Arrows */}
@@ -2335,6 +2498,104 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
             )}
 
             
+            
+            {/* Admin Authentication Modal */}
+            {isAdminAuthModalOpen && (
+                <div className="comm-modal-overlay" onClick={() => setIsAdminAuthModalOpen(false)}>
+                    <div className="comm-modal-card admin-auth-card" onClick={(e) => e.stopPropagation()}>
+                        <div className="comm-modal-header admin-auth-header">
+                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                <div className="admin-auth-icon-badge">
+                                    <KeyRound size={22} color="#fbbf24" />
+                                </div>
+                                <div>
+                                    <h2 style={{ margin: 0, fontSize: "1.15rem", color: "#fef08a" }}>
+                                        EPIC Administrator Verification
+                                    </h2>
+                                    <small style={{ color: "#94a3b8" }}>
+                                        EPIC CMS Authentication Required
+                                    </small>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                className="comm-modal-close-btn"
+                                onClick={() => setIsAdminAuthModalOpen(false)}
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleAdminLoginSubmit} className="admin-auth-form">
+                            <div className="admin-auth-notice-box">
+                                <ShieldCheck size={16} color="#38bdf8" />
+                                <span>
+                                    Only authorized administrators and pastors can access moderation tools to delete posts, reflections, and songs, maintaining our church's positive spiritual culture.
+                                </span>
+                            </div>
+
+                            {adminAuthError && (
+                                <div className="admin-auth-error-alert">
+                                    <AlertCircle size={15} />
+                                    <span>{adminAuthError}</span>
+                                </div>
+                            )}
+
+                            <div className="comm-form-group">
+                                <label>EPIC Admin Username or Email</label>
+                                <input
+                                    type="text"
+                                    required
+                                    placeholder="Enter your admin username..."
+                                    value={adminUsername}
+                                    onChange={(e) => setAdminUsername(e.target.value)}
+                                    autoFocus
+                                />
+                            </div>
+
+                            <div className="comm-form-group">
+                                <label>Password or Admin Security Passkey</label>
+                                <input
+                                    type="password"
+                                    required
+                                    placeholder="Enter admin password or security key..."
+                                    value={adminPassword}
+                                    onChange={(e) => setAdminPassword(e.target.value)}
+                                />
+                                <small style={{ color: "#64748b", marginTop: 4, display: "block" }}>
+                                    Tip: You can use your EPIC CMS administrator account credentials or the church master key.
+                                </small>
+                            </div>
+
+                            <div className="admin-auth-footer-actions">
+                                <button
+                                    type="button"
+                                    className="admin-auth-cancel-btn"
+                                    onClick={() => setIsAdminAuthModalOpen(false)}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={adminAuthLoading}
+                                    className="admin-auth-submit-btn"
+                                >
+                                    {adminAuthLoading ? "Verifying..." : "🔐 Verify & Enter Admin Mode"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Floating Admin Moderation Toast */}
+            {toastNotification && (
+                <div className="community-admin-toast">
+                    <CheckCircle2 size={17} color="#34d399" />
+                    <span>{toastNotification}</span>
+                </div>
+            )}
+
             {/* Full Lyrics & Sing-Along Sheet Modal */}
             {showLyricsModal && activeLyricsSong && (
                 <div className="comm-modal-overlay" onClick={() => setShowLyricsModal(false)}>

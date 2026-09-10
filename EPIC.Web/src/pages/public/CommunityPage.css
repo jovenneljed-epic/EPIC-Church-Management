@@ -3674,3 +3674,201 @@
     background: #ef4444;
     color: #ffffff;
 }
+
+
+/* =========================================================================
+   SECURE ADMIN AUTHENTICATION MODAL & FULL MODERATION STYLING
+   ========================================================================= */
+.fb-card-header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.fb-post-admin-delete-btn {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.2s ease;
+}
+
+.fb-post-admin-delete-btn:hover {
+    background: #ef4444;
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+}
+
+.comm-comment-admin-delete-btn {
+    background: none;
+    border: none;
+    color: #64748b;
+    padding: 4px 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    align-self: flex-start;
+}
+
+.comm-comment-admin-delete-btn:hover {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.shorts-stage-admin-delete-btn {
+    background: rgba(239, 68, 68, 0.2);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    padding: 6px 12px;
+    border-radius: 18px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 10px;
+    transition: all 0.2s ease;
+}
+
+.shorts-stage-admin-delete-btn:hover {
+    background: #ef4444;
+    color: #ffffff;
+}
+
+/* Admin Auth Modal Card */
+.admin-auth-card {
+    max-width: 480px;
+    background: #0f172a;
+    border: 1px solid rgba(234, 179, 8, 0.4);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85);
+}
+
+.admin-auth-header {
+    background: linear-gradient(135deg, rgba(234, 179, 8, 0.15) 0%, rgba(30, 41, 59, 0.6) 100%);
+    border-bottom: 1px solid rgba(234, 179, 8, 0.25);
+    padding: 16px 20px;
+}
+
+.admin-auth-icon-badge {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(234, 179, 8, 0.2);
+    border: 1px solid rgba(234, 179, 8, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.admin-auth-form {
+    padding: 20px;
+}
+
+.admin-auth-notice-box {
+    background: rgba(56, 189, 248, 0.1);
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    color: #bae6fd;
+    line-height: 1.5;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.admin-auth-error-alert {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    color: #fca5a5;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.admin-auth-footer-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.admin-auth-cancel-btn {
+    background: rgba(51, 65, 85, 0.8);
+    color: #cbd5e1;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 9px 16px;
+    border-radius: 8px;
+    font-size: 0.86rem;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.admin-auth-cancel-btn:hover {
+    background: rgba(71, 85, 105, 0.9);
+    color: #ffffff;
+}
+
+.admin-auth-submit-btn {
+    background: linear-gradient(135deg, #eab308 0%, #f59e0b 100%);
+    color: #0f172a;
+    border: none;
+    padding: 9px 20px;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(234, 179, 8, 0.4);
+    transition: all 0.2s ease;
+}
+
+.admin-auth-submit-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(234, 179, 8, 0.6);
+}
+
+.admin-auth-submit-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Floating Moderation Toast */
+.community-admin-toast {
+    position: fixed;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #0f172a;
+    border: 1px solid rgba(52, 211, 153, 0.5);
+    color: #f1f5f9;
+    padding: 10px 18px;
+    border-radius: 30px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+    z-index: 100000;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.88rem;
+    font-weight: 700;
+    animation: fadeIn 0.25s ease-out;
+}
