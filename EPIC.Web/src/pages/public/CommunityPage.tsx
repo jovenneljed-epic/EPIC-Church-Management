@@ -17,8 +17,22 @@ import {
     Award,
     BookOpen,
     Users,
-    Video
+    Video,
+    Music,
+    Play,
+    Pause,
+    SkipForward,
+    SkipBack,
+    Volume2,
+    VolumeX
 } from "lucide-react";
+import {
+    type WorshipSong,
+    type WorshipMood,
+    WORSHIP_PLAYLIST,
+    MOOD_CATEGORIES,
+    spiritualSynth
+} from "../../services/worshipService";
 import {
     type CommunityPost,
     type CommunityStory,
@@ -117,6 +131,18 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
     const [shortCompressing, setShortCompressing] = useState<boolean>(false);
     const shortFileInputRef = useRef<HTMLInputElement | null>(null);
 
+    // Mobile Responsive Active Tab (FEED, PRAYER, LADDER, WORSHIP)
+    const [mobileTab, setMobileTab] = useState<"FEED" | "PRAYER" | "LADDER" | "WORSHIP">("FEED");
+
+    // Christian Worship Music Player State
+    const [worshipMood, setWorshipMood] = useState<WorshipMood>("ALL");
+    const [currentSong, setCurrentSong] = useState<WorshipSong>(WORSHIP_PLAYLIST[0]);
+    const [isPlaying, setIsPlaying] = useState<boolean>(false);
+    const [isMuted, setIsMuted] = useState<boolean>(false);
+    const [songProgress, setSongProgress] = useState<number>(0);
+    const [useAmbientSynth, setUseAmbientSynth] = useState<boolean>(false);
+    const audioRef = useRef<HTMLAudioElement | null>(null);
+
     // Comment state
     const [expandedComments, setExpandedComments] = useState<Record<number, boolean>>({});
     const [commentInputs, setCommentInputs] = useState<Record<number, string>>({});
@@ -212,6 +238,75 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
     const leaderboard: LeaderboardMember[] = useMemo(() => {
         return getCommunityLeaderboard(faithProfile.faithPoints, faithProfile.name);
     }, [faithProfile.faithPoints, faithProfile.name]);
+
+    // Filtered worship songs by mood
+    const filteredSongs = useMemo(() => {
+        if (worshipMood === "ALL") return WORSHIP_PLAYLIST;
+        return WORSHIP_PLAYLIST.filter((s) => s.mood === worshipMood);
+    }, [worshipMood]);
+
+    // Play selected song automatically
+    const handleSelectSong = (song: WorshipSong) => {
+        setCurrentSong(song);
+        setIsPlaying(true);
+        setSongProgress(0);
+
+        if (useAmbientSynth) {
+            spiritualSynth.playWorshipChords(song.chordsKey);
+        } else {
+            if (audioRef.current) {
+                audioRef.current.src = song.audioUrl;
+                audioRef.current.currentTime = 0;
+                audioRef.current.play().catch(() => {
+                    setUseAmbientSynth(true);
+                    spiritualSynth.playWorshipChords(song.chordsKey);
+                });
+            }
+        }
+    };
+
+    // Toggle Play / Pause
+    const handleTogglePlay = () => {
+        if (isPlaying) {
+            setIsPlaying(false);
+            if (audioRef.current) audioRef.current.pause();
+            spiritualSynth.stop();
+        } else {
+            setIsPlaying(true);
+            if (useAmbientSynth) {
+                spiritualSynth.playWorshipChords(currentSong.chordsKey);
+            } else {
+                if (audioRef.current) {
+                    audioRef.current.play().catch(() => {
+                        setUseAmbientSynth(true);
+                        spiritualSynth.playWorshipChords(currentSong.chordsKey);
+                    });
+                }
+            }
+        }
+    };
+
+    // Next Track
+    const handleNextSong = () => {
+        const idx = WORSHIP_PLAYLIST.findIndex((s) => s.id === currentSong.id);
+        const nextIdx = (idx + 1) % WORSHIP_PLAYLIST.length;
+        handleSelectSong(WORSHIP_PLAYLIST[nextIdx]);
+    };
+
+    // Previous Track
+    const handlePrevSong = () => {
+        const idx = WORSHIP_PLAYLIST.findIndex((s) => s.id === currentSong.id);
+        const prevIdx = (idx - 1 + WORSHIP_PLAYLIST.length) % WORSHIP_PLAYLIST.length;
+        handleSelectSong(WORSHIP_PLAYLIST[prevIdx]);
+    };
+
+    // Toggle Mute
+    const handleToggleMute = () => {
+        const next = !isMuted;
+        setIsMuted(next);
+        if (audioRef.current) audioRef.current.muted = next;
+        spiritualSynth.setVolume(next ? 0 : 0.3);
+    };
 
     // Claim daily challenge
     const handleClaimChallenge = () => {
@@ -431,9 +526,69 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                 onChange={(e) => handlePhotoSelect(e.target.files)}
             />
 
+            {/* Real Worship Audio Element for Automatic Playback */}
+            <audio
+                ref={audioRef}
+                src={currentSong.audioUrl}
+                onTimeUpdate={() => {
+                    if (audioRef.current && audioRef.current.duration) {
+                        setSongProgress((audioRef.current.currentTime / audioRef.current.duration) * 100);
+                    }
+                }}
+                onEnded={handleNextSong}
+            />
+
+            {/* Mobile View Segmented Tab Bar (Visible on mobile <= 820px) */}
+            <div className="comm-mobile-tabs-bar">
+                <button
+                    type="button"
+                    className={`comm-mobile-tab-btn ${mobileTab === "FEED" ? "active" : ""}`}
+                    onClick={() => {
+                        setMobileTab("FEED");
+                        setActiveTab("ALL");
+                    }}
+                >
+                    <span className="comm-mob-tab-icon">📰</span>
+                    <span>Feed</span>
+                </button>
+
+                <button
+                    type="button"
+                    className={`comm-mobile-tab-btn ${mobileTab === "PRAYER" ? "active" : ""}`}
+                    onClick={() => {
+                        setMobileTab("PRAYER");
+                        setActiveTab("PRAYER");
+                    }}
+                >
+                    <span className="comm-mob-tab-icon">🙏</span>
+                    <span>Prayers</span>
+                </button>
+
+                <button
+                    type="button"
+                    className={`comm-mobile-tab-btn ${mobileTab === "LADDER" ? "active" : ""}`}
+                    onClick={() => setMobileTab("LADDER")}
+                >
+                    <span className="comm-mob-tab-icon">🏆</span>
+                    <span>Ladder</span>
+                </button>
+
+                <button
+                    type="button"
+                    className={`comm-mobile-tab-btn ${mobileTab === "WORSHIP" ? "active" : ""}`}
+                    onClick={() => {
+                        setMobileTab("WORSHIP");
+                        setActiveTab("WORSHIP");
+                    }}
+                >
+                    <span className="comm-mob-tab-icon">🎵</span>
+                    <span>Worship</span>
+                </button>
+            </div>
+
             <main className="community-dashboard-container">
                 {/* 3-COLUMN FACEBOOK DASHBOARD GRID */}
-                <div className="community-fb-grid">
+                <div className={`community-fb-grid mobile-${mobileTab.toLowerCase()}`}>
                     {/* =========================================================
                         COLUMN 1: LEFT SIDEBAR (Shortcuts & Ministry Groups)
                         ========================================================= */}
@@ -511,6 +666,19 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                                     <span className="fb-nav-icon">➕</span>
                                     <span>Create EPIC Short (+20 Pts)</span>
                                 </button>
+
+                                <button
+                                    type="button"
+                                    className={`fb-nav-item-btn ${activeTab === "WORSHIP" ? "active" : ""}`}
+                                    style={{ color: "#ec4899", fontWeight: 700 }}
+                                    onClick={() => {
+                                        setActiveTab("WORSHIP");
+                                        setMobileTab("WORSHIP");
+                                    }}
+                                >
+                                    <span className="fb-nav-icon">🎵</span>
+                                    <span>Worship Songs Playlist</span>
+                                </button>
                             </div>
 
                             {/* Ministry Groups List */}
@@ -558,6 +726,202 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                         COLUMN 2: CENTER SOCIAL FEED (Facebook Style)
                         ========================================================= */}
                     <section className="fb-center-feed">
+                        {/* If Worship Tab is active, show the Christian Worship Sanctuary Hub */}
+                        {activeTab === "WORSHIP" || mobileTab === "WORSHIP" ? (
+                            <div className="worship-sanctuary-hub">
+                                <div className="worship-hub-header">
+                                    <button
+                                        type="button"
+                                        className="worship-back-to-feed-btn"
+                                        onClick={() => {
+                                            setActiveTab("ALL");
+                                            setMobileTab("FEED");
+                                        }}
+                                    >
+                                        ← Back to Fellowship Feed
+                                    </button>
+                                    <span className="worship-hub-tag">
+                                        <Music size={14} style={{ display: "inline", marginRight: 4 }} />
+                                        Spiritual Sanctuary &amp; Auto-Player
+                                    </span>
+                                </div>
+
+                                {/* Active Song Hero Stage */}
+                                <div className="worship-hero-stage">
+                                    <div className="worship-hero-top">
+                                        <div className={`worship-vinyl-disc ${isPlaying ? "spinning" : ""}`}>
+                                            <img src={currentSong.albumCover} alt={currentSong.title} />
+                                            <div className="vinyl-hole"></div>
+                                        </div>
+
+                                        <div className="worship-hero-info">
+                                            <div className="worship-status-pill">
+                                                <span className="worship-status-dot"></span>
+                                                <span>{isPlaying ? "AUTOMATICALLY PLAYING" : "PAUSED"}</span>
+                                                <span style={{ margin: "0 4px" }}>•</span>
+                                                <span>{currentSong.moodLabel}</span>
+                                            </div>
+                                            <h2 className="worship-song-main-title">{currentSong.title}</h2>
+                                            <p className="worship-song-main-artist">{currentSong.artist}</p>
+                                            <div className="worship-scripture-highlight">
+                                                {currentSong.scriptureTheme}
+                                            </div>
+                                            <p className="worship-lyrics-quote">
+                                                "{currentSong.lyricsSnippet}"
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Player Controls Bar */}
+                                    <div className="worship-stage-controls">
+                                        <div className="worship-progress-wrap">
+                                            <div
+                                                className="worship-progress-track"
+                                                onClick={(e) => {
+                                                    const rect = e.currentTarget.getBoundingClientRect();
+                                                    const clickX = e.clientX - rect.left;
+                                                    const pct = clickX / rect.width;
+                                                    if (audioRef.current && audioRef.current.duration) {
+                                                        audioRef.current.currentTime = pct * audioRef.current.duration;
+                                                    }
+                                                }}
+                                            >
+                                                <div
+                                                    className="worship-progress-bar"
+                                                    style={{ width: `${songProgress}%` }}
+                                                ></div>
+                                            </div>
+                                            <div className="worship-time-labels">
+                                                <span>{isPlaying ? "Playing..." : "0:00"}</span>
+                                                <span>{currentSong.duration}</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="worship-buttons-dock">
+                                            <button
+                                                type="button"
+                                                className="worship-round-btn"
+                                                onClick={handlePrevSong}
+                                                title="Previous Song"
+                                            >
+                                                <SkipBack size={20} />
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                className="worship-play-giant-btn"
+                                                onClick={handleTogglePlay}
+                                                title={isPlaying ? "Pause" : "Play"}
+                                            >
+                                                {isPlaying ? <Pause size={26} /> : <Play size={26} style={{ marginLeft: 3 }} />}
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                className="worship-round-btn"
+                                                onClick={handleNextSong}
+                                                title="Next Song"
+                                            >
+                                                <SkipForward size={20} />
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                className="worship-round-btn mute"
+                                                onClick={handleToggleMute}
+                                                title={isMuted ? "Unmute" : "Mute"}
+                                            >
+                                                {isMuted ? <VolumeX size={19} /> : <Volume2 size={19} />}
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                className={`worship-synth-pill-btn ${useAmbientSynth ? "active" : ""}`}
+                                                onClick={() => {
+                                                    const next = !useAmbientSynth;
+                                                    setUseAmbientSynth(next);
+                                                    if (isPlaying) {
+                                                        if (next) {
+                                                            if (audioRef.current) audioRef.current.pause();
+                                                            spiritualSynth.playWorshipChords(currentSong.chordsKey);
+                                                        } else {
+                                                            spiritualSynth.stop();
+                                                            if (audioRef.current) audioRef.current.play();
+                                                        }
+                                                    }
+                                                }}
+                                            >
+                                                ✨ {useAmbientSynth ? "Ambient Chords" : "Synthesizer Chords"}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Mood Category Filter Pills */}
+                                <div className="worship-moods-strip">
+                                    {MOOD_CATEGORIES.map((cat) => (
+                                        <button
+                                            key={cat.key}
+                                            type="button"
+                                            className={`worship-mood-filter-pill ${worshipMood === cat.key ? "active" : ""}`}
+                                            onClick={() => setWorshipMood(cat.key)}
+                                        >
+                                            <span>{cat.icon}</span>
+                                            <span>{cat.label}</span>
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {/* Song Cards Playlist */}
+                                <div className="worship-playlist-cards-list">
+                                    {filteredSongs.map((song, sIdx) => {
+                                        const isThisPlaying = isPlaying && currentSong.id === song.id;
+                                        return (
+                                            <div
+                                                key={song.id}
+                                                className={`worship-song-row ${currentSong.id === song.id ? "current" : ""}`}
+                                                onClick={() => handleSelectSong(song)}
+                                            >
+                                                <div className="worship-song-row-left">
+                                                    <span className="worship-song-index">
+                                                        {isThisPlaying ? "🔊" : sIdx + 1}
+                                                    </span>
+                                                    <div className="worship-song-thumb">
+                                                        <img src={song.albumCover} alt={song.title} />
+                                                        {isThisPlaying && <div className="worship-thumb-pulse"></div>}
+                                                    </div>
+                                                    <div className="worship-song-text">
+                                                        <strong className="worship-song-title-text">{song.title}</strong>
+                                                        <span className="worship-song-artist-text">{song.artist}</span>
+                                                        <small className="worship-song-scripture-text">{song.scriptureTheme}</small>
+                                                    </div>
+                                                </div>
+
+                                                <div className="worship-song-row-right">
+                                                    <span className="worship-song-mood-pill">{song.moodLabel}</span>
+                                                    <span className="worship-song-time">{song.duration}</span>
+                                                    <button
+                                                        type="button"
+                                                        className={`worship-song-row-play-btn ${isThisPlaying ? "playing" : ""}`}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            if (currentSong.id === song.id) {
+                                                                handleTogglePlay();
+                                                            } else {
+                                                                handleSelectSong(song);
+                                                            }
+                                                        }}
+                                                    >
+                                                        {isThisPlaying ? <Pause size={15} /> : <Play size={15} style={{ marginLeft: 1 }} />}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ) : (
+                            <>
                         {/* Stories Carousel */}
                         {stories.length > 0 && (
                             <div className="fb-stories-strip">
@@ -920,6 +1284,8 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                                 );
                             }))}
                         </div>
+                            </>
+                        )}
                     </section>
 
                     {/* =========================================================
@@ -1617,6 +1983,72 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                     </div>
                 </div>
             )}
+
+            {/* =========================================================
+                FLOATING CHRISTIAN WORSHIP MUSIC MINI-DOCK (Automatic Audio)
+                ========================================================= */}
+            <div className="worship-floating-dock">
+                <div className="worship-dock-inner">
+                    <div
+                        className="worship-dock-song-meta"
+                        onClick={() => {
+                            setActiveTab("WORSHIP");
+                            setMobileTab("WORSHIP");
+                        }}
+                        title="Click to view full Worship Sanctuary"
+                    >
+                        <div className={`worship-dock-disc ${isPlaying ? "spinning" : ""}`}>
+                            <img src={currentSong.albumCover} alt="Cover" />
+                        </div>
+                        <div className="worship-dock-text">
+                            <strong>{currentSong.title}</strong>
+                            <span>{currentSong.artist} • {currentSong.moodLabel}</span>
+                        </div>
+                    </div>
+
+                    <div className="worship-dock-actions">
+                        <button
+                            type="button"
+                            className="worship-dock-ctrl-btn"
+                            onClick={handlePrevSong}
+                            title="Previous Worship Song"
+                        >
+                            <SkipBack size={16} />
+                        </button>
+
+                        <button
+                            type="button"
+                            className="worship-dock-play-btn"
+                            onClick={handleTogglePlay}
+                            title={isPlaying ? "Pause" : "Auto-Play"}
+                        >
+                            {isPlaying ? <Pause size={17} /> : <Play size={17} style={{ marginLeft: 2 }} />}
+                        </button>
+
+                        <button
+                            type="button"
+                            className="worship-dock-ctrl-btn"
+                            onClick={handleNextSong}
+                            title="Next Worship Song"
+                        >
+                            <SkipForward size={16} />
+                        </button>
+
+                        <button
+                            type="button"
+                            className="worship-dock-playlist-btn"
+                            onClick={() => {
+                                setActiveTab("WORSHIP");
+                                setMobileTab("WORSHIP");
+                            }}
+                            title="Open Christian Songs Playlist"
+                        >
+                            <Music size={14} />
+                            <span className="worship-dock-btn-label">Songs</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
 
             {/* Daily Challenge Earned Toast Notification */}
             {challengeClaimedToast && (
