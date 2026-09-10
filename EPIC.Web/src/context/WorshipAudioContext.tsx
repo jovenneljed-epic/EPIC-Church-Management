@@ -25,12 +25,17 @@ interface WorshipAudioContextType {
     showVideoPlayer: boolean;
     activeLyricsSong: WorshipSong | null;
     showLyricsModal: boolean;
+    isContinuousLoop: boolean;
+    currentTime: number;
+    durationTime: number;
     playSong: (song: WorshipSong) => void;
     togglePlay: () => void;
     pause: () => void;
     resume: () => void;
     nextSong: () => void;
     prevSong: () => void;
+    seekTo: (seconds: number) => void;
+    toggleContinuousLoop: () => void;
     setVolume: (v: number) => void;
     toggleMute: () => void;
     setWorshipMood: (mood: WorshipMood) => void;
@@ -71,13 +76,29 @@ export const WorshipAudioProvider: React.FC<{ children: React.ReactNode }> = ({ 
         return allSongs[0] || WORSHIP_PLAYLIST[0];
     });
 
-    // 4. Playback State
+    // 4. Playback State & Continuous Loop
     const [isPlaying, setIsPlaying] = useState<boolean>(false);
     const [isMuted, setIsMuted] = useState<boolean>(false);
     const [volume, setVolumeState] = useState<number>(100);
     const [worshipMood, setWorshipMood] = useState<WorshipMood>("ALL");
+    const [isContinuousLoop, setIsContinuousLoop] = useState<boolean>(() => {
+        const saved = localStorage.getItem("epic_worship_continuous_loop");
+        return saved !== null ? saved === "true" : true;
+    });
 
-    // 5. Sound Bar UI State
+    const toggleContinuousLoop = useCallback(() => {
+        setIsContinuousLoop((prev) => {
+            const next = !prev;
+            localStorage.setItem("epic_worship_continuous_loop", String(next));
+            return next;
+        });
+    }, []);
+
+    // 5. Track Progress (Seconds elapsed)
+    const [currentTime, setCurrentTime] = useState<number>(0);
+    const durationTime = currentSong?.durationSeconds || 300;
+
+    // 6. Sound Bar UI State
     const [isSoundBarVisible, setIsSoundBarVisible] = useState<boolean>(true);
     const [isSoundBarExpanded, setIsSoundBarExpanded] = useState<boolean>(() => {
         const saved = localStorage.getItem(SOUNDBAR_EXPANDED_KEY);
@@ -85,14 +106,25 @@ export const WorshipAudioProvider: React.FC<{ children: React.ReactNode }> = ({ 
     });
     const [showVideoPlayer, setShowVideoPlayer] = useState<boolean>(false);
 
-    // 6. Lyrics Modal State
+    // 7. Lyrics Modal State
     const [activeLyricsSong, setActiveLyricsSong] = useState<WorshipSong | null>(null);
     const [showLyricsModal, setShowLyricsModal] = useState<boolean>(false);
 
-    // 7. Persistent Audio Refs (YouTube Iframe & HTML5 Audio for uploaded tracks)
+    // 8. Persistent Audio Refs (YouTube Iframe & HTML5 Audio for uploaded tracks)
     const iframeRef = useRef<HTMLIFrameElement>(null);
     const html5AudioRef = useRef<HTMLAudioElement>(null);
     const hasInitiatedPlayback = useRef<boolean>(false);
+
+    // Active playlist based on selected mood
+    const activePlaylist = useMemo(() => {
+        if (worshipMood === "ALL") return allSongs;
+        const filtered = allSongs.filter((s) => s.mood === worshipMood);
+        return filtered.length > 0 ? filtered : allSongs;
+    }, [allSongs, worshipMood]);
+
+    // Cooldown guard to avoid rapid duplicate triggers
+    const lastAdvanceRef = useRef<number>(0);
+    const nextSongRef = useRef<() => void>(() => {});
 
     // Sync HTML5 audio volume & mute
     useEffect(() => {
@@ -128,16 +160,137 @@ export const WorshipAudioProvider: React.FC<{ children: React.ReactNode }> = ({ 
         } catch {}
     }, []);
 
+    // Handshake when YouTube iframe finishes loading
+    const handleIframeLoad = useCallback(() => {
+        try {
+            if (iframeRef.current && iframeRef.current.contentWindow) {
+                iframeRef.current.contentWindow.postMessage(JSON.stringify({ event: "listening" }), "*");
+                iframeRef.current.contentWindow.postMessage(
+                    JSON.stringify({ event: "command", func: "addEventListener", args: ["onStateChange"] }),
+                    "*"
+                );
+            }
+        } catch {}
+    }, []);
+
     // Play specific song
     const playSong = useCallback((song: WorshipSong) => {
         setCurrentSong(song);
+        setCurrentTime(0);
         setIsPlaying(true);
         hasInitiatedPlayback.current = true;
+        lastAdvanceRef.current = Date.now();
         localStorage.setItem(ACTIVE_SONG_KEY, song.id);
         if (song.audioUrl && html5AudioRef.current) {
+            html5AudioRef.current.currentTime = 0;
             html5AudioRef.current.play().catch(() => {});
         }
     }, []);
+
+    // Next Song (Continuous playback across tracks, looping back to first track after last song)
+    const nextSong = useCallback(() => {
+        if (activePlaylist.length === 0) return;
+        const now = Date.now();
+        if (now - lastAdvanceRef.current < 1500) {
+            return; // Guard against rapid duplicate firing
+        }
+        lastAdvanceRef.current = now;
+
+        const currentIdx = activePlaylist.findIndex((s) => s.id === currentSong.id);
+        const isLastSong = currentIdx >= activePlaylist.length - 1;
+
+        if (isLastSong && !isContinuousLoop) {
+            setIsPlaying(false);
+            setCurrentTime(0);
+            return;
+        }
+
+        // Loop to index 0 after last song for continuous worship
+        const nextIdx = currentIdx === -1 ? 0 : (currentIdx + 1) % activePlaylist.length;
+        playSong(activePlaylist[nextIdx]);
+    }, [activePlaylist, currentSong.id, isContinuousLoop, playSong]);
+
+    useEffect(() => {
+        nextSongRef.current = nextSong;
+    }, [nextSong]);
+
+    // Previous Song
+    const prevSong = useCallback(() => {
+        if (activePlaylist.length === 0) return;
+        const currentIdx = activePlaylist.findIndex((s) => s.id === currentSong.id);
+        const prevIdx = (currentIdx - 1 + activePlaylist.length) % activePlaylist.length;
+        playSong(activePlaylist[prevIdx]);
+    }, [activePlaylist, currentSong.id, playSong]);
+
+    // Seek To
+    const seekTo = useCallback(
+        (seconds: number) => {
+            const clamped = Math.max(0, Math.min(durationTime, seconds));
+            setCurrentTime(clamped);
+            if (currentSong.audioUrl && html5AudioRef.current) {
+                html5AudioRef.current.currentTime = clamped;
+            } else {
+                sendCommand("seekTo", [clamped, true]);
+            }
+        },
+        [durationTime, currentSong.audioUrl, sendCommand]
+    );
+
+    // Listen to YouTube postMessage events for automatic continuous track progression
+    useEffect(() => {
+        const handleWindowMessage = (event: MessageEvent) => {
+            try {
+                let data = event.data;
+                if (typeof data === "string") {
+                    try {
+                        data = JSON.parse(data);
+                    } catch {
+                        return;
+                    }
+                }
+                if (!data) return;
+
+                // YouTube video state 0 = ENDED
+                if (data.event === "onStateChange" && data.info === 0) {
+                    console.log("[WorshipAudio] YouTube track ended, advancing continuously...");
+                    nextSongRef.current();
+                } else if (data.event === "infoDelivery") {
+                    if (data.info?.playerState === 0) {
+                        console.log("[WorshipAudio] YouTube infoDelivery playerState ended, advancing continuously...");
+                        nextSongRef.current();
+                    }
+                    if (typeof data.info?.currentTime === "number") {
+                        setCurrentTime(Math.floor(data.info.currentTime));
+                    }
+                }
+            } catch {}
+        };
+
+        window.addEventListener("message", handleWindowMessage);
+        return () => window.removeEventListener("message", handleWindowMessage);
+    }, []);
+
+    // Active progress timer & double-safety track advance
+    useEffect(() => {
+        if (!isPlaying) return;
+
+        const interval = setInterval(() => {
+            setCurrentTime((prev) => {
+                const next = prev + 1;
+                if (!currentSong.audioUrl) {
+                    sendCommand("getCurrentTime");
+                }
+                // Double safety: If currentTime reaches song's durationSeconds, auto-advance
+                if (durationTime > 0 && next >= durationTime) {
+                    console.log("[WorshipAudio] Song duration reached, auto-advancing continuously...");
+                    nextSongRef.current();
+                }
+                return next;
+            });
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [isPlaying, currentSong.audioUrl, durationTime, sendCommand]);
 
     // Add new custom song (Admin upload with proper lyrics)
     const addNewSong = useCallback(
@@ -198,22 +351,6 @@ export const WorshipAudioProvider: React.FC<{ children: React.ReactNode }> = ({ 
             sendCommand("playVideo");
         }
     }, [currentSong.audioUrl, sendCommand]);
-
-    // Next Song
-    const nextSong = useCallback(() => {
-        if (allSongs.length === 0) return;
-        const currentIdx = allSongs.findIndex((s) => s.id === currentSong.id);
-        const nextIdx = (currentIdx + 1) % allSongs.length;
-        playSong(allSongs[nextIdx]);
-    }, [allSongs, currentSong, playSong]);
-
-    // Previous Song
-    const prevSong = useCallback(() => {
-        if (allSongs.length === 0) return;
-        const currentIdx = allSongs.findIndex((s) => s.id === currentSong.id);
-        const prevIdx = (currentIdx - 1 + allSongs.length) % allSongs.length;
-        playSong(allSongs[prevIdx]);
-    }, [allSongs, currentSong, playSong]);
 
     // Volume & Mute
     const setVolume = useCallback(
@@ -333,12 +470,17 @@ export const WorshipAudioProvider: React.FC<{ children: React.ReactNode }> = ({ 
         showVideoPlayer,
         activeLyricsSong,
         showLyricsModal,
+        isContinuousLoop,
+        currentTime,
+        durationTime,
         playSong,
         togglePlay,
         pause,
         resume,
         nextSong,
         prevSong,
+        seekTo,
+        toggleContinuousLoop,
         setVolume,
         toggleMute,
         setWorshipMood,
@@ -361,7 +503,12 @@ export const WorshipAudioProvider: React.FC<{ children: React.ReactNode }> = ({ 
             <audio
                 ref={html5AudioRef}
                 src={currentSong?.audioUrl || undefined}
-                onEnded={nextSong}
+                onEnded={() => nextSongRef.current()}
+                onTimeUpdate={() => {
+                    if (html5AudioRef.current && currentSong?.audioUrl) {
+                        setCurrentTime(Math.floor(html5AudioRef.current.currentTime));
+                    }
+                }}
                 preload="auto"
                 style={{ display: "none" }}
             />
@@ -437,6 +584,7 @@ export const WorshipAudioProvider: React.FC<{ children: React.ReactNode }> = ({ 
                         ref={iframeRef}
                         key={currentSong?.id}
                         src={iframeSrc}
+                        onLoad={handleIframeLoad}
                         title={currentSong?.title || "Christian Worship Master Audio"}
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                         allowFullScreen

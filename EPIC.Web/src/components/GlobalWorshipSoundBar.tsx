@@ -14,7 +14,8 @@ import {
     ChevronDown,
     Music,
     Radio,
-    Plus
+    Plus,
+    Repeat
 } from "lucide-react";
 import { useWorshipAudio } from "../context/WorshipAudioContext";
 import { checkIsAdminVerified } from "../hooks/useAdminAuth";
@@ -32,9 +33,14 @@ export const GlobalWorshipSoundBar: React.FC = () => {
         showVideoPlayer,
         activeLyricsSong,
         showLyricsModal,
+        isContinuousLoop,
+        currentTime,
+        durationTime,
         togglePlay,
         nextSong,
         prevSong,
+        seekTo,
+        toggleContinuousLoop,
         setVolume,
         toggleMute,
         toggleSoundBar,
@@ -46,6 +52,12 @@ export const GlobalWorshipSoundBar: React.FC = () => {
 
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
     const isAdmin = checkIsAdminVerified();
+
+    const formatTime = (secs: number) => {
+        const m = Math.floor(secs / 60);
+        const s = Math.floor(secs % 60);
+        return `${m}:${s < 10 ? "0" : ""}${s}`;
+    };
 
     const handleNavigateToCommunity = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -159,36 +171,76 @@ export const GlobalWorshipSoundBar: React.FC = () => {
 
                         {/* CENTER: Playback Controls */}
                         <div className="epic-soundbar-center-ctrls">
-                            <button
-                                type="button"
-                                className="epic-soundbar-ctrl-btn skip"
-                                onClick={prevSong}
-                                title="Previous Worship Song"
-                            >
-                                <SkipBack size={17} />
-                            </button>
+                            <div className="epic-soundbar-center-buttons-row">
+                                <button
+                                    type="button"
+                                    className="epic-soundbar-ctrl-btn skip"
+                                    onClick={prevSong}
+                                    title="Previous Worship Song"
+                                >
+                                    <SkipBack size={17} />
+                                </button>
 
-                            <button
-                                type="button"
-                                className={`epic-soundbar-main-play-btn ${isPlaying ? "playing" : ""}`}
-                                onClick={togglePlay}
-                                title={isPlaying ? "Pause Worship" : "Play Worship"}
-                            >
-                                {isPlaying ? <Pause size={18} /> : <Play size={18} style={{ marginLeft: 2 }} />}
-                            </button>
+                                <button
+                                    type="button"
+                                    className={`epic-soundbar-main-play-btn ${isPlaying ? "playing" : ""}`}
+                                    onClick={togglePlay}
+                                    title={isPlaying ? "Pause Worship" : "Play Worship"}
+                                >
+                                    {isPlaying ? <Pause size={18} /> : <Play size={18} style={{ marginLeft: 2 }} />}
+                                </button>
 
-                            <button
-                                type="button"
-                                className="epic-soundbar-ctrl-btn skip"
-                                onClick={nextSong}
-                                title="Next Worship Song"
-                            >
-                                <SkipForward size={17} />
-                            </button>
+                                <button
+                                    type="button"
+                                    className="epic-soundbar-ctrl-btn skip"
+                                    onClick={nextSong}
+                                    title="Next Worship Song"
+                                >
+                                    <SkipForward size={17} />
+                                </button>
+
+                                <button
+                                    type="button"
+                                    className={`epic-soundbar-ctrl-btn loop ${isContinuousLoop ? "active" : ""}`}
+                                    onClick={toggleContinuousLoop}
+                                    title={
+                                        isContinuousLoop
+                                            ? "Continuous Worship Loop: Active (Loops automatically after last song)"
+                                            : "Continuous Loop: Disabled"
+                                    }
+                                >
+                                    <Repeat size={14} color={isContinuousLoop ? "#34d399" : "#64748b"} />
+                                </button>
+                            </div>
+
+                            {/* Track Progress Bar */}
+                            <div className="epic-soundbar-progress-row">
+                                <span className="epic-soundbar-time-text">{formatTime(currentTime)}</span>
+                                <div
+                                    className="epic-soundbar-progress-track"
+                                    onClick={(e) => {
+                                        const rect = e.currentTarget.getBoundingClientRect();
+                                        const clickX = e.clientX - rect.left;
+                                        const ratio = Math.max(0, Math.min(1, clickX / rect.width));
+                                        seekTo(ratio * (durationTime || 300));
+                                    }}
+                                    title="Click to seek position"
+                                >
+                                    <div
+                                        className="epic-soundbar-progress-fill"
+                                        style={{ width: `${Math.min(100, (currentTime / (durationTime || 300)) * 100)}%` }}
+                                    />
+                                </div>
+                                <span className="epic-soundbar-time-text">{formatTime(durationTime)}</span>
+                            </div>
 
                             <div className="epic-soundbar-status-indicator">
                                 <Radio size={12} color="#34d399" className={isPlaying ? "live-pulse" : ""} />
-                                <span>{isPlaying ? "Playing Background Worship" : "Worship Audio Paused"}</span>
+                                <span>
+                                    {isPlaying
+                                        ? `Continuous Praise Active ${isContinuousLoop ? "🔁 (Looping after last song)" : ""}`
+                                        : "Worship Audio Paused"}
+                                </span>
                             </div>
                         </div>
 

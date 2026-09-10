@@ -726,14 +726,22 @@ export function saveCustomWorshipSong(song: CreateWorshipSongRequest): WorshipSo
         (song.fullLyrics ? song.fullLyrics.split("\n").filter((l) => l.trim() && !l.startsWith("[")).slice(0, 2).join(" ") : "") ||
         "Worship the Lord with gladness; come before Him with joyful songs!";
 
-    const newSong: WorshipSong = {
+        let durationSec = 300;
+        if (song.duration && song.duration.includes(":")) {
+            const parts = song.duration.split(":");
+            const mins = parseInt(parts[0], 10) || 0;
+            const secs = parseInt(parts[1], 10) || 0;
+            durationSec = mins * 60 + secs;
+        }
+
+        const newSong: WorshipSong = {
         id: `custom-${Date.now()}`,
         title: song.title.trim(),
         artist: song.artist.trim() || "Worship Team",
         language: lang,
         albumCover: song.albumCover?.trim() || defaultCover,
         duration: song.duration || "5:00",
-        durationSeconds: 300,
+        durationSeconds: durationSec,
         mood: lang === "Tagalog" ? "TAGALOG" : "ENGLISH",
         moodLabel: lang === "Tagalog" ? "🇵🇭 Custom Tagalog Worship" : "🌐 Custom English Worship",
         youtubeId: yId || "",

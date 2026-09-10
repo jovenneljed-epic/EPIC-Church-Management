@@ -31,7 +31,8 @@ import {
     Unlock,
     KeyRound,
     AlertCircle,
-    CheckCircle2
+    CheckCircle2,
+    Repeat
 } from "lucide-react";
 import { login } from "../../auth/authService";
 import { useWorshipAudio } from "../../context/WorshipAudioContext";
@@ -285,6 +286,8 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
         allSongs,
         deletedSongIds,
         showVideoPlayer,
+        isContinuousLoop,
+        toggleContinuousLoop,
         playSong: handleSelectSong,
         togglePlay: handleTogglePlay,
         nextSong: handleNextSong,
@@ -1054,6 +1057,14 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                                                     onClick={handleNextSong}
                                                 >
                                                     <SkipForward size={16} /> Next Song
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className={`worship-action-loop-btn ${isContinuousLoop ? "active" : ""}`}
+                                                    onClick={toggleContinuousLoop}
+                                                    title={isContinuousLoop ? "Continuous Playlist Loop: Active (Loops automatically after last song)" : "Continuous Loop: Disabled"}
+                                                >
+                                                    <Repeat size={15} /> Continuous: {isContinuousLoop ? "ON (Loops back)" : "OFF"}
                                                 </button>
                                                 {userRole === "ADMIN" && (
                                                     <button
