@@ -1,15 +1,16 @@
 /**
  * EPIC Worship Music Service
- * Curated Christian Worship Songs & Auto-Play Audio Engine
- * Client-side isolated audio sessions (zero cross-user overlap)
+ * Pure Christian Praise & Worship Songs (Tagalog & English Only - No Worldly Songs)
+ * 100% Reliable Local Static Audio Streams in /audio/ (Zero 403 / Zero Corruption)
  */
 
-export type WorshipMood = "ALL" | "PRAISE" | "SOAKING" | "PEACE" | "WARFARE" | "HYMN";
+export type WorshipMood = "ALL" | "TAGALOG" | "ENGLISH";
 
 export interface WorshipSong {
     id: string;
     title: string;
     artist: string;
+    language: "Tagalog" | "English";
     albumCover: string;
     duration: string;
     durationSeconds: number;
@@ -23,224 +24,233 @@ export interface WorshipSong {
 }
 
 export const WORSHIP_PLAYLIST: WorshipSong[] = [
+    // ==========================================
+    // 🇵🇭 TAGALOG CHRISTIAN PRAISE & WORSHIP SONGS
+    // ==========================================
     {
-        id: "song-1",
+        id: "song-tagalog-1",
+        title: "Diyos Ka Sa Amin",
+        artist: "Malayang Pilipino Music",
+        language: "Tagalog",
+        albumCover: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=400&q=80",
+        duration: "4:30",
+        durationSeconds: 270,
+        mood: "TAGALOG",
+        moodLabel: "🇵🇭 Tagalog Worship",
+        audioUrl: "/audio/tagalog-diyos-ka-sa-amin.wav",
+        scriptureTheme: "Awit 89:1 — 'Aawitin ko ang tapat Mong pag-ibig, O Panginoon, magpakailanman!'",
+        lyricsSnippet: "Diyos Ka sa amin, tapat at totoo, noon, ngayon at magpakailanman! Sa bawat sandali, Ikaw ang aming sandigan.",
+        chordsKey: "G"
+    },
+    {
+        id: "song-tagalog-2",
+        title: "Salamat, Salamat",
+        artist: "Malayang Pilipino Music",
+        language: "Tagalog",
+        albumCover: "https://images.unsplash.com/photo-1518495973542-4542c06a5843?auto=format&fit=crop&w=400&q=80",
+        duration: "5:12",
+        durationSeconds: 312,
+        mood: "TAGALOG",
+        moodLabel: "🇵🇭 Tagalog Pasasalamat",
+        audioUrl: "/audio/tagalog-salamat-salamat.wav",
+        scriptureTheme: "1 Tesalonica 5:18 — 'Magpasalamat kayo sa lahat ng pagkakataon; sapagkat ito ang kalooban ng Diyos sa inyo.'",
+        lyricsSnippet: "Salamat, salamat O Hesus sa pag-ibig Mo! Walang hanggang pasasalamat ang alay sa Iyo.",
+        chordsKey: "E"
+    },
+    {
+        id: "song-tagalog-3",
+        title: "Banal Mong Tahanan",
+        artist: "Rommel Guevara",
+        language: "Tagalog",
+        albumCover: "https://images.unsplash.com/photo-1438232992991-995b7058bbb3?auto=format&fit=crop&w=400&q=80",
+        duration: "4:48",
+        durationSeconds: 288,
+        mood: "TAGALOG",
+        moodLabel: "🇵🇭 Tagalog Soaking",
+        audioUrl: "/audio/tagalog-banal-mong-tahanan.wav",
+        scriptureTheme: "Awit 84:10 — 'Sapagkat ang isang araw sa Iyong mga looban ay higit na mabuti kaysa sanlibong araw sa iba.'",
+        lyricsSnippet: "Ang puso ko'y dinudulog sa Iyo, nagpapakumbaba, nagsusumamo, dalangin ko'y patnubayan Mo sa banal Mong tahanan.",
+        chordsKey: "D"
+    },
+    {
+        id: "song-tagalog-4",
+        title: "Dakilang Katapatan",
+        artist: "Papuri Singers / Arnel de Pano",
+        language: "Tagalog",
+        albumCover: "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=400&q=80",
+        duration: "5:20",
+        durationSeconds: 320,
+        mood: "TAGALOG",
+        moodLabel: "🇵🇭 Tagalog Hymn",
+        audioUrl: "/audio/tagalog-dakilang-katapatan.wav",
+        scriptureTheme: "Panaghoy 3:22-23 — 'Dakila ang Iyong katapatan; bago tuwina ang Iyong habag tuwing umaga.'",
+        lyricsSnippet: "Dakila Ka, O Diyos, tapat Ka ngang tunay! Magmula pa sa ugat ng aming buhay, katapatan Mo'y walang kapantay.",
+        chordsKey: "D"
+    },
+    {
+        id: "song-tagalog-5",
+        title: "Tanging Pag-asa",
+        artist: "Faithmusic Manila",
+        language: "Tagalog",
+        albumCover: "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=400&q=80",
+        duration: "4:15",
+        durationSeconds: 255,
+        mood: "TAGALOG",
+        moodLabel: "🇵🇭 Tagalog Pag-asa",
+        audioUrl: "/audio/tagalog-tanging-pag-asa.wav",
+        scriptureTheme: "Awit 62:5 — 'Sa Diyos lamang nagpapahinga ang aking kaluluwa, sapagkat mula sa Kanya ang aking pag-asa.'",
+        lyricsSnippet: "Ikaw ang tanging pag-asa, kagalakan ko't lakas, Panginoong Hesus Ikaw lamang ang aking kaligtasan.",
+        chordsKey: "C"
+    },
+    {
+        id: "song-tagalog-6",
+        title: "Kay Buti-Buti Mo Panginoon",
+        artist: "Rommel Guevara",
+        language: "Tagalog",
+        albumCover: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=400&q=80",
+        duration: "4:40",
+        durationSeconds: 280,
+        mood: "TAGALOG",
+        moodLabel: "🇵🇭 Tagalog Papuri",
+        audioUrl: "/audio/tagalog-kay-buti-buti-mo.wav",
+        scriptureTheme: "Awit 107:1 — 'O magpasalamat sa Panginoon, sapagkat Siya ay mabuti; ang Kanyang kagandahang-loob ay magpakailanman.'",
+        lyricsSnippet: "Kay buti-buti Mo, Panginoon! Sa lahat ng oras, sa bawat araw, Ika'y laging tapat at maaasahan.",
+        chordsKey: "G"
+    },
+
+    // ==========================================
+    // 🌐 ENGLISH CHRISTIAN PRAISE & WORSHIP SONGS
+    // ==========================================
+    {
+        id: "song-eng-1",
         title: "Goodness of God",
         artist: "CeCe Winans / Bethel Music",
+        language: "English",
         albumCover: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=400&q=80",
         duration: "4:56",
         durationSeconds: 296,
-        mood: "PRAISE",
-        moodLabel: "🙏 Praise & Gratitude",
-        audioUrl: "https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=ambient-piano-amp-strings-10711.mp3",
-        scriptureTheme: "Psalm 23:6 — 'Surely goodness and mercy shall follow me all the days of my life.'",
+        mood: "ENGLISH",
+        moodLabel: "🌐 English Praise",
+        audioUrl: "/audio/english-goodness-of-god.wav",
+        scriptureTheme: "Psalm 23:6 — 'Surely goodness and mercy shall follow me all the days of my life, and I will dwell in the house of the Lord forever.'",
         lyricsSnippet: "All my life You have been faithful, All my life You have been so, so good! With every breath that I am able, I will sing of the goodness of God.",
         chordsKey: "G"
     },
     {
-        id: "song-2",
+        id: "song-eng-2",
         title: "Way Maker",
         artist: "Sinach / Leeland",
+        language: "English",
         albumCover: "https://images.unsplash.com/photo-1469571486292-0ba58a3f068b?auto=format&fit=crop&w=400&q=80",
         duration: "5:04",
         durationSeconds: 304,
-        mood: "WARFARE",
-        moodLabel: "⚔️ Faith & Breakthrough",
-        audioUrl: "https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0a13f69d2.mp3?filename=piano-moment-9835.mp3",
-        scriptureTheme: "Isaiah 43:19 — 'I am making a way in the wilderness and streams in the wasteland.'",
+        mood: "ENGLISH",
+        moodLabel: "🌐 English Warfare",
+        audioUrl: "/audio/english-way-maker.wav",
+        scriptureTheme: "Isaiah 43:19 — 'See, I am doing a new thing! I am making a way in the wilderness and streams in the wasteland.'",
         lyricsSnippet: "Way Maker, Miracle Worker, Promise Keeper, Light in the darkness, my God, that is who You are!",
         chordsKey: "C"
     },
     {
-        id: "song-3",
+        id: "song-eng-3",
         title: "10,000 Reasons (Bless the Lord)",
         artist: "Matt Redman",
+        language: "English",
         albumCover: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=400&q=80",
         duration: "4:18",
         durationSeconds: 258,
-        mood: "SOAKING",
-        moodLabel: "☀️ Morning Worship",
-        audioUrl: "https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73467.mp3?filename=inspiring-cinematic-ambient-116199.mp3",
+        mood: "ENGLISH",
+        moodLabel: "🌐 English Morning",
+        audioUrl: "/audio/english-10000-reasons.wav",
         scriptureTheme: "Psalm 103:1 — 'Bless the Lord, O my soul, and all that is within me, bless His holy name.'",
         lyricsSnippet: "Bless the Lord O my soul, O my soul, worship His holy name. Sing like never before, O my soul, I'll worship Your holy name.",
         chordsKey: "G"
     },
     {
-        id: "song-4",
+        id: "song-eng-4",
         title: "What A Beautiful Name",
         artist: "Hillsong Worship",
+        language: "English",
         albumCover: "https://images.unsplash.com/photo-1523580494863-6f3031224c94?auto=format&fit=crop&w=400&q=80",
         duration: "5:20",
         durationSeconds: 320,
-        mood: "PRAISE",
-        moodLabel: "👑 Christ Exaltation",
-        audioUrl: "https://cdn.pixabay.com/download/audio/2021/08/04/audio_3341ab738e.mp3?filename=the-cradle-of-your-soul-5753.mp3",
+        mood: "ENGLISH",
+        moodLabel: "🌐 English Exaltation",
+        audioUrl: "/audio/english-what-a-beautiful-name.wav",
         scriptureTheme: "Philippians 2:9 — 'God exalted Him to the highest place and gave Him the name that is above every name.'",
         lyricsSnippet: "What a beautiful Name it is, What a beautiful Name it is, The Name of Jesus Christ my King!",
         chordsKey: "D"
     },
     {
-        id: "song-5",
-        title: "Oceans (Where Feet May Fail)",
-        artist: "Hillsong UNITED",
-        albumCover: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=400&q=80",
-        duration: "6:10",
-        durationSeconds: 370,
-        mood: "SOAKING",
-        moodLabel: "🌊 Deep Surrender",
-        audioUrl: "https://cdn.pixabay.com/download/audio/2022/10/14/audio_9939f772cb.mp3?filename=meditation-piano-123415.mp3",
-        scriptureTheme: "Matthew 14:29 — 'Come,' He said. Then Peter got down out of the boat, walked on the water and came toward Jesus.",
-        lyricsSnippet: "Spirit lead me where my trust is without borders, Let me walk upon the waters wherever You would call me.",
-        chordsKey: "D"
-    },
-    {
-        id: "song-6",
-        title: "Gratitude",
-        artist: "Brandon Lake",
-        albumCover: "https://images.unsplash.com/photo-1504052434569-70ad5836ab65?auto=format&fit=crop&w=400&q=80",
-        duration: "4:32",
-        durationSeconds: 272,
-        mood: "SOAKING",
-        moodLabel: "❤️ Heartfelt Thanksgiving",
-        audioUrl: "https://cdn.pixabay.com/download/audio/2022/05/16/audio_db6591461e.mp3?filename=relaxing-piano-110624.mp3",
-        scriptureTheme: "Psalm 100:4 — 'Enter His gates with thanksgiving and His courts with praise; give thanks to Him and praise His name.'",
-        lyricsSnippet: "So I throw up my hands and praise You again and again, 'Cause all that I have is a hallelujah, hallelujah!",
-        chordsKey: "C"
-    },
-    {
-        id: "song-7",
-        title: "Peace Be Still",
-        artist: "Hope Darst",
-        albumCover: "https://images.unsplash.com/photo-1518495973542-4542c06a5843?auto=format&fit=crop&w=400&q=80",
-        duration: "4:12",
-        durationSeconds: 252,
-        mood: "PEACE",
-        moodLabel: "🕊️ Peace & Healing",
-        audioUrl: "https://cdn.pixabay.com/download/audio/2022/03/24/audio_3d1ef9b265.mp3?filename=peaceful-garden-healing-light-11833.mp3",
-        scriptureTheme: "Mark 4:39 — 'He got up, rebuked the wind and said to the waves, \"Quiet! Be still!\" Then the wind died down and it was completely calm.'",
-        lyricsSnippet: "Peace be still, say the word and I will. I believe that You are here now, Standing in the storm with me.",
-        chordsKey: "G"
-    },
-    {
-        id: "song-8",
-        title: "Great Are You Lord",
-        artist: "All Sons & Daughters",
-        albumCover: "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=400&q=80",
-        duration: "4:45",
-        durationSeconds: 285,
-        mood: "WARFARE",
-        moodLabel: "🌬️ Breath in Our Lungs",
-        audioUrl: "https://cdn.pixabay.com/download/audio/2022/01/26/audio_d0c6ff1101.mp3?filename=calm-piano-ambient-10149.mp3",
-        scriptureTheme: "Ezekiel 37:5 — 'This is what the Sovereign Lord says: I will make breath enter you, and you will come to life.'",
-        lyricsSnippet: "It's Your breath in our lungs, so we pour out our praise, we pour out our praise! Great are You, Lord!",
-        chordsKey: "A"
-    },
-    {
-        id: "song-9",
+        id: "song-eng-5",
         title: "Amazing Grace (My Chains Are Gone)",
         artist: "Chris Tomlin",
+        language: "English",
         albumCover: "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=400&q=80",
         duration: "4:24",
         durationSeconds: 264,
-        mood: "HYMN",
-        moodLabel: "✝️ Timeless Hymn",
-        audioUrl: "https://cdn.pixabay.com/download/audio/2022/11/06/audio_9246a36c53.mp3?filename=hopeful-piano-ambient-126284.mp3",
-        scriptureTheme: "Romans 8:1 — 'Therefore, there is now no condemnation for those who are in Christ Jesus.'",
+        mood: "ENGLISH",
+        moodLabel: "🌐 English Hymn",
+        audioUrl: "/audio/english-amazing-grace.wav",
+        scriptureTheme: "Romans 8:1 — 'There is now no condemnation for those who are in Christ Jesus.'",
         lyricsSnippet: "My chains are gone, I've been set free! My God, my Savior has ransomed me. And like a flood His mercy rains, unending love, amazing grace.",
         chordsKey: "E"
     },
     {
-        id: "song-10",
-        title: "I Speak Jesus",
-        artist: "Charity Gayle",
-        albumCover: "https://images.unsplash.com/photo-1438232992991-995b7058bbb3?auto=format&fit=crop&w=400&q=80",
-        duration: "5:15",
-        durationSeconds: 315,
-        mood: "WARFARE",
-        moodLabel: "🔥 Power in His Name",
-        audioUrl: "https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=ambient-piano-amp-strings-10711.mp3",
-        scriptureTheme: "Acts 4:12 — 'Salvation is found in no one else, for there is no other name under heaven given to mankind by which we must be saved.'",
-        lyricsSnippet: "I just wanna speak the name of Jesus over every heart and every mind, 'Cause I know there is peace within Your presence, I speak Jesus!",
-        chordsKey: "D"
-    },
-    {
-        id: "song-11",
-        title: "Jireh (You Are Enough)",
-        artist: "Elevation Worship & Maverick City",
-        albumCover: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=400&q=80",
-        duration: "5:45",
-        durationSeconds: 345,
-        mood: "PRAISE",
-        moodLabel: "🙌 Lord Our Provider",
-        audioUrl: "https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73467.mp3?filename=inspiring-cinematic-ambient-116199.mp3",
-        scriptureTheme: "Philippians 4:19 — 'And my God will meet all your needs according to the riches of His glory in Christ Jesus.'",
-        lyricsSnippet: "Jireh, You are enough! Jireh, You are enough! And I will be content in every circumstance, You are enough!",
-        chordsKey: "C"
-    },
-    {
-        id: "song-12",
-        title: "Reckless Love",
-        artist: "Cory Asbury",
+        id: "song-eng-6",
+        title: "How Great Thou Art",
+        artist: "Classic Hymn / Carl Boberg",
+        language: "English",
         albumCover: "https://images.unsplash.com/photo-1499209974431-9dddcece7f88?auto=format&fit=crop&w=400&q=80",
-        duration: "5:32",
-        durationSeconds: 332,
-        mood: "SOAKING",
-        moodLabel: "💖 Overwhelming Love",
-        audioUrl: "https://cdn.pixabay.com/download/audio/2021/08/04/audio_3341ab738e.mp3?filename=the-cradle-of-your-soul-5753.mp3",
-        scriptureTheme: "Luke 15:4 — 'Does he not leave the ninety-nine in the open country and go after the lost sheep until he finds it?'",
-        lyricsSnippet: "Oh, the overwhelming, never-ending, reckless love of God! Oh, it chases me down, fights 'til I'm found, leaves the ninety-nine.",
-        chordsKey: "G"
+        duration: "4:50",
+        durationSeconds: 290,
+        mood: "ENGLISH",
+        moodLabel: "🌐 English Majestic Hymn",
+        audioUrl: "/audio/english-how-great-thou-art.wav",
+        scriptureTheme: "Psalm 8:1 — 'O Lord, our Lord, how majestic is Your name in all the earth!'",
+        lyricsSnippet: "Then sings my soul, my Savior God, to Thee: How great Thou art, how great Thou art!",
+        chordsKey: "A"
     }
 ];
 
 export const MOOD_CATEGORIES: { key: WorshipMood; label: string; icon: string }[] = [
-    { key: "ALL", label: "All Songs", icon: "✨" },
-    { key: "PRAISE", label: "Praise & Joy", icon: "❤️" },
-    { key: "SOAKING", label: "Soaking Worship", icon: "🕊️" },
-    { key: "PEACE", label: "Peace & Rest", icon: "🌿" },
-    { key: "WARFARE", label: "Faith & Breakthrough", icon: "⚔️" },
-    { key: "HYMN", label: "Classic Hymns", icon: "✝️" }
+    { key: "ALL", label: "✨ Lahat / All Christian Songs", icon: "✨" },
+    { key: "TAGALOG", label: "🇵🇭 Tagalog Christian Worship", icon: "🇵🇭" },
+    { key: "ENGLISH", label: "🌐 English Christian Worship", icon: "🌐" }
 ];
 
 const CUSTOM_SONGS_STORAGE_KEY = "epic_community_custom_worship_songs";
 
-/**
- * Get user's custom added worship songs from local storage
- * Guaranteed 100% private to this device/browser
- */
 export function getCustomWorshipSongs(): WorshipSong[] {
     try {
         const stored = localStorage.getItem(CUSTOM_SONGS_STORAGE_KEY);
         if (stored) {
             return JSON.parse(stored);
         }
-    } catch {
-        // storage disabled or unavailable
-    }
+    } catch {}
     return [];
 }
 
-/**
- * Add a custom worship song to this user's personal device playlist
- */
 export function saveCustomWorshipSong(song: {
     title: string;
     artist: string;
     audioUrl: string;
-    mood?: WorshipMood;
+    language?: "Tagalog" | "English";
     scriptureTheme?: string;
     lyricsSnippet?: string;
 }): WorshipSong {
     const list = getCustomWorshipSongs();
+    const lang = song.language || "Tagalog";
     const newSong: WorshipSong = {
         id: `custom-${Date.now()}`,
         title: song.title.trim(),
         artist: song.artist.trim() || "Worship Team",
+        language: lang,
         albumCover: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=400&q=80",
         duration: "4:00",
         durationSeconds: 240,
-        mood: song.mood || "PRAISE",
-        moodLabel: "🎵 Custom Worship Song",
+        mood: lang === "Tagalog" ? "TAGALOG" : "ENGLISH",
+        moodLabel: lang === "Tagalog" ? "🇵🇭 Custom Tagalog Worship" : "🌐 Custom English Worship",
         audioUrl: song.audioUrl.trim(),
         scriptureTheme: song.scriptureTheme?.trim() || "Colossians 3:16 — 'Singing to God with thanksgiving in your hearts.'",
         lyricsSnippet: song.lyricsSnippet?.trim() || "Worship the Lord with gladness; come before Him with joyful songs!",
@@ -255,11 +265,6 @@ export function saveCustomWorshipSong(song: {
     return newSong;
 }
 
-/**
- * Web Audio API Spiritual Ambient Synthesizer
- * Generates peaceful, resonant worship chords in real time
- * as an ultra-reliable, zero-dependency audio generator
- */
 class SpiritualAmbientSynth {
     private ctx: AudioContext | null = null;
     private masterGain: GainNode | null = null;
@@ -292,7 +297,6 @@ class SpiritualAmbientSynth {
             osc.type = "sine";
             osc.frequency.setValueAtTime(freq, ctx.currentTime);
 
-            // Gentle swelling envelope
             noteGain.gain.setValueAtTime(0.001, ctx.currentTime);
             noteGain.gain.exponentialRampToValueAtTime(0.08, ctx.currentTime + 1.5);
 
@@ -330,19 +334,14 @@ class SpiritualAmbientSynth {
     private getChordFrequencies(key: "C" | "G" | "D" | "E" | "A"): number[] {
         switch (key) {
             case "C":
-                // C major (C3, E3, G3, B3, C4)
                 return [130.81, 164.81, 196.0, 246.94, 261.63];
             case "G":
-                // G major (G2, B2, D3, G3, B3)
                 return [98.0, 123.47, 146.83, 196.0, 246.94];
             case "D":
-                // D major (D3, F#3, A3, D4)
                 return [146.83, 185.0, 220.0, 293.66];
             case "E":
-                // E minor / major warmth
                 return [82.41, 123.47, 164.81, 246.94];
             case "A":
-                // A major warmth
                 return [110.0, 138.59, 164.81, 220.0];
             default:
                 return [130.81, 164.81, 196.0];

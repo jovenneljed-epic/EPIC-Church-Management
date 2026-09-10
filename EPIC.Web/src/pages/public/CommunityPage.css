@@ -2929,3 +2929,138 @@
         grid-template-columns: 1fr !important;
     }
 }
+
+
+/* =========================================================================
+   MOBILE EPIC SHORTS WATCH BANNER & THEATER MOBILE ADAPTATIONS
+   ========================================================================= */
+.fb-shorts-mobile-banner {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.22) 0%, rgba(244, 63, 94, 0.28) 50%, rgba(56, 189, 248, 0.22) 100%);
+    border-top: 1px solid rgba(244, 63, 94, 0.4);
+    border-bottom: 1px solid rgba(244, 63, 94, 0.4);
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    box-sizing: border-box;
+    width: 100%;
+    transition: all 0.2s ease;
+}
+
+.fb-shorts-mobile-banner:active {
+    background: rgba(244, 63, 94, 0.35);
+    transform: scale(0.99);
+}
+
+.fb-shorts-banner-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.fb-shorts-banner-icon {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ef4444 0%, #f43f5e 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 14px rgba(244, 63, 94, 0.5);
+    animation: communityPulse 1.8s infinite;
+}
+
+.fb-shorts-banner-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.fb-shorts-banner-text strong {
+    font-size: 0.92rem;
+    color: #ffffff;
+    font-weight: 800;
+}
+
+.fb-shorts-banner-text span {
+    font-size: 0.74rem;
+    color: #e0f2fe;
+}
+
+.fb-shorts-banner-badge {
+    background: #ffffff;
+    color: #0f172a;
+    font-size: 0.76rem;
+    font-weight: 900;
+    padding: 6px 12px;
+    border-radius: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    white-space: nowrap;
+}
+
+.shorts-mobile-onscreen-nav {
+    display: none;
+    position: absolute;
+    right: 14px;
+    top: 70px;
+    z-index: 20;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.shorts-mob-nav-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: #38bdf8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.shorts-mob-nav-btn:disabled {
+    opacity: 0.25;
+}
+
+@media (max-width: 768px) {
+    .fb-shorts-mobile-banner {
+        display: flex !important;
+    }
+
+    .shorts-mobile-onscreen-nav {
+        display: flex !important;
+    }
+
+    /* Full screen TikTok/Reels Mobile Theater */
+    .shorts-theater-overlay {
+        padding: 0 !important;
+        background: #000000 !important;
+        z-index: 99999 !important;
+    }
+
+    .shorts-theater-card {
+        width: 100vw !important;
+        height: 100vh !important;
+        max-height: 100vh !important;
+        gap: 0 !important;
+    }
+
+    .shorts-stage-media {
+        width: 100vw !important;
+        height: 100vh !important;
+        max-height: 100vh !important;
+        border-radius: 0 !important;
+        border: none !important;
+    }
+
+    .shorts-nav-dock {
+        display: none !important;
+    }
+}

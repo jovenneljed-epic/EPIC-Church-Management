@@ -134,7 +134,7 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
     const shortFileInputRef = useRef<HTMLInputElement | null>(null);
 
     // Mobile Responsive Active Tab (FEED, PRAYER, LADDER, WORSHIP)
-    const [mobileTab, setMobileTab] = useState<"FEED" | "PRAYER" | "LADDER" | "WORSHIP">("FEED");
+    const [mobileTab, setMobileTab] = useState<"FEED" | "SHORTS" | "PRAYER" | "LADDER" | "WORSHIP">("FEED");
 
     // Christian Worship Music Player State
     const [worshipMood, setWorshipMood] = useState<WorshipMood>("ALL");
@@ -624,6 +624,17 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
 
                 <button
                     type="button"
+                    className={`comm-mobile-tab-btn ${activeShortIdx !== null ? "active" : ""}`}
+                    onClick={() => {
+                        handleOpenShort(0);
+                    }}
+                >
+                    <span className="comm-mob-tab-icon">🎥</span>
+                    <span>Shorts</span>
+                </button>
+
+                <button
+                    type="button"
                     className={`comm-mobile-tab-btn ${mobileTab === "PRAYER" ? "active" : ""}`}
                     onClick={() => {
                         setMobileTab("PRAYER");
@@ -1052,6 +1063,20 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                                 </div>
                             </div>
                         )}
+
+                        {/* Mobile Facebook Reels / EPIC Shorts Watch Banner */}
+                        <div className="fb-shorts-mobile-banner" onClick={() => handleOpenShort(0)}>
+                            <div className="fb-shorts-banner-content">
+                                <div className="fb-shorts-banner-icon">
+                                    <Video size={18} color="#ffffff" />
+                                </div>
+                                <div className="fb-shorts-banner-text">
+                                    <strong>🎬 Watch EPIC Shorts Theater</strong>
+                                    <span>{shorts.length} vertical spiritual shorts, sermons &amp; praise</span>
+                                </div>
+                            </div>
+                            <span className="fb-shorts-banner-badge">▶ Watch (+20 Pts)</span>
+                        </div>
 
                         {/* Facebook-Style "What's On Your Mind?" Post Composer Box */}
                         <div className="fb-composer-box">
@@ -1817,6 +1842,34 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                                 <span className="shorts-scripture-tag">
                                     📖 {shorts[activeShortIdx].scripture}
                                 </span>
+                            </div>
+
+                            {/* Mobile In-Screen Quick Navigation Arrows */}
+                            <div className="shorts-mobile-onscreen-nav">
+                                <button
+                                    type="button"
+                                    className="shorts-mob-nav-btn prev"
+                                    disabled={activeShortIdx === 0}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (activeShortIdx > 0) setActiveShortIdx(activeShortIdx - 1);
+                                    }}
+                                    title="Previous Short"
+                                >
+                                    <ChevronUp size={20} />
+                                </button>
+                                <button
+                                    type="button"
+                                    className="shorts-mob-nav-btn next"
+                                    disabled={activeShortIdx === shorts.length - 1}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (activeShortIdx < shorts.length - 1) setActiveShortIdx(activeShortIdx + 1);
+                                    }}
+                                    title="Next Short"
+                                >
+                                    <ChevronDown size={20} />
+                                </button>
                             </div>
                         </div>
 
