@@ -20,6 +20,9 @@ import {
     FileText,
     Mail,
     ThumbsUp,
+    Trash2,
+    Lock,
+    Unlock
 } from "lucide-react";
 import {
     CHURCH_ARTICLES,
@@ -40,9 +43,14 @@ import {
     type ReactionType,
     type ArticleReactions,
     type BlogComment,
+    adminDeleteBlogComment,
+    adminDeleteBlogReply
 } from "../../services/blogEngagementService";
 import { getAdminBlogs } from "../../services/blogService";
 import type { BlogPost } from "../../services/blogService";
+import { useAdminAuth } from "../../hooks/useAdminAuth";
+import { AdminAuthModal, AdminToast } from "../../components/AdminAuthModal";
+import "../../components/AdminAuthModal.css";
 import "./BlogPage.css";
 
 interface BlogPageProps {
@@ -52,6 +60,19 @@ interface BlogPageProps {
 }
 
 export default function BlogPage({ onNavigate, initialSlug, initialSubpath }: BlogPageProps) {
+    // Admin vs Member Role & Authentication Hook
+    const {
+        userRole,
+        isAdmin,
+        isAdminAuthModalOpen,
+        adminAuthError,
+        adminAuthLoading,
+        toastNotification,
+        handleRequestAdminMode,
+        handleAdminLogin,
+        closeAdminAuthModal,
+        showToast: showAdminToast
+    } = useAdminAuth();
     const [selectedCategory, setSelectedCategory] = useState<string>("all");
     const [searchQuery, setSearchQuery] = useState<string>("");
     const [selectedTag, setSelectedTag] = useState<string | null>(null);
@@ -498,6 +519,51 @@ export default function BlogPage({ onNavigate, initialSlug, initialSubpath }: Bl
         showToast("Reply posted successfully!");
     };
 
+    // Admin Moderation: Delete comment
+    const handleDeleteComment = (articleId: string, commentId: string, author: string) => {
+        if (!isAdmin) return;
+        const confirmed = window.confirm(
+            `Admin Moderation Confirmation:\n\nAre you sure you want to delete this reflection by "${author}"?\n\nThis will remove the comment and any replies from the discussion.`
+        );
+        if (!confirmed) return;
+
+        adminDeleteBlogComment(articleId, commentId);
+        setCommentsMap((prev) => ({
+            ...prev,
+            [articleId]: (prev[articleId] || []).filter((c) => c.id !== commentId)
+        }));
+        showAdminToast(`🗑️ Reflection by "${author}" deleted by Administrator.`);
+    };
+
+    // Admin Moderation: Delete reply
+    const handleDeleteReply = (
+        articleId: string,
+        commentId: string,
+        replyId: string,
+        author: string
+    ) => {
+        if (!isAdmin) return;
+        const confirmed = window.confirm(
+            `Admin Moderation Confirmation:\n\nAre you sure you want to delete this reply by "${author}"?`
+        );
+        if (!confirmed) return;
+
+        adminDeleteBlogReply(articleId, commentId, replyId);
+        setCommentsMap((prev) => ({
+            ...prev,
+            [articleId]: (prev[articleId] || []).map((c) => {
+                if (c.id === commentId) {
+                    return {
+                        ...c,
+                        replies: c.replies.filter((r) => r.id !== replyId)
+                    };
+                }
+                return c;
+            })
+        }));
+        showAdminToast(`🗑️ Reply by "${author}" deleted by Administrator.`);
+    };
+
     // Open Facebook Share Modal
     const handleShareModalOpen = (article: ChurchArticle, e?: React.MouseEvent) => {
         e?.stopPropagation();
@@ -874,6 +940,38 @@ export default function BlogPage({ onNavigate, initialSlug, initialSubpath }: Bl
     return (
         <div className="epic-public-blog">
             <PublicHeader onNavigate={onNavigate} />
+
+            {/* EPIC Blog Role Bar (Admin vs Member Mode - Just like EPIC CMS) */}
+            <div className={`community-role-top-banner ${userRole.toLowerCase()}`}>
+                <div className="community-role-banner-content">
+                    <span className="community-role-tag">
+                        {userRole === "ADMIN" ? "👑 EPIC Administrator Mode" : "👤 EPIC Church Member Mode"}
+                    </span>
+                    <span className="community-role-desc">
+                        {userRole === "ADMIN"
+                            ? "Admin Moderation Active: You can delete comments and replies across all church articles to maintain positive culture."
+                            : "Church Family Articles: Read inspiring biblical doctrine, share amens, and post reflections."}
+                    </span>
+                </div>
+                <button
+                    type="button"
+                    className={`community-role-switch-pill ${userRole.toLowerCase()}`}
+                    onClick={handleRequestAdminMode}
+                    title={userRole === "ADMIN" ? "Exit Admin Mode" : "Authenticate as Admin"}
+                >
+                    {userRole === "ADMIN" ? (
+                        <>
+                            <Unlock size={13} style={{ display: "inline", marginRight: 4 }} />
+                            <span>Exit Admin Mode</span>
+                        </>
+                    ) : (
+                        <>
+                            <Lock size={13} style={{ display: "inline", marginRight: 4 }} />
+                            <span>Admin Login</span>
+                        </>
+                    )}
+                </button>
+            </div>
 
             {/* =========================================================================
                 ARTICLE READING VIEW (13-POINT ARCHITECTURE)
@@ -1274,6 +1372,16 @@ export default function BlogPage({ onNavigate, initialSlug, initialSubpath }: Bl
                                                         <span className="comment-time">{c.timestamp}</span>
                                                     </div>
                                                 </div>
+                                                {isAdmin && (
+                                                    <button
+                                                        type="button"
+                                                        className="moderation-delete-pill"
+                                                        onClick={() => handleDeleteComment(activeArticle.id, c.id, c.authorName)}
+                                                        title="Admin: Delete Reflection"
+                                                    >
+                                                        <Trash2 size={12} /> Delete
+                                                    </button>
+                                                )}
                                             </div>
 
                                             <p className="comment-content-text">{c.content}</p>
@@ -1358,7 +1466,20 @@ export default function BlogPage({ onNavigate, initialSlug, initialSubpath }: Bl
                                                                         </strong>
                                                                     </div>
                                                                 </div>
-                                                                <span className="comment-time">{r.timestamp}</span>
+                                                                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                                                    <span className="comment-time">{r.timestamp}</span>
+                                                                    {isAdmin && (
+                                                                        <button
+                                                                            type="button"
+                                                                            className="moderation-delete-pill"
+                                                                            style={{ padding: "2px 6px", fontSize: "0.7rem" }}
+                                                                            onClick={() => handleDeleteReply(activeArticle.id, c.id, r.id, r.authorName)}
+                                                                            title="Admin: Delete Reply"
+                                                                        >
+                                                                            <Trash2 size={11} /> Delete
+                                                                        </button>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                             <p className="comment-content-text" style={{ fontSize: "0.875rem", margin: "6px 0 0 0" }}>
                                                                 {r.content}
@@ -1871,6 +1992,18 @@ export default function BlogPage({ onNavigate, initialSlug, initialSubpath }: Bl
                     </div>
                 </div>
             )}
+
+            {/* Admin Auth Modal & Toast */}
+            <AdminAuthModal
+                isOpen={isAdminAuthModalOpen}
+                onClose={closeAdminAuthModal}
+                onSubmit={handleAdminLogin}
+                error={adminAuthError}
+                loading={adminAuthLoading}
+                title="EPIC Blog Admin Moderation"
+                description="Only authorized church administrators and pastors can delete comments or replies to maintain a godly, encouraging environment for all readers."
+            />
+            <AdminToast message={toastNotification} />
         </div>
     );
 }

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * EPIC Church Management System - Gallery & Visual Kingdom Chronicle Service
  * Cloud-synchronized photo and news story service connecting to Microsoft SQL Server
  * with client-side canvas compression, optimistic updates, and offline caching.
@@ -32,6 +32,44 @@ export interface CreateGalleryStoryRequest {
 
 const GALLERY_STORAGE_KEY = "epic_gallery_stories_v1";
 const GALLERY_LIKES_KEY = "epic_gallery_user_likes_v1";
+const GALLERY_DELETED_KEY = "epic_gallery_deleted_ids_v1";
+
+export function getDeletedGalleryStoryIds(): number[] {
+    try {
+        const raw = localStorage.getItem(GALLERY_DELETED_KEY);
+        return raw ? JSON.parse(raw) : [];
+    } catch {
+        return [];
+    }
+}
+
+export function saveDeletedGalleryStoryIds(ids: number[]): void {
+    try {
+        localStorage.setItem(GALLERY_DELETED_KEY, JSON.stringify(ids));
+    } catch {
+        // ignore
+    }
+}
+
+export function adminDeleteGalleryStory(storyId: number): boolean {
+    const deleted = getDeletedGalleryStoryIds();
+    if (!deleted.includes(storyId)) {
+        deleted.push(storyId);
+        saveDeletedGalleryStoryIds(deleted);
+    }
+    const current = getStoredStories();
+    const updated = current.filter((s) => s.id !== storyId);
+    saveStoredStories(updated);
+
+    // Call Cloud Backend
+    fetch(`${API_BASE_URL}/gallery/${storyId}`, { method: "DELETE" }).catch(() => {});
+    return true;
+}
+
+export function adminRestoreAllGalleryStories(): void {
+    localStorage.removeItem(GALLERY_DELETED_KEY);
+    saveStoredStories(INITIAL_CURATED_STORIES);
+}
 
 const INITIAL_CURATED_STORIES: GalleryPhotoStory[] = [
     {
@@ -150,13 +188,17 @@ function saveUserLikedMap(map: Record<number, boolean>): void {
 }
 
 function getStoredStories(): GalleryPhotoStory[] {
+    const deletedIds = getDeletedGalleryStoryIds();
     try {
         const raw = localStorage.getItem(GALLERY_STORAGE_KEY);
-        if (raw) return JSON.parse(raw);
+        if (raw) {
+            const parsed: GalleryPhotoStory[] = JSON.parse(raw);
+            return parsed.filter((s) => !deletedIds.includes(s.id));
+        }
     } catch {
         // ignore
     }
-    return INITIAL_CURATED_STORIES;
+    return INITIAL_CURATED_STORIES.filter((s) => !deletedIds.includes(s.id));
 }
 
 function saveStoredStories(stories: GalleryPhotoStory[]): void {
@@ -173,10 +215,13 @@ function saveStoredStories(stories: GalleryPhotoStory[]): void {
 export function getInitialStories(): GalleryPhotoStory[] {
     const stories = getStoredStories();
     const liked = getUserLikedMap();
-    return stories.map((s) => ({
-        ...s,
-        userLiked: !!liked[s.id]
-    }));
+    const deletedIds = getDeletedGalleryStoryIds();
+    return stories
+        .filter((s) => !deletedIds.includes(s.id))
+        .map((s) => ({
+            ...s,
+            userLiked: !!liked[s.id]
+        }));
 }
 
 /**
@@ -191,20 +236,23 @@ export async function fetchGalleryStories(): Promise<GalleryPhotoStory[]> {
 
         const data: any[] = await res.json();
         const liked = getUserLikedMap();
+        const deletedIds = getDeletedGalleryStoryIds();
 
-        const stories: GalleryPhotoStory[] = data.map((item) => ({
-            id: item.id || item.Id,
-            title: item.title || item.Title || "Ministry Moment",
-            description: item.description || item.Description || "",
-            imageUrl: item.imageUrl || item.ImageUrl || "",
-            category: (item.category || item.Category || "WORSHIP").toUpperCase(),
-            eventLocation: item.eventLocation || item.EventLocation || "Main Sanctuary",
-            capturedBy: item.capturedBy || item.CapturedBy || "EPIC Media",
-            badge: (item.badge || item.Badge || "MOMENT").toUpperCase(),
-            likes: item.likes || item.Likes || 0,
-            createdDate: item.createdDate || item.CreatedDate || new Date().toISOString(),
-            userLiked: !!liked[item.id || item.Id]
-        }));
+        const stories: GalleryPhotoStory[] = data
+            .filter((item) => !deletedIds.includes(item.id || item.Id))
+            .map((item) => ({
+                id: item.id || item.Id,
+                title: item.title || item.Title || "Ministry Moment",
+                description: item.description || item.Description || "",
+                imageUrl: item.imageUrl || item.ImageUrl || "",
+                category: (item.category || item.Category || "WORSHIP").toUpperCase(),
+                eventLocation: item.eventLocation || item.EventLocation || "Main Sanctuary",
+                capturedBy: item.capturedBy || item.CapturedBy || "EPIC Media",
+                badge: (item.badge || item.Badge || "MOMENT").toUpperCase(),
+                likes: item.likes || item.Likes || 0,
+                createdDate: item.createdDate || item.CreatedDate || new Date().toISOString(),
+                userLiked: !!liked[item.id || item.Id]
+            }));
 
         saveStoredStories(stories);
         return stories;

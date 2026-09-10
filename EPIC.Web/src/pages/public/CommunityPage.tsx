@@ -172,6 +172,7 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
             // Already admin, switch back to member
             setUserRole("MEMBER");
             sessionStorage.removeItem("epic_community_admin_verified");
+            sessionStorage.removeItem("epic_admin_verified");
             setToastNotification("Switched to Church Member view.");
             setTimeout(() => setToastNotification(""), 3000);
         } else {
@@ -179,6 +180,7 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
             if (permissionService.isAdministrator()) {
                 setUserRole("ADMIN");
                 sessionStorage.setItem("epic_community_admin_verified", "true");
+                sessionStorage.setItem("epic_admin_verified", "true");
                 setToastNotification("👑 Administrator privileges verified via EPIC CMS session.");
                 setTimeout(() => setToastNotification(""), 3000);
             } else {
@@ -204,6 +206,7 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
         if (p === "epic2026" || p === "admin123" || (u.toLowerCase() === "admin" && (p === "epic" || p === "admin"))) {
             setUserRole("ADMIN");
             sessionStorage.setItem("epic_community_admin_verified", "true");
+            sessionStorage.setItem("epic_admin_verified", "true");
             setIsAdminAuthModalOpen(false);
             setToastNotification("👑 Administrator access verified! Moderation controls unlocked.");
             setTimeout(() => setToastNotification(""), 4000);
@@ -216,6 +219,7 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
             if (permissionService.isAdministrator() || res.role?.toLowerCase().includes("admin") || res.roleId === 1) {
                 setUserRole("ADMIN");
                 sessionStorage.setItem("epic_community_admin_verified", "true");
+                sessionStorage.setItem("epic_admin_verified", "true");
                 setIsAdminAuthModalOpen(false);
                 setToastNotification(`👑 Welcome, ${res.fullName || res.username}! Community moderation controls unlocked.`);
                 setTimeout(() => setToastNotification(""), 4000);

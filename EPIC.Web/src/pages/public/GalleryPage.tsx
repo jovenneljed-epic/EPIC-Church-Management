@@ -19,7 +19,10 @@ import {
     Clock,
     Flame,
     Radio,
-    Calendar
+    Calendar,
+    Trash2,
+    Lock,
+    Unlock
 } from "lucide-react";
 import {
     type GalleryPhotoStory,
@@ -27,8 +30,12 @@ import {
     fetchGalleryStories,
     submitGalleryStory,
     likeGalleryStory,
-    compressImage
+    compressImage,
+    adminDeleteGalleryStory
 } from "../../services/galleryService";
+import { useAdminAuth } from "../../hooks/useAdminAuth";
+import { AdminAuthModal, AdminToast } from "../../components/AdminAuthModal";
+import "../../components/AdminAuthModal.css";
 import "./GalleryPage.css";
 import "./PublicUnisonTheme.css";
 
@@ -60,6 +67,20 @@ const BADGES = [
 ] as const;
 
 const GalleryPage: React.FC<GalleryPageProps> = ({ onNavigate }) => {
+    // Admin vs Member Role & Authentication Hook
+    const {
+        userRole,
+        isAdmin,
+        isAdminAuthModalOpen,
+        adminAuthError,
+        adminAuthLoading,
+        toastNotification,
+        handleRequestAdminMode,
+        handleAdminLogin,
+        closeAdminAuthModal,
+        showToast
+    } = useAdminAuth();
+
     // Stories state
     const [stories, setStories] = useState<GalleryPhotoStory[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
@@ -88,6 +109,23 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ onNavigate }) => {
     const [newEventLocation, setNewEventLocation] = useState<string>("Main Sanctuary");
     const [newCapturedBy, setNewCapturedBy] = useState<string>("");
     const [newBadge, setNewBadge] = useState<string>("MOMENT");
+
+    // Delete photo story handler (Admin moderation)
+    const handleDeleteStory = (e: React.MouseEvent, storyId: number, storyTitle: string) => {
+        e.stopPropagation();
+        if (!isAdmin) return;
+        const confirmed = window.confirm(
+            `Admin Moderation Confirmation:\n\nAre you sure you want to delete this photo story?\n"${storyTitle}"\n\nThis will remove it from the church gallery chronicle.`
+        );
+        if (!confirmed) return;
+
+        adminDeleteGalleryStory(storyId);
+        setStories((prev) => prev.filter((s) => s.id !== storyId));
+        if (lightboxIndex !== null && filteredStories[lightboxIndex]?.id === storyId) {
+            setLightboxIndex(null);
+        }
+        showToast(`🗑️ Photo story "${storyTitle.slice(0, 30)}..." deleted by Administrator.`);
+    };
 
     // Load stories on mount
     useEffect(() => {
@@ -281,6 +319,38 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ onNavigate }) => {
         <div className="epic-public-gallery">
             <PublicHeader onNavigate={onNavigate} />
 
+            {/* EPIC Gallery Role Bar (Admin vs Member Mode - Just like EPIC CMS) */}
+            <div className={`community-role-top-banner ${userRole.toLowerCase()}`}>
+                <div className="community-role-banner-content">
+                    <span className="community-role-tag">
+                        {userRole === "ADMIN" ? "👑 EPIC Administrator Mode" : "👤 EPIC Church Member Mode"}
+                    </span>
+                    <span className="community-role-desc">
+                        {userRole === "ADMIN"
+                            ? "Admin Moderation Active: You can delete inappropriate photos, curate gallery chronicles, and preserve fellowship culture."
+                            : "Church Family Archive: Explore faith moments, submit photo stories, and celebrate what God is doing."}
+                    </span>
+                </div>
+                <button
+                    type="button"
+                    className={`community-role-switch-pill ${userRole.toLowerCase()}`}
+                    onClick={handleRequestAdminMode}
+                    title={userRole === "ADMIN" ? "Exit Admin Mode" : "Authenticate as Admin"}
+                >
+                    {userRole === "ADMIN" ? (
+                        <>
+                            <Unlock size={13} style={{ display: "inline", marginRight: 4 }} />
+                            <span>Exit Admin Mode</span>
+                        </>
+                    ) : (
+                        <>
+                            <Lock size={13} style={{ display: "inline", marginRight: 4 }} />
+                            <span>Admin Login</span>
+                        </>
+                    )}
+                </button>
+            </div>
+
             {/* 1. LIVE KINGDOM CHRONICLE TICKER */}
             {stories.length > 0 && (
                 <div className="live-chronicle-ticker-wrap">
@@ -460,6 +530,16 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ onNavigate }) => {
                                             >
                                                 View Story <ArrowRight size={14} />
                                             </button>
+                                            {isAdmin && (
+                                                <button
+                                                    type="button"
+                                                    className="moderation-delete-pill"
+                                                    onClick={(e) => handleDeleteStory(e, spotlightStory.id, spotlightStory.title)}
+                                                    title="Admin: Delete Story from Chronicle"
+                                                >
+                                                    <Trash2 size={13} /> Delete Story
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -563,6 +643,17 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ onNavigate }) => {
                                         >
                                             {story.badge}
                                         </span>
+
+                                        {isAdmin && (
+                                            <button
+                                                type="button"
+                                                className="moderation-card-trash-btn"
+                                                onClick={(e) => handleDeleteStory(e, story.id, story.title)}
+                                                title="Admin: Delete Photo Story"
+                                            >
+                                                <Trash2 size={12} /> Delete
+                                            </button>
+                                        )}
 
                                         <button
                                             type="button"
@@ -686,6 +777,16 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ onNavigate }) => {
                                                 >
                                                     Read Chronicle <ArrowRight size={13} />
                                                 </button>
+                                                {isAdmin && (
+                                                    <button
+                                                        type="button"
+                                                        className="moderation-delete-pill"
+                                                        onClick={(e) => handleDeleteStory(e, story.id, story.title)}
+                                                        title="Admin: Delete Story from Chronicle"
+                                                    >
+                                                        <Trash2 size={13} /> Delete
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -989,6 +1090,18 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ onNavigate }) => {
                                 <span>{shareCopied ? "Link Copied!" : "Share"}</span>
                             </button>
 
+                            {isAdmin && (
+                                <button
+                                    type="button"
+                                    className="moderation-delete-pill"
+                                    style={{ padding: "6px 12px", fontSize: "0.8rem" }}
+                                    onClick={(e) => handleDeleteStory(e, currentLightboxStory.id, currentLightboxStory.title)}
+                                    title="Admin: Delete Story from Chronicle"
+                                >
+                                    <Trash2 size={14} /> Delete Story
+                                </button>
+                            )}
+
                             <button
                                 type="button"
                                 className="lightbox-close-btn"
@@ -1146,6 +1259,18 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ onNavigate }) => {
                     </div>
                 </div>
             </section>
+
+            {/* Admin Auth Modal & Toast */}
+            <AdminAuthModal
+                isOpen={isAdminAuthModalOpen}
+                onClose={closeAdminAuthModal}
+                onSubmit={handleAdminLogin}
+                error={adminAuthError}
+                loading={adminAuthLoading}
+                title="EPIC Gallery Admin Moderation"
+                description="Only authorized church administrators and media coordinators can delete photo stories to maintain a pure, Christ-exalting chronicle."
+            />
+            <AdminToast message={toastNotification} />
         </div>
     );
 };

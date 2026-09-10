@@ -1,4 +1,4 @@
-﻿/**
+/**
  * EPIC Church Blog - Cloud Engagement & Reaction Engine
  * Provides real-time Facebook-style reactions, share tracking, and cloud-persistent commenting.
  * Synchronizes across the entire internet via the EPIC Cloud API (SQL Server backend)
@@ -606,3 +606,48 @@ export function toggleCommentLike(
 
     return result;
 }
+
+/**
+ * Admin Delete Comment: removes comment from local storage & notifies UI & calls API
+ */
+export function adminDeleteBlogComment(articleId: string, commentId: string): boolean {
+    const all = getAllStoredComments();
+    const currentList = all[articleId] || [];
+    const filtered = currentList.filter((c) => c.id !== commentId);
+    all[articleId] = filtered;
+    saveAllStoredComments(all);
+    notifyUpdate("comments", articleId, filtered);
+
+    // Call Cloud Backend
+    fetch(`${API_BASE_URL}/blog/${encodeURIComponent(articleId)}/comment/${encodeURIComponent(commentId)}`, {
+        method: "DELETE"
+    }).catch(() => {});
+    return true;
+}
+
+/**
+ * Admin Delete Reply: removes reply from specific comment & notifies UI & calls API
+ */
+export function adminDeleteBlogReply(articleId: string, commentId: string, replyId: string): boolean {
+    const all = getAllStoredComments();
+    const currentList = all[articleId] || [];
+    const updatedList = currentList.map((c) => {
+        if (c.id === commentId) {
+            return {
+                ...c,
+                replies: c.replies.filter((r) => r.id !== replyId)
+            };
+        }
+        return c;
+    });
+    all[articleId] = updatedList;
+    saveAllStoredComments(all);
+    notifyUpdate("comments", articleId, updatedList);
+
+    // Call Cloud Backend
+    fetch(`${API_BASE_URL}/blog/${encodeURIComponent(articleId)}/comment/${encodeURIComponent(commentId)}/reply/${encodeURIComponent(replyId)}`, {
+        method: "DELETE"
+    }).catch(() => {});
+    return true;
+}
+
