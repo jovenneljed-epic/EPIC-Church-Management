@@ -1,9 +1,11 @@
-import React, { createContext, useContext, useState, useRef, useMemo, useCallback } from "react";
+import React, { createContext, useContext, useState, useRef, useMemo, useCallback, useEffect } from "react";
 import {
     type WorshipSong,
     type WorshipMood,
+    type CreateWorshipSongRequest,
     WORSHIP_PLAYLIST,
     getCustomWorshipSongs,
+    saveCustomWorshipSong,
     getDeletedSongIds,
     adminDeleteSong,
     adminRestoreAllSongs
@@ -40,6 +42,7 @@ interface WorshipAudioContextType {
     closeLyrics: () => void;
     deleteSong: (songId: string) => void;
     restoreAllSongs: () => void;
+    addNewSong: (song: CreateWorshipSongRequest) => WorshipSong;
 }
 
 const WorshipAudioContext = createContext<WorshipAudioContextType | undefined>(undefined);
@@ -50,7 +53,7 @@ const SOUNDBAR_EXPANDED_KEY = "epic_soundbar_expanded";
 export const WorshipAudioProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     // 1. Deleted & Custom Songs
     const [deletedSongIds, setDeletedSongIds] = useState<string[]>(() => getDeletedSongIds());
-    const [customSongs] = useState<WorshipSong[]>(() => getCustomWorshipSongs());
+    const [customSongs, setCustomSongs] = useState<WorshipSong[]>(() => getCustomWorshipSongs());
 
     // 2. Compute all active songs
     const allSongs = useMemo(() => {
@@ -86,9 +89,32 @@ export const WorshipAudioProvider: React.FC<{ children: React.ReactNode }> = ({ 
     const [activeLyricsSong, setActiveLyricsSong] = useState<WorshipSong | null>(null);
     const [showLyricsModal, setShowLyricsModal] = useState<boolean>(false);
 
-    // 7. Persistent YouTube iframe Ref
+    // 7. Persistent Audio Refs (YouTube Iframe & HTML5 Audio for uploaded tracks)
     const iframeRef = useRef<HTMLIFrameElement>(null);
+    const html5AudioRef = useRef<HTMLAudioElement>(null);
     const hasInitiatedPlayback = useRef<boolean>(false);
+
+    // Sync HTML5 audio volume & mute
+    useEffect(() => {
+        if (html5AudioRef.current) {
+            html5AudioRef.current.volume = isMuted ? 0 : volume / 100;
+            html5AudioRef.current.muted = isMuted;
+        }
+    }, [volume, isMuted]);
+
+    // Sync HTML5 audio playback state
+    useEffect(() => {
+        if (!html5AudioRef.current) return;
+        if (currentSong?.audioUrl) {
+            if (isPlaying) {
+                html5AudioRef.current.play().catch(() => {});
+            } else {
+                html5AudioRef.current.pause();
+            }
+        } else {
+            html5AudioRef.current.pause();
+        }
+    }, [currentSong?.audioUrl, isPlaying]);
 
     // Send YouTube Command via postMessage
     const sendCommand = useCallback((func: string, args: any[] = []) => {
@@ -108,36 +134,70 @@ export const WorshipAudioProvider: React.FC<{ children: React.ReactNode }> = ({ 
         setIsPlaying(true);
         hasInitiatedPlayback.current = true;
         localStorage.setItem(ACTIVE_SONG_KEY, song.id);
+        if (song.audioUrl && html5AudioRef.current) {
+            html5AudioRef.current.play().catch(() => {});
+        }
     }, []);
+
+    // Add new custom song (Admin upload with proper lyrics)
+    const addNewSong = useCallback(
+        (songRequest: CreateWorshipSongRequest): WorshipSong => {
+            const created = saveCustomWorshipSong(songRequest);
+            const updated = getCustomWorshipSongs();
+            setCustomSongs(updated);
+            playSong(created);
+            return created;
+        },
+        [playSong]
+    );
 
     // Toggle Play / Pause
     const togglePlay = useCallback(() => {
         if (!hasInitiatedPlayback.current) {
             hasInitiatedPlayback.current = true;
             setIsPlaying(true);
+            if (currentSong.audioUrl && html5AudioRef.current) {
+                html5AudioRef.current.play().catch(() => {});
+            }
             return;
         }
 
         setIsPlaying((prev) => {
             const next = !prev;
-            if (next) {
-                sendCommand("playVideo");
+            if (currentSong.audioUrl && html5AudioRef.current) {
+                if (next) {
+                    html5AudioRef.current.play().catch(() => {});
+                } else {
+                    html5AudioRef.current.pause();
+                }
             } else {
-                sendCommand("pauseVideo");
+                if (next) {
+                    sendCommand("playVideo");
+                } else {
+                    sendCommand("pauseVideo");
+                }
             }
             return next;
         });
-    }, [sendCommand]);
+    }, [currentSong.audioUrl, sendCommand]);
 
     const pause = useCallback(() => {
         setIsPlaying(false);
-        sendCommand("pauseVideo");
-    }, [sendCommand]);
+        if (currentSong.audioUrl && html5AudioRef.current) {
+            html5AudioRef.current.pause();
+        } else {
+            sendCommand("pauseVideo");
+        }
+    }, [currentSong.audioUrl, sendCommand]);
 
     const resume = useCallback(() => {
         setIsPlaying(true);
-        sendCommand("playVideo");
-    }, [sendCommand]);
+        if (currentSong.audioUrl && html5AudioRef.current) {
+            html5AudioRef.current.play().catch(() => {});
+        } else {
+            sendCommand("playVideo");
+        }
+    }, [currentSong.audioUrl, sendCommand]);
 
     // Next Song
     const nextSong = useCallback(() => {
@@ -156,27 +216,40 @@ export const WorshipAudioProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }, [allSongs, currentSong, playSong]);
 
     // Volume & Mute
-    const setVolume = useCallback((v: number) => {
-        const clamped = Math.max(0, Math.min(100, v));
-        setVolumeState(clamped);
-        sendCommand("setVolume", [clamped]);
-        if (clamped === 0) {
-            setIsMuted(true);
-            sendCommand("mute");
-        } else if (isMuted) {
-            setIsMuted(false);
-            sendCommand("unMute");
-        }
-    }, [sendCommand, isMuted]);
+    const setVolume = useCallback(
+        (v: number) => {
+            const clamped = Math.max(0, Math.min(100, v));
+            setVolumeState(clamped);
+            sendCommand("setVolume", [clamped]);
+            if (html5AudioRef.current) {
+                html5AudioRef.current.volume = clamped / 100;
+            }
+            if (clamped === 0) {
+                setIsMuted(true);
+                sendCommand("mute");
+                if (html5AudioRef.current) html5AudioRef.current.muted = true;
+            } else if (isMuted) {
+                setIsMuted(false);
+                sendCommand("unMute");
+                if (html5AudioRef.current) html5AudioRef.current.muted = false;
+            }
+        },
+        [sendCommand, isMuted]
+    );
 
     const toggleMute = useCallback(() => {
         setIsMuted((prev) => {
             const next = !prev;
             if (next) {
                 sendCommand("mute");
+                if (html5AudioRef.current) html5AudioRef.current.muted = true;
             } else {
                 sendCommand("unMute");
                 sendCommand("setVolume", [volume || 80]);
+                if (html5AudioRef.current) {
+                    html5AudioRef.current.muted = false;
+                    html5AudioRef.current.volume = (volume || 80) / 100;
+                }
             }
             return next;
         });
@@ -192,36 +265,44 @@ export const WorshipAudioProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }, []);
 
     // Lyrics
-    const openLyrics = useCallback((song?: WorshipSong) => {
-        setActiveLyricsSong(song || currentSong);
-        setShowLyricsModal(true);
-    }, [currentSong]);
+    const openLyrics = useCallback(
+        (song?: WorshipSong) => {
+            setActiveLyricsSong(song || currentSong);
+            setShowLyricsModal(true);
+        },
+        [currentSong]
+    );
 
     const closeLyrics = useCallback(() => {
         setShowLyricsModal(false);
     }, []);
 
     // Admin Delete Song
-    const deleteSong = useCallback((songId: string) => {
-        adminDeleteSong(songId);
-        const updated = getDeletedSongIds();
-        setDeletedSongIds(updated);
+    const deleteSong = useCallback(
+        (songId: string) => {
+            adminDeleteSong(songId);
+            setDeletedSongIds(getDeletedSongIds());
+            setCustomSongs(getCustomWorshipSongs());
 
-        // If currently playing song was deleted, switch to next available
-        if (currentSong.id === songId) {
-            const remaining = allSongs.filter((s) => s.id !== songId);
-            if (remaining.length > 0) {
-                playSong(remaining[0]);
-            } else {
-                setIsPlaying(false);
+            // If currently playing song was deleted, switch to next available
+            if (currentSong.id === songId) {
+                const remaining = allSongs.filter((s) => s.id !== songId);
+                if (remaining.length > 0) {
+                    playSong(remaining[0]);
+                } else {
+                    setIsPlaying(false);
+                    if (html5AudioRef.current) html5AudioRef.current.pause();
+                }
             }
-        }
-    }, [currentSong, allSongs, playSong]);
+        },
+        [currentSong, allSongs, playSong]
+    );
 
     // Admin Restore Songs
     const restoreAllSongs = useCallback(() => {
         adminRestoreAllSongs();
         setDeletedSongIds([]);
+        setCustomSongs(getCustomWorshipSongs());
     }, []);
 
     // Filtered Songs by mood
@@ -268,12 +349,22 @@ export const WorshipAudioProvider: React.FC<{ children: React.ReactNode }> = ({ 
         openLyrics,
         closeLyrics,
         deleteSong,
-        restoreAllSongs
+        restoreAllSongs,
+        addNewSong
     };
 
     return (
         <WorshipAudioContext.Provider value={value}>
             {children}
+
+            {/* Hidden HTML5 Audio Element for Direct / Uploaded Audio Streams */}
+            <audio
+                ref={html5AudioRef}
+                src={currentSong?.audioUrl || undefined}
+                onEnded={nextSong}
+                preload="auto"
+                style={{ display: "none" }}
+            />
 
             {/* Persistent Global YouTube Audio/Video Engine */}
             {/* When showVideoPlayer is false, keeps 1px background iframe active so audio NEVER stops */}

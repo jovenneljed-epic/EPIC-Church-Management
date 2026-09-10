@@ -622,17 +622,61 @@
     margin-bottom: 14px;
 }
 
-.epic-lyrics-text-box {
-    font-family: inherit;
+.epic-soundbar-action-btn.upload {
+    background: rgba(56, 189, 248, 0.12);
+    border-color: rgba(56, 189, 248, 0.35);
+    color: #38bdf8;
+}
+
+.epic-soundbar-action-btn.upload:hover {
+    background: rgba(56, 189, 248, 0.25);
+    border-color: #38bdf8;
+    color: #ffffff;
+}
+
+.epic-lyrics-structured-box {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 18px 22px;
     font-size: 0.95rem;
     line-height: 1.8;
     color: #f1f5f9;
-    white-space: pre-wrap;
-    background: rgba(0, 0, 0, 0.35);
-    padding: 16px 20px;
-    border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.epic-lyrics-badge {
+    display: inline-block;
+    padding: 3px 9px;
+    background: rgba(56, 189, 248, 0.15);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    color: #38bdf8;
+    font-size: 0.74rem;
+    font-weight: 700;
+    border-radius: 6px;
+    margin: 14px 0 4px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.epic-lyrics-badge:first-child {
+    margin-top: 0;
+}
+
+.epic-lyrics-badge.chorus {
+    background: rgba(245, 158, 11, 0.2);
+    border-color: rgba(245, 158, 11, 0.4);
+    color: #fbbf24;
+}
+
+.epic-lyrics-badge.bridge {
+    background: rgba(168, 85, 247, 0.2);
+    border-color: rgba(168, 85, 247, 0.4);
+    color: #c084fc;
+}
+
+.epic-lyrics-line {
     margin: 0;
+    padding: 2px 0;
 }
 
 @keyframes spinDisc {

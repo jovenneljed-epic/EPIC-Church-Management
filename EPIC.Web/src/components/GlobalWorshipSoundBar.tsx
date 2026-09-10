@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
     Play,
     Pause,
@@ -13,9 +13,12 @@ import {
     ChevronUp,
     ChevronDown,
     Music,
-    Radio
+    Radio,
+    Plus
 } from "lucide-react";
 import { useWorshipAudio } from "../context/WorshipAudioContext";
+import { checkIsAdminVerified } from "../hooks/useAdminAuth";
+import { UploadWorshipSongModal } from "./UploadWorshipSongModal";
 import "./GlobalWorshipSoundBar.css";
 
 export const GlobalWorshipSoundBar: React.FC = () => {
@@ -40,6 +43,9 @@ export const GlobalWorshipSoundBar: React.FC = () => {
         openLyrics,
         closeLyrics
     } = useWorshipAudio();
+
+    const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+    const isAdmin = checkIsAdminVerified();
 
     const handleNavigateToCommunity = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -237,6 +243,19 @@ export const GlobalWorshipSoundBar: React.FC = () => {
                                 <span className="btn-text">{showVideoPlayer ? "Hide Video" : "Video"}</span>
                             </button>
 
+                            {/* Admin Upload Worship Song Button */}
+                            {isAdmin && (
+                                <button
+                                    type="button"
+                                    className="epic-soundbar-action-btn upload"
+                                    onClick={() => setIsUploadModalOpen(true)}
+                                    title="Admin: Upload Christian Worship Song with Proper Lyrics"
+                                >
+                                    <Plus size={14} color="#38bdf8" />
+                                    <span className="btn-text">Upload</span>
+                                </button>
+                            )}
+
                             {/* Go to Sanctuary */}
                             <button
                                 type="button"
@@ -307,11 +326,42 @@ export const GlobalWorshipSoundBar: React.FC = () => {
                             <div className="epic-lyrics-meta-pill">
                                 <span>📖 {activeLyricsSong.scriptureTheme}</span>
                             </div>
-                            <pre className="epic-lyrics-text-box">{activeLyricsSong.fullLyrics}</pre>
+                            <div className="epic-lyrics-structured-box">
+                                {activeLyricsSong.fullLyrics.split("\n").map((line, idx) => {
+                                    const trimmed = line.trim();
+                                    if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+                                        const tag = trimmed.slice(1, -1);
+                                        const isChorus = tag.toLowerCase().includes("chorus");
+                                        const isBridge = tag.toLowerCase().includes("bridge");
+                                        return (
+                                            <div
+                                                key={idx}
+                                                className={`epic-lyrics-badge ${isChorus ? "chorus" : isBridge ? "bridge" : ""}`}
+                                            >
+                                                {tag}
+                                            </div>
+                                        );
+                                    }
+                                    if (!trimmed) {
+                                        return <div key={idx} style={{ height: 10 }} />;
+                                    }
+                                    return (
+                                        <p key={idx} className="epic-lyrics-line">
+                                            {line}
+                                        </p>
+                                    );
+                                })}
+                            </div>
                         </div>
                     </div>
                 </div>
             )}
+
+            {/* Admin Upload Worship Song Modal */}
+            <UploadWorshipSongModal
+                isOpen={isUploadModalOpen}
+                onClose={() => setIsUploadModalOpen(false)}
+            />
         </>
     );
 };

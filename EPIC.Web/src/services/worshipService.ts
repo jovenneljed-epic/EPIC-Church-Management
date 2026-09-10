@@ -23,8 +23,22 @@ export interface WorshipSong {
     scriptureTheme: string;
     lyricsSnippet: string;
     fullLyrics: string;
-    chordsKey: "C" | "G" | "D" | "E" | "A";
+    chordsKey: string;
     isCustom?: boolean;
+}
+
+export interface CreateWorshipSongRequest {
+    title: string;
+    artist: string;
+    language?: "Tagalog" | "English";
+    albumCover?: string;
+    duration?: string;
+    youtubeUrlOrId?: string;
+    audioUrl?: string;
+    scriptureTheme?: string;
+    lyricsSnippet?: string;
+    fullLyrics?: string;
+    chordsKey?: string;
 }
 
 export const WORSHIP_PLAYLIST: WorshipSong[] = [
@@ -690,42 +704,44 @@ export function getCustomWorshipSongs(): WorshipSong[] {
     return [];
 }
 
-export function saveCustomWorshipSong(song: {
-    title: string;
-    artist: string;
-    youtubeUrlOrId?: string;
-    audioUrl?: string;
-    language?: "Tagalog" | "English";
-    scriptureTheme?: string;
-    lyricsSnippet?: string;
-    fullLyrics?: string;
-}): WorshipSong {
+export function saveCustomWorshipSong(song: CreateWorshipSongRequest): WorshipSong {
     const list = getCustomWorshipSongs();
     const lang = song.language || "Tagalog";
     
     // Extract video ID if full URL was provided
-    let yId = (song.youtubeUrlOrId || song.audioUrl || "").trim();
+    let yId = (song.youtubeUrlOrId || "").trim();
     if (yId.includes("v=")) {
         yId = yId.split("v=")[1].split("&")[0];
     } else if (yId.includes("youtu.be/")) {
         yId = yId.split("youtu.be/")[1].split("?")[0];
     }
 
+    let defaultCover = "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=800&q=80";
+    if (yId) {
+        defaultCover = `https://img.youtube.com/vi/${yId}/hqdefault.jpg`;
+    }
+
+    const snippet =
+        song.lyricsSnippet?.trim() ||
+        (song.fullLyrics ? song.fullLyrics.split("\n").filter((l) => l.trim() && !l.startsWith("[")).slice(0, 2).join(" ") : "") ||
+        "Worship the Lord with gladness; come before Him with joyful songs!";
+
     const newSong: WorshipSong = {
         id: `custom-${Date.now()}`,
         title: song.title.trim(),
         artist: song.artist.trim() || "Worship Team",
         language: lang,
-        albumCover: yId ? `https://img.youtube.com/vi/${yId}/hqdefault.jpg` : "https://img.youtube.com/vi/n0FBb6hnwTo/hqdefault.jpg",
-        duration: "5:00",
+        albumCover: song.albumCover?.trim() || defaultCover,
+        duration: song.duration || "5:00",
         durationSeconds: 300,
         mood: lang === "Tagalog" ? "TAGALOG" : "ENGLISH",
         moodLabel: lang === "Tagalog" ? "🇵🇭 Custom Tagalog Worship" : "🌐 Custom English Worship",
-        youtubeId: yId || "n0FBb6hnwTo",
+        youtubeId: yId || "",
+        audioUrl: song.audioUrl || "",
         scriptureTheme: song.scriptureTheme?.trim() || "Colossians 3:16 — 'Singing to God with thanksgiving in your hearts.'",
-        lyricsSnippet: song.lyricsSnippet?.trim() || "Worship the Lord with gladness; come before Him with joyful songs!",
+        lyricsSnippet: snippet,
         fullLyrics: song.fullLyrics?.trim() || "[Worship Song]\nCome let us worship and bow down before the Lord our Maker.",
-        chordsKey: "G",
+        chordsKey: song.chordsKey || "G",
         isCustom: true
     };
 

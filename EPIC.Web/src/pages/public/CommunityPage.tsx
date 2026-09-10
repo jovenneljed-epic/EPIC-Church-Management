@@ -35,10 +35,10 @@ import {
 } from "lucide-react";
 import { login } from "../../auth/authService";
 import { useWorshipAudio } from "../../context/WorshipAudioContext";
+import { UploadWorshipSongModal } from "../../components/UploadWorshipSongModal";
 import {
     type WorshipSong,
-    MOOD_CATEGORIES,
-    saveCustomWorshipSong,
+    MOOD_CATEGORIES
 } from "../../services/worshipService";
 import permissionService from "../../PermissionService";
 import {
@@ -313,13 +313,9 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
         }
     };
 
-    // Worship Search and Custom Songs Modal State
+    // Worship Search and Upload Song Modal State
     const [worshipSearchQuery, setWorshipSearchQuery] = useState<string>("");
-    const [isAddSongOpen, setIsAddSongOpen] = useState<boolean>(false);
-    const [customTitle, setCustomTitle] = useState<string>("");
-    const [customArtist, setCustomArtist] = useState<string>("");
-    const [customAudioUrl, setCustomAudioUrl] = useState<string>("");
-    const [customScripture, setCustomScripture] = useState<string>("");
+    const [isUploadSongModalOpen, setIsUploadSongModalOpen] = useState<boolean>(false);
 
     // Comment state
     const [expandedComments, setExpandedComments] = useState<Record<number, boolean>>({});
@@ -442,29 +438,6 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
         }
         setActiveShortIdx(idx);
     };
-
-    // Handle adding custom song to user's personal device playlist
-    const handleAddCustomSong = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!customTitle.trim() || !customAudioUrl.trim()) {
-            alert("Please provide at least a song title and audio stream URL.");
-            return;
-        }
-        const created = saveCustomWorshipSong({
-            title: customTitle.trim(),
-            artist: customArtist.trim() || "Worship Team",
-            audioUrl: customAudioUrl.trim(),
-            scriptureTheme: customScripture.trim() || undefined
-        });
-        setIsAddSongOpen(false);
-        setCustomTitle("");
-        setCustomArtist("");
-        setCustomAudioUrl("");
-        setCustomScripture("");
-        handleSelectSong(created); // Auto-play user's song immediately on their device
-    };
-
-
 
     // Claim daily challenge
     const handleClaimChallenge = () => {
@@ -971,10 +944,19 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                                         <button
                                             type="button"
                                             className="worship-add-song-top-btn"
-                                            onClick={() => setIsAddSongOpen(true)}
-                                            title="Add your own custom worship song to play on your device"
+                                            onClick={() => {
+                                                if (userRole !== "ADMIN") {
+                                                    setAdminAuthError("");
+                                                    setIsAdminAuthModalOpen(true);
+                                                    setToastNotification("👑 Administrator permissions required to upload worship songs with lyrics.");
+                                                    setTimeout(() => setToastNotification(""), 4000);
+                                                } else {
+                                                    setIsUploadSongModalOpen(true);
+                                                }
+                                            }}
+                                            title="Upload Christian praise & worship song with proper lyrics (Admin verified)"
                                         >
-                                            <Plus size={14} /> Add My Song
+                                            <Plus size={14} /> Upload Worship Song
                                         </button>
                                         <span className="worship-hub-tag">
                                             <Music size={14} style={{ display: "inline", marginRight: 4 }} />
@@ -2415,80 +2397,15 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
 
 
 
-            {/* Modal: Add Custom Worship Song to Personal Device */}
-            {isAddSongOpen && (
-                <div className="comm-modal-overlay" onClick={() => setIsAddSongOpen(false)}>
-                    <div className="comm-modal-card" onClick={(e) => e.stopPropagation()}>
-                        <div className="comm-modal-header">
-                            <h2>
-                                <Music size={20} color="#ec4899" /> Add Custom Worship Song
-                            </h2>
-                            <button
-                                type="button"
-                                className="comm-modal-close"
-                                onClick={() => setIsAddSongOpen(false)}
-                            >
-                                ✕
-                            </button>
-                        </div>
-                        <p style={{ fontSize: "0.82rem", color: "#94a3b8", marginBottom: 14 }}>
-                            Add your favorite worship track to your personal device playlist. It plays privately only on your device without overlapping with anyone else!
-                        </p>
-                        <form onSubmit={handleAddCustomSong}>
-                            <div className="comm-form-group">
-                                <label>Song Title *</label>
-                                <input
-                                    type="text"
-                                    placeholder="e.g. In Jesus Name (God of Possible)"
-                                    value={customTitle}
-                                    onChange={(e) => setCustomTitle(e.target.value)}
-                                    required
-                                />
-                            </div>
-                            <div className="comm-form-group">
-                                <label>Artist / Worship Team</label>
-                                <input
-                                    type="text"
-                                    placeholder="e.g. Katy Nichole"
-                                    value={customArtist}
-                                    onChange={(e) => setCustomArtist(e.target.value)}
-                                />
-                            </div>
-                            <div className="comm-form-group">
-                                <label>Audio Stream URL (MP3 / HTTPS Audio Link) *</label>
-                                <input
-                                    type="url"
-                                    placeholder="https://.../song.mp3"
-                                    value={customAudioUrl}
-                                    onChange={(e) => setCustomAudioUrl(e.target.value)}
-                                    required
-                                />
-                            </div>
-                            <div className="comm-form-group">
-                                <label>Scripture / Heart Theme (Optional)</label>
-                                <input
-                                    type="text"
-                                    placeholder="e.g. Jeremiah 32:17 - 'Ah, Sovereign Lord... nothing is too hard for You.'"
-                                    value={customScripture}
-                                    onChange={(e) => setCustomScripture(e.target.value)}
-                                />
-                            </div>
-                            <div className="comm-modal-footer">
-                                <button
-                                    type="button"
-                                    className="comm-btn-cancel"
-                                    onClick={() => setIsAddSongOpen(false)}
-                                >
-                                    Cancel
-                                </button>
-                                <button type="submit" className="comm-btn-submit">
-                                    Save &amp; Play on My Device ▶
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+            {/* Modal: Admin Upload Worship Song with Proper Lyrics */}
+            <UploadWorshipSongModal
+                isOpen={isUploadSongModalOpen}
+                onClose={() => setIsUploadSongModalOpen(false)}
+                onSongUploaded={(newSong) => {
+                    setToastNotification(`✓ "${newSong.title}" with proper lyrics published to Sanctuary!`);
+                    setTimeout(() => setToastNotification(""), 4000);
+                }}
+            />
 
             {/* Daily Challenge Earned Toast Notification */}
             {challengeClaimedToast && (
