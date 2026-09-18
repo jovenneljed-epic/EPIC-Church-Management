@@ -1,4 +1,4 @@
-﻿/* =========================================================
+/* =========================================================
    CHURCH SERVICES PAGE
 ========================================================= */
 
@@ -235,22 +235,16 @@
 
 
 .epic-service-modal {
-
-    width:800px;
-
-    max-height:90vh;
-
-    overflow-y:auto;
-
-    background:#ffffff;
-
-    color:#111827;
-
-    border-radius:16px;
-
-    box-shadow:
-    0 20px 50px rgba(0,0,0,.25);
-
+    width: min(800px, 95vw);
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: #ffffff;
+    color: #0f172a;
+    border-radius: 16px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+    position: relative;
 }
 
 
@@ -260,190 +254,267 @@
 ========================================================= */
 
 .epic-modal-header {
-
-    display:flex;
-
-    justify-content:space-between;
-
-    padding:22px 25px;
-
-    border-bottom:1px solid #e5e7eb;
-
+    flex-shrink: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 20px 24px;
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    z-index: 10;
 }
 
 
 
 .epic-modal-header h2 {
-
-    margin:0;
-
-    color:#111827;
-
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: #0f172a;
 }
 
 
 
 .epic-modal-header p {
-
-    margin-top:6px;
-
-    color:#6b7280;
-
+    margin-top: 4px;
+    font-size: 13px;
+    color: #64748b;
 }
 
 
 
 .epic-modal-close {
+    background: #f1f5f9;
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    font-size: 20px;
+    line-height: 1;
+    color: #64748b;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+}
 
-    background:none;
-
-    border:none;
-
-    font-size:28px;
-
-    color:#64748b;
-
-    cursor:pointer;
-
+.epic-modal-close:hover {
+    background: #e2e8f0;
+    color: #0f172a;
 }
 
 
 
 /* =========================================================
-   FORM
+   FORM & SCROLLABLE BODY
 ========================================================= */
 
+.epic-service-modal form {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
 .epic-form-grid {
-
-    display:grid;
-
-    grid-template-columns:repeat(2,1fr);
-
-    gap:18px;
-
-    padding:25px;
-
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 24px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px;
+    align-content: start;
 }
 
 
 
 .epic-form-full {
-
-    grid-column:1 / -1;
-
+    grid-column: 1 / -1;
 }
 
 
 
 .epic-form-group {
-
-    display:flex;
-
-    flex-direction:column;
-
-    gap:8px;
-
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }
 
 
 
+.epic-form-label,
+.epic-service-modal .epic-form-group label,
 .epic-form-group label {
-
-    display:block;
-
-    color:#111827 !important;
-
-    font-size:13px;
-
-    font-weight:700;
-
-    line-height:18px;
-
-    opacity:1 !important;
-
-    visibility:visible !important;
-
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    color: #0f172a !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    line-height: 1.4 !important;
+    margin-bottom: 2px !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    text-transform: none !important;
 }
 
 
 
+.epic-required,
+.epic-service-modal .epic-form-group label span,
 .epic-form-group label span {
-
-    color:#dc2626 !important;
-
-    margin-left:4px;
-
+    color: #ef4444 !important;
+    font-weight: 800 !important;
+    margin-left: 2px !important;
+    visibility: visible !important;
+    opacity: 1 !important;
 }
 
 
 
+.epic-form-input,
+.epic-form-select,
+.epic-form-textarea,
+.epic-service-modal input,
+.epic-service-modal select,
+.epic-service-modal textarea,
 .epic-form-group input,
 .epic-form-group select,
 .epic-form-group textarea {
-
-    width:100%;
-
-    box-sizing:border-box;
-
-    background:#ffffff !important;
-
-    color:#111827 !important;
-
-    border:1px solid #d1d5db;
-
-    border-radius:9px;
-
-    padding:11px 12px;
-
-    font-size:14px;
-
+    display: block !important;
+    width: 100% !important;
+    min-height: 42px !important;
+    padding: 10px 14px !important;
+    font-size: 14px !important;
+    font-family: inherit !important;
+    font-weight: 500 !important;
+    color: #0f172a !important;
+    background-color: #ffffff !important;
+    border: 1.5px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    box-sizing: border-box !important;
+    outline: none !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    transition: all 0.15s ease-in-out !important;
 }
 
 
 
+.epic-form-input:focus,
+.epic-form-select:focus,
+.epic-form-textarea:focus,
+.epic-service-modal input:focus,
+.epic-service-modal select:focus,
+.epic-service-modal textarea:focus,
+.epic-form-group input:focus,
+.epic-form-group select:focus,
+.epic-form-group textarea:focus {
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+    background-color: #ffffff !important;
+}
+
+
+
+.epic-form-input::placeholder,
+.epic-form-textarea::placeholder,
+.epic-service-modal input::placeholder,
+.epic-service-modal textarea::placeholder,
 .epic-form-group input::placeholder,
 .epic-form-group textarea::placeholder {
-
-    color:#9ca3af !important;
-
+    color: #94a3b8 !important;
+    opacity: 1 !important;
 }
 
 
 
+.epic-form-select option,
+.epic-service-modal select option,
 .epic-form-group select option {
-
-    color:#111827;
-
-    background:#ffffff;
-
+    color: #0f172a !important;
+    background-color: #ffffff !important;
+    padding: 8px !important;
 }
 
 
 
+.epic-form-textarea,
+.epic-service-modal textarea,
 .epic-form-group textarea {
-
-    resize:vertical;
-
+    min-height: 88px !important;
+    resize: vertical !important;
 }
 
 
 
 /* =========================================================
-   FOOTER
+   FOOTER (STICKY / FIXED AT BOTTOM)
 ========================================================= */
 
 .epic-modal-footer {
+    flex-shrink: 0;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 24px;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    z-index: 10;
+}
 
-    display:flex;
 
-    justify-content:flex-end;
 
-    gap:12px;
+/* =========================================================
+   DELETE MODAL
+========================================================= */
 
-    padding:20px 25px;
+.epic-delete-modal {
+    width: min(440px, 95vw);
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 28px;
+    text-align: center;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3);
+}
 
-    border-top:1px solid #e5e7eb;
+.epic-delete-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: #fef2f2;
+    color: #ef4444;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+    font-size: 24px;
+}
 
+.epic-delete-modal h2 {
+    margin: 0 0 8px;
+    font-size: 20px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.epic-delete-modal p {
+    margin: 0 0 24px;
+    color: #64748b;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.epic-delete-modal .epic-modal-footer {
+    background: transparent;
+    padding: 0;
+    border: none;
+    justify-content: center;
+    gap: 12px;
 }
 
 

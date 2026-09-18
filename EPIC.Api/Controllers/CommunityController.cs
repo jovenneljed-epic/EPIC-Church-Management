@@ -134,7 +134,14 @@ public class CommunityController(ApplicationDbContext db) : ControllerBase
         var c = await db.CommunityContent.AsNoTracking().SingleOrDefaultAsync(c => c.Id == id && c.Kind == "PHOTO" && c.Status != "REMOVED");
         if (c?.Photo == null) return NotFound();
         if (!Admin(u, c.CustomerId) && (!Member(u) || (!await Visible(u).AnyAsync(x => x.Id == id) && c.MemberId != u.MemberId))) return NotFound();
-        Response.Headers.CacheControl = "private, no-store"; Response.Headers.XContentTypeOptions = "nosniff";
+        var etag = $"\"photo-{id}-{c.Photo.Length}\"";
+        if (Request.Headers.IfNoneMatch.ToString() == etag)
+        {
+            return StatusCode(304);
+        }
+        Response.Headers.ETag = etag;
+        Response.Headers.CacheControl = "public, max-age=604800, stale-while-revalidate=86400";
+        Response.Headers.XContentTypeOptions = "nosniff";
         return File(c.Photo, "image/jpeg");
     }
     [HttpDelete("content/{id:int}")]

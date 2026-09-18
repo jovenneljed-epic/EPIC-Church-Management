@@ -651,11 +651,11 @@ export default function Expenses() {
 
         const interval =
             window.setInterval(() => {
-
-                void loadExpenses();
-                void loadDashboard();
-
-            }, 30000);
+                if (document.visibilityState === "visible") {
+                    void loadExpenses();
+                    void loadDashboard();
+                }
+            }, 180000);
 
         return () => {
 

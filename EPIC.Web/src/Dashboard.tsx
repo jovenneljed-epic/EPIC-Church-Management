@@ -667,11 +667,12 @@ const Dashboard: React.FC = () => {
 
         const interval =
             window.setInterval(
-                () =>
-                    loadDashboard(
-                        false
-                    ),
-                30000
+                () => {
+                    if (document.visibilityState === "visible") {
+                        loadDashboard(false);
+                    }
+                },
+                180000
             );
 
         const visibilityHandler =

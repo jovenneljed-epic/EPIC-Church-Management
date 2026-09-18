@@ -102,7 +102,8 @@ export const WorshipAudioProvider: React.FC<{ children: React.ReactNode }> = ({ 
     const [isSoundBarVisible, setIsSoundBarVisible] = useState<boolean>(true);
     const [isSoundBarExpanded, setIsSoundBarExpanded] = useState<boolean>(() => {
         const saved = localStorage.getItem(SOUNDBAR_EXPANDED_KEY);
-        return saved !== null ? saved === "true" : true;
+        if (saved !== null) return saved === "true";
+        return typeof window !== "undefined" && window.innerWidth > 900;
     });
     const [showVideoPlayer, setShowVideoPlayer] = useState<boolean>(false);
 

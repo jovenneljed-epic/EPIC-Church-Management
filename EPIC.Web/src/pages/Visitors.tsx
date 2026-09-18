@@ -40,6 +40,14 @@ type Visitor = {
     conversionDate?: string | null;
     createdDate?: string | null;
     updatedDate?: string | null;
+    attendanceRating?: {
+        visitCount: number;
+        requiredThreshold: number;
+        ratingPercentage: number;
+        stars: number;
+        isEligible: boolean;
+        tierLabel: string;
+    } | null;
 };
 
 type DashboardData = {
@@ -410,6 +418,60 @@ function statusClass(
 }
 
 // ============================================================
+// ATTENDANCE RATING HELPER
+// ============================================================
+
+function renderAttendanceRating(visitor: Visitor) {
+    const threshold = visitor.attendanceRating?.requiredThreshold ?? 4;
+    const visits = visitor.visitCount ?? 0;
+    const ratingPercent = visitor.attendanceRating?.ratingPercentage ?? Math.min(100, Math.round((visits / threshold) * 100));
+    const stars = visitor.attendanceRating?.stars ?? Math.min(threshold, visits);
+
+    if (visitor.isConvertedToMember) {
+        return (
+            <div className="attendance-rating-cell is-member">
+                <div className="rating-badge-member">
+                    <span className="star-icon">⭐</span>
+                    <strong>100%</strong>
+                    <span className="rating-tag">MEMBER</span>
+                </div>
+                <span className="member-code-sub">
+                    {visitor.convertedMemberId ? `MEM-${String(visitor.convertedMemberId).padStart(4, "0")}` : "Promoted"}
+                </span>
+            </div>
+        );
+    }
+
+    const isQualified = visits >= threshold;
+
+    return (
+        <div className="attendance-rating-cell">
+            <div className="rating-stars-row">
+                <span className="stars-icons">
+                    {"★".repeat(stars)}{"☆".repeat(Math.max(0, threshold - stars))}
+                </span>
+                <strong className={`rating-percent-tag ${isQualified ? "ready" : ""}`}>
+                    {ratingPercent}%
+                </strong>
+            </div>
+            <div className="rating-progress-track">
+                <div
+                    className={`rating-progress-fill ${
+                        isQualified ? "ready" : ratingPercent >= 75 ? "high" : ratingPercent >= 50 ? "med" : "low"
+                    }`}
+                    style={{ width: `${ratingPercent}%` }}
+                />
+            </div>
+            <span className="rating-milestone-text">
+                {isQualified
+                    ? "✓ Qualified for Member"
+                    : `${threshold - visits} more visit to Member`}
+            </span>
+        </div>
+    );
+}
+
+// ============================================================
 // COMPONENT
 // ============================================================
 
@@ -478,6 +540,16 @@ export default function Visitors() {
 
     const [success, setSuccess] =
         useState("");
+
+    const [autoConvertedVisitor, setAutoConvertedVisitor] =
+        useState<{
+            fullName: string;
+            memberCode: string;
+            visitCount: number;
+        } | null>(null);
+
+    const [isScanning, setIsScanning] =
+        useState(false);
 
     // ========================================================
     // LOAD VISITORS
@@ -901,6 +973,17 @@ export default function Visitors() {
                         visitCount: number;
                         attendanceId: number;
                         status: string;
+                        autoConverted?: boolean;
+                        convertedMemberId?: number | null;
+                        convertedMemberCode?: string | null;
+                        attendanceRating?: {
+                            visitCount: number;
+                            requiredThreshold: number;
+                            ratingPercentage: number;
+                            stars: number;
+                            isEligible: boolean;
+                            tierLabel: string;
+                        };
                     }>(
                         `/Visitors/${selectedVisitor.visitorId}/attendance`,
                         {
@@ -922,13 +1005,26 @@ export default function Visitors() {
                     false
                 );
 
-                setSuccess(
-                    `${getFullName(
-                        selectedVisitor
-                    )} successfully recorded as ${getVisitLabel(
-                        result.visitCount
-                    )}.`
-                );
+                if (result.autoConverted) {
+                    setAutoConvertedVisitor({
+                        fullName: getFullName(selectedVisitor),
+                        memberCode: result.convertedMemberCode || "MEM",
+                        visitCount: result.visitCount
+                    });
+                    setSuccess(
+                        `🎉 Milestone Reached! ${getFullName(
+                            selectedVisitor
+                        )} reached 100% attendance rating (${result.visitCount} services) and was AUTOMATICALLY converted to Official Member ${result.convertedMemberCode || ""}!`
+                    );
+                } else {
+                    setSuccess(
+                        `${getFullName(
+                            selectedVisitor
+                        )} successfully recorded as ${getVisitLabel(
+                            result.visitCount
+                        )}.`
+                    );
+                }
 
                 await Promise.all([
                     loadVisitors(),
@@ -953,6 +1049,58 @@ export default function Visitors() {
                 setSaving(false);
             }
         };
+
+    // ========================================================
+    // RUN AUTO-CONVERT SCAN
+    // ========================================================
+
+    const runAutoConvertScan = async () => {
+        try {
+            setIsScanning(true);
+            setError("");
+            setSuccess("");
+
+            const res = await apiFetch<{
+                convertedCount: number;
+                message: string;
+                promotions?: Array<{
+                    fullName: string;
+                    memberCode: string;
+                    visitCount: number;
+                }>;
+            }>("/Visitors/auto-convert-scan", {
+                method: "POST"
+            });
+
+            if (res.convertedCount > 0) {
+                setSuccess(`🎉 ${res.message}`);
+                if (res.promotions && res.promotions.length > 0) {
+                    const first = res.promotions[0];
+                    setAutoConvertedVisitor({
+                        fullName: first.fullName,
+                        memberCode: first.memberCode,
+                        visitCount: first.visitCount
+                    });
+                }
+            } else {
+                setSuccess("⚡ Auto-Convert Scan Complete: All eligible visitors with 4+ attendances are already converted!");
+            }
+
+            await Promise.all([
+                loadVisitors(),
+                loadDashboard(),
+            ]);
+        } catch (err) {
+            console.error("Auto-convert scan error:", err);
+            setError(
+                err instanceof Error
+                    ? err.message
+                    : "Auto-conversion scan failed."
+            );
+        } finally {
+            setIsScanning(false);
+        }
+    };
 
     // ========================================================
     // OPEN HISTORY
@@ -1232,6 +1380,17 @@ export default function Visitors() {
                             <span>
                                 Refresh
                             </span>
+                        </button>
+
+                        <button
+                            type="button"
+                            className="btn btn-scan"
+                            onClick={runAutoConvertScan}
+                            disabled={isScanning || loading}
+                            title="Scan database and automatically promote visitors with 4+ visits to official members"
+                        >
+                            <span>{isScanning ? "⏳" : "⚡"}</span>
+                            <span>{isScanning ? "Scanning..." : "Auto-Convert Scan"}</span>
                         </button>
 
                         <button
@@ -1592,6 +1751,47 @@ export default function Visitors() {
                 </section>
 
                 {/* ==================================================
+                    AUTO-PROMOTION INTELLIGENCE BANNER
+                ================================================== */}
+
+                <section className="auto-promotion-banner">
+
+                    <div className="banner-content">
+
+                        <div className="banner-badge">
+                            ⚡ AUTO-PROMOTION ACTIVE
+                        </div>
+
+                        <div className="banner-text">
+
+                            <h3>
+                                Automated Member Conversion System
+                            </h3>
+
+                            <p>
+                                Visitors are automatically promoted to official <strong>Church Members</strong> upon reaching <strong>100% Attendance Rating</strong> (4 service attendances). All visitor attendance history is automatically preserved and transferred into their new Member profile.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                    <div className="banner-action">
+
+                        <button
+                            type="button"
+                            className="btn btn-scan-banner"
+                            onClick={runAutoConvertScan}
+                            disabled={isScanning || loading}
+                        >
+                            {isScanning ? "Scanning Database..." : "⚡ Run Auto-Convert Scan Now"}
+                        </button>
+
+                    </div>
+
+                </section>
+
+                {/* ==================================================
                     CONTENT
                 ================================================== */}
 
@@ -1828,6 +2028,10 @@ export default function Visitors() {
                                         </th>
 
                                         <th>
+                                            Attendance Rating
+                                        </th>
+
+                                        <th>
                                             Visits
                                         </th>
 
@@ -1896,6 +2100,10 @@ export default function Visitors() {
 
                                                     </div>
 
+                                                </td>
+
+                                                <td>
+                                                    {renderAttendanceRating(visitor)}
                                                 </td>
 
                                                 <td>
@@ -2146,6 +2354,10 @@ export default function Visitors() {
 
                                             </div>
 
+                                        </div>
+
+                                        <div className="card-rating-container">
+                                            {renderAttendanceRating(visitor)}
                                         </div>
 
                                         <div className="card-details">
@@ -3135,6 +3347,71 @@ export default function Visitors() {
 
                     </div>
                 )}
+
+            {/* ==================================================
+                CELEBRATION MODAL (AUTO-CONVERTED TO MEMBER)
+            ================================================== */}
+            {autoConvertedVisitor && (
+                <div
+                    className="modal-backdrop celebration-backdrop"
+                    onMouseDown={e => {
+                        if (e.target === e.currentTarget) {
+                            setAutoConvertedVisitor(null);
+                        }
+                    }}
+                >
+                    <div className="modal modal-celebration">
+                        <div className="celebration-confetti">🎉 ⭐ 🏆 ⭐ 🎉</div>
+                        <div className="celebration-header">
+                            <span className="celebration-tag">NEW MEMBER PROMOTION</span>
+                            <h2>Milestone Reached!</h2>
+                            <p className="celebration-subtitle">
+                                Attendance Rating: <strong>100% ({autoConvertedVisitor.visitCount} Services Attended)</strong>
+                            </p>
+                        </div>
+
+                        <div className="celebration-body">
+                            <div className="promoted-badge-box">
+                                <div className="promoted-avatar">
+                                    {autoConvertedVisitor.fullName.charAt(0).toUpperCase()}
+                                </div>
+                                <div className="promoted-info">
+                                    <h3>{autoConvertedVisitor.fullName}</h3>
+                                    <span className="promoted-status-pill">OFFICIAL MEMBER</span>
+                                    <div className="promoted-code">
+                                        Member Code: <strong>{autoConvertedVisitor.memberCode}</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="celebration-notes">
+                                <div className="note-item">
+                                    <span className="note-icon">✓</span>
+                                    <span>Official church membership profile created automatically</span>
+                                </div>
+                                <div className="note-item">
+                                    <span className="note-icon">✓</span>
+                                    <span>All {autoConvertedVisitor.visitCount} historical visitor service attendances mirrored into Member records</span>
+                                </div>
+                                <div className="note-item">
+                                    <span className="note-icon">✓</span>
+                                    <span>Visitor record marked as Converted & Linked</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="modal-footer celebration-footer">
+                            <button
+                                type="button"
+                                className="btn btn-primary btn-celebrate"
+                                onClick={() => setAutoConvertedVisitor(null)}
+                            >
+                                Awesome! View & Continue
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
         </div>
     );

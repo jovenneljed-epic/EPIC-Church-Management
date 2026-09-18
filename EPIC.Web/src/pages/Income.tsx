@@ -730,8 +730,10 @@ export default function Income() {
     useEffect(() => {
         const interval =
             window.setInterval(() => {
-                void loadDashboard();
-            }, 30000);
+                if (document.visibilityState === "visible") {
+                    void loadDashboard();
+                }
+            }, 180000);
 
         return () => {
             window.clearInterval(

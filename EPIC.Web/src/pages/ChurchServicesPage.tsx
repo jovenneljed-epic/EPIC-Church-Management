@@ -1897,327 +1897,187 @@ const ChurchServicesPage: React.FC =
                                 <div className="epic-form-grid">
 
                                     {/* SERVICE NAME */}
-
                                     <div className="epic-form-group epic-form-full">
-
-                                        <label>
-                                            Service
-                                            Name
-                                            <span>
-                                                *
-                                            </span>
+                                        <label className="epic-form-label" style={{ color: "#0f172a", fontWeight: 700 }}>
+                                            Service Name <span className="epic-required" style={{ color: "#ef4444" }}>*</span>
                                         </label>
-
                                         <input
                                             name="serviceName"
                                             type="text"
-                                            value={
-                                                form.serviceName
-                                            }
-                                            onChange={
-                                                handleChange
-                                            }
+                                            className="epic-form-input"
+                                            value={form.serviceName}
+                                            onChange={handleChange}
                                             placeholder="e.g. Sunday Worship Service"
                                             required
-                                            maxLength={
-                                                200
-                                            }
+                                            maxLength={200}
                                         />
-
                                     </div>
 
                                     {/* SERVICE TYPE */}
-
                                     <div className="epic-form-group">
-
-                                        <label>
-                                            Service
-                                            Type
+                                        <label className="epic-form-label" style={{ color: "#0f172a", fontWeight: 700 }}>
+                                            Service Type
                                         </label>
-
                                         <select
                                             name="serviceType"
-                                            value={
-                                                form.serviceType
-                                            }
-                                            onChange={
-                                                handleChange
-                                            }
+                                            className="epic-form-select"
+                                            value={form.serviceType}
+                                            onChange={handleChange}
                                         >
-                                            {SERVICE_TYPES.map(
-                                                ([
-                                                    value,
-                                                    label,
-                                                ]) => (
-                                                    <option
-                                                        key={
-                                                            value
-                                                        }
-                                                        value={
-                                                            value
-                                                        }
-                                                    >
-                                                        {
-                                                            label
-                                                        }
-                                                    </option>
-                                                )
-                                            )}
+                                            {SERVICE_TYPES.map(([value, label]) => (
+                                                <option key={value} value={value}>
+                                                    {label}
+                                                </option>
+                                            ))}
                                         </select>
-
                                     </div>
 
                                     {/* STATUS */}
-
                                     <div className="epic-form-group">
-
-                                        <label>
+                                        <label className="epic-form-label" style={{ color: "#0f172a", fontWeight: 700 }}>
                                             Status
                                         </label>
-
                                         <select
                                             name="status"
-                                            value={
-                                                form.status
-                                            }
-                                            onChange={
-                                                handleChange
-                                            }
+                                            className="epic-form-select"
+                                            value={form.status}
+                                            onChange={handleChange}
                                         >
-                                            {SERVICE_STATUSES.map(
-                                                ([
-                                                    value,
-                                                    label,
-                                                ]) => (
-                                                    <option
-                                                        key={
-                                                            value
-                                                        }
-                                                        value={
-                                                            value
-                                                        }
-                                                    >
-                                                        {
-                                                            label
-                                                        }
-                                                    </option>
-                                                )
-                                            )}
+                                            {SERVICE_STATUSES.map(([value, label]) => (
+                                                <option key={value} value={value}>
+                                                    {label}
+                                                </option>
+                                            ))}
                                         </select>
-
                                     </div>
 
                                     {/* DATE */}
-
                                     <div className="epic-form-group">
-
-                                        <label>
-                                            Service
-                                            Date
-                                            <span>
-                                                *
-                                            </span>
+                                        <label className="epic-form-label" style={{ color: "#0f172a", fontWeight: 700 }}>
+                                            Service Date <span className="epic-required" style={{ color: "#ef4444" }}>*</span>
                                         </label>
-
                                         <input
                                             name="serviceDate"
                                             type="date"
-                                            value={
-                                                form.serviceDate
-                                            }
-                                            onChange={
-                                                handleChange
-                                            }
+                                            className="epic-form-input"
+                                            value={form.serviceDate}
+                                            onChange={handleChange}
                                             required
                                         />
-
                                     </div>
 
                                     {/* START TIME */}
-
                                     <div className="epic-form-group">
-
-                                        <label>
+                                        <label className="epic-form-label" style={{ color: "#0f172a", fontWeight: 700 }}>
                                             Start Time
                                         </label>
-
                                         <input
                                             name="startTime"
                                             type="time"
-                                            value={
-                                                form.startTime
-                                            }
-                                            onChange={
-                                                handleChange
-                                            }
+                                            className="epic-form-input"
+                                            value={form.startTime}
+                                            onChange={handleChange}
                                         />
-
                                     </div>
 
                                     {/* END TIME */}
-
                                     <div className="epic-form-group">
-
-                                        <label>
+                                        <label className="epic-form-label" style={{ color: "#0f172a", fontWeight: 700 }}>
                                             End Time
                                         </label>
-
                                         <input
                                             name="endTime"
                                             type="time"
-                                            value={
-                                                form.endTime
-                                            }
-                                            onChange={
-                                                handleChange
-                                            }
+                                            className="epic-form-input"
+                                            value={form.endTime}
+                                            onChange={handleChange}
                                         />
-
                                     </div>
 
                                     {/* LOCATION */}
-
                                     <div className="epic-form-group epic-form-full">
-
-                                        <label>
+                                        <label className="epic-form-label" style={{ color: "#0f172a", fontWeight: 700 }}>
                                             Location
                                         </label>
-
                                         <input
                                             name="location"
                                             type="text"
-                                            value={
-                                                form.location
-                                            }
-                                            onChange={
-                                                handleChange
-                                            }
+                                            className="epic-form-input"
+                                            value={form.location}
+                                            onChange={handleChange}
                                             placeholder="Church location"
-                                            maxLength={
-                                                250
-                                            }
+                                            maxLength={250}
                                         />
-
                                     </div>
 
                                     {/* LEADER */}
-
                                     <div className="epic-form-group">
-
-                                        <label>
-                                            Service
-                                            Leader
+                                        <label className="epic-form-label" style={{ color: "#0f172a", fontWeight: 700 }}>
+                                            Service Leader
                                         </label>
-
                                         <input
                                             name="serviceLeader"
                                             type="text"
-                                            value={
-                                                form.serviceLeader
-                                            }
-                                            onChange={
-                                                handleChange
-                                            }
+                                            className="epic-form-input"
+                                            value={form.serviceLeader}
+                                            onChange={handleChange}
                                             placeholder="Worship / Service Leader"
-                                            maxLength={
-                                                200
-                                            }
+                                            maxLength={200}
                                         />
-
                                     </div>
 
                                     {/* SPEAKER */}
-
                                     <div className="epic-form-group">
-
-                                        <label>
-                                            Speaker /
-                                            Preacher
+                                        <label className="epic-form-label" style={{ color: "#0f172a", fontWeight: 700 }}>
+                                            Speaker / Preacher
                                         </label>
-
                                         <input
                                             name="speaker"
                                             type="text"
-                                            value={
-                                                form.speaker
-                                            }
-                                            onChange={
-                                                handleChange
-                                            }
+                                            className="epic-form-input"
+                                            value={form.speaker}
+                                            onChange={handleChange}
                                             placeholder="Speaker / Preacher"
-                                            maxLength={
-                                                200
-                                            }
+                                            maxLength={200}
                                         />
-
                                     </div>
 
                                     {/* DESCRIPTION */}
-
                                     <div className="epic-form-group epic-form-full">
-
-                                        <label>
-                                            Description /
-                                            Notes
+                                        <label className="epic-form-label" style={{ color: "#0f172a", fontWeight: 700 }}>
+                                            Description / Notes
                                         </label>
-
                                         <textarea
                                             name="description"
-                                            value={
-                                                form.description
-                                            }
-                                            onChange={
-                                                handleChange
-                                            }
+                                            className="epic-form-textarea"
+                                            value={form.description}
+                                            onChange={handleChange}
                                             placeholder="Additional notes about this service..."
-                                            rows={
-                                                4
-                                            }
-                                            maxLength={
-                                                MAX_DESCRIPTION_LENGTH
-                                            }
+                                            rows={4}
+                                            maxLength={MAX_DESCRIPTION_LENGTH}
                                         />
-
                                         <small
                                             style={{
-                                                display:
-                                                    "block",
-                                                marginTop:
-                                                    "6px",
-                                                textAlign:
-                                                    "right",
-                                                opacity:
-                                                    0.7,
+                                                display: "block",
+                                                marginTop: "6px",
+                                                textAlign: "right",
+                                                color: "#64748b",
+                                                fontSize: "12px",
                                             }}
                                         >
-                                            {
-                                                form
-                                                    .description
-                                                    .length
-                                            }
-                                            /
-                                            {
-                                                MAX_DESCRIPTION_LENGTH
-                                            }
+                                            {form.description.length} / {MAX_DESCRIPTION_LENGTH}
                                         </small>
-
                                     </div>
 
                                 </div>
 
                                 {/* MODAL FOOTER */}
-
                                 <div className="epic-modal-footer">
-
                                     <button
                                         type="button"
                                         className="epic-secondary-button"
-                                        onClick={
-                                            closeModal
-                                        }
-                                        disabled={
-                                            saving
-                                        }
+                                        onClick={closeModal}
+                                        disabled={saving}
                                     >
                                         Cancel
                                     </button>
@@ -2225,18 +2085,14 @@ const ChurchServicesPage: React.FC =
                                     <button
                                         type="submit"
                                         className="epic-primary-button"
-                                        disabled={
-                                            saving
-                                        }
+                                        disabled={saving}
                                     >
                                         {saving
                                             ? "Saving..."
-                                            : editingId !==
-                                                null
+                                            : editingId !== null
                                                 ? "Update Service"
                                                 : "Save Service"}
                                     </button>
-
                                 </div>
 
                             </form>

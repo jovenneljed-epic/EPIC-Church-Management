@@ -11,8 +11,10 @@ using Microsoft.IdentityModel.Tokens;
 
 using Resend;
 
+using System.IO.Compression;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.AspNetCore.ResponseCompression;
 
 // ============================================================
 // BUILDER
@@ -71,7 +73,37 @@ ConfigureSwagger(
 builder.Services.AddControllers();
 builder.Services.AddMemoryCache();
 
+// ============================================================
+// RESPONSE COMPRESSION (BROTLI & GZIP - BANDWIDTH OPTIMIZATION)
+// ============================================================
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+    options.Providers.Add<BrotliCompressionProvider>();
+    options.Providers.Add<GzipCompressionProvider>();
+    options.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(new[]
+    {
+        "application/json",
+        "application/javascript",
+        "text/css",
+        "text/plain",
+        "text/json",
+        "image/svg+xml"
+    });
+});
+
+builder.Services.Configure<BrotliCompressionProviderOptions>(options =>
+{
+    options.Level = CompressionLevel.Fastest;
+});
+
+builder.Services.Configure<GzipCompressionProviderOptions>(options =>
+{
+    options.Level = CompressionLevel.Fastest;
+});
+
 builder.Services.AddScoped<AttendanceStatusService>();
+builder.Services.AddScoped<VisitorPromotionService>();
 builder.Services.AddHttpClient("ExpoPush", client => {
     client.BaseAddress = new Uri("https://exp.host/--/api/v2/push/");
     client.Timeout = TimeSpan.FromSeconds(20);
@@ -126,6 +158,13 @@ Directory.CreateDirectory(
 
 
 // ============================================================
+// RESPONSE COMPRESSION
+// ============================================================
+
+app.UseResponseCompression();
+
+
+// ============================================================
 // SWAGGER
 // ============================================================
 
@@ -151,7 +190,7 @@ app.UseCors(
 
 
 // ============================================================
-// STATIC MEMBER PHOTOS
+// STATIC MEMBER PHOTOS (WITH CLIENT CACHE CONTROL)
 // ============================================================
 
 app.UseStaticFiles(
@@ -162,7 +201,14 @@ app.UseStaticFiles(
                 memberPhotoFolder),
 
         RequestPath =
-            "/member-photos"
+            "/member-photos",
+
+        OnPrepareResponse = ctx =>
+        {
+            // Cache member photos for 7 days to avoid repeat bandwidth downloads
+            ctx.Context.Response.Headers.CacheControl =
+                "public, max-age=604800, stale-while-revalidate=86400";
+        }
     });
 
 
@@ -208,6 +254,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHub<ChatHub>("/hubs/chat", options => options.CloseOnAuthenticationExpiration = true);
+app.MapHub<CommunityHub>("/hubs/community");
 
 
 // ============================================================
@@ -826,6 +873,11 @@ static async Task SeedDatabaseAsync(
 static bool IsAllowedOrigin(
     string origin)
 {
+    if (string.IsNullOrWhiteSpace(origin))
+    {
+        return true;
+    }
+
     // --------------------------------------------------------
     // LOCALHOST
     // --------------------------------------------------------
@@ -851,15 +903,17 @@ static bool IsAllowedOrigin(
 
 
     // --------------------------------------------------------
-    // PRODUCTION
+    // PRODUCTION & DEPLOYMENTS
     // --------------------------------------------------------
 
-    if (origin.Equals(
-        "https://epic-cms.vercel.app",
-        StringComparison.OrdinalIgnoreCase) ||
-    origin.Equals(
-        "https://epic-member-portal.vercel.app",
-        StringComparison.OrdinalIgnoreCase))
+    if (origin.EndsWith("vercel.app", StringComparison.OrdinalIgnoreCase) ||
+        origin.EndsWith("onrender.com", StringComparison.OrdinalIgnoreCase) ||
+        origin.Equals(
+            "https://epic-cms.vercel.app",
+            StringComparison.OrdinalIgnoreCase) ||
+        origin.Equals(
+            "https://epic-member-portal.vercel.app",
+            StringComparison.OrdinalIgnoreCase))
     {
         return true;
     }

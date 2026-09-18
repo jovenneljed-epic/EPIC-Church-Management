@@ -41,7 +41,7 @@ public sealed class AutomaticAttendanceWorker(IServiceScopeFactory scopes, IConf
             try { await RecordMissing(from, ct); }
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
             catch (Exception ex) { logger.LogError(ex, "Automatic attendance failed; the next cycle will retry."); }
-            try { await Task.Delay(TimeSpan.FromSeconds(30), ct); }
+            try { await Task.Delay(TimeSpan.FromMinutes(5), ct); }
             catch (OperationCanceledException) { break; }
         }
     }

@@ -81,6 +81,8 @@ import {
     getCommunityLeaderboard,
     compressImage
 } from "../../services/communityService";
+import { HubConnectionBuilder, HubConnection, LogLevel } from "@microsoft/signalr";
+import { API_BASE_URL } from "../../config";
 import "./CommunityPage.css";
 import "./PublicUnisonTheme.css";
 
@@ -373,6 +375,101 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
         });
         return () => {
             mounted = false;
+        };
+    }, []);
+
+    // Real-time Community Feed Synchronization via SignalR
+    useEffect(() => {
+        let isDisposed = false;
+        let hubConnection: HubConnection | null = null;
+
+        const connectHub = async () => {
+            try {
+                const hubUrl = API_BASE_URL.replace(/\/api\/?$/, "") + "/hubs/community";
+                hubConnection = new HubConnectionBuilder()
+                    .withUrl(hubUrl)
+                    .withAutomaticReconnect([0, 2000, 5000, 10000, 20000])
+                    .configureLogging(LogLevel.None)
+                    .build();
+
+                // 1. Instant Real-Time Post from ANY user (mobile or web)
+                hubConnection.on("CommunityPostCreated", (newPost: CommunityPost) => {
+                    if (isDisposed) return;
+                    setPosts((prev) => {
+                        if (prev.some((p) => p.id === newPost.id)) return prev;
+                        return [newPost, ...prev];
+                    });
+                });
+
+                // 2. Instant Real-Time Reactions & Prayers
+                hubConnection.on("CommunityPostReactionUpdated", (data: {
+                    postId: number;
+                    encouragesCount: number;
+                    prayingCount: number;
+                    strengthenedCount: number;
+                    celebratesCount: number;
+                }) => {
+                    if (isDisposed) return;
+                    setPosts((prev) =>
+                        prev.map((p) =>
+                            p.id === data.postId
+                                ? {
+                                      ...p,
+                                      encouragesCount: data.encouragesCount,
+                                      prayingCount: data.prayingCount,
+                                      strengthenedCount: data.strengthenedCount,
+                                      celebratesCount: data.celebratesCount
+                                  }
+                                : p
+                        )
+                    );
+                });
+
+                // 3. Instant Real-Time Comments
+                hubConnection.on("CommunityCommentAdded", (data: {
+                    postId: number;
+                    comment: any;
+                    commentsCount: number;
+                }) => {
+                    if (isDisposed) return;
+                    setPosts((prev) =>
+                        prev.map((p) => {
+                            if (p.id === data.postId) {
+                                const existingComments = p.comments || [];
+                                if (existingComments.some((c) => c.id === data.comment.id)) return p;
+                                return {
+                                    ...p,
+                                    commentsCount: data.commentsCount,
+                                    comments: [...existingComments, data.comment]
+                                };
+                            }
+                            return p;
+                        })
+                    );
+                });
+
+                // 4. Instant Real-Time Post Deletion
+                hubConnection.on("CommunityPostDeleted", (data: { postId: number }) => {
+                    if (isDisposed) return;
+                    setPosts((prev) => prev.filter((p) => p.id !== data.postId));
+                });
+
+                await hubConnection.start();
+                if (!isDisposed) {
+                    await hubConnection.invoke("JoinFeed").catch(() => {});
+                }
+            } catch {
+                // Fail gracefully if backend is offline/deploying
+            }
+        };
+
+        void connectHub();
+
+        return () => {
+            isDisposed = true;
+            if (hubConnection) {
+                void hubConnection.stop();
+            }
         };
     }, []);
 
@@ -682,7 +779,7 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ onNavigate }) => {
                 mediaUrl: uploadedPhotoUrl || undefined
             });
 
-            setPosts((prev) => [created, ...prev]);
+            setPosts((prev) => (prev.some((p) => p.id === created.id) ? prev : [created, ...prev]));
             setIsCreateOpen(false);
             setPostTitle("");
             setPostContent("");

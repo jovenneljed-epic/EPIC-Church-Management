@@ -1,8 +1,9 @@
-﻿using EPIC.Api.Data;
+using EPIC.Api.Data;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace EPIC.Api.Controllers
 {
@@ -12,11 +13,14 @@ namespace EPIC.Api.Controllers
     public class DashboardController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IMemoryCache _cache;
 
         public DashboardController(
-            ApplicationDbContext context)
+            ApplicationDbContext context,
+            IMemoryCache cache)
         {
             _context = context;
+            _cache = cache;
         }
 
         // =========================================================
@@ -29,6 +33,12 @@ namespace EPIC.Api.Controllers
         {
             try
             {
+                if (_cache.TryGetValue("web_dashboard_summary", out object? cachedData) && cachedData != null)
+                {
+                    Response.Headers.CacheControl = "private, max-age=60";
+                    return Ok(cachedData);
+                }
+
                 // =================================================
                 // CURRENT TIME
                 // =================================================
@@ -477,7 +487,7 @@ namespace EPIC.Api.Controllers
                 // RESPONSE
                 // =================================================
 
-                return Ok(new
+                var responseData = new
                 {
                     generatedAt =
                         nowUtc,
@@ -674,7 +684,11 @@ namespace EPIC.Api.Controllers
                         currentYear =
                             currentYearRevenue
                     }
-                });
+                };
+
+                _cache.Set("web_dashboard_summary", responseData, TimeSpan.FromSeconds(60));
+                Response.Headers.CacheControl = "private, max-age=60";
+                return Ok(responseData);
             }
             catch (Exception ex)
             {
@@ -717,6 +731,12 @@ namespace EPIC.Api.Controllers
         {
             try
             {
+                if (_cache.TryGetValue("mobile_dashboard_summary", out object? cachedMobileData) && cachedMobileData != null)
+                {
+                    Response.Headers.CacheControl = "private, max-age=60";
+                    return Ok(cachedMobileData);
+                }
+
                 // =================================================
                 // PHILIPPINE DATE
                 // =================================================
@@ -878,7 +898,7 @@ namespace EPIC.Api.Controllers
                 // RESPONSE
                 // =================================================
 
-                return Ok(new
+                var responseData = new
                 {
                     generatedAt =
                         DateTime.UtcNow,
@@ -909,7 +929,11 @@ namespace EPIC.Api.Controllers
                     todayGiving,
 
                     upcomingService
-                });
+                };
+
+                _cache.Set("mobile_dashboard_summary", responseData, TimeSpan.FromSeconds(60));
+                Response.Headers.CacheControl = "private, max-age=60";
+                return Ok(responseData);
             }
             catch (Exception ex)
             {

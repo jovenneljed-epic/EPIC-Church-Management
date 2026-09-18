@@ -32,6 +32,37 @@ public class MemberNotificationsController(ApplicationDbContext context) : Contr
                 .Skip(Math.Max(0, skip)).Take(50).Select(n => new { n.Id, n.Kind, n.Title, n.Body, n.ReferenceId, n.CreatedAt, n.ReadAt }).ToListAsync() });
     }
 
+    // =========================================================
+    // LIGHTWEIGHT SYNC CHECK (Ultra-low bandwidth for mobile/web)
+    // Returns ~80 bytes instead of 30-50 KB of full notification list
+    // =========================================================
+    [HttpGet("check")]
+    public async Task<IActionResult> Check()
+    {
+        var memberId = await MemberId();
+        if (memberId == null) return Forbid();
+        var now = DateTime.UtcNow;
+        var query = context.MemberNotifications.AsNoTracking().Where(n => n.MemberId == memberId && n.Kind != "CHAT" &&
+            (n.AnnouncementId == null || context.Announcements.Any(a => a.Id == n.AnnouncementId && a.IsPublished && a.PublishDate <= now)) &&
+            (n.Kind != "CHAT" || context.ChatMemberships.Any(m => m.RoomId == n.ReferenceId && m.MemberId == memberId && m.IsActive && m.JoinedAt <= n.CreatedAt)));
+
+        var latest = await query.OrderByDescending(n => n.CreatedAt).ThenBy(n => n.Id)
+            .Select(n => new { n.Id, n.Kind, n.Title, n.Body, n.ReadAt })
+            .FirstOrDefaultAsync();
+
+        var unreadCount = await query.CountAsync(n => n.ReadAt == null);
+
+        return Ok(new
+        {
+            unread = unreadCount,
+            latestId = latest?.Id,
+            latestKind = latest?.Kind,
+            latestTitle = latest?.Title,
+            latestBody = latest?.Body,
+            isRead = latest?.ReadAt != null
+        });
+    }
+
     [HttpPost("{id:guid}/read")]
     public async Task<IActionResult> Read(Guid id)
     {

@@ -4,7 +4,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using EPIC.Api.Data;
 using EPIC.Api.Models;
+using EPIC.Api.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace EPIC.Api.Controllers
@@ -14,12 +16,14 @@ namespace EPIC.Api.Controllers
     public class PublicCommunityController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IHubContext<CommunityHub> _hub;
         private static bool _tablesEnsured = false;
         private static readonly object _tableLock = new object();
 
-        public PublicCommunityController(ApplicationDbContext context)
+        public PublicCommunityController(ApplicationDbContext context, IHubContext<CommunityHub> hub)
         {
             _context = context;
+            _hub = hub;
             EnsureTablesCreated();
         }
 
@@ -358,6 +362,33 @@ namespace EPIC.Api.Controllers
             _context.PublicCommunityPosts.Add(post);
             await _context.SaveChangesAsync();
 
+            var broadcastItem = new
+            {
+                post.Id,
+                post.AuthorName,
+                post.AuthorRole,
+                post.AvatarBg,
+                post.PostType,
+                post.MinistryGroup,
+                post.Title,
+                post.Content,
+                post.ScriptureRef,
+                post.MediaUrl,
+                post.EncouragesCount,
+                post.PrayingCount,
+                post.StrengthenedCount,
+                post.CelebratesCount,
+                post.CommentsCount,
+                post.CreatedAt,
+                Comments = new List<object>()
+            };
+
+            try
+            {
+                await _hub.Clients.All.SendAsync("CommunityPostCreated", broadcastItem);
+            }
+            catch { }
+
             return Ok(post);
         }
 
@@ -403,14 +434,23 @@ namespace EPIC.Api.Controllers
             }
 
             await _context.SaveChangesAsync();
-            return Ok(new
+
+            var reactionData = new
             {
-                post.Id,
+                postId = post.Id,
                 post.EncouragesCount,
                 post.PrayingCount,
                 post.StrengthenedCount,
                 post.CelebratesCount
-            });
+            };
+
+            try
+            {
+                await _hub.Clients.All.SendAsync("CommunityPostReactionUpdated", reactionData);
+            }
+            catch { }
+
+            return Ok(reactionData);
         }
 
         public record PrayDto(int PostId, string UserToken);
@@ -434,6 +474,19 @@ namespace EPIC.Api.Controllers
                 });
                 post.PrayingCount += 1;
                 await _context.SaveChangesAsync();
+
+                try
+                {
+                    await _hub.Clients.All.SendAsync("CommunityPostReactionUpdated", new
+                    {
+                        postId = post.Id,
+                        post.EncouragesCount,
+                        post.PrayingCount,
+                        post.StrengthenedCount,
+                        post.CelebratesCount
+                    });
+                }
+                catch { }
             }
 
             return Ok(new { post.Id, post.PrayingCount });
@@ -463,7 +516,53 @@ namespace EPIC.Api.Controllers
             post.CommentsCount += 1;
             await _context.SaveChangesAsync();
 
+            try
+            {
+                await _hub.Clients.All.SendAsync("CommunityCommentAdded", new
+                {
+                    postId = post.Id,
+                    comment = new
+                    {
+                        comment.Id,
+                        comment.PostId,
+                        comment.AuthorName,
+                        comment.AvatarBg,
+                        comment.Content,
+                        comment.CreatedAt
+                    },
+                    commentsCount = post.CommentsCount
+                });
+            }
+            catch { }
+
             return Ok(comment);
+        }
+
+        [HttpDelete("posts/{id}")]
+        public async Task<IActionResult> DeletePost(int id)
+        {
+            var post = await _context.PublicCommunityPosts.FindAsync(id);
+            if (post == null) return NotFound("Post not found.");
+
+            var comments = await _context.PublicCommunityComments.Where(c => c.PostId == id).ToListAsync();
+            _context.PublicCommunityComments.RemoveRange(comments);
+
+            var reactions = await _context.PublicCommunityReactions.Where(r => r.PostId == id).ToListAsync();
+            _context.PublicCommunityReactions.RemoveRange(reactions);
+
+            var prayers = await _context.PublicCommunityPrayers.Where(p => p.PostId == id).ToListAsync();
+            _context.PublicCommunityPrayers.RemoveRange(prayers);
+
+            _context.PublicCommunityPosts.Remove(post);
+            await _context.SaveChangesAsync();
+
+            try
+            {
+                await _hub.Clients.All.SendAsync("CommunityPostDeleted", new { postId = id });
+            }
+            catch { }
+
+            return Ok(new { success = true, postId = id });
         }
 
         [HttpGet("stories")]

@@ -1,5 +1,6 @@
-﻿using EPIC.Api.Data;
+using EPIC.Api.Data;
 using EPIC.Api.Models;
+using EPIC.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -12,11 +13,14 @@ namespace EPIC.Api.Controllers
     public class VisitorAttendanceController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly VisitorPromotionService _promotionService;
 
         public VisitorAttendanceController(
-            ApplicationDbContext context)
+            ApplicationDbContext context,
+            VisitorPromotionService promotionService)
         {
             _context = context;
+            _promotionService = promotionService;
         }
 
         // =========================================================
@@ -279,27 +283,14 @@ namespace EPIC.Api.Controllers
                 visitCount;
 
             // -----------------------------------------------------
-            // AUTOMATIC ELIGIBILITY
+            // AUTOMATIC PROMOTION BASED ON ATTENDANCE RATING
             // -----------------------------------------------------
 
-            bool eligible =
-                visitCount >= 4;
-
-            if (eligible)
-            {
-                visitor.FollowUpStatus =
-                    "ELIGIBLE";
-            }
-            else if (visitCount == 1)
-            {
-                visitor.FollowUpStatus =
-                    "FOLLOW-UP";
-            }
-
-            visitor.UpdatedDate =
-                DateTime.Now;
-
-            await _context.SaveChangesAsync();
+            var promotionResult = await _promotionService
+                .AutoConvertVisitorIfEligibleAsync(
+                    visitor.VisitorId,
+                    VisitorPromotionService.DefaultAttendanceThreshold,
+                    attendance.RecordedBy);
 
             // -----------------------------------------------------
             // RESPONSE
@@ -316,8 +307,9 @@ namespace EPIC.Api.Controllers
 
                 new
                 {
-                    message =
-                        "VISITOR ATTENDANCE RECORDED SUCCESSFULLY.",
+                    message = promotionResult.WasAutoConverted
+                        ? promotionResult.Message
+                        : "VISITOR ATTENDANCE RECORDED SUCCESSFULLY.",
 
                     visitorAttendanceId =
                         attendance.VisitorAttendanceId,
@@ -332,6 +324,18 @@ namespace EPIC.Api.Controllers
                         (visitor.FirstName + " " +
                          visitor.MiddleName + " " +
                          visitor.LastName).Trim(),
+
+                    autoConverted =
+                        promotionResult.WasAutoConverted,
+
+                    convertedMemberId =
+                        promotionResult.MemberId,
+
+                    convertedMemberCode =
+                        promotionResult.MemberCode,
+
+                    attendanceRating =
+                        VisitorPromotionService.CalculateAttendanceRating(visitor.VisitCount, VisitorPromotionService.DefaultAttendanceThreshold),
 
                     churchServiceId =
                         churchService.ChurchServiceId,
@@ -349,7 +353,7 @@ namespace EPIC.Api.Controllers
                         visitCount,
 
                     membershipEligible =
-                        eligible,
+                        visitor.VisitCount >= VisitorPromotionService.DefaultAttendanceThreshold,
 
                     followUpStatus =
                         visitor.FollowUpStatus

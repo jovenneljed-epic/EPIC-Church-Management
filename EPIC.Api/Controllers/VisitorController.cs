@@ -1,6 +1,7 @@
-﻿using EPIC.Api.Authorization;
+using EPIC.Api.Authorization;
 using EPIC.Api.Data;
 using EPIC.Api.Models;
+using EPIC.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,6 +14,7 @@ namespace EPIC.Api.Controllers
     public class VisitorsController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly VisitorPromotionService _promotionService;
 
         // =========================================================
         // ALLOWED ATTENDANCE STATUSES
@@ -38,9 +40,11 @@ namespace EPIC.Api.Controllers
         };
 
         public VisitorsController(
-            ApplicationDbContext context)
+            ApplicationDbContext context,
+            VisitorPromotionService promotionService)
         {
             _context = context;
+            _promotionService = promotionService;
         }
 
         // =========================================================
@@ -823,10 +827,21 @@ namespace EPIC.Api.Controllers
 
             await _context.SaveChangesAsync();
 
+            // =====================================================
+            // AUTOMATIC VISITOR PROMOTION BASED ON ATTENDANCE RATING
+            // =====================================================
+
+            var promotionResult = await _promotionService
+                .AutoConvertVisitorIfEligibleAsync(
+                    visitor.VisitorId,
+                    VisitorPromotionService.DefaultAttendanceThreshold,
+                    recordedBy);
+
             return Ok(new
             {
-                message =
-                    "VISITOR ATTENDANCE RECORDED SUCCESSFULLY.",
+                message = promotionResult.WasAutoConverted
+                    ? promotionResult.Message
+                    : "VISITOR ATTENDANCE RECORDED SUCCESSFULLY.",
 
                 visitorId =
                     visitor.VisitorId,
@@ -844,7 +859,22 @@ namespace EPIC.Api.Controllers
                     attendance.Status,
 
                 followUpStatus =
-                    visitor.FollowUpStatus
+                    visitor.FollowUpStatus,
+
+                autoConverted =
+                    promotionResult.WasAutoConverted,
+
+                convertedMemberId =
+                    promotionResult.MemberId,
+
+                convertedMemberCode =
+                    promotionResult.MemberCode,
+
+                conversionDate =
+                    promotionResult.ConversionDate,
+
+                attendanceRating =
+                    VisitorPromotionService.CalculateAttendanceRating(visitor.VisitCount, VisitorPromotionService.DefaultAttendanceThreshold)
             });
         }
 
@@ -1028,6 +1058,50 @@ namespace EPIC.Api.Controllers
                             "AN ERROR OCCURRED WHILE CONVERTING THE VISITOR TO A MEMBER."
                     });
             }
+        }
+
+        // =========================================================
+        // SCAN & AUTO-CONVERT ALL ELIGIBLE VISITORS
+        // POST: /api/Visitors/auto-convert-scan
+        // Permission: Visitors / edit
+        // =========================================================
+
+        [HttpPost("auto-convert-scan")]
+        [Permission("Visitors", "edit")]
+        public async Task<IActionResult> AutoConvertEligibleScan(
+            [FromQuery] int threshold = VisitorPromotionService.DefaultAttendanceThreshold)
+        {
+            var results = await _promotionService
+                .AutoConvertAllEligibleVisitorsAsync(
+                    customerId: null,
+                    threshold: threshold,
+                    recordedBy: User.Identity?.Name ?? "BATCH_AUTOMATION");
+
+            return Ok(new
+            {
+                convertedCount = results.Count,
+                message = results.Count > 0
+                    ? $"Successfully auto-converted {results.Count} eligible visitor(s) to official members!"
+                    : "No eligible unconverted visitors found.",
+                promotions = results
+            });
+        }
+
+        // =========================================================
+        // GET CONVERSION & RATING METRICS
+        // GET: /api/Visitors/conversion-metrics
+        // Permission: Visitors / view
+        // =========================================================
+
+        [HttpGet("conversion-metrics")]
+        [Permission("Visitors", "view")]
+        public async Task<IActionResult> GetConversionMetrics(
+            [FromQuery] int threshold = VisitorPromotionService.DefaultAttendanceThreshold)
+        {
+            var metrics = await _promotionService
+                .GetConversionMetricsAsync(customerId: null, threshold: threshold);
+
+            return Ok(metrics);
         }
 
         // =========================================================
@@ -1437,7 +1511,10 @@ namespace EPIC.Api.Controllers
                     v.CreatedDate,
 
                 updatedDate =
-                    v.UpdatedDate
+                    v.UpdatedDate,
+
+                attendanceRating =
+                    VisitorPromotionService.CalculateAttendanceRating(v.VisitCount, VisitorPromotionService.DefaultAttendanceThreshold)
             };
         }
 
