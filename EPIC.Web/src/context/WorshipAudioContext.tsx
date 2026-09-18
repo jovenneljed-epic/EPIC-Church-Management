@@ -170,9 +170,23 @@ export const WorshipAudioProvider: React.FC<{ children: React.ReactNode }> = ({ 
                     JSON.stringify({ event: "command", func: "addEventListener", args: ["onStateChange"] }),
                     "*"
                 );
+                if (isPlaying) {
+                    iframeRef.current.contentWindow.postMessage(
+                        JSON.stringify({ event: "command", func: "unMute", args: [] }),
+                        "*"
+                    );
+                    iframeRef.current.contentWindow.postMessage(
+                        JSON.stringify({ event: "command", func: "setVolume", args: [volume || 100] }),
+                        "*"
+                    );
+                    iframeRef.current.contentWindow.postMessage(
+                        JSON.stringify({ event: "command", func: "playVideo", args: [] }),
+                        "*"
+                    );
+                }
             }
         } catch {}
-    }, []);
+    }, [isPlaying, volume]);
 
     // Play specific song
     const playSong = useCallback((song: WorshipSong) => {
@@ -185,8 +199,14 @@ export const WorshipAudioProvider: React.FC<{ children: React.ReactNode }> = ({ 
         if (song.audioUrl && html5AudioRef.current) {
             html5AudioRef.current.currentTime = 0;
             html5AudioRef.current.play().catch(() => {});
+        } else {
+            setTimeout(() => {
+                sendCommand("unMute");
+                sendCommand("setVolume", [volume || 100]);
+                sendCommand("playVideo");
+            }, 300);
         }
-    }, []);
+    }, [sendCommand, volume]);
 
     // Next Song (Continuous playback across tracks, looping back to first track after last song)
     const nextSong = useCallback(() => {
@@ -307,18 +327,10 @@ export const WorshipAudioProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
     // Toggle Play / Pause
     const togglePlay = useCallback(() => {
-        if (!hasInitiatedPlayback.current) {
-            hasInitiatedPlayback.current = true;
-            setIsPlaying(true);
-            if (currentSong.audioUrl && html5AudioRef.current) {
-                html5AudioRef.current.play().catch(() => {});
-            }
-            return;
-        }
-
+        hasInitiatedPlayback.current = true;
         setIsPlaying((prev) => {
             const next = !prev;
-            if (currentSong.audioUrl && html5AudioRef.current) {
+            if (currentSong?.audioUrl && html5AudioRef.current) {
                 if (next) {
                     html5AudioRef.current.play().catch(() => {});
                 } else {
@@ -326,6 +338,8 @@ export const WorshipAudioProvider: React.FC<{ children: React.ReactNode }> = ({ 
                 }
             } else {
                 if (next) {
+                    sendCommand("unMute");
+                    sendCommand("setVolume", [volume || 100]);
                     sendCommand("playVideo");
                 } else {
                     sendCommand("pauseVideo");
@@ -333,7 +347,7 @@ export const WorshipAudioProvider: React.FC<{ children: React.ReactNode }> = ({ 
             }
             return next;
         });
-    }, [currentSong.audioUrl, sendCommand]);
+    }, [currentSong?.audioUrl, sendCommand, volume]);
 
     const pause = useCallback(() => {
         setIsPlaying(false);
@@ -449,12 +463,11 @@ export const WorshipAudioProvider: React.FC<{ children: React.ReactNode }> = ({ 
         return allSongs.filter((s) => s.mood === worshipMood);
     }, [allSongs, worshipMood]);
 
-    // Video URL with YouTube embed options
+    // Video URL with YouTube embed options (clean standard embed without origin restrictions)
     const iframeSrc = useMemo(() => {
         if (!currentSong?.youtubeId) return "";
         const auto = isPlaying ? 1 : 0;
-        const origin = typeof window !== "undefined" ? window.location.origin : "";
-        return `https://www.youtube.com/embed/${currentSong.youtubeId}?autoplay=${auto}&enablejsapi=1&playsinline=1&rel=0${origin ? `&origin=${encodeURIComponent(origin)}` : ""}`;
+        return `https://www.youtube.com/embed/${currentSong.youtubeId}?autoplay=${auto}&enablejsapi=1&playsinline=1&rel=0`;
     }, [currentSong?.youtubeId, isPlaying]);
 
     const value: WorshipAudioContextType = {
@@ -515,7 +528,7 @@ export const WorshipAudioProvider: React.FC<{ children: React.ReactNode }> = ({ 
             />
 
             {/* Persistent Global YouTube Audio/Video Engine */}
-            {/* When showVideoPlayer is false, keeps 1px background iframe active so audio NEVER stops */}
+            {/* Kept in active DOM with valid dimensions (opacity 0.005) so browsers NEVER suspend or mute background audio */}
             {/* When showVideoPlayer is true, docks as a crisp picture-in-picture floating frame */}
             <div
                 id="epic-global-worship-iframe-container"
@@ -536,13 +549,13 @@ export const WorshipAudioProvider: React.FC<{ children: React.ReactNode }> = ({ 
                           }
                         : {
                               position: "fixed",
-                              bottom: -9999,
-                              right: -9999,
-                              width: 1,
-                              height: 1,
-                              opacity: 0.001,
+                              bottom: 0,
+                              left: 0,
+                              width: 200,
+                              height: 120,
+                              opacity: 0.005,
                               pointerEvents: "none",
-                              zIndex: -1
+                              zIndex: 0
                           }
                 }
             >
@@ -587,7 +600,7 @@ export const WorshipAudioProvider: React.FC<{ children: React.ReactNode }> = ({ 
                         src={iframeSrc}
                         onLoad={handleIframeLoad}
                         title={currentSong?.title || "Christian Worship Master Audio"}
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                         allowFullScreen
                         style={{
                             width: "100%",
