@@ -15,7 +15,10 @@ import {
     Music,
     Radio,
     Plus,
-    Repeat
+    Repeat,
+    ListMusic,
+    Search,
+    X
 } from "lucide-react";
 import { useWorshipAudio } from "../context/WorshipAudioContext";
 import { checkIsAdminVerified } from "../hooks/useAdminAuth";
@@ -28,6 +31,8 @@ export const GlobalWorshipSoundBar: React.FC = () => {
         isPlaying,
         isMuted,
         volume,
+        allSongs,
+        playSong,
         isSoundBarVisible,
         isSoundBarExpanded,
         showVideoPlayer,
@@ -51,7 +56,24 @@ export const GlobalWorshipSoundBar: React.FC = () => {
     } = useWorshipAudio();
 
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+    const [showPlaylistModal, setShowPlaylistModal] = useState(false);
+    const [playlistSearch, setPlaylistSearch] = useState("");
+    const [playlistMood, setPlaylistMood] = useState<"ALL" | "TAGALOG" | "ENGLISH">("ALL");
     const isAdmin = checkIsAdminVerified();
+
+    const quickPlaylistSongs = (allSongs || []).filter((s) => {
+        const matchesMood =
+            playlistMood === "ALL" ||
+            (playlistMood === "TAGALOG" && s.language === "Tagalog") ||
+            (playlistMood === "ENGLISH" && s.language === "English");
+        const q = playlistSearch.toLowerCase().trim();
+        const matchesSearch =
+            !q ||
+            s.title.toLowerCase().includes(q) ||
+            s.artist.toLowerCase().includes(q) ||
+            (s.scriptureTheme && s.scriptureTheme.toLowerCase().includes(q));
+        return matchesMood && matchesSearch;
+    });
 
     const formatTime = (secs: number) => {
         const m = Math.floor(secs / 60);
@@ -308,6 +330,17 @@ export const GlobalWorshipSoundBar: React.FC = () => {
                                 </button>
                             )}
 
+                            {/* Quick Playlist Drawer Button */}
+                            <button
+                                type="button"
+                                className={`epic-soundbar-action-btn playlist ${showPlaylistModal ? "active" : ""}`}
+                                onClick={() => setShowPlaylistModal((v) => !v)}
+                                title={`Browse All ${allSongs?.length || 52} Praise & Worship Songs`}
+                            >
+                                <ListMusic size={14} color="#38bdf8" />
+                                <span className="btn-text">Songs ({allSongs?.length || 52})</span>
+                            </button>
+
                             {/* Go to Sanctuary */}
                             <button
                                 type="button"
@@ -404,6 +437,146 @@ export const GlobalWorshipSoundBar: React.FC = () => {
                                     );
                                 })}
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Quick 52-Song Playlist Modal / Drawer */}
+            {showPlaylistModal && (
+                <div className="epic-soundbar-playlist-modal-overlay" onClick={() => setShowPlaylistModal(false)}>
+                    <div className="epic-soundbar-playlist-card" onClick={(e) => e.stopPropagation()}>
+                        <div className="epic-soundbar-playlist-header">
+                            <div className="epic-soundbar-playlist-header-left">
+                                <ListMusic size={22} color="#38bdf8" />
+                                <div>
+                                    <h3 style={{ margin: 0, fontSize: "1.15rem", color: "#f8fafc" }}>
+                                        Christian Praise & Worship Songs
+                                    </h3>
+                                    <small style={{ color: "#94a3b8" }}>
+                                        {allSongs?.length || 52} Master Recordings • Pure Worship (Tagalog & English)
+                                    </small>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                className="epic-lyrics-close-btn"
+                                onClick={() => setShowPlaylistModal(false)}
+                                title="Close Playlist"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        {/* Search & Mood Filter Bar */}
+                        <div className="epic-soundbar-playlist-filter-bar">
+                            <div className="epic-soundbar-playlist-search-box">
+                                <Search size={14} color="#64748b" />
+                                <input
+                                    type="text"
+                                    placeholder="Search 52 songs by title, artist, or scripture..."
+                                    value={playlistSearch}
+                                    onChange={(e) => setPlaylistSearch(e.target.value)}
+                                    className="epic-soundbar-playlist-search-input"
+                                />
+                                {playlistSearch && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setPlaylistSearch("")}
+                                        style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer" }}
+                                    >
+                                        <X size={13} />
+                                    </button>
+                                )}
+                            </div>
+
+                            <div className="epic-soundbar-playlist-tabs">
+                                <button
+                                    type="button"
+                                    className={`epic-playlist-tab-btn ${playlistMood === "ALL" ? "active" : ""}`}
+                                    onClick={() => setPlaylistMood("ALL")}
+                                >
+                                    ✨ All ({allSongs?.length || 52})
+                                </button>
+                                <button
+                                    type="button"
+                                    className={`epic-playlist-tab-btn ${playlistMood === "TAGALOG" ? "active" : ""}`}
+                                    onClick={() => setPlaylistMood("TAGALOG")}
+                                >
+                                    🇵🇭 Tagalog ({(allSongs || []).filter((s) => s.language === "Tagalog").length})
+                                </button>
+                                <button
+                                    type="button"
+                                    className={`epic-playlist-tab-btn ${playlistMood === "ENGLISH" ? "active" : ""}`}
+                                    onClick={() => setPlaylistMood("ENGLISH")}
+                                >
+                                    🌐 English ({(allSongs || []).filter((s) => s.language === "English").length})
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Scrollable Song List */}
+                        <div className="epic-soundbar-playlist-list">
+                            {quickPlaylistSongs.map((song, idx) => {
+                                const isThis = currentSong?.id === song.id;
+                                const isThisPlaying = isThis && isPlaying;
+                                return (
+                                    <div
+                                        key={song.id}
+                                        className={`epic-playlist-row ${isThis ? "active" : ""}`}
+                                        onClick={() => playSong(song)}
+                                    >
+                                        <div className="epic-playlist-row-left">
+                                            <span className="epic-playlist-num">
+                                                {isThisPlaying ? "🔊" : idx + 1}
+                                            </span>
+                                            <div className="epic-playlist-thumb">
+                                                <img src={song.albumCover} alt={song.title} />
+                                                {isThisPlaying && <div className="epic-thumb-glow" />}
+                                            </div>
+                                            <div className="epic-playlist-meta">
+                                                <div className="epic-playlist-title-row">
+                                                    <strong className="epic-playlist-title">{song.title}</strong>
+                                                    <span className={`epic-playlist-lang-tag ${song.language.toLowerCase()}`}>
+                                                        {song.language === "Tagalog" ? "🇵🇭 Tagalog" : "🌐 English"}
+                                                    </span>
+                                                </div>
+                                                <span className="epic-playlist-artist">{song.artist}</span>
+                                                <small className="epic-playlist-theme">{song.scriptureTheme}</small>
+                                            </div>
+                                        </div>
+
+                                        <div className="epic-playlist-row-right">
+                                            <span className="epic-playlist-duration">{song.duration}</span>
+                                            <button
+                                                type="button"
+                                                className="epic-playlist-lyrics-btn"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    openLyrics(song);
+                                                }}
+                                                title="View Lyrics"
+                                            >
+                                                <FileText size={12} /> Lyrics
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className={`epic-playlist-play-btn ${isThisPlaying ? "playing" : ""}`}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (isThis) {
+                                                        togglePlay();
+                                                    } else {
+                                                        playSong(song);
+                                                    }
+                                                }}
+                                            >
+                                                {isThisPlaying ? <Pause size={14} /> : <Play size={14} style={{ marginLeft: 1 }} />}
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
                 </div>
