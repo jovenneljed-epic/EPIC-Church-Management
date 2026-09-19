@@ -1,0 +1,443 @@
+/* ============================================================
+   EPIC FAMILY / HOUSEHOLD REPORT
+   Luke 4:18 Ministries — San Vicente Church • Umingan, Pangasinan
+   ============================================================ */
+
+.family-report-page {
+    --epic-primary: #2563eb;
+    --epic-primary-dark: #1d4ed8;
+    --epic-cyan: #06b6d4;
+    --epic-navy: #0f172a;
+    --text-main: #0f172a;
+    --text-secondary: #475569;
+    --text-muted: #64748b;
+    --surface: #ffffff;
+    --surface-soft: #f8fafc;
+    --surface-muted: #f1f5f9;
+    --border: #e2e8f0;
+    --success: #16a34a;
+    --warning: #f59e0b;
+    --purple: #7c3aed;
+
+    min-height: 100%;
+    padding: 24px;
+    background:
+        radial-gradient(circle at 10% 0%, rgba(37, 99, 235, .06), transparent 30%),
+        radial-gradient(circle at 90% 10%, rgba(6, 182, 212, .05), transparent 25%),
+        #f4f7fb;
+    color: var(--text-main);
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    box-sizing: border-box;
+}
+
+.family-report-page *,
+.family-report-page *::before,
+.family-report-page *::after {
+    box-sizing: border-box;
+}
+
+/* HERO */
+.family-report-hero {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 55%, #1e3a8a 100%);
+    border-radius: 20px;
+    padding: 28px 32px;
+    color: #ffffff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+}
+
+.family-report-hero::after {
+    content: "";
+    position: absolute;
+    top: -60px;
+    right: -40px;
+    width: 220px;
+    height: 220px;
+    background: radial-gradient(circle, rgba(56, 189, 248, 0.2), transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.family-hero-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.family-hero-icon {
+    width: 58px;
+    height: 58px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.4), rgba(6, 182, 212, 0.4));
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    flex-shrink: 0;
+}
+
+.family-hero-eyebrow {
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #38bdf8;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.family-hero-title {
+    font-size: 26px;
+    font-weight: 800;
+    margin: 0 0 4px 0;
+    letter-spacing: -0.5px;
+}
+
+.family-hero-subtitle {
+    font-size: 13px;
+    color: #cbd5e1;
+    margin: 0;
+    font-weight: 400;
+}
+
+.family-hero-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.family-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+}
+
+.family-btn-primary {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+}
+
+.family-btn-primary:hover {
+    background: linear-gradient(135deg, #1d4ed8, #1e40af);
+    transform: translateY(-1px);
+}
+
+.family-btn-secondary {
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(8px);
+}
+
+.family-btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* STATS */
+.family-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.family-stat-card {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 18px 20px;
+    border: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.family-stat-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.family-stat-value {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--text-main);
+    line-height: 1;
+}
+
+.family-stat-helper {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+/* FILTERS */
+.family-filter-card {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 20px 24px;
+    border: 1px solid var(--border);
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.family-filter-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr auto;
+    gap: 14px;
+    align-items: flex-end;
+}
+
+.family-filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.family-filter-group label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.family-input,
+.family-select {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    font-size: 13.5px;
+    background: #ffffff;
+    color: var(--text-main);
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.family-input:focus,
+.family-select:focus {
+    border-color: var(--epic-primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+/* HOUSEHOLD LIST */
+.family-households-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.family-card {
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.family-card:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.07);
+}
+
+.family-card-header {
+    background: #f8fafc;
+    border-bottom: 1px solid var(--border);
+    padding: 14px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.family-card-head-name {
+    font-size: 17px;
+    font-weight: 700;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.family-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 9px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.family-badge-count {
+    background: #e0e7ff;
+    color: #3730a3;
+}
+
+.family-badge-active {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.family-card-meta {
+    display: flex;
+    gap: 18px;
+    align-items: center;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.family-members-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.family-members-table th {
+    background: #ffffff;
+    color: #64748b;
+    font-weight: 600;
+    text-align: left;
+    padding: 10px 18px;
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.family-members-table td {
+    padding: 11px 18px;
+    border-bottom: 1px solid #f1f5f9;
+    color: #1e293b;
+}
+
+.family-members-table tr:last-child td {
+    border-bottom: none;
+}
+
+.family-members-table tr:hover td {
+    background: #f8fafc;
+}
+
+.role-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.role-head {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+}
+
+.role-spouse {
+    background: #fdf4ff;
+    color: #9333ea;
+    border: 1px solid #f5d0fe;
+}
+
+.role-child {
+    background: #f0fdf4;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+}
+
+.role-member {
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+}
+
+/* EMPTY STATE */
+.family-empty {
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px dashed var(--border);
+    padding: 48px 24px;
+    text-align: center;
+    color: var(--text-muted);
+}
+
+/* PRINT SHEET */
+@media print {
+    body, html {
+        background: #ffffff !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .family-report-page {
+        background: #ffffff !important;
+        padding: 0 !important;
+    }
+
+    .family-report-hero,
+    .family-filter-card,
+    .family-hero-actions,
+    .no-print {
+        display: none !important;
+    }
+
+    .print-header-sheet {
+        display: block !important;
+        border-bottom: 2px solid #0f172a;
+        padding-bottom: 12px;
+        margin-bottom: 18px;
+        text-align: center;
+    }
+
+    .print-header-sheet h2 {
+        margin: 0;
+        font-size: 18pt;
+        color: #0f172a;
+        font-weight: 800;
+    }
+
+    .print-header-sheet p {
+        margin: 4px 0 0 0;
+        font-size: 9.5pt;
+        color: #475569;
+    }
+
+    .family-card {
+        box-shadow: none !important;
+        border: 1px solid #cbd5e1 !important;
+        page-break-inside: avoid;
+        margin-bottom: 12px !important;
+    }
+
+    .family-card-header {
+        background: #f1f5f9 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .family-members-table th {
+        background: #f8fafc !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}

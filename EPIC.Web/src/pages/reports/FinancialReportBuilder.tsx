@@ -63,11 +63,23 @@ interface EndpointStatus {
     expenses: boolean;
 }
 
+export interface FinancialReportBuilderProps {
+    onBack?: () => void;
+    initialTypeFilter?: string;
+    customTitle?: string;
+    customSubtitle?: string;
+}
+
 // =========================================================
 // COMPONENT
 // =========================================================
 
-const FinancialReportBuilder: React.FC = () => {
+const FinancialReportBuilder: React.FC<FinancialReportBuilderProps> = ({
+    onBack,
+    initialTypeFilter = "ALL",
+    customTitle,
+    customSubtitle,
+}) => {
 
     // =====================================================
     // STATE
@@ -95,7 +107,13 @@ const FinancialReportBuilder: React.FC = () => {
         useState("");
 
     const [typeFilter, setTypeFilter] =
-        useState("ALL");
+        useState(initialTypeFilter);
+
+    useEffect(() => {
+        if (initialTypeFilter) {
+            setTypeFilter(initialTypeFilter);
+        }
+    }, [initialTypeFilter]);
 
     const [categoryFilter, setCategoryFilter] =
         useState("ALL");
@@ -1482,11 +1500,11 @@ const FinancialReportBuilder: React.FC = () => {
                         </div>
 
                         <h1>
-                            Financial Report
+                            ${customTitle || "Financial Report"}
                         </h1>
 
                         <div class="subtitle">
-                            Engaging People Into Christ
+                            ${customSubtitle || "Engaging People Into Christ"}
                         </div>
 
                     </div>
@@ -1707,40 +1725,60 @@ const FinancialReportBuilder: React.FC = () => {
                         </div>
 
                         <h1>
-                            Financial{" "}
-                            <span>
-                                Report Builder
-                            </span>
+                            {customTitle ? (
+                                <span>{customTitle}</span>
+                            ) : (
+                                <>
+                                    Financial{" "}
+                                    <span>
+                                        Report Builder
+                                    </span>
+                                </>
+                            )}
                         </h1>
 
                         <p>
-                            Analyze church income,
-                            giving, expenses, and
-                            overall financial
-                            performance directly
-                            from EPIC CMS.
+                            {customSubtitle ||
+                                "Analyze church income, giving, expenses, and overall financial performance directly from EPIC CMS."}
                         </p>
 
                     </div>
 
                 </div>
 
-                <button
-                    type="button"
-                    className="hero-print-btn"
-                    onClick={handlePrint}
-                    disabled={
-                        filteredTransactions.length === 0
-                    }
-                >
+                <div style={{ display: "flex", gap: "10px", alignItems: "center", flexWrap: "wrap" }}>
+                    {onBack && (
+                        <button
+                            type="button"
+                            className="hero-print-btn"
+                            style={{
+                                background: "#475569",
+                                borderColor: "#64748b",
+                                color: "#f8fafc"
+                            }}
+                            onClick={onBack}
+                        >
+                            ← Back to Reports
+                        </button>
+                    )}
 
-                    <span className="print-icon">
-                        ⎙
-                    </span>
+                    <button
+                        type="button"
+                        className="hero-print-btn"
+                        onClick={handlePrint}
+                        disabled={
+                            filteredTransactions.length === 0
+                        }
+                    >
 
-                    Print / Save PDF
+                        <span className="print-icon">
+                            ⎙
+                        </span>
 
-                </button>
+                        Print / Save PDF
+
+                    </button>
+                </div>
 
                 <div className="hero-glow hero-glow-one" />
 

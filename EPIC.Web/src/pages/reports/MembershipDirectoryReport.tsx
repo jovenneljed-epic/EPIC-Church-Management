@@ -40,6 +40,9 @@ interface MembersResponse {
 
 export interface MembershipDirectoryReportProps {
     onBack?: () => void;
+    initialStatusFilter?: string;
+    customTitle?: string;
+    customSubtitle?: string;
 }
 
 /* =========================================================
@@ -246,7 +249,10 @@ const formatDate = (
 
 const MembershipDirectoryReport:
     React.FC<MembershipDirectoryReportProps> = ({
-        onBack
+        onBack,
+        initialStatusFilter = "ALL",
+        customTitle,
+        customSubtitle
     }) => {
 
         /* =====================================================
@@ -276,7 +282,13 @@ const MembershipDirectoryReport:
         const [
             statusFilter,
             setStatusFilter
-        ] = useState("ALL");
+        ] = useState(initialStatusFilter);
+
+        useEffect(() => {
+            if (initialStatusFilter) {
+                setStatusFilter(initialStatusFilter);
+            }
+        }, [initialStatusFilter]);
 
         const [
             genderFilter,
@@ -981,13 +993,11 @@ const handlePrint = (): void => {
                                     </span>
 
                                     <h1>
-                                        Membership Directory
+                                        {customTitle || "Membership Directory"}
                                     </h1>
 
                                     <p>
-                                        Generate a professional
-                                        directory of registered
-                                        church members.
+                                        {customSubtitle || "Generate a professional directory of registered church members."}
                                     </p>
 
                                 </div>
@@ -1307,11 +1317,11 @@ const handlePrint = (): void => {
                                     </span>
 
                                     <h2>
-                                        MEMBERSHIP DIRECTORY
+                                        {customTitle?.toUpperCase() || "MEMBERSHIP DIRECTORY"}
                                     </h2>
 
                                     <p>
-                                        Official Church Member Listing
+                                        {customSubtitle || "Official Church Member Listing"}
                                     </p>
 
                                 </div>
@@ -1630,6 +1640,8 @@ const handlePrint = (): void => {
                     <MembershipDirectoryPrint
                         members={filteredMembers}
                         generatedAt={generatedDate}
+                        customTitle={customTitle}
+                        customSubtitle={customSubtitle}
                     />
 
                 </div>

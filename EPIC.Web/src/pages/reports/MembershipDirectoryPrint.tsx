@@ -28,6 +28,8 @@ interface Member {
 interface MembershipDirectoryPrintProps {
     members: Member[];
     generatedAt: string;
+    customTitle?: string;
+    customSubtitle?: string;
 }
 
 /* =========================================================
@@ -116,7 +118,9 @@ const getInitials = (
 const MembershipDirectoryPrint:
     React.FC<MembershipDirectoryPrintProps> = ({
         members,
-        generatedAt
+        generatedAt,
+        customTitle,
+        customSubtitle
     }) => {
 
         const total = members.length;
@@ -223,12 +227,11 @@ const MembershipDirectoryPrint:
                     </div>
 
                     <h1>
-                        Membership Directory
+                        {customTitle || "Membership Directory"}
                     </h1>
 
                     <p>
-                        Official listing of registered church members
-                        maintained through the EPIC Church Management System.
+                        {customSubtitle || "Official listing of registered church members maintained through the EPIC Church Management System."}
                     </p>
 
                     <div className="print-title-meta">

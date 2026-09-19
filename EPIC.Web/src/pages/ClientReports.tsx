@@ -7,6 +7,11 @@ import VisitorReportBuilder from "./reports/VisitorReportBuilder";
 import FinancialReportBuilder from "./reports/FinancialReportBuilder";
 import MemberAttendanceReport from "./MemberAttendanceReport";
 import ChurchFormDocument from "./forms/ChurchFormDocument";
+import FamilyHouseholdReport from "./reports/FamilyHouseholdReport";
+import BirthdayAnniversaryReport from "./reports/BirthdayAnniversaryReport";
+import MinistryMembershipReport from "./reports/MinistryMembershipReport";
+import ChurchServicesReport from "./reports/ChurchServicesReport";
+import LearningProgressReport from "./reports/LearningProgressReport";
 
 // =========================================================
 // TYPES
@@ -368,23 +373,63 @@ const Reports: React.FC<ReportsProps> = ({
     ] = useState(false);
 
     const [
+        showActiveMembers,
+        setShowActiveMembers
+    ] = useState(false);
+
+    const [
+        showBirthdayReport,
+        setShowBirthdayReport
+    ] = useState(false);
+
+    const [
+        showFamilyReport,
+        setShowFamilyReport
+    ] = useState(false);
+
+    const [
         showVisitorReport,
         setShowVisitorReport
     ] = useState(false);
-const [
-    showFinancialReport,
-    setShowFinancialReport
-] = useState(false);
- 
-const [
-    showMemberAttendanceReport,
-    setShowMemberAttendanceReport
-] = useState(false);
 
-const [
-    selectedForm,
-    setSelectedForm
-] = useState<FormDefinition | null>(null);
+    const [
+        showFinancialReport,
+        setShowFinancialReport
+    ] = useState(false);
+
+    const [
+        financialReportConfig,
+        setFinancialReportConfig
+    ] = useState<{
+        initialTypeFilter?: string;
+        customTitle?: string;
+        customSubtitle?: string;
+    }>({});
+
+    const [
+        showMemberAttendanceReport,
+        setShowMemberAttendanceReport
+    ] = useState(false);
+
+    const [
+        showMinistriesReport,
+        setShowMinistriesReport
+    ] = useState(false);
+
+    const [
+        showServicesReport,
+        setShowServicesReport
+    ] = useState(false);
+
+    const [
+        showLearningReport,
+        setShowLearningReport
+    ] = useState(false);
+
+    const [
+        selectedForm,
+        setSelectedForm
+    ] = useState<FormDefinition | null>(null);
 
     const [
         activeCategory,
@@ -450,13 +495,51 @@ const [
         switch (report.id) {
 
             // =================================================
-            // MEMBERSHIP DIRECTORY
+            // MEMBERSHIP REPORTS
             // =================================================
 
             case "membership-directory":
-
                 setShowMembershipDirectory(true);
+                return;
 
+            case "active-members":
+                setShowActiveMembers(true);
+                return;
+
+            case "birthday-report":
+                setShowBirthdayReport(true);
+                return;
+
+            case "family-report":
+                setShowFamilyReport(true);
+                return;
+
+            // =================================================
+            // ATTENDANCE REPORTS
+            // =================================================
+
+            case "attendance-summary":
+                if (onOpenAttendanceReport) {
+                    onOpenAttendanceReport();
+                } else {
+                    console.warn(
+                        "Reports: onOpenAttendanceReport callback is not connected."
+                    );
+                }
+                return;
+
+            case "attendance-date":
+                if (onOpenAttendanceByDate) {
+                    onOpenAttendanceByDate();
+                } else {
+                    console.warn(
+                        "Reports: onOpenAttendanceByDate callback is not connected."
+                    );
+                }
+                return;
+
+            case "member-attendance":
+                setShowMemberAttendanceReport(true);
                 return;
 
             // =================================================
@@ -464,81 +547,67 @@ const [
             // =================================================
 
             case "visitor-report":
-
                 setShowVisitorReport(true);
-
                 return;
 
             // =================================================
-            // ATTENDANCE SUMMARY
+            // FINANCIAL & GIVING REPORTS
             // =================================================
 
-            case "attendance-summary":
+            case "giving-report":
+                setFinancialReportConfig({
+                    initialTypeFilter: "GIVING",
+                    customTitle: "Tithes & Offerings Giving Report",
+                    customSubtitle: "Detailed records of tithes, offerings, and church contributions."
+                });
+                setShowFinancialReport(true);
+                return;
 
-                if (onOpenAttendanceReport) {
+            case "income-report":
+                setFinancialReportConfig({
+                    initialTypeFilter: "INCOME",
+                    customTitle: "Church Income Report",
+                    customSubtitle: "General receipts, donations, and auxiliary church income."
+                });
+                setShowFinancialReport(true);
+                return;
 
-                    onOpenAttendanceReport();
+            case "expense-report":
+                setFinancialReportConfig({
+                    initialTypeFilter: "EXPENSE",
+                    customTitle: "Church Expense Report",
+                    customSubtitle: "Operational costs, utilities, ministry expenses, and benevolence."
+                });
+                setShowFinancialReport(true);
+                return;
 
-                } else {
-
-                    console.warn(
-                        "Reports: onOpenAttendanceReport callback is not connected."
-                    );
-
-                }
-
+            case "financial-summary":
+                setFinancialReportConfig({
+                    initialTypeFilter: "ALL",
+                    customTitle: "Financial Statement (Income vs Expenses)",
+                    customSubtitle: "Comprehensive overview of revenue, giving, and church disbursements."
+                });
+                setShowFinancialReport(true);
                 return;
 
             // =================================================
-            // ATTENDANCE BY DATE
+            // MINISTRY, SERVICES & LEARNING REPORTS
             // =================================================
 
-            case "attendance-date":
-
-                if (onOpenAttendanceByDate) {
-
-                    onOpenAttendanceByDate();
-
-                } else {
-
-                    console.warn(
-                        "Reports: onOpenAttendanceByDate callback is not connected."
-                    );
-
-                }
-
+            case "ministries-report":
+                setShowMinistriesReport(true);
                 return;
 
-            // =================================================
-            // MEMBER ATTENDANCE
-            // =================================================
+            case "services-report":
+                setShowServicesReport(true);
+                return;
 
-            case "member-attendance":
+            case "learning-report":
+                setShowLearningReport(true);
+                return;
 
-    setShowMemberAttendanceReport(true);
-
-    return;
-            // =================================================
-            // FUTURE REPORTS
-            // =================================================
-            // =================================================
-            // FINANCIAL REPORT
-            // =================================================
-
-case "income-report":
-case "expense-report":
-case "financial-summary":
-
-    setShowFinancialReport(true);
-
-    return;
             default:
-
-                alert(
-                    `${report.title}\n\n` +
-                    "This report builder will be added in the next reporting phase."
-                );
-
+                console.warn(`Unrecognized report ID: ${report.id}`);
                 return;
         }
     };
@@ -567,16 +636,40 @@ case "financial-summary":
     }
 
     // =====================================================
-    // MEMBERSHIP DIRECTORY VIEW
+    // MEMBERSHIP REPORTS VIEWS
     // =====================================================
 
     if (showMembershipDirectory) {
-
         return (
             <MembershipDirectoryReport
-                onBack={() =>
-                    setShowMembershipDirectory(false)
-                }
+                onBack={() => setShowMembershipDirectory(false)}
+            />
+        );
+    }
+
+    if (showActiveMembers) {
+        return (
+            <MembershipDirectoryReport
+                onBack={() => setShowActiveMembers(false)}
+                initialStatusFilter="ACTIVE"
+                customTitle="Active Members Directory"
+                customSubtitle="Directory of currently active and participating church members."
+            />
+        );
+    }
+
+    if (showBirthdayReport) {
+        return (
+            <BirthdayAnniversaryReport
+                onBack={() => setShowBirthdayReport(false)}
+            />
+        );
+    }
+
+    if (showFamilyReport) {
+        return (
+            <FamilyHouseholdReport
+                onBack={() => setShowFamilyReport(false)}
             />
         );
     }
@@ -586,36 +679,67 @@ case "financial-summary":
     // =====================================================
 
     if (showVisitorReport) {
-
         return (
-            <VisitorReportBuilder />
+            <VisitorReportBuilder
+                onBack={() => setShowVisitorReport(false)}
+            />
         );
     }
-// =====================================================
-// FINANCIAL REPORT VIEW
-// =====================================================
 
-if (showFinancialReport) {
+    // =====================================================
+    // FINANCIAL & GIVING REPORT VIEW
+    // =====================================================
 
-    return (
-        <FinancialReportBuilder />
-    );
-}
+    if (showFinancialReport) {
+        return (
+            <FinancialReportBuilder
+                onBack={() => setShowFinancialReport(false)}
+                initialTypeFilter={financialReportConfig.initialTypeFilter}
+                customTitle={financialReportConfig.customTitle}
+                customSubtitle={financialReportConfig.customSubtitle}
+            />
+        );
+    }
 
-// =====================================================
-// MEMBER ATTENDANCE REPORT VIEW
-// =====================================================
+    // =====================================================
+    // MEMBER ATTENDANCE REPORT VIEW
+    // =====================================================
 
-if (showMemberAttendanceReport) {
+    if (showMemberAttendanceReport) {
+        return (
+            <MemberAttendanceReport
+                onBack={() => setShowMemberAttendanceReport(false)}
+            />
+        );
+    }
 
-    return (
-        <MemberAttendanceReport
-            onBack={() =>
-                setShowMemberAttendanceReport(false)
-            }
-        />
-    );
-}
+    // =====================================================
+    // MINISTRIES, SERVICES & LEARNING REPORT VIEWS
+    // =====================================================
+
+    if (showMinistriesReport) {
+        return (
+            <MinistryMembershipReport
+                onBack={() => setShowMinistriesReport(false)}
+            />
+        );
+    }
+
+    if (showServicesReport) {
+        return (
+            <ChurchServicesReport
+                onBack={() => setShowServicesReport(false)}
+            />
+        );
+    }
+
+    if (showLearningReport) {
+        return (
+            <LearningProgressReport
+                onBack={() => setShowLearningReport(false)}
+            />
+        );
+    }
     // =====================================================
     // MAIN REPORTS PAGE
     // =====================================================

@@ -107,11 +107,13 @@ type StatusFilter =
     | "ALL"
     | VisitorStatus;
 
-// =========================================================
-// COMPONENT
-// =========================================================
+export interface VisitorReportBuilderProps {
+    onBack?: () => void;
+}
 
-const VisitorReportBuilder: React.FC = () => {
+const VisitorReportBuilder: React.FC<VisitorReportBuilderProps> = ({
+    onBack
+}) => {
 
     // =====================================================
     // STATE
@@ -1185,6 +1187,16 @@ const VisitorReportBuilder: React.FC = () => {
                 </div>
 
                 <div className="epic-visitor-report-header-actions">
+                    {onBack && (
+                        <button
+                            type="button"
+                            className="visitor-report-btn secondary"
+                            onClick={onBack}
+                            style={{ fontWeight: 600 }}
+                        >
+                            ← Back to Reports
+                        </button>
+                    )}
 
                     <button
                         type="button"
@@ -1201,7 +1213,6 @@ const VisitorReportBuilder: React.FC = () => {
                     >
                         Print / Save PDF
                     </button>
-
                 </div>
 
             </div>

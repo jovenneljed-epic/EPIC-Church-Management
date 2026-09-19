@@ -1,0 +1,344 @@
+/* ============================================================
+   EPIC CHURCH SERVICES REPORT
+   Luke 4:18 Ministries — San Vicente Church • Umingan, Pangasinan
+   ============================================================ */
+
+.services-report-page {
+    --epic-primary: #0284c7;
+    --epic-primary-dark: #0369a1;
+    --text-main: #0f172a;
+    --text-secondary: #475569;
+    --text-muted: #64748b;
+    --surface: #ffffff;
+    --surface-soft: #f8fafc;
+    --border: #e2e8f0;
+
+    min-height: 100%;
+    padding: 24px;
+    background:
+        radial-gradient(circle at 10% 0%, rgba(2, 132, 199, .07), transparent 30%),
+        radial-gradient(circle at 90% 10%, rgba(14, 165, 233, .05), transparent 25%),
+        #f4f7fb;
+    color: var(--text-main);
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    box-sizing: border-box;
+}
+
+.services-report-page *,
+.services-report-page *::before,
+.services-report-page *::after {
+    box-sizing: border-box;
+}
+
+/* HERO */
+.services-report-hero {
+    background: linear-gradient(135deg, #082f49 0%, #0c4a6e 45%, #0369a1 100%);
+    border-radius: 20px;
+    padding: 28px 32px;
+    color: #ffffff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+}
+
+.services-hero-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.services-hero-icon {
+    width: 58px;
+    height: 58px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(56, 189, 248, 0.4), rgba(2, 132, 199, 0.4));
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    flex-shrink: 0;
+}
+
+.services-hero-eyebrow {
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #38bdf8;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.services-hero-title {
+    font-size: 26px;
+    font-weight: 800;
+    margin: 0 0 4px 0;
+    letter-spacing: -0.5px;
+}
+
+.services-hero-subtitle {
+    font-size: 13px;
+    color: #cbd5e1;
+    margin: 0;
+}
+
+.services-hero-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.services-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+}
+
+.services-btn-primary {
+    background: linear-gradient(135deg, #0284c7, #0369a1);
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+}
+
+.services-btn-primary:hover {
+    background: linear-gradient(135deg, #0369a1, #075985);
+    transform: translateY(-1px);
+}
+
+.services-btn-secondary {
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(8px);
+}
+
+.services-btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* STATS */
+.services-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.services-stat-card {
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 18px 20px;
+    border: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.services-stat-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.services-stat-value {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--text-main);
+    line-height: 1;
+}
+
+.services-stat-helper {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+/* FILTERS */
+.services-filter-card {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 20px 24px;
+    border: 1px solid var(--border);
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.services-filter-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr auto;
+    gap: 14px;
+    align-items: flex-end;
+}
+
+.services-filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.services-filter-group label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.services-input,
+.services-select {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    font-size: 13.5px;
+    background: #ffffff;
+    color: var(--text-main);
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.services-input:focus,
+.services-select:focus {
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+}
+
+/* TABLE CARD */
+.services-table-card {
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+}
+
+.services-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+}
+
+.services-table th {
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 700;
+    text-align: left;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    font-size: 11.5px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.services-table td {
+    padding: 14px 20px;
+    border-bottom: 1px solid #f1f5f9;
+    color: #1e293b;
+    vertical-align: middle;
+}
+
+.services-table tr:hover td {
+    background: #f0f9ff;
+}
+
+.service-type-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 9px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.badge-sunday {
+    background: #e0f2fe;
+    color: #0369a1;
+    border: 1px solid #bae6fd;
+}
+
+.badge-midweek {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
+}
+
+.badge-youth {
+    background: #fce7f3;
+    color: #9d174d;
+    border: 1px solid #fbcfe8;
+}
+
+.badge-special {
+    background: #ede9fe;
+    color: #5b21b6;
+    border: 1px solid #ddd6fe;
+}
+
+/* PRINT SHEET */
+@media print {
+    body, html {
+        background: #ffffff !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .services-report-page {
+        background: #ffffff !important;
+        padding: 0 !important;
+    }
+
+    .services-report-hero,
+    .services-filter-card,
+    .services-hero-actions,
+    .no-print {
+        display: none !important;
+    }
+
+    .print-header-sheet {
+        display: block !important;
+        border-bottom: 2px solid #0f172a;
+        padding-bottom: 12px;
+        margin-bottom: 18px;
+        text-align: center;
+    }
+
+    .print-header-sheet h2 {
+        margin: 0;
+        font-size: 18pt;
+        color: #0f172a;
+        font-weight: 800;
+    }
+
+    .print-header-sheet p {
+        margin: 4px 0 0 0;
+        font-size: 9.5pt;
+        color: #475569;
+    }
+
+    .services-table-card {
+        box-shadow: none !important;
+        border: 1px solid #cbd5e1 !important;
+    }
+
+    .services-table th {
+        background: #f1f5f9 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}
