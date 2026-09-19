@@ -528,9 +528,14 @@
 }
 
 .mar-card.mar-filters-card {
-    overflow: visible;
+    overflow: visible !important;
     position: relative;
-    z-index: 100;
+    z-index: 200;
+}
+
+.mar-card.mar-filters-card .mar-filters,
+.mar-card.mar-filters-card .mar-field {
+    overflow: visible !important;
 }
 
 .mar-card.mar-filters-card .mar-card-header {

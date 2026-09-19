@@ -2976,7 +2976,7 @@ const MemberAttendanceReport: React.FC<
                 FILTERS
             ================================================== */}
 
-            <section className="mar-card mar-filters-card">
+            <section className="mar-card mar-filters-card" style={{ overflow: "visible", position: "relative", zIndex: 200 }}>
 
                 <div className="mar-card-header">
 
@@ -2999,7 +2999,7 @@ const MemberAttendanceReport: React.FC<
 
                 </div>
 
-                <div className="mar-filters">
+                <div className="mar-filters" style={{ overflow: "visible" }}>
 
                     <div className="mar-field search">
 
@@ -3020,13 +3020,13 @@ const MemberAttendanceReport: React.FC<
 
                     </div>
 
-                    <div className="mar-field" style={{ position: "relative" }}>
+                    <div className="mar-field" style={{ position: "relative", overflow: "visible", zIndex: 201 }}>
 
                         <label>
                             Church Service
                         </label>
 
-                        <div className="mar-service-dropdown-container" ref={serviceDropdownRef}>
+                        <div className="mar-service-dropdown-container" ref={serviceDropdownRef} style={{ position: "relative", zIndex: 1000 }}>
                             <div
                                 className={`mar-service-dropdown-trigger ${isServiceDropdownOpen ? "open" : ""}`}
                                 onClick={() => setIsServiceDropdownOpen(prev => !prev)}
@@ -3053,6 +3053,14 @@ const MemberAttendanceReport: React.FC<
                                     <div className="mar-service-trigger-placeholder">
                                         <Calendar size={15} style={{ color: "#64748b" }} />
                                         <span>All Services ({allServices.length})</span>
+                                        <span className="mar-service-pill completed" style={{ fontSize: 10, padding: "1px 6px", marginLeft: 4 }}>
+                                            {completedServicesCount} Completed
+                                        </span>
+                                        {upcomingServicesCount > 0 && (
+                                            <span className="mar-service-pill upcoming" style={{ fontSize: 10, padding: "1px 6px" }}>
+                                                {upcomingServicesCount} Upcoming
+                                            </span>
+                                        )}
                                     </div>
                                 )}
 
