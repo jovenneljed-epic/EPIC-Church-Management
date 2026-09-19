@@ -1472,17 +1472,90 @@ const FinancialReportBuilder: React.FC<FinancialReportBuilderProps> = ({
                         font-size: 10px;
                     }
 
-                    @media print {
+                    .print-footer-sheet {
+                        margin-top: 30px;
+                        page-break-inside: avoid;
+                    }
 
+                    .print-signatures {
+                        display: flex;
+                        justify-content: space-between;
+                        gap: 20px;
+                        margin-top: 25px;
+                    }
+
+                    .print-signature-box {
+                        text-align: center;
+                        flex: 1;
+                    }
+
+                    .signature-line {
+                        border-bottom: 1px solid #0f172a;
+                        margin-bottom: 4px;
+                        height: 25px;
+                    }
+
+                    .signature-name {
+                        font-size: 8pt;
+                        font-weight: 700;
+                        color: #0f172a;
+                    }
+
+                    .signature-title {
+                        font-size: 7pt;
+                        color: #64748b;
+                    }
+
+                    @page {
+                        size: letter portrait;
+                        margin: 10mm 10mm 12mm 10mm;
+                    }
+
+                    @media print {
                         body {
-                            padding: 15px;
+                            padding: 0;
+                            margin: 0;
+                            width: 100%;
+                            height: auto;
                         }
 
                         tr {
-                            page-break-inside:
-                                avoid;
+                            page-break-inside: avoid;
                         }
 
+                        .print-footer-sheet {
+                            margin-top: 30px;
+                            page-break-inside: avoid;
+                        }
+
+                        .print-signatures {
+                            display: flex;
+                            justify-content: space-between;
+                            gap: 20px;
+                            margin-top: 25px;
+                        }
+
+                        .print-signature-box {
+                            text-align: center;
+                            flex: 1;
+                        }
+
+                        .signature-line {
+                            border-bottom: 1px solid #0f172a;
+                            margin-bottom: 4px;
+                            height: 25px;
+                        }
+
+                        .signature-name {
+                            font-size: 8pt;
+                            font-weight: 700;
+                            color: #0f172a;
+                        }
+
+                        .signature-title {
+                            font-size: 7pt;
+                            color: #64748b;
+                        }
                     }
 
                 </style>
@@ -1653,10 +1726,30 @@ const FinancialReportBuilder: React.FC<FinancialReportBuilderProps> = ({
                     )}
 
                     <br />
+                    Records displayed: ${filteredTransactions.length}
+                </div>
 
-                    Records displayed:
-                    ${filteredTransactions.length}
-
+                <div class="print-footer-sheet">
+                    <div style="font-size: 8pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #475569; margin-bottom: 8px; border-bottom: 1px dashed #cbd5e1; padding-bottom: 4px;">
+                        Ecclesiastical Financial Audit & Administrative Attestation
+                    </div>
+                    <div class="print-signatures">
+                        <div class="print-signature-box">
+                            <div class="signature-line"></div>
+                            <div class="signature-name">Sis. Leah Reyes</div>
+                            <div class="signature-title">Church Treasurer / Bookkeeper</div>
+                        </div>
+                        <div class="print-signature-box">
+                            <div class="signature-line"></div>
+                            <div class="signature-name">Bro. Benjamin Reyes</div>
+                            <div class="signature-title">Finance & Stewardship Committee Chair</div>
+                        </div>
+                        <div class="print-signature-box">
+                            <div class="signature-line"></div>
+                            <div class="signature-name">Pastor Mateo Santos</div>
+                            <div class="signature-title">Senior Pastor — Luke 4:18 Ministries</div>
+                        </div>
+                    </div>
                 </div>
 
             </body>

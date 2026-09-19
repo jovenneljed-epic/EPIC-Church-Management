@@ -428,6 +428,25 @@ const FamilyHouseholdReport: React.FC<FamilyHouseholdReportProps> = ({ onBack })
                     ))}
                 </div>
             )}
+
+            {/* PRINT FOOTER / SIGNATURE SHEET */}
+            <div className="print-footer-sheet" style={{ display: "none" }}>
+                <div className="print-signature-box">
+                    <div className="signature-line" />
+                    <div className="signature-name">Sis. Leah Reyes</div>
+                    <div className="signature-title">Church Membership Secretary</div>
+                </div>
+                <div className="print-signature-box">
+                    <div className="signature-line" />
+                    <div className="signature-name">Pastor Mateo Santos</div>
+                    <div className="signature-title">Senior Pastor, Luke 4:18 Ministries</div>
+                </div>
+                <div className="print-signature-box">
+                    <div className="signature-line" />
+                    <div className="signature-name">San Vicente Church Council</div>
+                    <div className="signature-title">Official Parish Verification Seal</div>
+                </div>
+            </div>
         </div>
     );
 };

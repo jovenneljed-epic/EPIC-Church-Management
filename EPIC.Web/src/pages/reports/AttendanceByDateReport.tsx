@@ -293,7 +293,11 @@ const statusClass = (
 // COMPONENT
 // ============================================================
 
-const AttendanceByDateReport: React.FC = () => {
+export interface AttendanceByDateReportProps {
+    onBack?: () => void;
+}
+
+const AttendanceByDateReport: React.FC<AttendanceByDateReportProps> = ({ onBack }) => {
 
     const [fromDate, setFromDate] =
         useState(today());
@@ -825,22 +829,35 @@ const AttendanceByDateReport: React.FC = () => {
 
                 </div>
 
-                <button
-                    type="button"
-                    className="hero-print-btn"
-                    onClick={
-                        handlePrint
-                    }
-                    disabled={
-                        loading
-                    }
-                >
-                    <span className="print-icon">
-                        ⎙
-                    </span>
+                <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                    {onBack && (
+                        <button
+                            type="button"
+                            className="hero-print-btn"
+                            style={{ background: "rgba(255, 255, 255, 0.15)", border: "1px solid rgba(255, 255, 255, 0.25)" }}
+                            onClick={onBack}
+                        >
+                            ← Back to Reports
+                        </button>
+                    )}
 
-                    Print Report
-                </button>
+                    <button
+                        type="button"
+                        className="hero-print-btn"
+                        onClick={
+                            handlePrint
+                        }
+                        disabled={
+                            loading
+                        }
+                    >
+                        <span className="print-icon">
+                            ⎙
+                        </span>
+
+                        Print Report
+                    </button>
+                </div>
 
             </section>
 

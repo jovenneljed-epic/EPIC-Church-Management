@@ -511,11 +511,11 @@ const AttendanceReportPrint: React.FC<
                         <div className="signature-line" />
 
                         <strong>
-                            Attendance Recorder
+                            Sis. Corazon Aquino
                         </strong>
 
                         <span>
-                            Signature over Printed Name
+                            Attendance Ministry Recorder
                         </span>
 
                     </div>
@@ -525,11 +525,11 @@ const AttendanceReportPrint: React.FC<
                         <div className="signature-line" />
 
                         <strong>
-                            Church Administrator
+                            Bro. Joshua Santos
                         </strong>
 
                         <span>
-                            Signature over Printed Name
+                            Church Administrator / Attestation
                         </span>
 
                     </div>
@@ -539,11 +539,11 @@ const AttendanceReportPrint: React.FC<
                         <div className="signature-line" />
 
                         <strong>
-                            Pastor / Authorized Representative
+                            Pastor Mateo Santos
                         </strong>
 
                         <span>
-                            Signature over Printed Name
+                            Senior Pastor — Luke 4:18 Ministries
                         </span>
 
                     </div>

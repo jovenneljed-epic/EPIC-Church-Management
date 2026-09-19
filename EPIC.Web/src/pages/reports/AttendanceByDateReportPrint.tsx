@@ -778,8 +778,12 @@ const AttendanceByDateReportPrint: React.FC<Props> = ({
                         <span />
 
                         <strong>
-                            Prepared / Verified By
+                            Sis. Corazon Aquino
                         </strong>
+
+                        <small style={{ fontSize: "7px", color: "#64748b", display: "block", textAlign: "center" }}>
+                            Attendance Ministry Recorder
+                        </small>
 
                     </div>
 
@@ -788,8 +792,26 @@ const AttendanceByDateReportPrint: React.FC<Props> = ({
                         <span />
 
                         <strong>
-                            Church Administrator
+                            Bro. Joshua Santos
                         </strong>
+
+                        <small style={{ fontSize: "7px", color: "#64748b", display: "block", textAlign: "center" }}>
+                            Church Administrator
+                        </small>
+
+                    </div>
+
+                    <div className="signature-line">
+
+                        <span />
+
+                        <strong>
+                            Pastor Mateo Santos
+                        </strong>
+
+                        <small style={{ fontSize: "7px", color: "#64748b", display: "block", textAlign: "center" }}>
+                            Senior Pastor — Luke 4:18 Ministries
+                        </small>
 
                     </div>
 

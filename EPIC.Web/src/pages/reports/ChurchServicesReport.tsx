@@ -406,6 +406,25 @@ const ChurchServicesReport: React.FC<ChurchServicesReportProps> = ({ onBack }) =
                     </tbody>
                 </table>
             </div>
+
+            {/* PRINT FOOTER / SIGNATURE SHEET */}
+            <div className="print-footer-sheet" style={{ display: "none" }}>
+                <div className="print-signature-box">
+                    <div className="signature-line" />
+                    <div className="signature-name">Bro. Eduardo Dela Cruz Sr.</div>
+                    <div className="signature-title">Elder & Worship Service Leader</div>
+                </div>
+                <div className="print-signature-box">
+                    <div className="signature-line" />
+                    <div className="signature-name">Pastor Mateo Santos</div>
+                    <div className="signature-title">Senior Pastor, Luke 4:18 Ministries</div>
+                </div>
+                <div className="print-signature-box">
+                    <div className="signature-line" />
+                    <div className="signature-name">San Vicente Church Council</div>
+                    <div className="signature-title">Official Verification Stamp</div>
+                </div>
+            </div>
         </div>
     );
 };

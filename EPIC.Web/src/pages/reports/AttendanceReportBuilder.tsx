@@ -116,7 +116,11 @@ type StatusFilter =
 // COMPONENT
 // =========================================================
 
-const AttendanceReportBuilder: React.FC = () => {
+export interface AttendanceReportBuilderProps {
+    onBack?: () => void;
+}
+
+const AttendanceReportBuilder: React.FC<AttendanceReportBuilderProps> = ({ onBack }) => {
     // =====================================================
     // STATE
     // =====================================================
@@ -1387,6 +1391,16 @@ const AttendanceReportBuilder: React.FC = () => {
                 </div>
 
                 <div className="epic-report-builder-header-actions">
+
+                    {onBack && (
+                        <button
+                            type="button"
+                            className="epic-report-builder-btn secondary"
+                            onClick={onBack}
+                        >
+                            ← Back to Reports
+                        </button>
+                    )}
 
                     {report && (
                         <button

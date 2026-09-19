@@ -329,6 +329,25 @@ const MinistryMembershipReport: React.FC<MinistryMembershipReportProps> = ({ onB
                     </tbody>
                 </table>
             </div>
+
+            {/* PRINT FOOTER / SIGNATURE SHEET */}
+            <div className="print-footer-sheet" style={{ display: "none" }}>
+                <div className="print-signature-box">
+                    <div className="signature-line" />
+                    <div className="signature-name">Bro. Joshua Santos</div>
+                    <div className="signature-title">Ministries & Pastoral Coordinator</div>
+                </div>
+                <div className="print-signature-box">
+                    <div className="signature-line" />
+                    <div className="signature-name">Pastor Mateo Santos</div>
+                    <div className="signature-title">Senior Pastor, Luke 4:18 Ministries</div>
+                </div>
+                <div className="print-signature-box">
+                    <div className="signature-line" />
+                    <div className="signature-name">San Vicente Church Council</div>
+                    <div className="signature-title">Official Verification Stamp</div>
+                </div>
+            </div>
         </div>
     );
 };

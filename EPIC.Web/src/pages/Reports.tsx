@@ -12,6 +12,8 @@ import BirthdayAnniversaryReport from "./reports/BirthdayAnniversaryReport";
 import MinistryMembershipReport from "./reports/MinistryMembershipReport";
 import ChurchServicesReport from "./reports/ChurchServicesReport";
 import LearningProgressReport from "./reports/LearningProgressReport";
+import AttendanceReportBuilder from "./reports/AttendanceReportBuilder";
+import AttendanceByDateReport from "./reports/AttendanceByDateReport";
 
 // =========================================================
 // TYPES
@@ -427,6 +429,16 @@ const Reports: React.FC<ReportsProps> = ({
     ] = useState(false);
 
     const [
+        showAttendanceSummary,
+        setShowAttendanceSummary
+    ] = useState(false);
+
+    const [
+        showAttendanceByDate,
+        setShowAttendanceByDate
+    ] = useState(false);
+
+    const [
         selectedForm,
         setSelectedForm
     ] = useState<FormDefinition | null>(null);
@@ -522,9 +534,7 @@ const Reports: React.FC<ReportsProps> = ({
                 if (onOpenAttendanceReport) {
                     onOpenAttendanceReport();
                 } else {
-                    console.warn(
-                        "Reports: onOpenAttendanceReport callback is not connected."
-                    );
+                    setShowAttendanceSummary(true);
                 }
                 return;
 
@@ -532,9 +542,7 @@ const Reports: React.FC<ReportsProps> = ({
                 if (onOpenAttendanceByDate) {
                     onOpenAttendanceByDate();
                 } else {
-                    console.warn(
-                        "Reports: onOpenAttendanceByDate callback is not connected."
-                    );
+                    setShowAttendanceByDate(true);
                 }
                 return;
 
@@ -704,6 +712,22 @@ const Reports: React.FC<ReportsProps> = ({
     // =====================================================
     // MEMBER ATTENDANCE REPORT VIEW
     // =====================================================
+
+    if (showAttendanceSummary) {
+        return (
+            <AttendanceReportBuilder
+                onBack={() => setShowAttendanceSummary(false)}
+            />
+        );
+    }
+
+    if (showAttendanceByDate) {
+        return (
+            <AttendanceByDateReport
+                onBack={() => setShowAttendanceByDate(false)}
+            />
+        );
+    }
 
     if (showMemberAttendanceReport) {
         return (
