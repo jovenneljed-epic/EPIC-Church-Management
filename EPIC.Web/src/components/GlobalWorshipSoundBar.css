@@ -4,48 +4,59 @@
    ========================================================================= */
 
 .epic-soundbar-wrapper {
-    position: fixed;
-    bottom: 16px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 99990;
-    width: calc(100% - 32px);
-    max-width: 1180px;
-    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-    font-family: inherit;
-    pointer-events: auto;
+    position: fixed !important;
+    bottom: 16px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    z-index: 99990 !important;
+    width: calc(100% - 32px) !important;
+    max-width: 1180px !important;
+    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    font-family: inherit !important;
+    pointer-events: auto !important;
+    box-sizing: border-box !important;
+}
+
+.epic-soundbar-wrapper button {
+    font-family: inherit !important;
+    outline: none !important;
+    box-sizing: border-box !important;
+    border-style: solid !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
 }
 
 /* Minimized Floating Sound Pill */
 .epic-soundbar-wrapper.minimized {
-    width: auto;
-    max-width: 90vw;
-    bottom: 18px;
-    right: 20px;
-    left: auto;
-    transform: none;
+    width: auto !important;
+    max-width: 90vw !important;
+    bottom: 18px !important;
+    right: 20px !important;
+    left: auto !important;
+    transform: none !important;
 }
 
 .epic-soundbar-min-pill {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    background: rgba(15, 23, 42, 0.94);
-    border: 1px solid rgba(56, 189, 248, 0.4);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    padding: 6px 14px 6px 8px;
-    border-radius: 40px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.75), 0 0 15px rgba(56, 189, 248, 0.2);
-    cursor: pointer;
-    transition: all 0.25s ease;
-    user-select: none;
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    background: rgba(15, 23, 42, 0.94) !important;
+    border: 1px solid rgba(56, 189, 248, 0.4) !important;
+    backdrop-filter: blur(14px) !important;
+    -webkit-backdrop-filter: blur(14px) !important;
+    padding: 6px 12px 6px 8px !important;
+    border-radius: 40px !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.75), 0 0 15px rgba(56, 189, 248, 0.2) !important;
+    cursor: pointer !important;
+    transition: all 0.25s ease !important;
+    user-select: none !important;
+    box-sizing: border-box !important;
 }
 
 .epic-soundbar-min-pill:hover {
-    transform: translateY(-2px);
-    border-color: #38bdf8;
-    box-shadow: 0 14px 35px rgba(0, 0, 0, 0.85), 0 0 22px rgba(56, 189, 248, 0.35);
+    transform: translateY(-2px) !important;
+    border-color: #38bdf8 !important;
+    box-shadow: 0 14px 35px rgba(0, 0, 0, 0.85), 0 0 22px rgba(56, 189, 248, 0.35) !important;
 }
 
 .epic-soundbar-min-disc {
@@ -92,60 +103,86 @@
 }
 
 .epic-soundbar-pill-play {
-    background: linear-gradient(135deg, #0284c7 0%, #38bdf8 100%);
-    color: #0f172a;
-    border: none;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    box-shadow: 0 2px 8px rgba(56, 189, 248, 0.4);
-    transition: transform 0.2s ease;
+    background: linear-gradient(135deg, #0284c7 0%, #38bdf8 100%) !important;
+    color: #0f172a !important;
+    border: none !important;
+    width: 28px !important;
+    height: 28px !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    box-shadow: 0 2px 8px rgba(56, 189, 248, 0.4) !important;
+    transition: transform 0.2s ease !important;
 }
 
 .epic-soundbar-pill-play:hover {
-    transform: scale(1.1);
+    transform: scale(1.1) !important;
 }
 
+.epic-soundbar-pill-expand-btn,
 .epic-soundbar-pill-toggle-btn {
-    background: rgba(56, 189, 248, 0.15);
-    color: #38bdf8;
-    border: 1px solid rgba(56, 189, 248, 0.35);
-    padding: 4px 9px;
-    border-radius: 16px;
-    font-size: 0.72rem;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    cursor: pointer;
-    transition: all 0.2s ease;
+    background: rgba(56, 189, 248, 0.15) !important;
+    color: #38bdf8 !important;
+    border: 1px solid rgba(56, 189, 248, 0.35) !important;
+    padding: 4px 10px !important;
+    border-radius: 16px !important;
+    font-size: 0.72rem !important;
+    font-weight: 700 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    white-space: nowrap !important;
 }
 
+.epic-soundbar-pill-expand-btn:hover,
 .epic-soundbar-pill-toggle-btn:hover {
-    background: rgba(56, 189, 248, 0.25);
-    color: #ffffff;
+    background: rgba(56, 189, 248, 0.3) !important;
+    color: #ffffff !important;
+    border-color: #38bdf8 !important;
+}
+
+.epic-soundbar-pill-close-btn {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.14) !important;
+    color: #94a3b8 !important;
+    width: 22px !important;
+    height: 22px !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+}
+
+.epic-soundbar-pill-close-btn:hover {
+    background: rgba(239, 68, 68, 0.2) !important;
+    color: #f87171 !important;
+    border-color: rgba(239, 68, 68, 0.4) !important;
 }
 
 /* =========================================================================
    FULL EXPANDED SOUND BAR CARD
    ========================================================================= */
 .epic-soundbar-full-card {
-    background: rgba(15, 23, 42, 0.95);
-    border: 1px solid rgba(56, 189, 248, 0.35);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border-radius: 18px;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85), 0 0 25px rgba(56, 189, 248, 0.15);
-    padding: 10px 18px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    transition: all 0.3s ease;
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.96) 0%, rgba(2, 6, 23, 0.98) 100%) !important;
+    border: 1px solid rgba(56, 189, 248, 0.35) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border-radius: 18px !important;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85), 0 0 25px rgba(56, 189, 248, 0.15) !important;
+    padding: 10px 18px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 16px !important;
+    color: #ffffff !important;
+    box-sizing: border-box !important;
+    transition: all 0.3s ease !important;
 }
 
 /* Left Section */
@@ -379,7 +416,7 @@
     background: rgba(255, 255, 255, 0.12);
     border-radius: 2px;
     cursor: pointer;
-    overflow: hidden;
+    overflow: visible;
     transition: height 0.15s ease;
     position: relative;
 }
@@ -393,6 +430,25 @@
     background: linear-gradient(90deg, #38bdf8, #34d399);
     border-radius: 2px;
     transition: width 0.3s ease;
+    position: relative;
+}
+
+.epic-soundbar-progress-scrubber-handle {
+    position: absolute;
+    right: -4px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 0 8px rgba(56, 189, 248, 0.95);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.epic-soundbar-progress-track:hover .epic-soundbar-progress-scrubber-handle {
+    opacity: 1;
 }
 
 .epic-soundbar-main-play-btn {
@@ -519,6 +575,61 @@
     background: #ec4899;
     color: #ffffff;
     box-shadow: 0 4px 12px rgba(236, 72, 153, 0.4);
+}
+
+.epic-soundbar-window-controls {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    margin-left: 4px !important;
+    border-left: 1px solid rgba(255, 255, 255, 0.12) !important;
+    padding-left: 8px !important;
+}
+
+.epic-soundbar-minimize-btn {
+    background: rgba(56, 189, 248, 0.15) !important;
+    border: 1px solid rgba(56, 189, 248, 0.45) !important;
+    color: #38bdf8 !important;
+    padding: 6px 13px !important;
+    border-radius: 20px !important;
+    font-size: 0.78rem !important;
+    font-weight: 700 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    cursor: pointer !important;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    box-shadow: 0 2px 8px rgba(56, 189, 248, 0.2) !important;
+    white-space: nowrap !important;
+}
+
+.epic-soundbar-minimize-btn:hover {
+    background: #0284c7 !important;
+    color: #ffffff !important;
+    border-color: #38bdf8 !important;
+    box-shadow: 0 4px 14px rgba(56, 189, 248, 0.45) !important;
+    transform: translateY(-1px) !important;
+}
+
+.epic-soundbar-close-btn {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    color: #94a3b8 !important;
+    width: 28px !important;
+    height: 28px !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+}
+
+.epic-soundbar-close-btn:hover {
+    background: rgba(239, 68, 68, 0.2) !important;
+    color: #f87171 !important;
+    border-color: rgba(239, 68, 68, 0.4) !important;
+    transform: scale(1.05) !important;
 }
 
 .epic-soundbar-toggle-collapse-btn {
@@ -774,6 +885,19 @@
 
     .epic-soundbar-action-btn {
         padding: 6px;
+    }
+
+    .epic-soundbar-minimize-btn {
+        padding: 5px 8px !important;
+        font-size: 0.72rem !important;
+    }
+
+    .epic-soundbar-minimize-btn span {
+        display: none;
+    }
+
+    .epic-soundbar-progress-row {
+        width: 140px !important;
     }
 }
 

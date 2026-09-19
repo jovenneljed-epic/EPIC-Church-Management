@@ -98,12 +98,12 @@ export const WorshipAudioProvider: React.FC<{ children: React.ReactNode }> = ({ 
     const [currentTime, setCurrentTime] = useState<number>(0);
     const durationTime = currentSong?.durationSeconds || 300;
 
-    // 6. Sound Bar UI State
+    // 6. Sound Bar UI State (Defaults to compact corner pill so it never blocks content)
     const [isSoundBarVisible, setIsSoundBarVisible] = useState<boolean>(true);
     const [isSoundBarExpanded, setIsSoundBarExpanded] = useState<boolean>(() => {
         const saved = localStorage.getItem(SOUNDBAR_EXPANDED_KEY);
         if (saved !== null) return saved === "true";
-        return typeof window !== "undefined" && window.innerWidth > 900;
+        return false; // Default to MINIMIZED so it never obstructs forms, tables or content!
     });
     const [showVideoPlayer, setShowVideoPlayer] = useState<boolean>(false);
 
@@ -412,6 +412,9 @@ export const WorshipAudioProvider: React.FC<{ children: React.ReactNode }> = ({ 
         setIsSoundBarExpanded((prev) => {
             const next = !prev;
             localStorage.setItem(SOUNDBAR_EXPANDED_KEY, String(next));
+            if (!next) {
+                setShowVideoPlayer(false);
+            }
             return next;
         });
     }, []);
@@ -538,10 +541,10 @@ export const WorshipAudioProvider: React.FC<{ children: React.ReactNode }> = ({ 
                     showVideoPlayer
                         ? {
                               position: "fixed",
-                              bottom: isSoundBarExpanded ? 88 : 70,
-                              right: 16,
-                              width: 320,
-                              maxWidth: "calc(100vw - 32px)",
+                              bottom: isSoundBarExpanded ? 96 : 74,
+                              right: 20,
+                              width: 290,
+                              maxWidth: "calc(100vw - 40px)",
                               aspectRatio: "16/9",
                               zIndex: 99998,
                               borderRadius: 14,

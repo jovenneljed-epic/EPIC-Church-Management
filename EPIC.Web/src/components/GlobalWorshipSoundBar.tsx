@@ -142,7 +142,7 @@ export const GlobalWorshipSoundBar: React.FC = () => {
 
                         <button
                             type="button"
-                            className="epic-soundbar-pill-toggle-btn"
+                            className="epic-soundbar-pill-expand-btn"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 toggleSoundBar();
@@ -150,7 +150,20 @@ export const GlobalWorshipSoundBar: React.FC = () => {
                             title="Expand Sound Bar"
                         >
                             <ChevronUp size={14} />
-                            <span>Sound Bar</span>
+                            <span>Expand</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            className="epic-soundbar-pill-close-btn"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setIsSoundBarVisible(false);
+                                setShowVideoPlayer(false);
+                            }}
+                            title="Close Sound Bar"
+                        >
+                            <X size={13} />
                         </button>
                     </div>
                 ) : (
@@ -251,7 +264,9 @@ export const GlobalWorshipSoundBar: React.FC = () => {
                                     <div
                                         className="epic-soundbar-progress-fill"
                                         style={{ width: `${Math.min(100, (currentTime / (durationTime || 300)) * 100)}%` }}
-                                    />
+                                    >
+                                        <div className="epic-soundbar-progress-scrubber-handle" />
+                                    </div>
                                 </div>
                                 <span className="epic-soundbar-time-text">{formatTime(durationTime)}</span>
                             </div>
@@ -352,15 +367,33 @@ export const GlobalWorshipSoundBar: React.FC = () => {
                                 <span className="btn-text">Sanctuary</span>
                             </button>
 
-                            {/* Minimize / Toggle Sound Bar Button */}
-                            <button
-                                type="button"
-                                className="epic-soundbar-toggle-collapse-btn"
-                                onClick={toggleSoundBar}
-                                title="Minimize Sound Bar to small pill"
-                            >
-                                <ChevronDown size={17} />
-                            </button>
+                            {/* Window Actions: Prominent Minimize and Close Buttons */}
+                            <div className="epic-soundbar-window-controls">
+                                <button
+                                    type="button"
+                                    className="epic-soundbar-minimize-btn"
+                                    onClick={() => {
+                                        toggleSoundBar();
+                                        setShowVideoPlayer(false);
+                                    }}
+                                    title="Minimize Sound Bar so it won't block any content"
+                                >
+                                    <ChevronDown size={15} />
+                                    <span>Minimize</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    className="epic-soundbar-close-btn"
+                                    onClick={() => {
+                                        setIsSoundBarVisible(false);
+                                        setShowVideoPlayer(false);
+                                    }}
+                                    title="Close Sound Bar"
+                                >
+                                    <X size={15} />
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}
