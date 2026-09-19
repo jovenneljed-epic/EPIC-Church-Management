@@ -243,6 +243,12 @@
 /* ---------------------------------------------------------
    SECTIONS & FIELD ITEMS
    --------------------------------------------------------- */
+.epic-form-body {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
 .epic-form-section {
     margin-bottom: 12px;
 }
@@ -516,8 +522,9 @@
 }
 
 /* =========================================================
+/* =========================================================
    PRINT MEDIA STYLES (@media print)
-   STRICT 1-PAGE PROFESSIONAL DOCUMENT OUTPUT (LETTER SIZE)
+   STRICT 1-PAGE FULL-FIT DOCUMENT OUTPUT (LETTER SIZE)
    ========================================================= */
 @media print {
     @page {
@@ -531,6 +538,7 @@
         color: #000000 !important;
         margin: 0 !important;
         padding: 0 !important;
+        height: 100% !important;
     }
 
     /* Suppress everything on the web page body */
@@ -588,12 +596,16 @@
         max-width: 100% !important;
     }
 
+    /* Stretches to the exact printable height of the Letter page */
     #epic-printable-sheet {
-        position: absolute !important;
+        position: relative !important;
         left: 0 !important;
         top: 0 !important;
         width: 100% !important;
         max-width: 100% !important;
+        height: 256mm !important;
+        min-height: 256mm !important;
+        max-height: 256mm !important;
         box-sizing: border-box !important;
         margin: 0 !important;
         padding: 0 !important;
@@ -601,20 +613,35 @@
         box-shadow: none !important;
         background: #ffffff !important;
         color: #000000 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
         page-break-inside: avoid !important;
         break-inside: avoid !important;
         page-break-after: avoid !important;
         page-break-before: avoid !important;
     }
 
+    /* Fills the space between the title bar and the footer, distributing sections evenly */
+    .epic-form-body {
+        flex: 1 1 auto !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
     /* High-contrast black print borders and scaled-up typography */
     .epic-form-header {
         border-bottom: 2pt solid #000000 !important;
         padding-bottom: 5px !important;
-        margin-bottom: 8px !important;
+        margin-bottom: 6px !important;
         display: flex !important;
         justify-content: space-between !important;
         align-items: center !important;
+        flex-shrink: 0 !important;
     }
 
     .epic-form-letterhead {
@@ -700,9 +727,10 @@
         border: 1.5pt solid #000000 !important;
         background: #f8fafc !important;
         padding: 4px 8px !important;
-        margin-bottom: 8px !important;
+        margin-bottom: 6px !important;
         text-align: center !important;
         border-radius: 3px !important;
+        flex-shrink: 0 !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
     }
@@ -724,7 +752,7 @@
     }
 
     .epic-form-section {
-        margin-bottom: 7px !important;
+        margin-bottom: 0 !important;
     }
 
     .epic-form-section-title {
@@ -765,7 +793,7 @@
 
     /* Print values: clean ruled underlines with handwriting space */
     .epic-print-value {
-        min-height: 20px !important;
+        min-height: 21px !important;
         border-bottom: 0.85pt solid #000000 !important;
         display: flex !important;
         align-items: flex-end !important;
@@ -784,6 +812,19 @@
         display: block !important;
         width: 100% !important;
         height: 1px !important;
+    }
+
+    .epic-print-multiline {
+        white-space: pre-line !important;
+        align-items: flex-start !important;
+        line-height: 1.35 !important;
+        padding-top: 2px !important;
+    }
+
+    .epic-print-multiline-group {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 3px !important;
     }
 
     .epic-form-checkbox-group {
@@ -847,8 +888,8 @@
         font-size: 8.5px !important;
         line-height: 1.35 !important;
         padding: 5px 8px !important;
-        margin-top: 4px !important;
-        margin-bottom: 7px !important;
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
         text-align: justify !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
@@ -863,7 +904,8 @@
         display: grid !important;
         grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important;
         gap: 12px 16px !important;
-        margin-top: 8px !important;
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
         page-break-inside: avoid !important;
         break-inside: avoid !important;
     }
@@ -877,19 +919,19 @@
 
     .epic-form-sig-line {
         width: 100% !important;
-        min-height: 22px !important;
+        min-height: 24px !important;
         border-bottom: 1.2pt solid #000000 !important;
         margin-bottom: 3px !important;
         display: flex !important;
         align-items: flex-end !important;
         justify-content: center !important;
         font-family: "Brush Script MT", "Segoe Script", cursive, sans-serif !important;
-        font-size: 13.5px !important;
+        font-size: 14px !important;
         color: #000000 !important;
     }
 
     .epic-form-sig-label {
-        font-size: 9px !important;
+        font-size: 9.5px !important;
         font-weight: 800 !important;
         color: #000000 !important;
         text-transform: uppercase !important;
@@ -903,8 +945,8 @@
     }
 
     .epic-form-seal-box {
-        width: 56px !important;
-        height: 56px !important;
+        width: 58px !important;
+        height: 58px !important;
         border: 1.2pt dashed #000000 !important;
         border-radius: 50% !important;
         font-size: 7.5px !important;
@@ -920,7 +962,7 @@
     }
 
     .epic-form-doc-footer {
-        margin-top: 8px !important;
+        margin-top: 4px !important;
         padding-top: 3px !important;
         border-top: 0.75pt solid #000000 !important;
         display: flex !important;
@@ -928,10 +970,11 @@
         align-items: center !important;
         font-size: 7.5px !important;
         color: #444444 !important;
+        flex-shrink: 0 !important;
     }
 
     /* Force collapse inline margin-top */
     #epic-printable-sheet [style*="margin-top"] {
-        margin-top: 3px !important;
+        margin-top: 2px !important;
     }
 }

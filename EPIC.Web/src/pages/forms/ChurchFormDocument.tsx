@@ -74,11 +74,26 @@ const PrintField: React.FC<PrintFieldProps> = ({
             </div>
 
             {/* PRINT WIDGET: PURE ELEGANT TYPOGRAPHY ON CRISP RULED LINE */}
-            <div className="epic-print-value print-only">
+            <div className="print-only">
                 {value && value.trim() ? (
-                    <span className="epic-print-text">{value}</span>
+                    <div
+                        className="epic-print-value epic-print-multiline"
+                        style={rows && rows > 1 ? { minHeight: `${rows * 22}px` } : undefined}
+                    >
+                        <span className="epic-print-text">{value}</span>
+                    </div>
+                ) : rows && rows > 1 ? (
+                    <div className="epic-print-multiline-group">
+                        {Array.from({ length: rows }).map((_, idx) => (
+                            <div key={idx} className="epic-print-value">
+                                <span className="epic-print-blank" />
+                            </div>
+                        ))}
+                    </div>
                 ) : (
-                    <span className="epic-print-blank" />
+                    <div className="epic-print-value">
+                        <span className="epic-print-blank" />
+                    </div>
                 )}
             </div>
         </div>
@@ -437,6 +452,9 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
                     <p>{form.description}</p>
                 </div>
 
+                {/* Main Form Body Container (Fills Sheet from Top to Bottom) */}
+                <div className="epic-form-body">
+
                 {/* =========================================================
                     FORM 1: NEW MEMBER REGISTRATION
                 ========================================================= */}
@@ -781,7 +799,17 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
 
                         <section className="epic-form-section">
                             <div className="epic-form-section-title">2. Scope of Responsibilities & Duties</div>
-                            <PrintField label="Duties & Expectations" name="responsibilities" value={fields.responsibilities} rows={3} onChange={handleInputChange} />
+                            <PrintField label="Key Ministry Objectives & Specific Duties" name="responsibilities" value={fields.responsibilities} rows={4} onChange={handleInputChange} />
+                        </section>
+
+                        <section className="epic-form-section">
+                            <div className="epic-form-section-title">3. Standards of Service & Ministry Commitment</div>
+                            <div className="epic-form-checkbox-group">
+                                <PrintCheckbox label="Regular Church Service & Prayer Attendance" checked={checkboxes.chkAttendance !== undefined ? !!checkboxes.chkAttendance : true} onChange={() => handleCheckboxChange("chkAttendance")} />
+                                <PrintCheckbox label="Uphold Christian Integrity & Good Testimony" checked={checkboxes.chkIntegrity !== undefined ? !!checkboxes.chkIntegrity : true} onChange={() => handleCheckboxChange("chkIntegrity")} />
+                                <PrintCheckbox label="Submission to Pastoral Leadership & Doctrine" checked={checkboxes.chkSubmission !== undefined ? !!checkboxes.chkSubmission : true} onChange={() => handleCheckboxChange("chkSubmission")} />
+                                <PrintCheckbox label="Faithful Stewardship & Discretion" checked={checkboxes.chkStewardship !== undefined ? !!checkboxes.chkStewardship : true} onChange={() => handleCheckboxChange("chkStewardship")} />
+                            </div>
                         </section>
 
                         <div className="epic-form-declaration-box">
@@ -978,6 +1006,7 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
                         </div>
                     </>
                 )}
+                </div>
 
                 {/* Official Footer Note */}
                 <footer className="epic-form-doc-footer">
