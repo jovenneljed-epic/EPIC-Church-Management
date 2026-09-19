@@ -464,11 +464,13 @@ export const WorshipAudioProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }, [allSongs, worshipMood]);
 
     // Video URL with YouTube embed options (clean standard embed without origin restrictions)
+    // Only loads when the user has actively initiated worship music playback
     const iframeSrc = useMemo(() => {
+        if (!hasInitiatedPlayback.current && !isPlaying) return "";
         if (!currentSong?.youtubeId) return "";
         const auto = hasInitiatedPlayback.current || isPlaying ? 1 : 0;
         return `https://www.youtube.com/embed/${currentSong.youtubeId}?autoplay=${auto}&enablejsapi=1&playsinline=1&rel=0`;
-    }, [currentSong?.youtubeId]);
+    }, [currentSong?.youtubeId, isPlaying]);
 
     const value: WorshipAudioContextType = {
         currentSong,
@@ -550,13 +552,14 @@ export const WorshipAudioProvider: React.FC<{ children: React.ReactNode }> = ({ 
                           }
                         : {
                               position: "fixed",
-                              bottom: 0,
-                              left: 0,
+                              top: -9999,
+                              left: -9999,
                               width: 200,
                               height: 120,
-                              opacity: 0.005,
+                              opacity: 0,
                               pointerEvents: "none",
-                              zIndex: 0
+                              zIndex: -1,
+                              overflow: "hidden"
                           }
                 }
             >

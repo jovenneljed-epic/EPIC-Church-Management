@@ -24,6 +24,8 @@
     color: var(--text-main);
     font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     box-sizing: border-box;
+    flex: 1 1 auto;
+    border-radius: 16px;
 }
 
 .celebration-report-page *,
