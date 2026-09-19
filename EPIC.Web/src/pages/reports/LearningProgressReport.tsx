@@ -355,11 +355,15 @@ const LearningProgressReport: React.FC<LearningProgressReportProps> = ({ onBack 
 
             {/* HERO */}
             <section className="learning-report-hero">
+                <div className="hero-glow hero-glow-one" />
+                <div className="hero-glow hero-glow-two" />
                 <div className="learning-hero-left">
                     <div className="learning-hero-icon">🎓</div>
                     <div>
                         <div className="learning-hero-eyebrow">EPIC REPORTS CENTER</div>
-                        <h1 className="learning-hero-title">Learning & Discipleship Report</h1>
+                        <h1 className="learning-hero-title">
+                            Learning &amp; <span>Discipleship Report</span>
+                        </h1>
                         <p className="learning-hero-subtitle">
                             Luke 4:18 Ministries — San Vicente Church • Umingan, Pangasinan
                         </p>
@@ -369,7 +373,7 @@ const LearningProgressReport: React.FC<LearningProgressReportProps> = ({ onBack 
                 <div className="learning-hero-actions">
                     {onBack && (
                         <button type="button" className="learning-btn learning-btn-secondary" onClick={onBack}>
-                            ← Back to Reports & Documents
+                            ← Back to Reports
                         </button>
                     )}
                     <button type="button" className="learning-btn learning-btn-secondary" onClick={handleExportCSV}>
@@ -384,41 +388,76 @@ const LearningProgressReport: React.FC<LearningProgressReportProps> = ({ onBack 
             {/* STATS */}
             <div className="learning-stats-grid">
                 <div className="learning-stat-card">
-                    <span className="learning-stat-label">Enrolled Disciples</span>
-                    <span className="learning-stat-value" style={{ color: "#10b981" }}>{totalDisciples}</span>
-                    <span className="family-stat-helper">Students active in learning tracks</span>
+                    <div className="learning-stat-icon" style={{ background: "#ecfdf5", color: "#059669" }}>
+                        🎓
+                    </div>
+                    <div className="learning-stat-content">
+                        <span className="learning-stat-label">Enrolled Disciples</span>
+                        <span className="learning-stat-value" style={{ color: "#059669" }}>{totalDisciples}</span>
+                        <span className="learning-stat-helper">Students active in tracks</span>
+                    </div>
                 </div>
                 <div className="learning-stat-card">
-                    <span className="learning-stat-label">Discipleship Courses</span>
-                    <span className="learning-stat-value" style={{ color: "#2563eb" }}>{totalCourses}</span>
-                    <span className="family-stat-helper">Offered curriculum subjects</span>
+                    <div className="learning-stat-icon" style={{ background: "#eff6ff", color: "#2563eb" }}>
+                        📖
+                    </div>
+                    <div className="learning-stat-content">
+                        <span className="learning-stat-label">Discipleship Courses</span>
+                        <span className="learning-stat-value" style={{ color: "#2563eb" }}>{totalCourses}</span>
+                        <span className="learning-stat-helper">Offered curriculum subjects</span>
+                    </div>
                 </div>
                 <div className="learning-stat-card">
-                    <span className="learning-stat-label">Graduates</span>
-                    <span className="learning-stat-value" style={{ color: "#16a34a" }}>{completedCount}</span>
-                    <span className="family-stat-helper">Completed courses 100%</span>
+                    <div className="learning-stat-icon" style={{ background: "#f0fdf4", color: "#16a34a" }}>
+                        🏆
+                    </div>
+                    <div className="learning-stat-content">
+                        <span className="learning-stat-label">Graduates (100%)</span>
+                        <span className="learning-stat-value" style={{ color: "#16a34a" }}>{completedCount}</span>
+                        <span className="learning-stat-helper">Completed courses 100%</span>
+                    </div>
                 </div>
                 <div className="learning-stat-card">
-                    <span className="learning-stat-label">Average Completion</span>
-                    <span className="learning-stat-value" style={{ color: "#7c3aed" }}>{avgProgress}%</span>
-                    <span className="family-stat-helper">Cohort learning pace</span>
+                    <div className="learning-stat-icon" style={{ background: "#f5f3ff", color: "#7c3aed" }}>
+                        📈
+                    </div>
+                    <div className="learning-stat-content">
+                        <span className="learning-stat-label">Average Completion</span>
+                        <span className="learning-stat-value" style={{ color: "#7c3aed" }}>{avgProgress}%</span>
+                        <span className="learning-stat-helper">Cohort learning pace</span>
+                    </div>
                 </div>
             </div>
 
             {/* FILTERS */}
             <div className="learning-filter-card">
-                <div className="learning-filter-grid">
-                    <div className="services-filter-group">
-                        <label>Search Disciple / Course</label>
-                        <input
-                            type="text"
-                            className="learning-input"
-                            placeholder="e.g. Eduardo, Foundations of Faith..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
+                <div className="learning-filter-header">
+                    <div>
+                        <span className="learning-filter-kicker">REPORT FILTERS & SEARCH</span>
+                        <h2 className="learning-filter-title">Filter Learning &amp; Discipleship Records</h2>
+                        <p className="learning-filter-desc">Filter disciples by name, course curriculum track, or graduation status.</p>
                     </div>
-                    <div className="services-filter-group">
+                    <div className="learning-filter-status">
+                        <span className="learning-status-dot" />
+                        LIVE ROSTER READY
+                    </div>
+                </div>
+
+                <div className="learning-filter-grid">
+                    <div className="learning-filter-group">
+                        <label>Search Disciple / Course</label>
+                        <div className="learning-input-shell">
+                            <span className="learning-input-icon">🔍</span>
+                            <input
+                                type="text"
+                                className="learning-input"
+                                placeholder="e.g. Eduardo, Foundations of Faith..."
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    <div className="learning-filter-group">
                         <label>Course Subject</label>
                         <select
                             className="learning-select"
@@ -433,7 +472,7 @@ const LearningProgressReport: React.FC<LearningProgressReportProps> = ({ onBack 
                             ))}
                         </select>
                     </div>
-                    <div className="services-filter-group">
+                    <div className="learning-filter-group">
                         <label>Status</label>
                         <select
                             className="learning-select"
@@ -445,19 +484,18 @@ const LearningProgressReport: React.FC<LearningProgressReportProps> = ({ onBack 
                             <option value="In Progress">In Progress</option>
                         </select>
                     </div>
-                    <div className="services-filter-group">
+                    <div className="learning-filter-group learning-filter-actions">
                         <label>&nbsp;</label>
                         <button
                             type="button"
-                            className="learning-btn learning-btn-secondary"
-                            style={{ color: "#475569", background: "#f1f5f9", borderColor: "#cbd5e1" }}
+                            className="learning-btn-reset"
                             onClick={() => {
                                 setSearch("");
                                 setCourseFilter("ALL");
                                 setStatusFilter("ALL");
                             }}
                         >
-                            Reset
+                            <span style={{ fontSize: "14px" }}>↺</span> Reset Filters
                         </button>
                     </div>
                 </div>
@@ -465,113 +503,124 @@ const LearningProgressReport: React.FC<LearningProgressReportProps> = ({ onBack 
 
             {/* TABLE */}
             <div className="learning-table-card">
-                <table className="learning-table">
-                    <thead>
-                        <tr>
-                            <th>Disciple / Student</th>
-                            <th>Course Title & Instructor</th>
-                            <th>Progress</th>
-                            <th>Lessons</th>
-                            <th>Score</th>
-                            <th>Enrolled Date</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {loading ? (
+                <div className="learning-table-header">
+                    <div>
+                        <h3 className="learning-table-title">Enrolled Disciples &amp; Students Roster</h3>
+                        <p className="learning-table-subtitle">Comprehensive record of curriculum enrollments, lesson progress, and grades.</p>
+                    </div>
+                    <div className="learning-count-badge">
+                        Showing <strong>{filtered.length}</strong> of <strong>{enrollments.length}</strong> disciples
+                    </div>
+                </div>
+                <div className="learning-table-responsive">
+                    <table className="learning-table">
+                        <thead>
                             <tr>
-                                <td colSpan={7} style={{ textAlign: "center", padding: "30px", color: "#64748b" }}>
-                                    Loading discipleship progress...
-                                </td>
+                                <th>Disciple / Student</th>
+                                <th>Course Title &amp; Instructor</th>
+                                <th>Progress</th>
+                                <th>Lessons</th>
+                                <th>Score</th>
+                                <th>Enrolled Date</th>
+                                <th>Status</th>
                             </tr>
-                        ) : filtered.length === 0 ? (
-                            <tr>
-                                <td colSpan={7} style={{ textAlign: "center", padding: "30px", color: "#64748b" }}>
-                                    No enrollment records match your selected filters.
-                                </td>
-                            </tr>
-                        ) : (
-                            filtered.map((e) => (
-                                <tr key={e.id}>
-                                    <td>
-                                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                                            <div className="disciple-avatar-circle">
-                                                {e.studentName.replace(/^(Bro\.|Sis\.|Pastor)\s+/i, "").charAt(0) || "D"}
-                                            </div>
-                                            <div>
-                                                <div style={{ fontWeight: 700, color: "#0f172a" }}>{e.studentName}</div>
-                                                <div style={{ fontSize: "11px", color: "#64748b" }}>San Vicente Member</div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div style={{ fontWeight: 600, color: "#0f172a" }}>{e.courseTitle}</div>
-                                        <div style={{ fontSize: "11.5px", color: "#64748b" }}>Instructor: {e.instructor}</div>
-                                    </td>
-                                    <td style={{ width: "190px" }}>
-                                        <div className="progress-bar-container">
-                                            <div className="progress-track">
-                                                <div
-                                                    className={`progress-fill ${
-                                                        e.progressPercentage === 100
-                                                            ? "fill-complete"
-                                                            : e.progressPercentage >= 70
-                                                            ? "fill-high"
-                                                            : "fill-medium"
-                                                    }`}
-                                                    style={{ width: `${e.progressPercentage}%` }}
-                                                />
-                                            </div>
-                                            <span style={{ fontSize: "12px", fontWeight: 700, minWidth: "35px" }}>
-                                                {e.progressPercentage}%
-                                            </span>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        {e.completedLessons} / {e.totalLessons}
-                                    </td>
-                                    <td>
-                                        {e.gradeScore ? (
-                                            <strong style={{ color: "#16a34a" }}>{e.gradeScore}%</strong>
-                                        ) : (
-                                            <span style={{ color: "#94a3b8" }}>—</span>
-                                        )}
-                                    </td>
-                                    <td style={{ fontSize: "12px", color: "#475569", whiteSpace: "nowrap" }}>
-                                        {e.enrolledDate}
-                                    </td>
-                                    <td>
-                                        <span
-                                            className={`learning-status-badge ${
-                                                e.status === "Completed" ? "badge-completed" : "badge-progress"
-                                            }`}
-                                        >
-                                            {e.status === "Completed" ? "✓ Completed" : "⏳ In Progress"}
-                                        </span>
+                        </thead>
+                        <tbody>
+                            {loading ? (
+                                <tr>
+                                    <td colSpan={7} style={{ textAlign: "center", padding: "30px", color: "#64748b" }}>
+                                        Loading discipleship progress...
                                     </td>
                                 </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
+                            ) : filtered.length === 0 ? (
+                                <tr>
+                                    <td colSpan={7} style={{ textAlign: "center", padding: "30px", color: "#64748b" }}>
+                                        No enrollment records match your selected filters.
+                                    </td>
+                                </tr>
+                            ) : (
+                                filtered.map((e) => (
+                                    <tr key={e.id}>
+                                        <td>
+                                            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                                <div className="disciple-avatar-circle">
+                                                    {e.studentName.replace(/^(Bro\.|Sis\.|Pastor)\s+/i, "").charAt(0) || "D"}
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontWeight: 700, color: "#0f172a" }}>{e.studentName}</div>
+                                                    <div style={{ fontSize: "11px", color: "#64748b" }}>San Vicente Member</div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div style={{ fontWeight: 600, color: "#0f172a" }}>{e.courseTitle}</div>
+                                            <div style={{ fontSize: "11.5px", color: "#64748b" }}>Instructor: {e.instructor}</div>
+                                        </td>
+                                        <td style={{ width: "190px" }}>
+                                            <div className="progress-bar-container">
+                                                <div className="progress-track">
+                                                    <div
+                                                        className={`progress-fill ${
+                                                            e.progressPercentage === 100
+                                                                ? "fill-complete"
+                                                                : e.progressPercentage >= 70
+                                                                ? "fill-high"
+                                                                : "fill-medium"
+                                                        }`}
+                                                        style={{ width: `${e.progressPercentage}%` }}
+                                                    />
+                                                </div>
+                                                <span style={{ fontSize: "12px", fontWeight: 700, minWidth: "35px" }}>
+                                                    {e.progressPercentage}%
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {e.completedLessons} / {e.totalLessons}
+                                        </td>
+                                        <td>
+                                            {e.gradeScore ? (
+                                                <strong style={{ color: "#16a34a" }}>{e.gradeScore}%</strong>
+                                            ) : (
+                                                <span style={{ color: "#94a3b8" }}>—</span>
+                                            )}
+                                        </td>
+                                        <td style={{ fontSize: "12px", color: "#475569", whiteSpace: "nowrap" }}>
+                                            {e.enrolledDate}
+                                        </td>
+                                        <td>
+                                            <span
+                                                className={`learning-status-badge ${
+                                                    e.status === "Completed" ? "badge-completed" : "badge-progress"
+                                                }`}
+                                            >
+                                                {e.status === "Completed" ? "✓ Completed" : "⏳ In Progress"}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             {/* PRINT FOOTER / SIGNATURE SHEET */}
             <div className="print-footer-sheet" style={{ display: "none" }}>
                 <div className="print-signature-box">
                     <div className="signature-line" />
-                    <div className="signature-name">Sis. Rebecca Santos</div>
-                    <div className="signature-title">Church Discipleship Coordinator</div>
+                    <div className="signature-name">Bro. Eduardo Dela Cruz Sr.</div>
+                    <div className="signature-title">Head Deacon &amp; Ministry Coordinator</div>
+                </div>
+                <div className="print-signature-box">
+                    <div className="signature-line" />
+                    <div className="signature-name">Sis. Maria Elena Dela Cruz</div>
+                    <div className="signature-title">Discipleship &amp; Education Director</div>
                 </div>
                 <div className="print-signature-box">
                     <div className="signature-line" />
                     <div className="signature-name">Pastor Mateo Santos</div>
                     <div className="signature-title">Senior Pastor, Luke 4:18 Ministries</div>
-                </div>
-                <div className="print-signature-box">
-                    <div className="signature-line" />
-                    <div className="signature-name">San Vicente Church Council</div>
-                    <div className="signature-title">Official Verification Stamp</div>
                 </div>
             </div>
         </div>

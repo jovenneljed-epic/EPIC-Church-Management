@@ -192,29 +192,29 @@ const MinistryMembershipReport: React.FC<MinistryMembershipReportProps> = ({ onB
                 <div className="ministry-stat-card">
                     <span className="ministry-stat-label">Active Ministries</span>
                     <span className="ministry-stat-value" style={{ color: "#8b5cf6" }}>{totalMinistries}</span>
-                    <span className="family-stat-helper">Operational ministry teams</span>
+                    <span className="ministry-stat-helper">Operational ministry teams</span>
                 </div>
                 <div className="ministry-stat-card">
                     <span className="ministry-stat-label">Total Volunteers</span>
                     <span className="ministry-stat-value" style={{ color: "#2563eb" }}>{totalVolunteers}</span>
-                    <span className="family-stat-helper">Active servants in roster</span>
+                    <span className="ministry-stat-helper">Active servants in roster</span>
                 </div>
                 <div className="ministry-stat-card">
                     <span className="ministry-stat-label">Ministry Heads</span>
                     <span className="ministry-stat-value" style={{ color: "#16a34a" }}>{totalLeaders}</span>
-                    <span className="family-stat-helper">Appointed ministry coordinators</span>
+                    <span className="ministry-stat-helper">Appointed ministry coordinators</span>
                 </div>
                 <div className="ministry-stat-card">
                     <span className="ministry-stat-label">Avg Team Size</span>
                     <span className="ministry-stat-value" style={{ color: "#06b6d4" }}>{avgPerMinistry}</span>
-                    <span className="family-stat-helper">Members per ministry</span>
+                    <span className="ministry-stat-helper">Members per ministry</span>
                 </div>
             </div>
 
             {/* FILTERS */}
             <div className="ministry-filter-card">
                 <div className="ministry-filter-grid">
-                    <div className="family-filter-group">
+                    <div className="ministry-filter-group">
                         <label>Search Volunteer / Member</label>
                         <input
                             type="text"
@@ -224,7 +224,7 @@ const MinistryMembershipReport: React.FC<MinistryMembershipReportProps> = ({ onB
                             onChange={(e) => setSearch(e.target.value)}
                         />
                     </div>
-                    <div className="family-filter-group">
+                    <div className="ministry-filter-group">
                         <label>Ministry Department</label>
                         <select
                             className="ministry-select"
@@ -239,7 +239,7 @@ const MinistryMembershipReport: React.FC<MinistryMembershipReportProps> = ({ onB
                             ))}
                         </select>
                     </div>
-                    <div className="family-filter-group">
+                    <div className="ministry-filter-group">
                         <label>Service Role</label>
                         <select
                             className="ministry-select"
@@ -252,7 +252,7 @@ const MinistryMembershipReport: React.FC<MinistryMembershipReportProps> = ({ onB
                             <option value="Volunteer">Volunteer</option>
                         </select>
                     </div>
-                    <div className="family-filter-group">
+                    <div className="ministry-filter-group">
                         <label>&nbsp;</label>
                         <button
                             type="button"
