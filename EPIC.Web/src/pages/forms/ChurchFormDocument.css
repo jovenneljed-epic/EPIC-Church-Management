@@ -7,8 +7,8 @@
    CONTAINER & SCREEN TOOLBAR
    --------------------------------------------------------- */
 .epic-form-container {
-    padding: 24px;
-    max-width: 1040px;
+    padding: 20px;
+    max-width: 960px;
     margin: 0 auto;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     color: #1e293b;
@@ -19,12 +19,12 @@
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
-    gap: 16px;
+    gap: 14px;
     background: #ffffff;
-    padding: 16px 24px;
-    border-radius: 14px;
-    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.06), 0 2px 6px -1px rgba(0, 0, 0, 0.04);
-    margin-bottom: 24px;
+    padding: 14px 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.06), 0 2px 6px -1px rgba(0, 0, 0, 0.04);
+    margin-bottom: 20px;
     border: 1px solid #e2e8f0;
 }
 
@@ -38,8 +38,8 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 9px 16px;
-    font-size: 14px;
+    padding: 8px 14px;
+    font-size: 13.5px;
     font-weight: 600;
     color: #475569;
     background: #f1f5f9;
@@ -62,13 +62,13 @@
 
 .epic-form-title-badge h3 {
     margin: 0;
-    font-size: 17px;
+    font-size: 16px;
     font-weight: 700;
     color: #0f172a;
 }
 
 .epic-form-title-badge span {
-    font-size: 12px;
+    font-size: 11.5px;
     color: #64748b;
     font-weight: 500;
 }
@@ -83,9 +83,9 @@
 .epic-form-btn {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 9px 18px;
-    font-size: 14px;
+    gap: 7px;
+    padding: 8px 16px;
+    font-size: 13.5px;
     font-weight: 600;
     border-radius: 8px;
     cursor: pointer;
@@ -122,9 +122,9 @@
 .epic-printable-sheet {
     background: #ffffff;
     border-radius: 6px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05);
     border: 1px solid #d1d5db;
-    padding: 42px 48px;
+    padding: 32px 40px;
     margin: 0 auto;
     position: relative;
     box-sizing: border-box;
@@ -138,20 +138,20 @@
     justify-content: space-between;
     align-items: flex-start;
     border-bottom: 2px solid #0f172a;
-    padding-bottom: 18px;
-    margin-bottom: 24px;
+    padding-bottom: 12px;
+    margin-bottom: 16px;
 }
 
 .epic-form-letterhead {
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 14px;
 }
 
 .epic-form-brand-seal {
-    width: 62px;
-    height: 62px;
-    border-radius: 12px;
+    width: 52px;
+    height: 52px;
+    border-radius: 10px;
     background: #0f172a;
     color: #ffffff;
     display: flex;
@@ -159,13 +159,13 @@
     align-items: center;
     justify-content: center;
     font-weight: 900;
-    font-size: 20px;
-    letter-spacing: 1px;
+    font-size: 18px;
+    letter-spacing: 0.5px;
     box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.2);
 }
 
 .epic-form-brand-seal small {
-    font-size: 9px;
+    font-size: 8px;
     letter-spacing: 0.5px;
     font-weight: 700;
     color: #94a3b8;
@@ -174,7 +174,7 @@
 
 .epic-form-letterhead-info h1 {
     margin: 0;
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 800;
     color: #0f172a;
     letter-spacing: 0.5px;
@@ -183,15 +183,15 @@
 
 .epic-form-letterhead-info h2 {
     margin: 2px 0 0 0;
-    font-size: 14px;
+    font-size: 13.5px;
     font-weight: 700;
     color: #2563eb;
     letter-spacing: 0.3px;
 }
 
 .epic-form-letterhead-info p {
-    margin: 3px 0 0 0;
-    font-size: 11px;
+    margin: 2px 0 0 0;
+    font-size: 10.5px;
     color: #475569;
 }
 
@@ -208,14 +208,14 @@
     border: 1px solid #cbd5e1;
     color: #0f172a;
     font-weight: 800;
-    font-size: 12px;
-    padding: 4px 10px;
+    font-size: 11.5px;
+    padding: 3px 8px;
     border-radius: 4px;
     letter-spacing: 0.5px;
 }
 
 .epic-form-meta-date {
-    font-size: 11px;
+    font-size: 10.5px;
     color: #64748b;
     font-weight: 600;
 }
@@ -223,16 +223,16 @@
 /* Document Title Bar */
 .epic-form-title-bar {
     background: #f8fafc;
-    border: 1px solid #0f172a;
+    border: 1.5px solid #0f172a;
     border-radius: 4px;
-    padding: 10px 16px;
+    padding: 8px 14px;
     text-align: center;
-    margin-bottom: 24px;
+    margin-bottom: 16px;
 }
 
 .epic-form-title-bar h2 {
     margin: 0;
-    font-size: 17px;
+    font-size: 15px;
     font-weight: 800;
     color: #0f172a;
     text-transform: uppercase;
@@ -240,8 +240,8 @@
 }
 
 .epic-form-title-bar p {
-    margin: 4px 0 0 0;
-    font-size: 11px;
+    margin: 2px 0 0 0;
+    font-size: 10.5px;
     color: #475569;
     font-style: italic;
 }
@@ -250,28 +250,28 @@
    FORM SECTIONS & GRIDS
    --------------------------------------------------------- */
 .epic-form-section {
-    margin-bottom: 22px;
+    margin-bottom: 16px;
     page-break-inside: avoid;
 }
 
 .epic-form-section-title {
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 800;
     color: #0f172a;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     background: #f1f5f9;
-    padding: 6px 12px;
+    padding: 4px 10px;
     border-left: 4px solid #2563eb;
     border-top: 1px solid #cbd5e1;
     border-right: 1px solid #cbd5e1;
     border-bottom: 1px solid #cbd5e1;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
 }
 
 .epic-form-grid {
     display: grid;
-    grid-gap: 14px;
+    grid-gap: 10px 14px;
 }
 
 .epic-form-grid-2 {
@@ -286,23 +286,15 @@
     grid-template-columns: repeat(4, 1fr);
 }
 
-.epic-form-grid-1-2 {
-    grid-template-columns: 1fr 2fr;
-}
-
-.epic-form-grid-2-1 {
-    grid-template-columns: 2fr 1fr;
-}
-
 /* Field items */
 .epic-form-field {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 3px;
 }
 
 .epic-form-field label {
-    font-size: 11px;
+    font-size: 10.5px;
     font-weight: 700;
     color: #334155;
     text-transform: uppercase;
@@ -313,8 +305,8 @@
 .epic-form-select,
 .epic-form-textarea {
     width: 100%;
-    padding: 8px 10px;
-    font-size: 13px;
+    padding: 6px 9px;
+    font-size: 12.5px;
     color: #0f172a;
     background: #fdfdfd;
     border: 1px solid #94a3b8;
@@ -335,22 +327,22 @@
 
 .epic-form-textarea {
     resize: vertical;
-    min-height: 54px;
+    min-height: 48px;
 }
 
 /* Checkboxes & Radios */
 .epic-form-checkbox-group {
     display: flex;
     flex-wrap: wrap;
-    gap: 14px 20px;
+    gap: 10px 18px;
     margin-top: 4px;
 }
 
 .epic-form-checkbox-label {
     display: inline-flex;
     align-items: center;
-    gap: 7px;
-    font-size: 12px;
+    gap: 6px;
+    font-size: 11.5px;
     color: #1e293b;
     font-weight: 500;
     cursor: pointer;
@@ -358,18 +350,18 @@
 
 .epic-form-checkbox-label input[type="checkbox"],
 .epic-form-checkbox-label input[type="radio"] {
-    width: 16px;
-    height: 16px;
+    width: 15px;
+    height: 15px;
     cursor: pointer;
     accent-color: #2563eb;
 }
 
-/* Tables inside forms (e.g. Family Children, Dedication Sponsors) */
+/* Tables inside forms */
 .epic-form-table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 6px;
-    font-size: 12px;
+    margin-top: 4px;
+    font-size: 11.5px;
 }
 
 .epic-form-table th {
@@ -377,14 +369,14 @@
     color: #1e293b;
     font-weight: 700;
     text-align: left;
-    padding: 7px 10px;
+    padding: 5px 8px;
     border: 1px solid #94a3b8;
     text-transform: uppercase;
-    font-size: 10.5px;
+    font-size: 10px;
 }
 
 .epic-form-table td {
-    padding: 6px 8px;
+    padding: 4px 6px;
     border: 1px solid #94a3b8;
     background: #ffffff;
 }
@@ -393,10 +385,10 @@
     width: 100%;
     border: none;
     background: transparent;
-    font-size: 12px;
+    font-size: 11.5px;
     font-family: inherit;
     color: #0f172a;
-    padding: 3px 0;
+    padding: 2px 0;
 }
 
 .epic-form-table td input:focus {
@@ -409,10 +401,10 @@
     background: #f8fafc;
     border: 1px solid #94a3b8;
     border-radius: 4px;
-    padding: 12px 16px;
-    margin-bottom: 20px;
-    font-size: 11.5px;
-    line-height: 1.55;
+    padding: 8px 12px;
+    margin-bottom: 16px;
+    font-size: 11px;
+    line-height: 1.45;
     color: #334155;
     text-align: justify;
 }
@@ -421,14 +413,12 @@
     color: #0f172a;
 }
 
-/* ---------------------------------------------------------
-   SIGNATURES & APPROVAL BLOCK
-   --------------------------------------------------------- */
+/* Signatures & Approval Block */
 .epic-form-signatures {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 28px 24px;
-    margin-top: 36px;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 20px 24px;
+    margin-top: 24px;
     page-break-inside: avoid;
 }
 
@@ -441,19 +431,19 @@
 
 .epic-form-sig-line {
     width: 100%;
-    min-height: 24px;
+    min-height: 22px;
     border-bottom: 1.5px solid #0f172a;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
     display: flex;
     align-items: flex-end;
     justify-content: center;
     font-family: "Brush Script MT", "Segoe Script", cursive, sans-serif;
-    font-size: 16px;
+    font-size: 15px;
     color: #1e3a8a;
 }
 
 .epic-form-sig-label {
-    font-size: 11.5px;
+    font-size: 11px;
     font-weight: 700;
     color: #0f172a;
     text-transform: uppercase;
@@ -461,16 +451,15 @@
 }
 
 .epic-form-sig-sub {
-    font-size: 10px;
+    font-size: 9.5px;
     color: #64748b;
-    margin-top: 2px;
+    margin-top: 1px;
 }
 
-/* Official Church Seal Stamp Target */
 .epic-form-seal-box {
-    width: 90px;
-    height: 90px;
-    border: 2px dashed #94a3b8;
+    width: 76px;
+    height: 76px;
+    border: 1.5px dashed #94a3b8;
     border-radius: 50%;
     display: flex;
     flex-direction: column;
@@ -478,31 +467,30 @@
     justify-content: center;
     text-align: center;
     color: #94a3b8;
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 700;
     text-transform: uppercase;
     margin: 0 auto;
 }
 
-/* Footer note */
 .epic-form-doc-footer {
-    margin-top: 32px;
-    padding-top: 12px;
+    margin-top: 20px;
+    padding-top: 8px;
     border-top: 1px solid #cbd5e1;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 10px;
+    font-size: 9.5px;
     color: #64748b;
 }
 
 /* =========================================================
-   PRINT STYLES (@media print)
+   PRINT STYLES (@media print) - STRICT 1-PAGE GUARANTEE
    ========================================================= */
 @media print {
     @page {
-        margin: 12mm 15mm 12mm 15mm;
-        size: auto;
+        size: portrait;
+        margin: 5mm 8mm 5mm 8mm;
     }
 
     body, html {
@@ -510,7 +498,10 @@
         color: #000000 !important;
         margin: 0 !important;
         padding: 0 !important;
-        font-size: 11pt !important;
+        height: 100% !important;
+        overflow: hidden !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
     }
 
     /* Hide entire UI around the form */
@@ -529,6 +520,7 @@
         padding: 0 !important;
         margin: 0 !important;
         max-width: 100% !important;
+        width: 100% !important;
     }
 
     .epic-printable-sheet {
@@ -537,69 +529,225 @@
         padding: 0 !important;
         margin: 0 !important;
         width: 100% !important;
+        max-height: 100% !important;
+        page-break-after: avoid !important;
+        page-break-inside: avoid !important;
+        page-break-before: avoid !important;
     }
 
-    /* Crisp borders for printing */
+    /* Compact Header */
     .epic-form-header {
         border-bottom: 2pt solid #000000 !important;
+        padding-bottom: 4px !important;
+        margin-bottom: 6px !important;
     }
 
     .epic-form-brand-seal {
         background: #000000 !important;
         color: #ffffff !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
+        width: 38px !important;
+        height: 38px !important;
+        font-size: 13px !important;
+        border-radius: 6px !important;
     }
 
+    .epic-form-brand-seal small {
+        font-size: 6.5px !important;
+    }
+
+    .epic-form-letterhead-info h1 {
+        font-size: 14px !important;
+        line-height: 1.1 !important;
+        margin: 0 !important;
+    }
+
+    .epic-form-letterhead-info h2 {
+        font-size: 11px !important;
+        color: #000000 !important;
+        line-height: 1.1 !important;
+        margin: 1px 0 0 0 !important;
+    }
+
+    .epic-form-letterhead-info p {
+        font-size: 8px !important;
+        color: #444444 !important;
+        margin: 1px 0 0 0 !important;
+    }
+
+    .epic-form-code {
+        font-size: 9.5px !important;
+        padding: 1px 5px !important;
+        border: 1pt solid #000000 !important;
+    }
+
+    .epic-form-meta-date {
+        font-size: 8.5px !important;
+    }
+
+    /* Compact Title Bar */
     .epic-form-title-bar {
-        border: 1.5pt solid #000000 !important;
+        border: 1.2pt solid #000000 !important;
         background: #f1f5f9 !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
+        padding: 3px 8px !important;
+        margin-bottom: 6px !important;
+    }
+
+    .epic-form-title-bar h2 {
+        font-size: 12px !important;
+        line-height: 1.1 !important;
+    }
+
+    .epic-form-title-bar p {
+        font-size: 8px !important;
+        margin: 1px 0 0 0 !important;
+    }
+
+    /* Compact Section */
+    .epic-form-section {
+        margin-bottom: 6px !important;
+        page-break-inside: avoid !important;
     }
 
     .epic-form-section-title {
         background: #f1f5f9 !important;
-        border: 1pt solid #000000 !important;
-        border-left: 4pt solid #000000 !important;
+        border: 0.75pt solid #000000 !important;
+        border-left: 3pt solid #000000 !important;
         color: #000000 !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
+        font-size: 9px !important;
+        padding: 2px 6px !important;
+        margin-bottom: 4px !important;
+        line-height: 1.2 !important;
+    }
+
+    .epic-form-grid {
+        grid-gap: 4px 8px !important;
+    }
+
+    .epic-form-field {
+        gap: 1px !important;
+    }
+
+    .epic-form-field label {
+        font-size: 7.5px !important;
+        font-weight: 800 !important;
+        color: #000000 !important;
+        margin-bottom: 1px !important;
+        line-height: 1 !important;
     }
 
     .epic-form-input,
-    .epic-form-select,
-    .epic-form-textarea {
-        border: 1pt solid #333333 !important;
+    .epic-form-select {
+        height: 18px !important;
+        min-height: 18px !important;
+        padding: 1px 4px !important;
+        font-size: 8.5px !important;
+        line-height: 16px !important;
+        border: 0.75pt solid #444444 !important;
         background: #ffffff !important;
         color: #000000 !important;
+        border-radius: 2px !important;
+    }
+
+    .epic-form-textarea {
+        height: 24px !important;
+        min-height: 24px !important;
+        padding: 1px 4px !important;
+        font-size: 8px !important;
+        line-height: 1.2 !important;
+        border: 0.75pt solid #444444 !important;
+        border-radius: 2px !important;
+    }
+
+    .epic-form-checkbox-group {
+        gap: 2px 12px !important;
+        margin-top: 1px !important;
+    }
+
+    .epic-form-checkbox-label {
+        font-size: 8px !important;
+        gap: 4px !important;
+        color: #000000 !important;
+    }
+
+    .epic-form-checkbox-label input[type="checkbox"],
+    .epic-form-checkbox-label input[type="radio"] {
+        width: 10px !important;
+        height: 10px !important;
+    }
+
+    .epic-form-table {
+        margin-top: 2px !important;
     }
 
     .epic-form-table th {
         background: #f1f5f9 !important;
         color: #000000 !important;
-        border: 1pt solid #000000 !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
+        border: 0.75pt solid #000000 !important;
+        font-size: 7.5px !important;
+        padding: 2px 4px !important;
     }
 
     .epic-form-table td {
-        border: 1pt solid #000000 !important;
+        border: 0.75pt solid #000000 !important;
+        padding: 1px 4px !important;
+        font-size: 8px !important;
     }
 
-    .epic-form-sig-line {
-        border-bottom: 1.5pt solid #000000 !important;
+    .epic-form-table td input {
+        font-size: 8px !important;
+        height: 15px !important;
+        padding: 0 !important;
     }
 
     .epic-form-declaration-box {
-        border: 1pt solid #000000 !important;
+        border: 0.75pt solid #000000 !important;
         background: #fafafa !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
+        font-size: 7.5px !important;
+        line-height: 1.25 !important;
+        padding: 3px 6px !important;
+        margin-bottom: 6px !important;
     }
 
-    .epic-form-section,
     .epic-form-signatures {
+        margin-top: 6px !important;
+        gap: 12px !important;
         page-break-inside: avoid !important;
+    }
+
+    .epic-form-sig-line {
+        min-height: 16px !important;
+        margin-bottom: 2px !important;
+        border-bottom: 1pt solid #000000 !important;
+        font-size: 11px !important;
+    }
+
+    .epic-form-sig-label {
+        font-size: 8px !important;
+        color: #000000 !important;
+    }
+
+    .epic-form-sig-sub {
+        font-size: 6.5px !important;
+        color: #555555 !important;
+    }
+
+    .epic-form-seal-box {
+        width: 50px !important;
+        height: 50px !important;
+        font-size: 7px !important;
+        border: 1pt dashed #000000 !important;
+    }
+
+    .epic-form-doc-footer {
+        margin-top: 6px !important;
+        padding-top: 2px !important;
+        font-size: 7px !important;
+        border-top: 0.5pt solid #000000 !important;
+    }
+
+    .epic-printable-sheet [style*="margin-top"],
+    .epic-form-section div[style*="margin-top"],
+    .epic-form-field[style*="margin-top"] {
+        margin-top: 3px !important;
     }
 }

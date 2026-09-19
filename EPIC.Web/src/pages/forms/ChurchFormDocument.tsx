@@ -58,7 +58,7 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
                 occupation: "Teacher",
                 contactNo: "0917-123-4567",
                 email: "juan.delacruz@example.com",
-                address: "Barangay San Vicente, Panabo City, Davao del Norte",
+                address: "Barangay San Vicente, Umingan, Pangasinan",
                 dateAcceptedChrist: "2018-04-12",
                 baptizedDate: "2018-06-20",
                 previousChurch: "None",
@@ -90,12 +90,12 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
                 bloodType: "O+",
                 contactNo: "0928-555-8901",
                 email: "grace.santos@example.com",
-                address: "Purok 4, San Vicente, Panabo City",
+                address: "Purok 4, San Vicente, Umingan, Pangasinan",
                 emergencyContact: "Elena Santos (Mother)",
                 emergencyPhone: "0920-111-2233",
                 education: "Bachelor of Science in Accountancy",
                 occupation: "Accountant",
-                company: "Panabo Commercial Corp.",
+                company: "Umingan Commercial Corp.",
                 cellGroupLeader: "Sis. Teresa Ramos",
                 ministry: "Worship Ministry - Vocalist",
                 spiritualGifts: "Exhortation, Music, Administration",
@@ -109,11 +109,11 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
                 familyCode: "FAM-2026-042",
                 headName: "Roberto Gomez",
                 headContact: "0919-876-5432",
-                address: "Block 7, Lot 12, Sunrise Village, San Vicente",
+                address: "Barangay San Vicente, Umingan, Pangasinan",
                 spouseName: "Anita Gomez",
                 spouseContact: "0919-876-5433",
                 weddingDate: "2010-12-18",
-                child1Name: "Joshua Gomez", child1Dob: "2012-05-10", child1Baptized: "Yes", child1School: "Panabo NHS",
+                child1Name: "Joshua Gomez", child1Dob: "2012-05-10", child1Baptized: "Yes", child1School: "Umingan NHS",
                 child2Name: "Sarah Gomez", child2Dob: "2015-09-24", child2Baptized: "Yes", child2School: "San Vicente Central",
                 child3Name: "Elijah Gomez", child3Dob: "2020-02-14", child3Baptized: "No", child3School: "Preparatory",
                 prayerRequests: "Good health for parents, financial provision for children's studies",
@@ -129,7 +129,7 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
                 ageGroup: "Young Adult (21-35)",
                 contactNo: "0935-789-0123",
                 email: "mark.villanueva@example.com",
-                address: "Gredu, Panabo City",
+                address: "Barangay San Vicente, Umingan, Pangasinan",
                 howDidYouHear: "Invited by friend / family",
                 invitedBy: "Bro. Juan Dela Cruz",
                 prayerRequest: "Direction for newly opened job opportunity and peace of mind.",
@@ -185,7 +185,7 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
                 age: "20",
                 gender: "Female",
                 contactNo: "0946-123-9876",
-                address: "Purok 2, San Vicente, Panabo City",
+                address: "Purok 2, San Vicente, Umingan, Pangasinan",
                 dateAcceptedChrist: "2024-05-15",
                 mentorName: "Sis. Teresa Ramos",
                 classDateCompleted: "2026-09-12",
@@ -204,14 +204,14 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
                 childName: "Nathaniel James Dela Cruz",
                 nickname: "Nate",
                 dob: "2026-04-18",
-                pob: "Panabo City Doctor's Hospital",
+                pob: "Umingan Medicare Community Hospital",
                 gender: "Male",
                 fatherName: "Juan Dela Cruz",
                 fatherContact: "0917-123-4567",
                 motherName: "Maria Clara Dela Cruz",
                 motherContact: "0917-987-6543",
                 weddingDate: "2022-01-15",
-                address: "San Vicente, Panabo City",
+                address: "San Vicente, Umingan, Pangasinan",
                 dedicationDate: "2026-10-18",
                 serviceSlot: "Sunday 9:00 AM Worship Service",
                 officiatingPastor: "Pastor Danilo Reyes",
@@ -230,14 +230,14 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
                 groomDob: "1997-06-14",
                 groomAge: "29",
                 groomContact: "0915-222-3344",
-                groomAddress: "Davao City",
+                groomAddress: "Umingan, Pangasinan",
                 groomParents: "Joseph & Rebecca Morales",
                 groomReligion: "Evangelical Christian (Luke 4:18)",
                 brideName: "Sarah Jane Perez",
                 brideDob: "1999-09-20",
                 brideAge: "27",
                 brideContact: "0916-333-4455",
-                brideAddress: "San Vicente, Panabo City",
+                brideAddress: "San Vicente, Umingan, Pangasinan",
                 brideParents: "Manuel & Elena Perez",
                 brideReligion: "Evangelical Christian (Luke 4:18)",
                 counselorPastor: "Pastor Danilo Reyes",
@@ -246,7 +246,7 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
                 weddingTime: "3:00 PM",
                 venue: "Luke 4:18 Ministries Sanctuary",
                 officiatingMinister: "Pastor Danilo Reyes (Lic. #98721)",
-                marriageLicenseNo: "ML-2026-9041 issued at Panabo City",
+                marriageLicenseNo: "ML-2026-9041 issued at Umingan, Pangasinan",
                 groomSignature: "David J. Morales",
                 brideSignature: "Sarah Jane Perez",
                 pastorSignature: "Pastor Danilo Reyes",
@@ -307,7 +307,7 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
                         </div>
                         <div className="epic-form-letterhead-info">
                             <h1>Luke 4:18 Ministries</h1>
-                            <h2>San Vicente Church • Panabo City</h2>
+                            <h2>San Vicente Church • Umingan, Pangasinan</h2>
                             <p>Official Ministry Document & Records • "The Spirit of the Lord is upon me..." (Luke 4:18)</p>
                         </div>
                     </div>
@@ -1244,7 +1244,7 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
 
                 {/* Official Footer Note */}
                 <footer className="epic-form-doc-footer">
-                    <span>Luke 4:18 Ministries • San Vicente Church, Panabo City</span>
+                    <span>Luke 4:18 Ministries • San Vicente Church, Umingan, Pangasinan</span>
                     <span>Printed via EPIC Church Management System</span>
                 </footer>
             </article>
