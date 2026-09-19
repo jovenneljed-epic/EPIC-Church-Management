@@ -4,11 +4,20 @@ import React, {
     useEffect,
     useMemo,
     useState,
+    useRef,
 } from "react";
 
 import axios from "axios";
 import { API_BASE_URL } from "../config";
 import "./MemberAttendanceReport.css";
+import {
+    Calendar,
+    ChevronDown,
+    Search,
+    Check,
+    X,
+    Filter
+} from "lucide-react";
 
 // ============================================================
 // TYPES
@@ -57,9 +66,67 @@ interface MemberSummary {
     classification: string;
 }
 
+interface ChurchServiceItem {
+    churchServiceId: number;
+    serviceName: string;
+    serviceDate: string;
+    startTime?: string;
+    endTime?: string;
+    status?: string;
+}
+
 interface MemberAttendanceReportProps {
     onBack?: () => void;
 }
+
+const getServiceCategory = (
+    service: ChurchServiceItem
+): "COMPLETED" | "UPCOMING" | "TODAY" | "CANCELLED" => {
+    const rawStatus = (service.status || "").toUpperCase();
+    if (rawStatus === "CANCELLED" || rawStatus === "CANCELED") return "CANCELLED";
+    if (rawStatus === "COMPLETED" || rawStatus === "ENDED" || rawStatus === "FINISHED") return "COMPLETED";
+
+    if (service.serviceDate) {
+        const todayStr = new Date().toISOString().slice(0, 10);
+        const sDateStr = service.serviceDate.slice(0, 10);
+        if (sDateStr === todayStr) return "TODAY";
+        if (sDateStr < todayStr) return "COMPLETED";
+        return "UPCOMING";
+    }
+
+    if (rawStatus === "UPCOMING" || rawStatus === "SCHEDULED") return "UPCOMING";
+    return "COMPLETED";
+};
+
+const formatDropdownDate = (dateStr?: string): string => {
+    if (!dateStr) return "";
+    try {
+        const d = new Date(dateStr.length === 10 ? `${dateStr}T00:00:00` : dateStr);
+        if (Number.isNaN(d.getTime())) return dateStr;
+        return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    } catch {
+        return dateStr;
+    }
+};
+
+const getRelativeDropdownLabel = (dateStr?: string): string | null => {
+    if (!dateStr) return null;
+    try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const target = new Date(dateStr.length === 10 ? `${dateStr}T00:00:00` : dateStr);
+        target.setHours(0, 0, 0, 0);
+        const diffDays = Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        if (diffDays === 0) return "Today";
+        if (diffDays === 1) return "Tomorrow";
+        if (diffDays === -1) return "Yesterday";
+        if (diffDays > 1 && diffDays <= 7) return `In ${diffDays} days`;
+        if (diffDays < -1 && diffDays >= -7) return `${Math.abs(diffDays)} days ago`;
+        return null;
+    } catch {
+        return null;
+    }
+};
 
 // ============================================================
 // AUTH
@@ -295,12 +362,74 @@ const MemberAttendanceReport: React.FC<
     const [dateTo, setDateTo] =
         useState("");
 
+    // Custom church service dropdown & classification filter states
+    const [churchServicesList, setChurchServicesList] =
+        useState<ChurchServiceItem[]>([]);
+
+    const [isServiceDropdownOpen, setIsServiceDropdownOpen] =
+        useState(false);
+
+    const [serviceSearchQuery, setServiceSearchQuery] =
+        useState("");
+
+    const [serviceCategoryFilter, setServiceCategoryFilter] =
+        useState<"ALL" | "UPCOMING" | "COMPLETED" | "CANCELLED">("ALL");
+
+    const [classificationFilter, setClassificationFilter] =
+        useState<"ALL" | "EXCELLENT" | "GOOD" | "NEEDS_FOLLOW_UP" | "PASTORAL_FOLLOW_UP">("ALL");
+
+    const serviceDropdownRef =
+        useRef<HTMLDivElement | null>(null);
+
     // ========================================================
     // VIEW-ONLY MEMBER STATE
     // ========================================================
 
     const [selectedMemberId, setSelectedMemberId] =
         useState<number | null>(null);
+
+    // Close dropdown on click outside
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (
+                serviceDropdownRef.current &&
+                !serviceDropdownRef.current.contains(event.target as Node)
+            ) {
+                setIsServiceDropdownOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () =>
+            document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    // Load Church Services catalog
+    useEffect(() => {
+        const controller = new AbortController();
+        const fetchChurchServices = async () => {
+            try {
+                const response = await axios.get(
+                    `${API_BASE_URL}/ChurchServices`,
+                    {
+                        ...getAuthConfig(),
+                        signal: controller.signal
+                    }
+                );
+                const data = Array.isArray(response.data)
+                    ? response.data
+                    : Array.isArray(response.data?.services)
+                        ? response.data.services
+                        : Array.isArray(response.data?.data)
+                            ? response.data.data
+                            : [];
+                setChurchServicesList(data);
+            } catch {
+                // Silently fallback to services extracted from attendance records
+            }
+        };
+        void fetchChurchServices();
+        return () => controller.abort();
+    }, []);
 
     // ========================================================
     // LOAD ATTENDANCE
@@ -397,29 +526,105 @@ const MemberAttendanceReport: React.FC<
     }, [loadAttendance]);
 
     // ========================================================
-    // SERVICES
+    // ALL CHURCH SERVICES (METADATA + ATTENDANCE RECORDS)
     // ========================================================
 
-    const services =
-        useMemo(() => {
+    const allServices = useMemo(() => {
+        const map = new Map<string, ChurchServiceItem>();
 
-            const set =
-                new Set<string>();
+        churchServicesList.forEach(s => {
+            if (s.serviceName) {
+                map.set(s.serviceName.trim().toLowerCase(), s);
+            }
+        });
 
-            records.forEach(record => {
+        records.forEach(record => {
+            const sName = getServiceName(record);
+            const key = sName.trim().toLowerCase();
+            if (!map.has(key) && sName !== "Church Service") {
+                map.set(key, {
+                    churchServiceId: record.churchServiceId || 0,
+                    serviceName: sName,
+                    serviceDate: record.attendanceDate?.slice(0, 10) || "",
+                    status: "Completed"
+                });
+            }
+        });
 
-                set.add(
-                    getServiceName(record)
-                );
+        return Array.from(map.values()).sort((a, b) => {
+            if (a.serviceDate && b.serviceDate) {
+                return b.serviceDate.localeCompare(a.serviceDate);
+            }
+            return a.serviceName.localeCompare(b.serviceName);
+        });
+    }, [churchServicesList, records]);
 
-            });
+    const selectedServiceObj = useMemo(() => {
+        if (serviceFilter === "ALL") return null;
+        return (
+            allServices.find(
+                s =>
+                    s.serviceName.toLowerCase() ===
+                    serviceFilter.toLowerCase()
+            ) || null
+        );
+    }, [allServices, serviceFilter]);
 
-            return Array.from(set).sort(
-                (a, b) =>
-                    a.localeCompare(b)
-            );
+    const upcomingServicesCount = useMemo(
+        () =>
+            allServices.filter(s =>
+                ["UPCOMING", "TODAY"].includes(getServiceCategory(s))
+            ).length,
+        [allServices]
+    );
 
-        }, [records]);
+    const completedServicesCount = useMemo(
+        () =>
+            allServices.filter(
+                s => getServiceCategory(s) === "COMPLETED"
+            ).length,
+        [allServices]
+    );
+
+    const cancelledServicesCount = useMemo(
+        () =>
+            allServices.filter(
+                s => getServiceCategory(s) === "CANCELLED"
+            ).length,
+        [allServices]
+    );
+
+    const filteredDropdownServices = useMemo(() => {
+        return allServices.filter(s => {
+            const cat = getServiceCategory(s);
+            if (
+                serviceCategoryFilter === "UPCOMING" &&
+                cat !== "UPCOMING" &&
+                cat !== "TODAY"
+            ) {
+                return false;
+            }
+            if (
+                serviceCategoryFilter === "COMPLETED" &&
+                cat !== "COMPLETED"
+            ) {
+                return false;
+            }
+            if (
+                serviceCategoryFilter === "CANCELLED" &&
+                cat !== "CANCELLED"
+            ) {
+                return false;
+            }
+
+            if (serviceSearchQuery.trim()) {
+                const q = serviceSearchQuery.toLowerCase();
+                const text = `${s.serviceName} ${s.serviceDate || ""} ${s.status || ""}`.toLowerCase();
+                return text.includes(q);
+            }
+            return true;
+        });
+    }, [allServices, serviceCategoryFilter, serviceSearchQuery]);
 
     // ========================================================
     // FILTER RECORDS
@@ -468,8 +673,12 @@ const MemberAttendanceReport: React.FC<
                     const matchesService =
                         serviceFilter ===
                             "ALL" ||
-                        service ===
-                            serviceFilter;
+                        service.toLowerCase() ===
+                            serviceFilter.toLowerCase() ||
+                        (selectedServiceObj &&
+                            record.churchServiceId &&
+                            record.churchServiceId ===
+                                selectedServiceObj.churchServiceId);
 
                     const matchesFrom =
                         !dateFrom ||
@@ -494,6 +703,7 @@ const MemberAttendanceReport: React.FC<
             records,
             search,
             serviceFilter,
+            selectedServiceObj,
             dateFrom,
             dateTo,
         ]);
@@ -635,6 +845,45 @@ const MemberAttendanceReport: React.FC<
 
         }, [filteredRecords]);
 
+    // Filtered by performance classification tab
+    const displayedMemberSummaries = useMemo(() => {
+        return memberSummaries.filter(m => {
+            if (classificationFilter === "EXCELLENT") {
+                return m.percentage >= 90;
+            }
+            if (classificationFilter === "GOOD") {
+                return m.percentage >= 75 && m.percentage < 90;
+            }
+            if (classificationFilter === "NEEDS_FOLLOW_UP") {
+                return m.percentage >= 60 && m.percentage < 75;
+            }
+            if (classificationFilter === "PASTORAL_FOLLOW_UP") {
+                return m.percentage < 60;
+            }
+            return true;
+        });
+    }, [memberSummaries, classificationFilter]);
+
+    const excellentCount = useMemo(
+        () => memberSummaries.filter(m => m.percentage >= 90).length,
+        [memberSummaries]
+    );
+
+    const goodCount = useMemo(
+        () => memberSummaries.filter(m => m.percentage >= 75 && m.percentage < 90).length,
+        [memberSummaries]
+    );
+
+    const needsFollowUpCount = useMemo(
+        () => memberSummaries.filter(m => m.percentage >= 60 && m.percentage < 75).length,
+        [memberSummaries]
+    );
+
+    const pastoralCount = useMemo(
+        () => memberSummaries.filter(m => m.percentage < 60).length,
+        [memberSummaries]
+    );
+
     // ========================================================
     // SELECTED MEMBER
     // ========================================================
@@ -648,7 +897,7 @@ const MemberAttendanceReport: React.FC<
                         member =>
                             member.memberId ===
                             selectedMemberId
-                    ) ?? null,
+                    ) || null,
             [
                 memberSummaries,
                 selectedMemberId,
@@ -662,13 +911,11 @@ const MemberAttendanceReport: React.FC<
     const selectedMemberRecords =
         useMemo(() => {
 
-            if (
-                selectedMemberId === null
-            ) {
+            if (!selectedMemberId) {
                 return [];
             }
 
-            return filteredRecords
+            return records
                 .filter(
                     record =>
                         record.memberId ===
@@ -685,19 +932,19 @@ const MemberAttendanceReport: React.FC<
                 );
 
         }, [
-            filteredRecords,
+            records,
             selectedMemberId,
         ]);
 
     // ========================================================
-    // STATISTICS
+    // OVERALL STATISTICS
     // ========================================================
 
     const statistics =
         useMemo(() => {
 
             const result = {
-                total: 0,
+                total: filteredRecords.length,
                 present: 0,
                 late: 0,
                 early: 0,
@@ -710,22 +957,23 @@ const MemberAttendanceReport: React.FC<
             filteredRecords.forEach(
                 record => {
 
-                    result.total++;
-
                     switch (
                         record.status
                     ) {
 
                         case "PRESENT":
                             result.present++;
+                            result.attended++;
                             break;
 
                         case "LATE":
                             result.late++;
+                            result.attended++;
                             break;
 
                         case "EARLY":
                             result.early++;
+                            result.attended++;
                             break;
 
                         case "ABSENT":
@@ -738,11 +986,6 @@ const MemberAttendanceReport: React.FC<
                     }
                 }
             );
-
-            result.attended =
-                result.present +
-                result.late +
-                result.early;
 
             result.percentage =
                 result.total > 0
@@ -896,6 +1139,8 @@ const MemberAttendanceReport: React.FC<
         setDateFrom("");
 
         setDateTo("");
+
+        setClassificationFilter("ALL");
 
     };
 
@@ -2774,37 +3019,197 @@ const MemberAttendanceReport: React.FC<
 
                     </div>
 
-                    <div className="mar-field">
+                    <div className="mar-field" style={{ position: "relative" }}>
 
                         <label>
                             Church Service
                         </label>
 
-                        <select
-                            value={serviceFilter}
-                            onChange={event =>
-                                setServiceFilter(
-                                    event.target.value
-                                )
-                            }
-                        >
+                        <div className="mar-service-dropdown-container" ref={serviceDropdownRef}>
+                            <div
+                                className={`mar-service-dropdown-trigger ${isServiceDropdownOpen ? "open" : ""}`}
+                                onClick={() => setIsServiceDropdownOpen(prev => !prev)}
+                                role="button"
+                                tabIndex={0}
+                                onKeyDown={e => { if (e.key === "Enter" || e.key === " ") setIsServiceDropdownOpen(prev => !prev); }}
+                            >
+                                {selectedServiceObj ? (
+                                    <div className="mar-service-trigger-content">
+                                        <span className={`mar-service-pill ${getServiceCategory(selectedServiceObj).toLowerCase()}`}>
+                                            {getServiceCategory(selectedServiceObj) === "COMPLETED" && <Check size={12} strokeWidth={2.5} />}
+                                            {getServiceCategory(selectedServiceObj) === "UPCOMING" && <Calendar size={12} strokeWidth={2.5} />}
+                                            {getServiceCategory(selectedServiceObj) === "TODAY" && <span className="pulse-dot"></span>}
+                                            {getServiceCategory(selectedServiceObj) === "CANCELLED" && <X size={12} strokeWidth={2.5} />}
+                                            {getServiceCategory(selectedServiceObj) === "TODAY" ? "Today" : (selectedServiceObj.status || "Completed")}
+                                        </span>
+                                        {selectedServiceObj.serviceDate && (
+                                            <span className="mar-trigger-date">{formatDropdownDate(selectedServiceObj.serviceDate)}</span>
+                                        )}
+                                        {selectedServiceObj.serviceDate && <span style={{ color: "#94a3b8" }}>—</span>}
+                                        <span className="mar-trigger-title">{selectedServiceObj.serviceName}</span>
+                                    </div>
+                                ) : (
+                                    <div className="mar-service-trigger-placeholder">
+                                        <Calendar size={15} style={{ color: "#64748b" }} />
+                                        <span>All Services ({allServices.length})</span>
+                                    </div>
+                                )}
 
-                            <option value="ALL">
-                                All Services
-                            </option>
+                                <div className="mar-service-trigger-actions">
+                                    {serviceFilter !== "ALL" && (
+                                        <button
+                                            type="button"
+                                            className="mar-trigger-clear-btn"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setServiceFilter("ALL");
+                                            }}
+                                            title="Reset to All Services"
+                                        >
+                                            ✕
+                                        </button>
+                                    )}
+                                    <ChevronDown size={16} className={`mar-trigger-chevron ${isServiceDropdownOpen ? "open" : ""}`} />
+                                </div>
+                            </div>
 
-                            {services.map(
-                                service => (
-                                    <option
-                                        key={service}
-                                        value={service}
-                                    >
-                                        {service}
-                                    </option>
-                                )
+                            {isServiceDropdownOpen && (
+                                <div className="mar-service-dropdown-popover">
+                                    {/* Search Box */}
+                                    <div className="mar-service-dropdown-search-box">
+                                        <Search size={14} style={{ color: "#64748b", flexShrink: 0 }} />
+                                        <input
+                                            type="text"
+                                            placeholder="Search service name, week, or date..."
+                                            value={serviceSearchQuery}
+                                            onChange={e => setServiceSearchQuery(e.target.value)}
+                                            autoFocus
+                                        />
+                                        {serviceSearchQuery && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setServiceSearchQuery("")}
+                                                style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: 12 }}
+                                            >
+                                                ✕
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {/* Category Filter Tabs */}
+                                    <div className="mar-service-dropdown-filter-tabs">
+                                        <button
+                                            type="button"
+                                            className={`mar-service-filter-tab ${serviceCategoryFilter === "ALL" ? "active" : ""}`}
+                                            onClick={() => setServiceCategoryFilter("ALL")}
+                                        >
+                                            All ({allServices.length})
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className={`mar-service-filter-tab tab-upcoming ${serviceCategoryFilter === "UPCOMING" ? "active" : ""}`}
+                                            onClick={() => setServiceCategoryFilter("UPCOMING")}
+                                        >
+                                            📅 Upcoming ({upcomingServicesCount})
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className={`mar-service-filter-tab tab-completed ${serviceCategoryFilter === "COMPLETED" ? "active" : ""}`}
+                                            onClick={() => setServiceCategoryFilter("COMPLETED")}
+                                        >
+                                            ✓ Completed ({completedServicesCount})
+                                        </button>
+                                        {cancelledServicesCount > 0 && (
+                                            <button
+                                                type="button"
+                                                className={`mar-service-filter-tab tab-cancelled ${serviceCategoryFilter === "CANCELLED" ? "active" : ""}`}
+                                                onClick={() => setServiceCategoryFilter("CANCELLED")}
+                                            >
+                                                ✕ Cancelled ({cancelledServicesCount})
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {/* Dropdown List */}
+                                    <div className="mar-service-dropdown-list">
+                                        {/* Option for All Services */}
+                                        <div
+                                            className={`mar-service-dropdown-item item-all ${serviceFilter === "ALL" ? "selected" : ""}`}
+                                            onClick={() => {
+                                                setServiceFilter("ALL");
+                                                setIsServiceDropdownOpen(false);
+                                            }}
+                                        >
+                                            <div className="mar-service-item-main">
+                                                <span className="mar-service-item-title" style={{ fontWeight: 700 }}>
+                                                    All Services ({allServices.length})
+                                                </span>
+                                                <span style={{ fontSize: 11, color: "#64748b" }}>
+                                                    View attendance aggregated across all church services
+                                                </span>
+                                            </div>
+                                            {serviceFilter === "ALL" && <Check size={16} color="#2563eb" strokeWidth={3} />}
+                                        </div>
+
+                                        {filteredDropdownServices.length === 0 ? (
+                                            <div className="mar-service-dropdown-empty">
+                                                No church services match your filter.
+                                            </div>
+                                        ) : (
+                                            filteredDropdownServices.map(s => {
+                                                const category = getServiceCategory(s);
+                                                const isSelected = serviceFilter.toLowerCase() === s.serviceName.toLowerCase();
+                                                const relLabel = getRelativeDropdownLabel(s.serviceDate);
+
+                                                return (
+                                                    <div
+                                                        key={s.churchServiceId || s.serviceName}
+                                                        className={`mar-service-dropdown-item item-${category.toLowerCase()} ${isSelected ? "selected" : ""}`}
+                                                        onClick={() => {
+                                                            setServiceFilter(s.serviceName);
+                                                            setIsServiceDropdownOpen(false);
+                                                        }}
+                                                    >
+                                                        <div className="mar-service-item-main">
+                                                            <div className="mar-service-item-top">
+                                                                {s.serviceDate && (
+                                                                    <span className="mar-service-item-date">
+                                                                        <Calendar size={13} style={{ color: "#64748b" }} />
+                                                                        {formatDropdownDate(s.serviceDate)}
+                                                                    </span>
+                                                                )}
+                                                                {relLabel && (
+                                                                    <span className={`mar-service-item-relative ${category === "TODAY" ? "rel-today" : category === "UPCOMING" ? "rel-upcoming" : ""}`}>
+                                                                        {relLabel}
+                                                                    </span>
+                                                                )}
+                                                                {s.startTime && (
+                                                                    <span className="mar-service-item-time">
+                                                                        {s.startTime}{s.endTime ? ` – ${s.endTime}` : ""}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <span className="mar-service-item-title">{s.serviceName}</span>
+                                                        </div>
+
+                                                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                                            <span className={`mar-service-pill ${category.toLowerCase()}`}>
+                                                                {category === "COMPLETED" && <Check size={12} strokeWidth={2.5} />}
+                                                                {category === "UPCOMING" && <Calendar size={12} strokeWidth={2.5} />}
+                                                                {category === "TODAY" && <span className="pulse-dot"></span>}
+                                                                {category === "CANCELLED" && <X size={12} strokeWidth={2.5} />}
+                                                                {category === "TODAY" ? "Today" : (s.status || "Completed")}
+                                                            </span>
+                                                            {isSelected && <Check size={16} color="#2563eb" strokeWidth={3} />}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })
+                                        )}
+                                    </div>
+                                </div>
                             )}
-
-                        </select>
+                        </div>
 
                     </div>
 
@@ -2880,14 +3285,68 @@ const MemberAttendanceReport: React.FC<
 
                     </div>
 
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        {classificationFilter !== "ALL" && (
+                            <button
+                                type="button"
+                                className="mar-button secondary"
+                                style={{ padding: "6px 12px", fontSize: 11 }}
+                                onClick={() => setClassificationFilter("ALL")}
+                            >
+                                Clear Filter (Showing {classificationFilter.replace(/_/g, " ")})
+                            </button>
+                        )}
+                        <button
+                            type="button"
+                            className="mar-button primary"
+                            onClick={handlePrint}
+                        >
+                            🖨 Print Report
+                        </button>
+                    </div>
+
+                </div>
+
+                {/* CLASSIFICATION PERFORMANCE FILTER BAR */}
+                <div className="mar-classification-filter-bar">
+                    <span className="mar-filter-bar-label">
+                        <Filter size={13} /> Performance:
+                    </span>
                     <button
                         type="button"
-                        className="mar-button primary"
-                        onClick={handlePrint}
+                        className={`mar-class-tab ${classificationFilter === "ALL" ? "active" : ""}`}
+                        onClick={() => setClassificationFilter("ALL")}
                     >
-                        🖨 Print Report
+                        All Members <span className="tab-count">{memberSummaries.length}</span>
                     </button>
-
+                    <button
+                        type="button"
+                        className={`mar-class-tab tab-excellent ${classificationFilter === "EXCELLENT" ? "active" : ""}`}
+                        onClick={() => setClassificationFilter(prev => prev === "EXCELLENT" ? "ALL" : "EXCELLENT")}
+                    >
+                        🌟 Excellent (90%+) <span className="tab-count">{excellentCount}</span>
+                    </button>
+                    <button
+                        type="button"
+                        className={`mar-class-tab tab-good ${classificationFilter === "GOOD" ? "active" : ""}`}
+                        onClick={() => setClassificationFilter(prev => prev === "GOOD" ? "ALL" : "GOOD")}
+                    >
+                        👍 Good (75–89%) <span className="tab-count">{goodCount}</span>
+                    </button>
+                    <button
+                        type="button"
+                        className={`mar-class-tab tab-needs-follow-up ${classificationFilter === "NEEDS_FOLLOW_UP" ? "active" : ""}`}
+                        onClick={() => setClassificationFilter(prev => prev === "NEEDS_FOLLOW_UP" ? "ALL" : "NEEDS_FOLLOW_UP")}
+                    >
+                        ⚠️ Needs Follow-up (60–74%) <span className="tab-count">{needsFollowUpCount}</span>
+                    </button>
+                    <button
+                        type="button"
+                        className={`mar-class-tab tab-pastoral-follow-up ${classificationFilter === "PASTORAL_FOLLOW_UP" ? "active" : ""}`}
+                        onClick={() => setClassificationFilter(prev => prev === "PASTORAL_FOLLOW_UP" ? "ALL" : "PASTORAL_FOLLOW_UP")}
+                    >
+                        🚨 Pastoral Follow-up (&lt;60%) <span className="tab-count">{pastoralCount}</span>
+                    </button>
                 </div>
 
                 <div className="mar-table-wrapper">
@@ -2950,7 +3409,7 @@ const MemberAttendanceReport: React.FC<
 
                         <tbody>
 
-                            {memberSummaries.length === 0 ? (
+                            {displayedMemberSummaries.length === 0 ? (
 
                                 <tr>
 
@@ -2959,23 +3418,26 @@ const MemberAttendanceReport: React.FC<
                                         className="mar-empty"
                                     >
                                         No attendance
-                                        records found.
+                                        records found{classificationFilter !== "ALL" ? ` with classification "${classificationFilter.replace(/_/g, " ")}"` : ""}.
                                     </td>
 
                                 </tr>
 
                             ) : (
 
-                                memberSummaries.map(
+                                displayedMemberSummaries.map(
                                     (
                                         member,
                                         index
-                                    ) => (
+                                    ) => {
+                                        const classType = getClassificationClass(member.percentage);
+                                        return (
 
                                         <tr
                                             key={
                                                 member.memberId
                                             }
+                                            className={`mar-row status-${classType}`}
                                         >
 
                                             <td>
@@ -2983,11 +3445,16 @@ const MemberAttendanceReport: React.FC<
                                             </td>
 
                                             <td>
-                                                <strong>
-                                                    {
-                                                        member.name
-                                                    }
-                                                </strong>
+                                                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                                    <div className={`mar-avatar status-${classType}`}>
+                                                        {member.name.split(" ").filter(Boolean).map(n => n[0]).slice(0, 2).join("")}
+                                                    </div>
+                                                    <strong>
+                                                        {
+                                                            member.name
+                                                        }
+                                                    </strong>
+                                                </div>
                                             </td>
 
                                             <td>
@@ -2998,7 +3465,7 @@ const MemberAttendanceReport: React.FC<
 
                                             <td>
 
-                                                <strong className="mar-percentage">
+                                                <strong className={`mar-percentage rate-${classType}`}>
                                                     {
                                                         member.percentage
                                                     }%
@@ -3007,41 +3474,39 @@ const MemberAttendanceReport: React.FC<
                                             </td>
 
                                             <td>
-                                                {
-                                                    member.present
-                                                }
+                                                <span className={`mar-num-badge ${member.present > 0 ? "num-present" : "num-zero"}`}>
+                                                    {member.present > 0 ? `• ${member.present}` : "0"}
+                                                </span>
                                             </td>
 
                                             <td>
-                                                {
-                                                    member.late
-                                                }
+                                                <span className={`mar-num-badge ${member.late > 0 ? "num-late" : "num-zero"}`}>
+                                                    {member.late > 0 ? `• ${member.late}` : "0"}
+                                                </span>
                                             </td>
 
                                             <td>
-                                                {
-                                                    member.early
-                                                }
+                                                <span className={`mar-num-badge ${member.early > 0 ? "num-early" : "num-zero"}`}>
+                                                    {member.early > 0 ? `• ${member.early}` : "0"}
+                                                </span>
                                             </td>
 
                                             <td>
-                                                {
-                                                    member.absent
-                                                }
+                                                <span className={`mar-num-badge ${member.absent > 0 ? "num-absent" : "num-zero"}`}>
+                                                    {member.absent > 0 ? `• ${member.absent}` : "0"}
+                                                </span>
                                             </td>
 
                                             <td>
-                                                {
-                                                    member.excused
-                                                }
+                                                <span className={`mar-num-badge ${member.excused > 0 ? "num-excused" : "num-zero"}`}>
+                                                    {member.excused > 0 ? `• ${member.excused}` : "0"}
+                                                </span>
                                             </td>
 
                                             <td>
 
                                                 <span
-                                                    className={`mar-classification ${getClassificationClass(
-                                                        member.percentage
-                                                    )}`}
+                                                    className={`mar-classification ${classType}`}
                                                 >
                                                     {
                                                         member.classification
@@ -3082,7 +3547,7 @@ const MemberAttendanceReport: React.FC<
 
                                         </tr>
 
-                                    )
+                                    ); }
                                 )
 
                             )}
