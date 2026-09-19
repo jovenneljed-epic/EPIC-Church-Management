@@ -3053,14 +3053,6 @@ const MemberAttendanceReport: React.FC<
                                     <div className="mar-service-trigger-placeholder">
                                         <Calendar size={15} style={{ color: "#64748b" }} />
                                         <span>All Services ({allServices.length})</span>
-                                        <span className="mar-service-pill completed" style={{ fontSize: 10, padding: "1px 6px", marginLeft: 4 }}>
-                                            {completedServicesCount} Completed
-                                        </span>
-                                        {upcomingServicesCount > 0 && (
-                                            <span className="mar-service-pill upcoming" style={{ fontSize: 10, padding: "1px 6px" }}>
-                                                {upcomingServicesCount} Upcoming
-                                            </span>
-                                        )}
                                     </div>
                                 )}
 
