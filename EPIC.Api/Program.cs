@@ -256,6 +256,11 @@ app.MapControllers();
 app.MapHub<ChatHub>("/hubs/chat", options => options.CloseOnAuthenticationExpiration = true);
 app.MapHub<CommunityHub>("/hubs/community");
 
+// ============================================================
+// LIGHTWEIGHT HEALTH & KEEP-ALIVE ENDPOINTS
+// ============================================================
+app.MapGet("/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow })).AllowAnonymous();
+app.MapGet("/api/health", () => Results.Ok(new { status = "healthy", timestamp = DateTime.UtcNow })).AllowAnonymous();
 
 // ============================================================
 // RUN

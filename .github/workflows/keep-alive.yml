@@ -1,0 +1,23 @@
+﻿name: Render API Keep-Alive
+
+on:
+  schedule:
+    # Ping every 10 minutes to prevent Render free-tier from sleeping after 15 minutes
+    - cron: '*/10 * * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub Actions tab
+
+jobs:
+  keep-alive:
+    name: Ping Health Endpoint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send keep-alive ping to Render
+        run: |
+          echo "Pinging EPIC API..."
+          STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" -m 30 "https://epic-api-m2av.onrender.com/health")
+          echo "Response code: $STATUS_CODE"
+          if [ "$STATUS_CODE" -ge 200 ] && [ "$STATUS_CODE" -lt 400 ]; then
+            echo "API is awake and healthy!"
+          else
+            echo "API returned code $STATUS_CODE (ping sent to wake up instance)"
+          fi

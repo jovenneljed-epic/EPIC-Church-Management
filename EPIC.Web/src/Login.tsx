@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./Login.css";
 
 import { API_BASE_URL } from "./config";
@@ -419,6 +419,19 @@ const Login: React.FC<LoginProps> = ({
         error,
         setError
     ] = useState("");
+
+    // =========================================================
+    // PRE-WARM BACKEND (PREVENTS COLD-START DELAY)
+    // =========================================================
+
+    useEffect(() => {
+        try {
+            const healthUrl = API_BASE_URL.replace(/\/api\/?$/, "") + "/health";
+            fetch(healthUrl, { method: "GET" }).catch(() => {});
+        } catch {
+            // Ignore pre-warm errors
+        }
+    }, []);
 
     // =========================================================
     // LOGIN
