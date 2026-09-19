@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using EPIC.Api.Data;
 using EPIC.Api.DTOs;
@@ -188,8 +188,16 @@ namespace EPIC.Api.Controllers
 
 
             return Ok(reports);
+        }
 
-
+        [HttpGet("learning")]
+        public async Task<IActionResult> GetLearningReports()
+        {
+            var reportsCtrl = new ReportsController(_context)
+            {
+                ControllerContext = ControllerContext
+            };
+            return await reportsCtrl.GetLearningReport();
         }
 
 

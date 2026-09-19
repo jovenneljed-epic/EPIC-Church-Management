@@ -1374,3 +1374,373 @@
         color: #64748b !important;
     }
 }
+
+/* =========================================================================
+   INTERACTIVE CYBER HUD MODAL & LEARNER TRANSCRIPT DRAWER
+   ========================================================================= */
+
+.cyber-modal-backdrop {
+    position: fixed !important;
+    inset: 0 !important;
+    background: rgba(3, 7, 18, 0.85) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    z-index: 9999 !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    padding: 20px !important;
+    animation: cyberFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+}
+
+.cyber-modal-card {
+    position: relative !important;
+    background: linear-gradient(145deg, rgba(15, 23, 42, 0.98) 0%, rgba(11, 17, 32, 0.99) 100%) !important;
+    border: 1px solid rgba(56, 189, 248, 0.35) !important;
+    border-radius: 20px !important;
+    width: 100% !important;
+    max-width: 680px !important;
+    max-height: 90vh !important;
+    display: flex !important;
+    flex-direction: column !important;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85), 0 0 40px rgba(56, 189, 248, 0.2) !important;
+    overflow: hidden !important;
+    animation: cyberSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+}
+
+@keyframes cyberFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes cyberSlideUp {
+    from { transform: translateY(20px) scale(0.97); opacity: 0; }
+    to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.cyber-modal-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 20px 24px !important;
+    border-bottom: 1px solid rgba(56, 189, 248, 0.18) !important;
+    background: rgba(15, 23, 42, 0.6) !important;
+}
+
+.modal-header-left {
+    display: flex !important;
+    align-items: center !important;
+    gap: 14px !important;
+}
+
+.modal-header-icon {
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: 12px !important;
+    background: rgba(56, 189, 248, 0.12) !important;
+    border: 1px solid rgba(56, 189, 248, 0.3) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: #38bdf8 !important;
+}
+
+.cyber-modal-title {
+    margin: 0 !important;
+    font-size: 1.15rem !important;
+    font-weight: 800 !important;
+    color: #ffffff !important;
+    letter-spacing: -0.3px !important;
+}
+
+.cyber-modal-subtitle {
+    margin: 2px 0 0 !important;
+    font-size: 0.8rem !important;
+    color: #94a3b8 !important;
+}
+
+.cyber-modal-close {
+    background: transparent !important;
+    border: 1px solid rgba(148, 163, 184, 0.2) !important;
+    border-radius: 10px !important;
+    color: #94a3b8 !important;
+    cursor: pointer !important;
+    width: 34px !important;
+    height: 34px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: all 0.2s ease !important;
+}
+
+.cyber-modal-close:hover {
+    background: rgba(239, 68, 68, 0.15) !important;
+    border-color: rgba(239, 68, 68, 0.4) !important;
+    color: #f87171 !important;
+}
+
+.cyber-modal-body {
+    padding: 24px !important;
+    overflow-y: auto !important;
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 20px !important;
+}
+
+.modal-learner-hero-box {
+    display: flex !important;
+    align-items: center !important;
+    gap: 18px !important;
+    padding: 16px !important;
+    border-radius: 14px !important;
+    background: rgba(30, 41, 59, 0.5) !important;
+    border: 1px solid rgba(56, 189, 248, 0.2) !important;
+}
+
+.modal-learner-avatar {
+    width: 56px !important;
+    height: 56px !important;
+    border-radius: 14px !important;
+    background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+    border: 2px solid #38bdf8 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1.3rem !important;
+    font-weight: 800 !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 15px rgba(56, 189, 248, 0.3) !important;
+    flex-shrink: 0 !important;
+}
+
+.modal-learner-info {
+    flex: 1 !important;
+}
+
+.modal-learner-name {
+    font-size: 1.15rem !important;
+    font-weight: 800 !important;
+    color: #ffffff !important;
+}
+
+.modal-learner-tags {
+    display: flex !important;
+    gap: 8px !important;
+    flex-wrap: wrap !important;
+    margin-top: 4px !important;
+}
+
+.modal-hud-kpis {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 12px !important;
+}
+
+@media (max-width: 640px) {
+    .modal-hud-kpis {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}
+
+.modal-hud-kpi-item {
+    background: rgba(15, 23, 42, 0.8) !important;
+    border: 1px solid rgba(148, 163, 184, 0.15) !important;
+    border-radius: 12px !important;
+    padding: 12px !important;
+    text-align: center !important;
+}
+
+.modal-kpi-label {
+    display: block !important;
+    font-size: 0.68rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    color: #94a3b8 !important;
+    margin-bottom: 4px !important;
+}
+
+.modal-kpi-val {
+    font-size: 1.1rem !important;
+    font-weight: 800 !important;
+    color: #f8fafc !important;
+}
+
+.curriculum-checklist-card {
+    background: rgba(15, 23, 42, 0.7) !important;
+    border: 1px solid rgba(56, 189, 248, 0.2) !important;
+    border-radius: 14px !important;
+    padding: 16px !important;
+}
+
+.curriculum-checklist-title {
+    font-size: 0.85rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    color: #38bdf8 !important;
+    margin: 0 0 12px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+.curriculum-modules-list {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+}
+
+.curriculum-module-row {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 10px 12px !important;
+    border-radius: 10px !important;
+    background: rgba(30, 41, 59, 0.35) !important;
+    border: 1px solid rgba(148, 163, 184, 0.1) !important;
+    transition: all 0.2s ease !important;
+}
+
+.curriculum-module-row.completed {
+    background: rgba(16, 185, 129, 0.08) !important;
+    border-color: rgba(52, 211, 153, 0.25) !important;
+}
+
+.module-row-left {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+}
+
+.module-check-icon {
+    width: 20px !important;
+    height: 20px !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 11px !important;
+    flex-shrink: 0 !important;
+}
+
+.module-check-icon.done {
+    background: rgba(52, 211, 153, 0.2) !important;
+    color: #34d399 !important;
+    border: 1px solid #34d399 !important;
+}
+
+.module-check-icon.pending {
+    background: rgba(148, 163, 184, 0.1) !important;
+    color: #64748b !important;
+    border: 1px solid rgba(148, 163, 184, 0.2) !important;
+}
+
+.module-title-text {
+    font-size: 0.83rem !important;
+    font-weight: 600 !important;
+    color: #e2e8f0 !important;
+}
+
+.curriculum-module-row.completed .module-title-text {
+    color: #f1f5f9 !important;
+}
+
+.module-status-chip {
+    font-size: 0.72rem !important;
+    font-weight: 700 !important;
+    padding: 2px 8px !important;
+    border-radius: 6px !important;
+    text-transform: uppercase !important;
+}
+
+.module-status-chip.done {
+    background: rgba(52, 211, 153, 0.15) !important;
+    color: #34d399 !important;
+    border: 1px solid rgba(52, 211, 153, 0.3) !important;
+}
+
+.module-status-chip.pending {
+    background: rgba(148, 163, 184, 0.1) !important;
+    color: #94a3b8 !important;
+    border: 1px solid rgba(148, 163, 184, 0.15) !important;
+}
+
+.cyber-modal-footer {
+    padding: 16px 24px !important;
+    border-top: 1px solid rgba(56, 189, 248, 0.18) !important;
+    background: rgba(15, 23, 42, 0.6) !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    gap: 12px !important;
+    flex-wrap: wrap !important;
+}
+
+.cyber-toast-notification {
+    position: fixed !important;
+    bottom: 24px !important;
+    right: 24px !important;
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(16, 185, 129, 0.25) 100%) !important;
+    border: 1px solid #34d399 !important;
+    border-radius: 12px !important;
+    padding: 14px 20px !important;
+    color: #ffffff !important;
+    font-size: 0.88rem !important;
+    font-weight: 600 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(52, 211, 153, 0.3) !important;
+    z-index: 10000 !important;
+    animation: cyberSlideUp 0.3s ease forwards !important;
+}
+
+.roster-action-btn {
+    background: rgba(56, 189, 248, 0.12) !important;
+    border: 1px solid rgba(56, 189, 248, 0.3) !important;
+    color: #38bdf8 !important;
+    padding: 5px 10px !important;
+    border-radius: 8px !important;
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    transition: all 0.2s ease !important;
+}
+
+.roster-action-btn:hover {
+    background: #0284c7 !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 12px rgba(56, 189, 248, 0.4) !important;
+}
+
+.sync-status-indicator {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    font-size: 0.78rem !important;
+    color: #94a3b8 !important;
+}
+
+.sync-dot {
+    width: 8px !important;
+    height: 8px !important;
+    border-radius: 50% !important;
+    background: #34d399 !important;
+    box-shadow: 0 0 8px #34d399 !important;
+}
+
+.sync-dot.syncing {
+    background: #38bdf8 !important;
+    box-shadow: 0 0 8px #38bdf8 !important;
+    animation: pulseSync 0.8s infinite alternate !important;
+}
+
+@keyframes pulseSync {
+    from { opacity: 0.4; transform: scale(0.8); }
+    to { opacity: 1; transform: scale(1.2); }
+}
+
