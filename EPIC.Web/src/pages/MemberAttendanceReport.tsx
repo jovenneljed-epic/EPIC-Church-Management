@@ -82,19 +82,20 @@ interface MemberAttendanceReportProps {
 const getServiceCategory = (
     service: ChurchServiceItem
 ): "COMPLETED" | "UPCOMING" | "TODAY" | "CANCELLED" => {
-    const rawStatus = (service.status || "").toUpperCase();
-    if (rawStatus === "CANCELLED" || rawStatus === "CANCELED") return "CANCELLED";
+    const rawStatus = (service.status || "").trim().toUpperCase();
+    if (rawStatus === "CANCELLED" || rawStatus === "POSTPONED" || rawStatus === "CANCELED") return "CANCELLED";
     if (rawStatus === "COMPLETED" || rawStatus === "ENDED" || rawStatus === "FINISHED") return "COMPLETED";
 
-    if (service.serviceDate) {
-        const todayStr = new Date().toISOString().slice(0, 10);
-        const sDateStr = service.serviceDate.slice(0, 10);
-        if (sDateStr === todayStr) return "TODAY";
-        if (sDateStr < todayStr) return "COMPLETED";
+    const serviceDay = service.serviceDate?.slice(0, 10);
+    const today = new Date().toISOString().slice(0, 10);
+    if (serviceDay === today || rawStatus === "IN_PROGRESS" || rawStatus === "LIVE") {
+        return "TODAY";
+    }
+
+    if (rawStatus === "SCHEDULED" || (serviceDay && serviceDay > today)) {
         return "UPCOMING";
     }
 
-    if (rawStatus === "UPCOMING" || rawStatus === "SCHEDULED") return "UPCOMING";
     return "COMPLETED";
 };
 
@@ -2975,7 +2976,7 @@ const MemberAttendanceReport: React.FC<
                 FILTERS
             ================================================== */}
 
-            <section className="mar-card">
+            <section className="mar-card mar-filters-card">
 
                 <div className="mar-card-header">
 
@@ -3040,7 +3041,7 @@ const MemberAttendanceReport: React.FC<
                                             {getServiceCategory(selectedServiceObj) === "UPCOMING" && <Calendar size={12} strokeWidth={2.5} />}
                                             {getServiceCategory(selectedServiceObj) === "TODAY" && <span className="pulse-dot"></span>}
                                             {getServiceCategory(selectedServiceObj) === "CANCELLED" && <X size={12} strokeWidth={2.5} />}
-                                            {getServiceCategory(selectedServiceObj) === "TODAY" ? "Today" : (selectedServiceObj.status || "Completed")}
+                                            {getServiceCategory(selectedServiceObj) === "TODAY" ? "Today" : getServiceCategory(selectedServiceObj) === "UPCOMING" ? (selectedServiceObj.status === "SCHEDULED" ? "Upcoming" : (selectedServiceObj.status || "Upcoming")) : (selectedServiceObj.status || "Completed")}
                                         </span>
                                         {selectedServiceObj.serviceDate && (
                                             <span className="mar-trigger-date">{formatDropdownDate(selectedServiceObj.serviceDate)}</span>
@@ -3198,7 +3199,7 @@ const MemberAttendanceReport: React.FC<
                                                                 {category === "UPCOMING" && <Calendar size={12} strokeWidth={2.5} />}
                                                                 {category === "TODAY" && <span className="pulse-dot"></span>}
                                                                 {category === "CANCELLED" && <X size={12} strokeWidth={2.5} />}
-                                                                {category === "TODAY" ? "Today" : (s.status || "Completed")}
+                                                                {category === "TODAY" ? "Today" : category === "UPCOMING" ? (s.status === "SCHEDULED" ? "Upcoming" : (s.status || "Upcoming")) : (s.status || "Completed")}
                                                             </span>
                                                             {isSelected && <Check size={16} color="#2563eb" strokeWidth={3} />}
                                                         </div>
@@ -3280,7 +3281,23 @@ const MemberAttendanceReport: React.FC<
                             <strong>
                                 {filteredRecords.length}
                             </strong>{" "}
-                            attendance records.
+                            attendance records
+                            {selectedServiceObj && (
+                                <>
+                                    {" "}for <strong>{selectedServiceObj.serviceName}</strong>
+                                    {selectedServiceObj.serviceDate && (
+                                        <> ({formatDropdownDate(selectedServiceObj.serviceDate)})</>
+                                    )}
+                                    {" "}
+                                    <span className={`mar-service-pill ${getServiceCategory(selectedServiceObj).toLowerCase()}`} style={{ verticalAlign: "middle", marginLeft: 4 }}>
+                                        {getServiceCategory(selectedServiceObj) === "COMPLETED" && <Check size={11} strokeWidth={2.5} />}
+                                        {getServiceCategory(selectedServiceObj) === "UPCOMING" && <Calendar size={11} strokeWidth={2.5} />}
+                                        {getServiceCategory(selectedServiceObj) === "TODAY" && <span className="pulse-dot"></span>}
+                                        {getServiceCategory(selectedServiceObj) === "CANCELLED" && <X size={11} strokeWidth={2.5} />}
+                                        {getServiceCategory(selectedServiceObj) === "TODAY" ? "Today" : getServiceCategory(selectedServiceObj) === "UPCOMING" ? (selectedServiceObj.status === "SCHEDULED" ? "Upcoming" : (selectedServiceObj.status || "Upcoming")) : (selectedServiceObj.status || "Completed")}
+                                    </span>
+                                </>
+                            )}.
                         </p>
 
                     </div>

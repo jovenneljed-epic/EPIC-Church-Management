@@ -527,6 +527,17 @@
     overflow: hidden;
 }
 
+.mar-card.mar-filters-card {
+    overflow: visible;
+    position: relative;
+    z-index: 100;
+}
+
+.mar-card.mar-filters-card .mar-card-header {
+    border-top-left-radius: 18px;
+    border-top-right-radius: 18px;
+}
+
 /* ============================================================
    CARD HEADER
    ============================================================ */
@@ -1848,13 +1859,11 @@
     white-space: nowrap;
 }
 
-/* Dropdown Popover */
 .mar-service-dropdown-popover {
     position: absolute;
     top: calc(100% + 6px);
     left: 0;
-    width: 100%;
-    min-width: 380px;
+    width: max(100%, 460px);
     max-width: 680px;
     background: #ffffff;
     border: 1px solid #cbd5e1;
@@ -1863,6 +1872,16 @@
     z-index: 1000;
     overflow: hidden;
     animation: marDropdownFadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (max-width: 768px) {
+    .mar-service-dropdown-popover {
+        left: auto;
+        right: 0;
+        width: 100%;
+        min-width: 300px;
+        max-width: calc(100vw - 40px);
+    }
 }
 
 @keyframes marDropdownFadeIn {
