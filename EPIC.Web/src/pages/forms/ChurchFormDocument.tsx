@@ -13,20 +13,123 @@ export interface ChurchFormDocumentProps {
     onBack: () => void;
 }
 
+// -------------------------------------------------------------
+// HELPER: FIELD COMPONENT (SCREEN WIDGET + PRINT-READY UNDERLINE)
+// -------------------------------------------------------------
+interface PrintFieldProps {
+    label: string;
+    name: string;
+    value?: string;
+    placeholder?: string;
+    type?: string;
+    options?: { value: string; label: string }[];
+    rows?: number;
+    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void;
+}
+
+const PrintField: React.FC<PrintFieldProps> = ({
+    label,
+    name,
+    value,
+    placeholder,
+    type = "text",
+    options,
+    rows,
+    onChange,
+}) => {
+    return (
+        <div className="epic-form-field">
+            <label>{label}</label>
+
+            {/* SCREEN WIDGET */}
+            <div className="screen-only">
+                {options ? (
+                    <select className="epic-form-select" name={name} value={value || ""} onChange={onChange}>
+                        <option value="">{placeholder || "Select..."}</option>
+                        {options.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                                {opt.label}
+                            </option>
+                        ))}
+                    </select>
+                ) : rows ? (
+                    <textarea
+                        className="epic-form-textarea"
+                        name={name}
+                        value={value || ""}
+                        onChange={onChange}
+                        rows={rows}
+                        placeholder={placeholder}
+                    />
+                ) : (
+                    <input
+                        className="epic-form-input"
+                        type={type}
+                        name={name}
+                        value={value || ""}
+                        onChange={onChange}
+                        placeholder={placeholder}
+                    />
+                )}
+            </div>
+
+            {/* PRINT WIDGET: PURE ELEGANT TYPOGRAPHY ON CRISP RULED LINE */}
+            <div className="epic-print-value print-only">
+                {value && value.trim() ? (
+                    <span className="epic-print-text">{value}</span>
+                ) : (
+                    <span className="epic-print-blank" />
+                )}
+            </div>
+        </div>
+    );
+};
+
+// -------------------------------------------------------------
+// HELPER: CHECKBOX COMPONENT (SCREEN INPUT + CRISP PRINT BOX)
+// -------------------------------------------------------------
+interface PrintCheckboxProps {
+    label: string;
+    checked: boolean;
+    onChange: () => void;
+}
+
+const PrintCheckbox: React.FC<PrintCheckboxProps> = ({
+    label,
+    checked,
+    onChange,
+}) => {
+    return (
+        <label className="epic-form-checkbox-label">
+            <span className="screen-only">
+                <input type="checkbox" checked={checked} onChange={onChange} />
+            </span>
+            <span className="epic-print-box print-only">
+                {checked ? "☒" : "☐"}
+            </span>
+            <span>{label}</span>
+        </label>
+    );
+};
+
+// -------------------------------------------------------------
+// MAIN COMPONENT
+// -------------------------------------------------------------
 export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
     form,
     onBack,
 }) => {
     const today = new Date().toISOString().split("T")[0];
 
-    // Generic form state supporting all inputs
     const [fields, setFields] = useState<Record<string, string>>({
         date: today,
     });
 
     const [checkboxes, setCheckboxes] = useState<Record<string, boolean>>({});
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const handleInputChange = (
+        e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+    ) => {
         const { name, value } = e.target;
         setFields((prev) => ({ ...prev, [name]: value }));
     };
@@ -297,7 +400,7 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
             </div>
 
             {/* Printable Paper Sheet */}
-            <article className="epic-printable-sheet">
+            <article id="epic-printable-sheet" className="epic-printable-sheet">
                 {/* Official Church Letterhead */}
                 <header className="epic-form-header">
                     <div className="epic-form-letterhead">
@@ -342,146 +445,67 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
                         <section className="epic-form-section">
                             <div className="epic-form-section-title">1. Personal Information</div>
                             <div className="epic-form-grid epic-form-grid-3">
-                                <div className="epic-form-field">
-                                    <label>Member Code / ID</label>
-                                    <input className="epic-form-input" name="memberCode" value={fields.memberCode || ""} onChange={handleInputChange} placeholder="MEM-YYYY-XXXX" />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Full Legal Name</label>
-                                    <input className="epic-form-input" name="fullName" value={fields.fullName || ""} onChange={handleInputChange} placeholder="Last Name, First Name, Middle Name" />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Nickname / Call Name</label>
-                                    <input className="epic-form-input" name="nickname" value={fields.nickname || ""} onChange={handleInputChange} />
-                                </div>
+                                <PrintField label="Member Code / ID" name="memberCode" value={fields.memberCode} placeholder="MEM-YYYY-XXXX" onChange={handleInputChange} />
+                                <PrintField label="Full Legal Name" name="fullName" value={fields.fullName} placeholder="Last Name, First Name, Middle Name" onChange={handleInputChange} />
+                                <PrintField label="Nickname" name="nickname" value={fields.nickname} onChange={handleInputChange} />
                             </div>
 
-                            <div className="epic-form-grid epic-form-grid-4" style={{ marginTop: 12 }}>
-                                <div className="epic-form-field">
-                                    <label>Date of Birth</label>
-                                    <input className="epic-form-input" type="date" name="dob" value={fields.dob || ""} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Gender</label>
-                                    <select className="epic-form-select" name="gender" value={fields.gender || ""} onChange={handleInputChange}>
-                                        <option value="">Select Gender</option>
-                                        <option value="Male">Male</option>
-                                        <option value="Female">Female</option>
-                                    </select>
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Civil Status</label>
-                                    <select className="epic-form-select" name="civilStatus" value={fields.civilStatus || ""} onChange={handleInputChange}>
-                                        <option value="">Select Status</option>
-                                        <option value="Single">Single</option>
-                                        <option value="Married">Married</option>
-                                        <option value="Widowed">Widowed</option>
-                                        <option value="Separated">Separated</option>
-                                    </select>
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Occupation / Profession</label>
-                                    <input className="epic-form-input" name="occupation" value={fields.occupation || ""} onChange={handleInputChange} />
-                                </div>
+                            <div className="epic-form-grid epic-form-grid-4">
+                                <PrintField label="Date of Birth" type="date" name="dob" value={fields.dob} onChange={handleInputChange} />
+                                <PrintField label="Gender" name="gender" value={fields.gender} options={[{ value: "Male", label: "Male" }, { value: "Female", label: "Female" }]} onChange={handleInputChange} />
+                                <PrintField label="Civil Status" name="civilStatus" value={fields.civilStatus} options={[{ value: "Single", label: "Single" }, { value: "Married", label: "Married" }, { value: "Widowed", label: "Widowed" }, { value: "Separated", label: "Separated" }]} onChange={handleInputChange} />
+                                <PrintField label="Occupation" name="occupation" value={fields.occupation} onChange={handleInputChange} />
                             </div>
 
-                            <div className="epic-form-grid epic-form-grid-2" style={{ marginTop: 12 }}>
-                                <div className="epic-form-field">
-                                    <label>Mobile / Contact Number</label>
-                                    <input className="epic-form-input" name="contactNo" value={fields.contactNo || ""} onChange={handleInputChange} placeholder="09XX-XXX-XXXX" />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Email Address</label>
-                                    <input className="epic-form-input" type="email" name="email" value={fields.email || ""} onChange={handleInputChange} placeholder="example@domain.com" />
-                                </div>
+                            <div className="epic-form-grid epic-form-grid-2">
+                                <PrintField label="Contact Number" name="contactNo" value={fields.contactNo} placeholder="09XX-XXX-XXXX" onChange={handleInputChange} />
+                                <PrintField label="Email Address" type="email" name="email" value={fields.email} placeholder="example@domain.com" onChange={handleInputChange} />
                             </div>
 
-                            <div className="epic-form-field" style={{ marginTop: 12 }}>
-                                <label>Complete Home Address</label>
-                                <input className="epic-form-input" name="address" value={fields.address || ""} onChange={handleInputChange} placeholder="House / Street / Barangay / City / Province" />
-                            </div>
+                            <PrintField label="Complete Home Address" name="address" value={fields.address} placeholder="Barangay, Municipality, Province" onChange={handleInputChange} />
                         </section>
 
                         <section className="epic-form-section">
                             <div className="epic-form-section-title">2. Spiritual Journey & Church Background</div>
                             <div className="epic-form-grid epic-form-grid-3">
-                                <div className="epic-form-field">
-                                    <label>Date Accepted Christ as Savior</label>
-                                    <input className="epic-form-input" type="date" name="dateAcceptedChrist" value={fields.dateAcceptedChrist || ""} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Date Water Baptized</label>
-                                    <input className="epic-form-input" type="date" name="baptizedDate" value={fields.baptizedDate || ""} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Referred / Invited By</label>
-                                    <input className="epic-form-input" name="referredBy" value={fields.referredBy || ""} onChange={handleInputChange} placeholder="Member Name" />
-                                </div>
+                                <PrintField label="Date Accepted Christ" type="date" name="dateAcceptedChrist" value={fields.dateAcceptedChrist} onChange={handleInputChange} />
+                                <PrintField label="Date Water Baptized" type="date" name="baptizedDate" value={fields.baptizedDate} onChange={handleInputChange} />
+                                <PrintField label="Referred / Invited By" name="referredBy" value={fields.referredBy} onChange={handleInputChange} />
                             </div>
-                            <div className="epic-form-field" style={{ marginTop: 12 }}>
-                                <label>Previous Church Affiliation (if transferring)</label>
-                                <input className="epic-form-input" name="previousChurch" value={fields.previousChurch || ""} onChange={handleInputChange} placeholder="Church Name and Location" />
-                            </div>
-                            <div className="epic-form-field" style={{ marginTop: 12 }}>
-                                <label>Reason for Joining Luke 4:18 Ministries</label>
-                                <textarea className="epic-form-textarea" name="reasonForJoining" value={fields.reasonForJoining || ""} onChange={handleInputChange} rows={2} />
-                            </div>
+                            <PrintField label="Previous Church Affiliation (if transferring)" name="previousChurch" value={fields.previousChurch} onChange={handleInputChange} />
+                            <PrintField label="Reason for Joining Luke 4:18 Ministries" name="reasonForJoining" value={fields.reasonForJoining} rows={2} onChange={handleInputChange} />
                         </section>
 
                         <section className="epic-form-section">
                             <div className="epic-form-section-title">3. Ministry Interests & Involvement</div>
-                            <p style={{ fontSize: 11, color: "#475569", margin: "0 0 10px 0" }}>Check all areas where you feel called or interested in serving:</p>
                             <div className="epic-form-checkbox-group">
-                                <label className="epic-form-checkbox-label">
-                                    <input type="checkbox" checked={!!checkboxes.interestWorship} onChange={() => handleCheckboxChange("interestWorship")} />
-                                    Praise & Worship / Music
-                                </label>
-                                <label className="epic-form-checkbox-label">
-                                    <input type="checkbox" checked={!!checkboxes.interestTech} onChange={() => handleCheckboxChange("interestTech")} />
-                                    Technical, Audio & Multimedia
-                                </label>
-                                <label className="epic-form-checkbox-label">
-                                    <input type="checkbox" checked={!!checkboxes.interestUsher} onChange={() => handleCheckboxChange("interestUsher")} />
-                                    Ushering, Greeters & Protocol
-                                </label>
-                                <label className="epic-form-checkbox-label">
-                                    <input type="checkbox" checked={!!checkboxes.interestKids} onChange={() => handleCheckboxChange("interestKids")} />
-                                    Children's Ministry / Sunday School
-                                </label>
-                                <label className="epic-form-checkbox-label">
-                                    <input type="checkbox" checked={!!checkboxes.interestYouth} onChange={() => handleCheckboxChange("interestYouth")} />
-                                    Youth & Campus Ministry
-                                </label>
-                                <label className="epic-form-checkbox-label">
-                                    <input type="checkbox" checked={!!checkboxes.interestPrayer} onChange={() => handleCheckboxChange("interestPrayer")} />
-                                    Intercessory Prayer Ministry
-                                </label>
-                                <label className="epic-form-checkbox-label">
-                                    <input type="checkbox" checked={!!checkboxes.interestOutreach} onChange={() => handleCheckboxChange("interestOutreach")} />
-                                    Evangelism & Community Outreach
-                                </label>
+                                <PrintCheckbox label="Praise & Worship / Music" checked={!!checkboxes.interestWorship} onChange={() => handleCheckboxChange("interestWorship")} />
+                                <PrintCheckbox label="Technical & Multimedia" checked={!!checkboxes.interestTech} onChange={() => handleCheckboxChange("interestTech")} />
+                                <PrintCheckbox label="Ushering & Protocol" checked={!!checkboxes.interestUsher} onChange={() => handleCheckboxChange("interestUsher")} />
+                                <PrintCheckbox label="Children's Church" checked={!!checkboxes.interestKids} onChange={() => handleCheckboxChange("interestKids")} />
+                                <PrintCheckbox label="Youth Ministry" checked={!!checkboxes.interestYouth} onChange={() => handleCheckboxChange("interestYouth")} />
+                                <PrintCheckbox label="Intercessory Prayer" checked={!!checkboxes.interestPrayer} onChange={() => handleCheckboxChange("interestPrayer")} />
+                                <PrintCheckbox label="Community Outreach" checked={!!checkboxes.interestOutreach} onChange={() => handleCheckboxChange("interestOutreach")} />
                             </div>
                         </section>
 
                         <div className="epic-form-declaration-box">
-                            <strong>MEMBERSHIP COVENANT & DECLARATION:</strong>
-                            <br />
-                            Having received Jesus Christ as my personal Lord and Savior, and being in agreement with the vision, mission, doctrine, and leadership of Luke 4:18 Ministries, I hereby apply for church membership. I commit to attend church services faithfully, participate in fellowship and small groups, give cheerfully of my tithes and offerings, and live a lifestyle that glorifies Jesus Christ.
+                            <strong>MEMBERSHIP COVENANT:</strong> Having received Jesus Christ as my personal Savior, and being in agreement with the vision, mission, and beliefs of Luke 4:18 Ministries, I hereby apply for church membership. I commit to attend worship faithfully, give of my tithes and offerings, and live a lifestyle honoring Christ.
                         </div>
 
                         <div className="epic-form-signatures">
                             <div className="epic-form-sig-block">
                                 <div className="epic-form-sig-line">{fields.applicantSignature || ""}</div>
-                                <span className="epic-form-sig-label">Applicant's Signature</span>
+                                <span className="epic-form-sig-label">Applicant Signature</span>
                                 <span className="epic-form-sig-sub">Signature over Printed Name</span>
                             </div>
                             <div className="epic-form-sig-block">
                                 <div className="epic-form-sig-line">{fields.pastorSignature || ""}</div>
                                 <span className="epic-form-sig-label">Senior Pastor / Minister</span>
-                                <span className="epic-form-sig-sub">Approved & Accepted into Fellowship</span>
+                                <span className="epic-form-sig-sub">San Vicente Church • Umingan</span>
                             </div>
                             <div className="epic-form-seal-box">
-                                Church Seal Stamp
+                                Official Church Seal
                             </div>
                         </div>
                     </>
@@ -495,100 +519,56 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
                         <section className="epic-form-section">
                             <div className="epic-form-section-title">1. Member Identification & Status</div>
                             <div className="epic-form-grid epic-form-grid-3">
-                                <div className="epic-form-field">
-                                    <label>Member ID Code</label>
-                                    <input className="epic-form-input" name="memberCode" value={fields.memberCode || ""} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Membership Status</label>
-                                    <select className="epic-form-select" name="membershipStatus" value={fields.membershipStatus || "Active"} onChange={handleInputChange}>
-                                        <option value="Active">Active Regular Member</option>
-                                        <option value="Probationary">Probationary / Candidate</option>
-                                        <option value="Inactive">Inactive</option>
-                                        <option value="Transferred">Transferred</option>
-                                    </select>
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Blood Type</label>
-                                    <input className="epic-form-input" name="bloodType" value={fields.bloodType || ""} onChange={handleInputChange} placeholder="e.g. O+, A+, B+" />
-                                </div>
+                                <PrintField label="Member ID Code" name="memberCode" value={fields.memberCode} onChange={handleInputChange} />
+                                <PrintField label="Membership Status" name="membershipStatus" value={fields.membershipStatus || "Active"} options={[{ value: "Active", label: "Active Member" }, { value: "Probationary", label: "Probationary" }, { value: "Inactive", label: "Inactive" }]} onChange={handleInputChange} />
+                                <PrintField label="Blood Type" name="bloodType" value={fields.bloodType} onChange={handleInputChange} />
                             </div>
                         </section>
 
                         <section className="epic-form-section">
-                            <div className="epic-form-section-title">2. Personal Profile</div>
+                            <div className="epic-form-section-title">2. Personal Profile & Emergency Contact</div>
                             <div className="epic-form-grid epic-form-grid-3">
-                                <div className="epic-form-field">
-                                    <label>Full Name</label>
-                                    <input className="epic-form-input" name="fullName" value={fields.fullName || ""} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Date of Birth</label>
-                                    <input className="epic-form-input" type="date" name="dob" value={fields.dob || ""} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Gender & Civil Status</label>
-                                    <input className="epic-form-input" name="genderStatus" value={fields.genderStatus || "Female / Single"} onChange={handleInputChange} />
-                                </div>
+                                <PrintField label="Full Name" name="fullName" value={fields.fullName} onChange={handleInputChange} />
+                                <PrintField label="Date of Birth" type="date" name="dob" value={fields.dob} onChange={handleInputChange} />
+                                <PrintField label="Civil Status & Gender" name="civilStatus" value={fields.civilStatus || "Single / Female"} onChange={handleInputChange} />
                             </div>
-                            <div className="epic-form-grid epic-form-grid-2" style={{ marginTop: 12 }}>
-                                <div className="epic-form-field">
-                                    <label>Contact Phone</label>
-                                    <input className="epic-form-input" name="contactNo" value={fields.contactNo || ""} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Email Address</label>
-                                    <input className="epic-form-input" name="email" value={fields.email || ""} onChange={handleInputChange} />
-                                </div>
+                            <div className="epic-form-grid epic-form-grid-2">
+                                <PrintField label="Contact Phone" name="contactNo" value={fields.contactNo} onChange={handleInputChange} />
+                                <PrintField label="Email Address" type="email" name="email" value={fields.email} onChange={handleInputChange} />
                             </div>
-                            <div className="epic-form-field" style={{ marginTop: 12 }}>
-                                <label>Residence Address</label>
-                                <input className="epic-form-input" name="address" value={fields.address || ""} onChange={handleInputChange} />
+                            <PrintField label="Residence Address" name="address" value={fields.address} onChange={handleInputChange} />
+                            <div className="epic-form-grid epic-form-grid-2">
+                                <PrintField label="Emergency Contact Person & Relation" name="emergencyContact" value={fields.emergencyContact} onChange={handleInputChange} />
+                                <PrintField label="Emergency Phone" name="emergencyPhone" value={fields.emergencyPhone} onChange={handleInputChange} />
                             </div>
                         </section>
 
                         <section className="epic-form-section">
-                            <div className="epic-form-section-title">3. Emergency Contact Person</div>
+                            <div className="epic-form-section-title">3. Vocation & Church Involvement</div>
                             <div className="epic-form-grid epic-form-grid-2">
-                                <div className="epic-form-field">
-                                    <label>Contact Person & Relationship</label>
-                                    <input className="epic-form-input" name="emergencyContact" value={fields.emergencyContact || ""} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Emergency Contact Phone</label>
-                                    <input className="epic-form-input" name="emergencyPhone" value={fields.emergencyPhone || ""} onChange={handleInputChange} />
-                                </div>
+                                <PrintField label="Educational Attainment" name="education" value={fields.education} onChange={handleInputChange} />
+                                <PrintField label="Occupation / Workplace" name="occupation" value={fields.occupation} onChange={handleInputChange} />
                             </div>
-                        </section>
-
-                        <section className="epic-form-section">
-                            <div className="epic-form-section-title">4. Church Involvement & Ministry Roles</div>
                             <div className="epic-form-grid epic-form-grid-2">
-                                <div className="epic-form-field">
-                                    <label>Current Ministry Assigned</label>
-                                    <input className="epic-form-input" name="ministry" value={fields.ministry || ""} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Life Group / Cell Leader</label>
-                                    <input className="epic-form-input" name="cellGroupLeader" value={fields.cellGroupLeader || ""} onChange={handleInputChange} />
-                                </div>
+                                <PrintField label="Current Ministry Assigned" name="ministry" value={fields.ministry} onChange={handleInputChange} />
+                                <PrintField label="Cell Group / Life Group Leader" name="cellGroupLeader" value={fields.cellGroupLeader} onChange={handleInputChange} />
                             </div>
-                            <div className="epic-form-field" style={{ marginTop: 12 }}>
-                                <label>Spiritual Gifts & Special Talents</label>
-                                <input className="epic-form-input" name="spiritualGifts" value={fields.spiritualGifts || ""} onChange={handleInputChange} />
-                            </div>
+                            <PrintField label="Spiritual Gifts & Ministry Skills" name="spiritualGifts" value={fields.spiritualGifts} onChange={handleInputChange} />
                         </section>
 
                         <div className="epic-form-signatures">
                             <div className="epic-form-sig-block">
                                 <div className="epic-form-sig-line">{fields.memberSignature || ""}</div>
                                 <span className="epic-form-sig-label">Member Signature</span>
-                                <span className="epic-form-sig-sub">Verified & Certified Correct</span>
+                                <span className="epic-form-sig-sub">Certified Correct</span>
                             </div>
                             <div className="epic-form-sig-block">
                                 <div className="epic-form-sig-line">{fields.officerSignature || ""}</div>
                                 <span className="epic-form-sig-label">Church Records Officer</span>
-                                <span className="epic-form-sig-sub">Church Administration & Secretariat</span>
+                                <span className="epic-form-sig-sub">San Vicente Church • Umingan</span>
+                            </div>
+                            <div className="epic-form-seal-box">
+                                Records Seal
                             </div>
                         </div>
                     </>
@@ -602,95 +582,75 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
                         <section className="epic-form-section">
                             <div className="epic-form-section-title">1. Household & Parents Information</div>
                             <div className="epic-form-grid epic-form-grid-3">
-                                <div className="epic-form-field">
-                                    <label>Head of Household Name</label>
-                                    <input className="epic-form-input" name="headName" value={fields.headName || ""} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Head Contact Number</label>
-                                    <input className="epic-form-input" name="headContact" value={fields.headContact || ""} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Family ID Code</label>
-                                    <input className="epic-form-input" name="familyCode" value={fields.familyCode || ""} onChange={handleInputChange} />
-                                </div>
+                                <PrintField label="Head of Household" name="headName" value={fields.headName} onChange={handleInputChange} />
+                                <PrintField label="Head Contact Number" name="headContact" value={fields.headContact} onChange={handleInputChange} />
+                                <PrintField label="Family ID Code" name="familyCode" value={fields.familyCode} onChange={handleInputChange} />
                             </div>
-
-                            <div className="epic-form-grid epic-form-grid-3" style={{ marginTop: 12 }}>
-                                <div className="epic-form-field">
-                                    <label>Spouse Full Name</label>
-                                    <input className="epic-form-input" name="spouseName" value={fields.spouseName || ""} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Spouse Contact Number</label>
-                                    <input className="epic-form-input" name="spouseContact" value={fields.spouseContact || ""} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Wedding Date (Church/Civil)</label>
-                                    <input className="epic-form-input" type="date" name="weddingDate" value={fields.weddingDate || ""} onChange={handleInputChange} />
-                                </div>
+                            <div className="epic-form-grid epic-form-grid-3">
+                                <PrintField label="Spouse Full Name" name="spouseName" value={fields.spouseName} onChange={handleInputChange} />
+                                <PrintField label="Spouse Contact" name="spouseContact" value={fields.spouseContact} onChange={handleInputChange} />
+                                <PrintField label="Church / Civil Wedding Date" type="date" name="weddingDate" value={fields.weddingDate} onChange={handleInputChange} />
                             </div>
-
-                            <div className="epic-form-field" style={{ marginTop: 12 }}>
-                                <label>Family Residence Address</label>
-                                <input className="epic-form-input" name="address" value={fields.address || ""} onChange={handleInputChange} />
-                            </div>
+                            <PrintField label="Family Residence Address" name="address" value={fields.address} onChange={handleInputChange} />
                         </section>
 
                         <section className="epic-form-section">
-                            <div className="epic-form-section-title">2. Children & Household Dependents</div>
+                            <div className="epic-form-section-title">2. Children & Dependents</div>
                             <table className="epic-form-table">
                                 <thead>
                                     <tr>
-                                        <th style={{ width: "35%" }}>Child / Dependent Full Name</th>
+                                        <th style={{ width: "35%" }}>Child Full Name</th>
                                         <th style={{ width: "20%" }}>Birth Date</th>
                                         <th style={{ width: "15%" }}>Water Baptized</th>
                                         <th style={{ width: "30%" }}>School / Grade / Work</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr>
-                                        <td><input name="child1Name" value={fields.child1Name || ""} onChange={handleInputChange} placeholder="Name" /></td>
-                                        <td><input name="child1Dob" value={fields.child1Dob || ""} onChange={handleInputChange} placeholder="YYYY-MM-DD" /></td>
-                                        <td><input name="child1Baptized" value={fields.child1Baptized || ""} onChange={handleInputChange} placeholder="Yes / No" /></td>
-                                        <td><input name="child1School" value={fields.child1School || ""} onChange={handleInputChange} placeholder="School / Occupation" /></td>
-                                    </tr>
-                                    <tr>
-                                        <td><input name="child2Name" value={fields.child2Name || ""} onChange={handleInputChange} placeholder="Name" /></td>
-                                        <td><input name="child2Dob" value={fields.child2Dob || ""} onChange={handleInputChange} placeholder="YYYY-MM-DD" /></td>
-                                        <td><input name="child2Baptized" value={fields.child2Baptized || ""} onChange={handleInputChange} placeholder="Yes / No" /></td>
-                                        <td><input name="child2School" value={fields.child2School || ""} onChange={handleInputChange} placeholder="School / Occupation" /></td>
-                                    </tr>
-                                    <tr>
-                                        <td><input name="child3Name" value={fields.child3Name || ""} onChange={handleInputChange} placeholder="Name" /></td>
-                                        <td><input name="child3Dob" value={fields.child3Dob || ""} onChange={handleInputChange} placeholder="YYYY-MM-DD" /></td>
-                                        <td><input name="child3Baptized" value={fields.child3Baptized || ""} onChange={handleInputChange} placeholder="Yes / No" /></td>
-                                        <td><input name="child3School" value={fields.child3School || ""} onChange={handleInputChange} placeholder="School / Occupation" /></td>
-                                    </tr>
-                                    <tr>
-                                        <td><input name="child4Name" value={fields.child4Name || ""} onChange={handleInputChange} placeholder="Name" /></td>
-                                        <td><input name="child4Dob" value={fields.child4Dob || ""} onChange={handleInputChange} placeholder="YYYY-MM-DD" /></td>
-                                        <td><input name="child4Baptized" value={fields.child4Baptized || ""} onChange={handleInputChange} placeholder="Yes / No" /></td>
-                                        <td><input name="child4School" value={fields.child4School || ""} onChange={handleInputChange} placeholder="School / Occupation" /></td>
-                                    </tr>
+                                    {[1, 2, 3, 4].map((num) => {
+                                        const nameKey = `child${num}Name`;
+                                        const dobKey = `child${num}Dob`;
+                                        const bapKey = `child${num}Baptized`;
+                                        const schKey = `child${num}School`;
+                                        return (
+                                            <tr key={num}>
+                                                <td>
+                                                    <input className="screen-only" name={nameKey} value={fields[nameKey] || ""} onChange={handleInputChange} placeholder="Name" />
+                                                    <span className="print-only">{fields[nameKey] || ""}</span>
+                                                </td>
+                                                <td>
+                                                    <input className="screen-only" name={dobKey} value={fields[dobKey] || ""} onChange={handleInputChange} placeholder="YYYY-MM-DD" />
+                                                    <span className="print-only">{fields[dobKey] || ""}</span>
+                                                </td>
+                                                <td>
+                                                    <input className="screen-only" name={bapKey} value={fields[bapKey] || ""} onChange={handleInputChange} placeholder="Yes/No" />
+                                                    <span className="print-only">{fields[bapKey] || ""}</span>
+                                                </td>
+                                                <td>
+                                                    <input className="screen-only" name={schKey} value={fields[schKey] || ""} onChange={handleInputChange} placeholder="School/Occupation" />
+                                                    <span className="print-only">{fields[schKey] || ""}</span>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </section>
 
                         <section className="epic-form-section">
-                            <div className="epic-form-section-title">3. Family Prayer Requests & Spiritual Needs</div>
-                            <textarea className="epic-form-textarea" name="prayerRequests" value={fields.prayerRequests || ""} onChange={handleInputChange} rows={3} placeholder="Write any specific prayer requests or spiritual assistance needed..." />
+                            <div className="epic-form-section-title">3. Family Prayer Requests</div>
+                            <PrintField label="Specific Family Prayer Requests" name="prayerRequests" value={fields.prayerRequests} rows={2} onChange={handleInputChange} />
                         </section>
 
                         <div className="epic-form-signatures">
                             <div className="epic-form-sig-block">
                                 <div className="epic-form-sig-line">{fields.headSignature || ""}</div>
-                                <span className="epic-form-sig-label">Head of Household Signature</span>
+                                <span className="epic-form-sig-label">Head of Household</span>
                             </div>
                             <div className="epic-form-sig-block">
                                 <div className="epic-form-sig-line">{fields.pastorSignature || ""}</div>
-                                <span className="epic-form-sig-label">Family Life Ministry Pastor</span>
+                                <span className="epic-form-sig-label">Family Life Pastor</span>
                             </div>
+                            <div className="epic-form-seal-box">Church Seal</div>
                         </div>
                     </>
                 )}
@@ -701,102 +661,49 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
                 {form.id === "visitor-card" && (
                     <>
                         <section className="epic-form-section">
-                            <div className="epic-form-section-title">Welcome to Luke 4:18 Ministries!</div>
-                            <p style={{ fontSize: 11.5, color: "#475569", margin: "0 0 14px 0" }}>
-                                We are so honored to have you worship with us today. Please take a moment to fill out this connection card so we can welcome you and pray for you.
-                            </p>
-
+                            <div className="epic-form-section-title">Visitor Information & Welcome</div>
                             <div className="epic-form-grid epic-form-grid-2">
-                                <div className="epic-form-field">
-                                    <label>Service Attended</label>
-                                    <input className="epic-form-input" name="serviceAttended" value={fields.serviceAttended || ""} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Full Name</label>
-                                    <input className="epic-form-input" name="fullName" value={fields.fullName || ""} onChange={handleInputChange} placeholder="Your name" />
-                                </div>
+                                <PrintField label="Service Attended" name="serviceAttended" value={fields.serviceAttended} onChange={handleInputChange} />
+                                <PrintField label="Full Name" name="fullName" value={fields.fullName} placeholder="Your name" onChange={handleInputChange} />
                             </div>
-
-                            <div className="epic-form-grid epic-form-grid-3" style={{ marginTop: 12 }}>
-                                <div className="epic-form-field">
-                                    <label>Age Group</label>
-                                    <select className="epic-form-select" name="ageGroup" value={fields.ageGroup || ""} onChange={handleInputChange}>
-                                        <option value="">Select Age Group</option>
-                                        <option value="Youth (13-20)">Youth (13-20)</option>
-                                        <option value="Young Adult (21-35)">Young Adult (21-35)</option>
-                                        <option value="Adult (36-59)">Adult (36-59)</option>
-                                        <option value="Senior Citizen (60+)">Senior Citizen (60+)</option>
-                                    </select>
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Mobile Contact Number</label>
-                                    <input className="epic-form-input" name="contactNo" value={fields.contactNo || ""} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Email Address</label>
-                                    <input className="epic-form-input" name="email" value={fields.email || ""} onChange={handleInputChange} />
-                                </div>
+                            <div className="epic-form-grid epic-form-grid-3">
+                                <PrintField label="Age Group" name="ageGroup" value={fields.ageGroup} options={[{ value: "Youth (13-20)", label: "Youth (13-20)" }, { value: "Young Adult (21-35)", label: "Young Adult (21-35)" }, { value: "Adult (36-59)", label: "Adult (36-59)" }, { value: "Senior (60+)", label: "Senior (60+)" }]} onChange={handleInputChange} />
+                                <PrintField label="Contact Number" name="contactNo" value={fields.contactNo} onChange={handleInputChange} />
+                                <PrintField label="Email Address" type="email" name="email" value={fields.email} onChange={handleInputChange} />
                             </div>
-
-                            <div className="epic-form-field" style={{ marginTop: 12 }}>
-                                <label>Address / Location</label>
-                                <input className="epic-form-input" name="address" value={fields.address || ""} onChange={handleInputChange} />
-                            </div>
-
-                            <div className="epic-form-grid epic-form-grid-2" style={{ marginTop: 12 }}>
-                                <div className="epic-form-field">
-                                    <label>How did you hear about our church?</label>
-                                    <input className="epic-form-input" name="howDidYouHear" value={fields.howDidYouHear || ""} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Invited by (Church Member)</label>
-                                    <input className="epic-form-input" name="invitedBy" value={fields.invitedBy || ""} onChange={handleInputChange} />
-                                </div>
+                            <PrintField label="Address / Residence" name="address" value={fields.address} onChange={handleInputChange} />
+                            <div className="epic-form-grid epic-form-grid-2">
+                                <PrintField label="How did you hear about us?" name="howDidYouHear" value={fields.howDidYouHear} onChange={handleInputChange} />
+                                <PrintField label="Invited by (Church Member)" name="invitedBy" value={fields.invitedBy} onChange={handleInputChange} />
                             </div>
                         </section>
 
                         <section className="epic-form-section">
-                            <div className="epic-form-section-title">My Next Steps / Decision Today</div>
+                            <div className="epic-form-section-title">My Decision / Next Steps Today</div>
                             <div className="epic-form-checkbox-group">
-                                <label className="epic-form-checkbox-label">
-                                    <input type="checkbox" checked={!!checkboxes.firstTime} onChange={() => handleCheckboxChange("firstTime")} />
-                                    This is my 1st time visiting
-                                </label>
-                                <label className="epic-form-checkbox-label">
-                                    <input type="checkbox" checked={!!checkboxes.decisionJesus} onChange={() => handleCheckboxChange("decisionJesus")} />
-                                    I made a decision to receive Jesus Christ today
-                                </label>
-                                <label className="epic-form-checkbox-label">
-                                    <input type="checkbox" checked={!!checkboxes.interestWaterBaptism} onChange={() => handleCheckboxChange("interestWaterBaptism")} />
-                                    I want to be water baptized
-                                </label>
-                                <label className="epic-form-checkbox-label">
-                                    <input type="checkbox" checked={!!checkboxes.interestLifeGroup} onChange={() => handleCheckboxChange("interestLifeGroup")} />
-                                    I want to join a Life Group / Cell Group
-                                </label>
-                                <label className="epic-form-checkbox-label">
-                                    <input type="checkbox" checked={!!checkboxes.requestCall} onChange={() => handleCheckboxChange("requestCall")} />
-                                    I would like a pastoral call / home visit
-                                </label>
+                                <PrintCheckbox label="This is my 1st time visiting" checked={!!checkboxes.firstTime} onChange={() => handleCheckboxChange("firstTime")} />
+                                <PrintCheckbox label="I received Jesus Christ today" checked={!!checkboxes.decisionJesus} onChange={() => handleCheckboxChange("decisionJesus")} />
+                                <PrintCheckbox label="I want to be water baptized" checked={!!checkboxes.interestWaterBaptism} onChange={() => handleCheckboxChange("interestWaterBaptism")} />
+                                <PrintCheckbox label="I want to join a Life Group" checked={!!checkboxes.interestLifeGroup} onChange={() => handleCheckboxChange("interestLifeGroup")} />
+                                <PrintCheckbox label="I would like a pastoral call / visit" checked={!!checkboxes.requestCall} onChange={() => handleCheckboxChange("requestCall")} />
                             </div>
                         </section>
 
                         <section className="epic-form-section">
-                            <div className="epic-form-section-title">How can we pray for you? (Prayer Requests)</div>
-                            <textarea className="epic-form-textarea" name="prayerRequest" value={fields.prayerRequest || ""} onChange={handleInputChange} rows={3} placeholder="Write your prayer request here..." />
+                            <div className="epic-form-section-title">How can we pray for you?</div>
+                            <PrintField label="Prayer Request / Comments" name="prayerRequest" value={fields.prayerRequest} rows={2} onChange={handleInputChange} />
                         </section>
 
                         <div className="epic-form-signatures">
                             <div className="epic-form-sig-block">
                                 <div className="epic-form-sig-line">{fields.assignedTo || ""}</div>
-                                <span className="epic-form-sig-label">Assigned Follow-Up Worker</span>
-                                <span className="epic-form-sig-sub">Visitor Care Ministry</span>
+                                <span className="epic-form-sig-label">Follow-Up Assigned Worker</span>
                             </div>
                             <div className="epic-form-sig-block">
-                                <div className="epic-form-sig-line">Completed</div>
-                                <span className="epic-form-sig-label">Follow-Up Action Status</span>
-                                <span className="epic-form-sig-sub">Recorded in EPIC CMS</span>
+                                <div className="epic-form-sig-line">Follow-Up Logged</div>
+                                <span className="epic-form-sig-label">Visitor Ministry Status</span>
                             </div>
+                            <div className="epic-form-seal-box">Welcome Team</div>
                         </div>
                     </>
                 )}
@@ -807,55 +714,29 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
                 {form.id === "ministry-volunteer" && (
                     <>
                         <section className="epic-form-section">
-                            <div className="epic-form-section-title">1. Volunteer Information</div>
+                            <div className="epic-form-section-title">1. Volunteer Details</div>
                             <div className="epic-form-grid epic-form-grid-3">
-                                <div className="epic-form-field">
-                                    <label>Volunteer Full Name</label>
-                                    <input className="epic-form-input" name="fullName" value={fields.fullName || ""} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Member Code</label>
-                                    <input className="epic-form-input" name="memberCode" value={fields.memberCode || ""} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Contact Number</label>
-                                    <input className="epic-form-input" name="contactNo" value={fields.contactNo || ""} onChange={handleInputChange} />
-                                </div>
+                                <PrintField label="Full Name" name="fullName" value={fields.fullName} onChange={handleInputChange} />
+                                <PrintField label="Member Code" name="memberCode" value={fields.memberCode} onChange={handleInputChange} />
+                                <PrintField label="Contact Number" name="contactNo" value={fields.contactNo} onChange={handleInputChange} />
                             </div>
-                            <div className="epic-form-grid epic-form-grid-2" style={{ marginTop: 12 }}>
-                                <div className="epic-form-field">
-                                    <label>Life Group Leader</label>
-                                    <input className="epic-form-input" name="lifeGroupLeader" value={fields.lifeGroupLeader || ""} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Desired Ministry to Serve In</label>
-                                    <input className="epic-form-input" name="desiredMinistry" value={fields.desiredMinistry || ""} onChange={handleInputChange} placeholder="e.g. Worship, Media, Ushers, Kids" />
-                                </div>
+                            <div className="epic-form-grid epic-form-grid-2">
+                                <PrintField label="Life Group Leader" name="lifeGroupLeader" value={fields.lifeGroupLeader} onChange={handleInputChange} />
+                                <PrintField label="Desired Ministry to Serve In" name="desiredMinistry" value={fields.desiredMinistry} onChange={handleInputChange} />
                             </div>
                         </section>
 
                         <section className="epic-form-section">
-                            <div className="epic-form-section-title">2. Talents, Skills & Experience</div>
-                            <div className="epic-form-field">
-                                <label>Specific Skills & Instruments (Musical, Technical, Teaching, etc.)</label>
-                                <textarea className="epic-form-textarea" name="specificSkills" value={fields.specificSkills || ""} onChange={handleInputChange} rows={2} />
-                            </div>
-                            <div className="epic-form-grid epic-form-grid-2" style={{ marginTop: 12 }}>
-                                <div className="epic-form-field">
-                                    <label>Previous Ministry / Serving Experience</label>
-                                    <input className="epic-form-input" name="experienceYears" value={fields.experienceYears || ""} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Weekly Schedule Availability</label>
-                                    <input className="epic-form-input" name="scheduleAvailability" value={fields.scheduleAvailability || ""} onChange={handleInputChange} placeholder="e.g. Sunday Morning, Saturday Rehearsal" />
-                                </div>
+                            <div className="epic-form-section-title">2. Talents & Skills</div>
+                            <PrintField label="Specific Skills & Instruments Played" name="specificSkills" value={fields.specificSkills} rows={2} onChange={handleInputChange} />
+                            <div className="epic-form-grid epic-form-grid-2">
+                                <PrintField label="Previous Ministry Experience" name="experienceYears" value={fields.experienceYears} onChange={handleInputChange} />
+                                <PrintField label="Weekly Schedule Availability" name="scheduleAvailability" value={fields.scheduleAvailability} onChange={handleInputChange} />
                             </div>
                         </section>
 
                         <div className="epic-form-declaration-box">
-                            <strong>VOLUNTEER PLEDGE OF SERVICE:</strong>
-                            <br />
-                            I joyfully offer my time, talents, and gifts for the service of God and His kingdom through Luke 4:18 Ministries. I commit to remain punctual, faithful, cooperative with church leadership, and maintain a Christian character worthy of the Gospel of Christ.
+                            <strong>VOLUNTEER PLEDGE OF SERVICE:</strong> I joyfully offer my gifts and time to serve God at Luke 4:18 Ministries. I commit to remain punctual, faithful, cooperative with leadership, and live a life worthy of Christ.
                         </div>
 
                         <div className="epic-form-signatures">
@@ -865,7 +746,7 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
                             </div>
                             <div className="epic-form-sig-block">
                                 <div className="epic-form-sig-line">{fields.ministryHeadSignature || ""}</div>
-                                <span className="epic-form-sig-label">Ministry Department Head</span>
+                                <span className="epic-form-sig-label">Ministry Head</span>
                             </div>
                             <div className="epic-form-sig-block">
                                 <div className="epic-form-sig-line">{fields.pastorSignature || ""}</div>
@@ -883,56 +764,28 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
                         <section className="epic-form-section">
                             <div className="epic-form-section-title">1. Official Appointment Details</div>
                             <div className="epic-form-grid epic-form-grid-3">
-                                <div className="epic-form-field">
-                                    <label>Appointment Document No.</label>
-                                    <input className="epic-form-input" name="docNo" value={fields.docNo || ""} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Appointee Full Name</label>
-                                    <input className="epic-form-input" name="appointeeName" value={fields.appointeeName || ""} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Member Code</label>
-                                    <input className="epic-form-input" name="memberCode" value={fields.memberCode || ""} onChange={handleInputChange} />
-                                </div>
+                                <PrintField label="Appointment Doc No." name="docNo" value={fields.docNo} onChange={handleInputChange} />
+                                <PrintField label="Appointee Full Name" name="appointeeName" value={fields.appointeeName} onChange={handleInputChange} />
+                                <PrintField label="Member Code" name="memberCode" value={fields.memberCode} onChange={handleInputChange} />
                             </div>
-
-                            <div className="epic-form-grid epic-form-grid-2" style={{ marginTop: 12 }}>
-                                <div className="epic-form-field">
-                                    <label>Ministry / Department</label>
-                                    <input className="epic-form-input" name="department" value={fields.department || ""} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Designated Role / Position Title</label>
-                                    <input className="epic-form-input" name="assignedRole" value={fields.assignedRole || ""} onChange={handleInputChange} />
-                                </div>
+                            <div className="epic-form-grid epic-form-grid-2">
+                                <PrintField label="Ministry / Department" name="department" value={fields.department} onChange={handleInputChange} />
+                                <PrintField label="Designated Role Title" name="assignedRole" value={fields.assignedRole} onChange={handleInputChange} />
                             </div>
-
-                            <div className="epic-form-grid epic-form-grid-3" style={{ marginTop: 12 }}>
-                                <div className="epic-form-field">
-                                    <label>Term Effective Date</label>
-                                    <input className="epic-form-input" type="date" name="termStart" value={fields.termStart || ""} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Term Expiration / Renewal</label>
-                                    <input className="epic-form-input" type="date" name="termEnd" value={fields.termEnd || ""} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Direct Overseer / Mentor</label>
-                                    <input className="epic-form-input" name="supervisor" value={fields.supervisor || ""} onChange={handleInputChange} />
-                                </div>
+                            <div className="epic-form-grid epic-form-grid-3">
+                                <PrintField label="Term Effective Date" type="date" name="termStart" value={fields.termStart} onChange={handleInputChange} />
+                                <PrintField label="Term Renewal Date" type="date" name="termEnd" value={fields.termEnd} onChange={handleInputChange} />
+                                <PrintField label="Overseeing Mentor / Pastor" name="supervisor" value={fields.supervisor} onChange={handleInputChange} />
                             </div>
                         </section>
 
                         <section className="epic-form-section">
                             <div className="epic-form-section-title">2. Scope of Responsibilities & Duties</div>
-                            <textarea className="epic-form-textarea" name="responsibilities" value={fields.responsibilities || ""} onChange={handleInputChange} rows={4} placeholder="Key duties and ministry scope..." />
+                            <PrintField label="Duties & Expectations" name="responsibilities" value={fields.responsibilities} rows={3} onChange={handleInputChange} />
                         </section>
 
                         <div className="epic-form-declaration-box">
-                            <strong>APPOINTMENT RATIFICATION:</strong>
-                            <br />
-                            This official ministry assignment is issued with the confidence and spiritual blessing of Luke 4:18 Ministries leadership. The appointee agrees to shepherd and serve with humility, diligence, and spiritual excellence according to 1 Peter 5:2-3.
+                            <strong>APPOINTMENT RATIFICATION:</strong> This ministry assignment is issued with the prayer and blessing of Luke 4:18 Ministries leadership. The appointee agrees to shepherd and serve with humility and excellence.
                         </div>
 
                         <div className="epic-form-signatures">
@@ -944,9 +797,7 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
                                 <div className="epic-form-sig-line">{fields.pastorSignature || ""}</div>
                                 <span className="epic-form-sig-label">Senior Pastor</span>
                             </div>
-                            <div className="epic-form-seal-box">
-                                Official Church Seal
-                            </div>
+                            <div className="epic-form-seal-box">Official Seal</div>
                         </div>
                     </>
                 )}
@@ -959,71 +810,36 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
                         <section className="epic-form-section">
                             <div className="epic-form-section-title">1. Baptism Candidate Information</div>
                             <div className="epic-form-grid epic-form-grid-3">
-                                <div className="epic-form-field">
-                                    <label>Candidate Full Name</label>
-                                    <input className="epic-form-input" name="candidateName" value={fields.candidateName || ""} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Date of Birth</label>
-                                    <input className="epic-form-input" type="date" name="dob" value={fields.dob || ""} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Gender & Age</label>
-                                    <input className="epic-form-input" name="genderAge" value={fields.genderAge || `${fields.gender || "Female"} / Age ${fields.age || "20"}`} onChange={handleInputChange} />
-                                </div>
+                                <PrintField label="Candidate Full Name" name="candidateName" value={fields.candidateName} onChange={handleInputChange} />
+                                <PrintField label="Date of Birth" type="date" name="dob" value={fields.dob} onChange={handleInputChange} />
+                                <PrintField label="Age & Gender" name="ageGender" value={fields.ageGender || "20 / Female"} onChange={handleInputChange} />
                             </div>
-                            <div className="epic-form-grid epic-form-grid-2" style={{ marginTop: 12 }}>
-                                <div className="epic-form-field">
-                                    <label>Contact Number</label>
-                                    <input className="epic-form-input" name="contactNo" value={fields.contactNo || ""} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Address</label>
-                                    <input className="epic-form-input" name="address" value={fields.address || ""} onChange={handleInputChange} />
-                                </div>
+                            <div className="epic-form-grid epic-form-grid-2">
+                                <PrintField label="Contact Number" name="contactNo" value={fields.contactNo} onChange={handleInputChange} />
+                                <PrintField label="Home Address" name="address" value={fields.address} onChange={handleInputChange} />
                             </div>
                         </section>
 
                         <section className="epic-form-section">
                             <div className="epic-form-section-title">2. Spiritual Preparedness & Class Completion</div>
                             <div className="epic-form-grid epic-form-grid-3">
-                                <div className="epic-form-field">
-                                    <label>Date Accepted Jesus Christ</label>
-                                    <input className="epic-form-input" type="date" name="dateAcceptedChrist" value={fields.dateAcceptedChrist || ""} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Pre-Baptism Class Date</label>
-                                    <input className="epic-form-input" type="date" name="classDateCompleted" value={fields.classDateCompleted || ""} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Class Instructor / Elder</label>
-                                    <input className="epic-form-input" name="instructor" value={fields.instructor || ""} onChange={handleInputChange} />
-                                </div>
+                                <PrintField label="Date Accepted Christ" type="date" name="dateAcceptedChrist" value={fields.dateAcceptedChrist} onChange={handleInputChange} />
+                                <PrintField label="Class Date Completed" type="date" name="classDateCompleted" value={fields.classDateCompleted} onChange={handleInputChange} />
+                                <PrintField label="Class Instructor" name="instructor" value={fields.instructor} onChange={handleInputChange} />
                             </div>
                         </section>
 
                         <section className="epic-form-section">
                             <div className="epic-form-section-title">3. Scheduled Water Baptism Ceremony</div>
                             <div className="epic-form-grid epic-form-grid-3">
-                                <div className="epic-form-field">
-                                    <label>Ceremony Date</label>
-                                    <input className="epic-form-input" type="date" name="baptismDate" value={fields.baptismDate || ""} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Baptism Venue</label>
-                                    <input className="epic-form-input" name="venue" value={fields.venue || ""} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Officiating Minister</label>
-                                    <input className="epic-form-input" name="officiatingPastor" value={fields.officiatingPastor || ""} onChange={handleInputChange} />
-                                </div>
+                                <PrintField label="Ceremony Date" type="date" name="baptismDate" value={fields.baptismDate} onChange={handleInputChange} />
+                                <PrintField label="Baptism Venue" name="venue" value={fields.venue} onChange={handleInputChange} />
+                                <PrintField label="Officiating Minister" name="officiatingPastor" value={fields.officiatingPastor} onChange={handleInputChange} />
                             </div>
                         </section>
 
                         <div className="epic-form-declaration-box">
-                            <strong>STATEMENT OF FAITH:</strong>
-                            <br />
-                            "We are buried therefore with him by baptism into death: that like as Christ was raised up from the dead by the glory of the Father, even so we also should walk in newness of life." (Romans 6:4). I publicly declare that I have repented of my sins and accepted Jesus Christ as my only Savior and Lord.
+                            <strong>STATEMENT OF FAITH:</strong> "We are buried therefore with him by baptism into death... even so we also should walk in newness of life." (Romans 6:4). I publicly declare my repentance and faith in Jesus Christ as my Lord.
                         </div>
 
                         <div className="epic-form-signatures">
@@ -1035,9 +851,7 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
                                 <div className="epic-form-sig-line">{fields.pastorSignature || ""}</div>
                                 <span className="epic-form-sig-label">Officiating Minister</span>
                             </div>
-                            <div className="epic-form-seal-box">
-                                Baptism Certificate Seal
-                            </div>
+                            <div className="epic-form-seal-box">Baptism Seal</div>
                         </div>
                     </>
                 )}
@@ -1050,73 +864,41 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
                         <section className="epic-form-section">
                             <div className="epic-form-section-title">1. Child Information</div>
                             <div className="epic-form-grid epic-form-grid-3">
-                                <div className="epic-form-field">
-                                    <label>Child's Full Name</label>
-                                    <input className="epic-form-input" name="childName" value={fields.childName || ""} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Date of Birth</label>
-                                    <input className="epic-form-input" type="date" name="dob" value={fields.dob || ""} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Gender / Nickname</label>
-                                    <input className="epic-form-input" name="childGender" value={fields.childGender || "Male (Nate)"} onChange={handleInputChange} />
-                                </div>
+                                <PrintField label="Child's Full Name" name="childName" value={fields.childName} onChange={handleInputChange} />
+                                <PrintField label="Date of Birth" type="date" name="dob" value={fields.dob} onChange={handleInputChange} />
+                                <PrintField label="Gender / Nickname" name="genderNickname" value={fields.genderNickname || "Male (Nate)"} onChange={handleInputChange} />
                             </div>
-                            <div className="epic-form-field" style={{ marginTop: 12 }}>
-                                <label>Place of Birth</label>
-                                <input className="epic-form-input" name="pob" value={fields.pob || ""} onChange={handleInputChange} />
-                            </div>
+                            <PrintField label="Place of Birth" name="pob" value={fields.pob} onChange={handleInputChange} />
                         </section>
 
                         <section className="epic-form-section">
                             <div className="epic-form-section-title">2. Parents' Information</div>
                             <div className="epic-form-grid epic-form-grid-2">
-                                <div className="epic-form-field">
-                                    <label>Father's Full Name</label>
-                                    <input className="epic-form-input" name="fatherName" value={fields.fatherName || ""} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Father's Contact Number</label>
-                                    <input className="epic-form-input" name="fatherContact" value={fields.fatherContact || ""} onChange={handleInputChange} />
-                                </div>
+                                <PrintField label="Father's Full Name" name="fatherName" value={fields.fatherName} onChange={handleInputChange} />
+                                <PrintField label="Father's Contact" name="fatherContact" value={fields.fatherContact} onChange={handleInputChange} />
                             </div>
-                            <div className="epic-form-grid epic-form-grid-2" style={{ marginTop: 12 }}>
-                                <div className="epic-form-field">
-                                    <label>Mother's Full Maiden Name</label>
-                                    <input className="epic-form-input" name="motherName" value={fields.motherName || ""} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Mother's Contact Number</label>
-                                    <input className="epic-form-input" name="motherContact" value={fields.motherContact || ""} onChange={handleInputChange} />
-                                </div>
+                            <div className="epic-form-grid epic-form-grid-2">
+                                <PrintField label="Mother's Full Maiden Name" name="motherName" value={fields.motherName} onChange={handleInputChange} />
+                                <PrintField label="Mother's Contact" name="motherContact" value={fields.motherContact} onChange={handleInputChange} />
                             </div>
-                            <div className="epic-form-field" style={{ marginTop: 12 }}>
-                                <label>Home Residence Address</label>
-                                <input className="epic-form-input" name="address" value={fields.address || ""} onChange={handleInputChange} />
+                            <div className="epic-form-grid epic-form-grid-2">
+                                <PrintField label="Parents' Wedding Date" type="date" name="weddingDate" value={fields.weddingDate} onChange={handleInputChange} />
+                                <PrintField label="Home Residence Address" name="address" value={fields.address} onChange={handleInputChange} />
                             </div>
                         </section>
 
                         <section className="epic-form-section">
-                            <div className="epic-form-section-title">3. Godparents / Sponsors (Ninong & Ninang)</div>
+                            <div className="epic-form-section-title">3. Primary Sponsors (Ninong & Ninang)</div>
                             <div className="epic-form-grid epic-form-grid-2">
-                                <div className="epic-form-field">
-                                    <label>Primary Sponsors (Ninong / Ninang)</label>
-                                    <input className="epic-form-input" name="sponsor1" value={fields.sponsor1 || ""} onChange={handleInputChange} placeholder="Name & Church" />
-                                    <input className="epic-form-input" style={{ marginTop: 6 }} name="sponsor2" value={fields.sponsor2 || ""} onChange={handleInputChange} placeholder="Name & Church" />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Secondary Sponsors</label>
-                                    <input className="epic-form-input" name="sponsor3" value={fields.sponsor3 || ""} onChange={handleInputChange} placeholder="Name & Church" />
-                                    <input className="epic-form-input" style={{ marginTop: 6 }} name="sponsor4" value={fields.sponsor4 || ""} onChange={handleInputChange} placeholder="Name & Church" />
-                                </div>
+                                <PrintField label="Sponsor 1" name="sponsor1" value={fields.sponsor1} onChange={handleInputChange} />
+                                <PrintField label="Sponsor 2" name="sponsor2" value={fields.sponsor2} onChange={handleInputChange} />
+                                <PrintField label="Sponsor 3" name="sponsor3" value={fields.sponsor3} onChange={handleInputChange} />
+                                <PrintField label="Sponsor 4" name="sponsor4" value={fields.sponsor4} onChange={handleInputChange} />
                             </div>
                         </section>
 
                         <div className="epic-form-declaration-box">
-                            <strong>PARENTS' COVENANT OF DEDICATION:</strong>
-                            <br />
-                            We, the parents, recognize this child as a precious gift and heritage from the Lord (Psalm 127:3). We joyfully dedicate our child to the Lord Jesus Christ, promising in the presence of God and this congregation to raise him/her in the discipline and instruction of the Lord.
+                            <strong>PARENTS' COVENANT:</strong> We recognize this child as a precious heritage from the Lord (Psalm 127:3) and dedicate him/her to Jesus Christ, promising before God and this congregation to raise him/her in Christian faith.
                         </div>
 
                         <div className="epic-form-signatures">
@@ -1144,84 +926,39 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
                         <section className="epic-form-section">
                             <div className="epic-form-section-title">1. Groom Information</div>
                             <div className="epic-form-grid epic-form-grid-3">
-                                <div className="epic-form-field">
-                                    <label>Groom Full Legal Name</label>
-                                    <input className="epic-form-input" name="groomName" value={fields.groomName || ""} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Birth Date & Age</label>
-                                    <input className="epic-form-input" name="groomDobAge" value={fields.groomDobAge || "1997-06-14 (Age 29)"} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Contact Number</label>
-                                    <input className="epic-form-input" name="groomContact" value={fields.groomContact || ""} onChange={handleInputChange} />
-                                </div>
+                                <PrintField label="Groom Full Name" name="groomName" value={fields.groomName} onChange={handleInputChange} />
+                                <PrintField label="Birth Date & Age" name="groomDobAge" value={fields.groomDobAge || "1997-06-14 (Age 29)"} onChange={handleInputChange} />
+                                <PrintField label="Contact Number" name="groomContact" value={fields.groomContact} onChange={handleInputChange} />
                             </div>
-                            <div className="epic-form-grid epic-form-grid-2" style={{ marginTop: 12 }}>
-                                <div className="epic-form-field">
-                                    <label>Parents' Names</label>
-                                    <input className="epic-form-input" name="groomParents" value={fields.groomParents || ""} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Religious Affiliation & Church</label>
-                                    <input className="epic-form-input" name="groomReligion" value={fields.groomReligion || ""} onChange={handleInputChange} />
-                                </div>
+                            <div className="epic-form-grid epic-form-grid-2">
+                                <PrintField label="Parents' Names" name="groomParents" value={fields.groomParents} onChange={handleInputChange} />
+                                <PrintField label="Religious Affiliation" name="groomReligion" value={fields.groomReligion} onChange={handleInputChange} />
                             </div>
                         </section>
 
                         <section className="epic-form-section">
                             <div className="epic-form-section-title">2. Bride Information</div>
                             <div className="epic-form-grid epic-form-grid-3">
-                                <div className="epic-form-field">
-                                    <label>Bride Full Legal Name</label>
-                                    <input className="epic-form-input" name="brideName" value={fields.brideName || ""} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Birth Date & Age</label>
-                                    <input className="epic-form-input" name="brideDobAge" value={fields.brideDobAge || "1999-09-20 (Age 27)"} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Contact Number</label>
-                                    <input className="epic-form-input" name="brideContact" value={fields.brideContact || ""} onChange={handleInputChange} />
-                                </div>
+                                <PrintField label="Bride Full Name" name="brideName" value={fields.brideName} onChange={handleInputChange} />
+                                <PrintField label="Birth Date & Age" name="brideDobAge" value={fields.brideDobAge || "1999-09-20 (Age 27)"} onChange={handleInputChange} />
+                                <PrintField label="Contact Number" name="brideContact" value={fields.brideContact} onChange={handleInputChange} />
                             </div>
-                            <div className="epic-form-grid epic-form-grid-2" style={{ marginTop: 12 }}>
-                                <div className="epic-form-field">
-                                    <label>Parents' Names</label>
-                                    <input className="epic-form-input" name="brideParents" value={fields.brideParents || ""} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Religious Affiliation & Church</label>
-                                    <input className="epic-form-input" name="brideReligion" value={fields.brideReligion || ""} onChange={handleInputChange} />
-                                </div>
+                            <div className="epic-form-grid epic-form-grid-2">
+                                <PrintField label="Parents' Names" name="brideParents" value={fields.brideParents} onChange={handleInputChange} />
+                                <PrintField label="Religious Affiliation" name="brideReligion" value={fields.brideReligion} onChange={handleInputChange} />
                             </div>
                         </section>
 
                         <section className="epic-form-section">
                             <div className="epic-form-section-title">3. Pre-Marital Counseling & Wedding Solemnization</div>
                             <div className="epic-form-grid epic-form-grid-2">
-                                <div className="epic-form-field">
-                                    <label>Counseling Pastor</label>
-                                    <input className="epic-form-input" name="counselorPastor" value={fields.counselorPastor || ""} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Pre-Marital Sessions Completed</label>
-                                    <input className="epic-form-input" name="counselingDates" value={fields.counselingDates || ""} onChange={handleInputChange} />
-                                </div>
+                                <PrintField label="Counseling Pastor" name="counselorPastor" value={fields.counselorPastor} onChange={handleInputChange} />
+                                <PrintField label="Sessions Completed" name="counselingDates" value={fields.counselingDates} onChange={handleInputChange} />
                             </div>
-                            <div className="epic-form-grid epic-form-grid-3" style={{ marginTop: 12 }}>
-                                <div className="epic-form-field">
-                                    <label>Scheduled Wedding Date & Time</label>
-                                    <input className="epic-form-input" name="weddingDateTime" value={fields.weddingDateTime || "2026-12-12 at 3:00 PM"} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Officiating Minister</label>
-                                    <input className="epic-form-input" name="officiatingMinister" value={fields.officiatingMinister || ""} onChange={handleInputChange} />
-                                </div>
-                                <div className="epic-form-field">
-                                    <label>Marriage License / Doc No.</label>
-                                    <input className="epic-form-input" name="marriageLicenseNo" value={fields.marriageLicenseNo || ""} onChange={handleInputChange} />
-                                </div>
+                            <div className="epic-form-grid epic-form-grid-3">
+                                <PrintField label="Scheduled Wedding Date & Time" name="weddingDateTime" value={fields.weddingDateTime || "2026-12-12 at 3:00 PM"} onChange={handleInputChange} />
+                                <PrintField label="Officiating Minister" name="officiatingMinister" value={fields.officiatingMinister} onChange={handleInputChange} />
+                                <PrintField label="Marriage License No." name="marriageLicenseNo" value={fields.marriageLicenseNo} onChange={handleInputChange} />
                             </div>
                         </section>
 
