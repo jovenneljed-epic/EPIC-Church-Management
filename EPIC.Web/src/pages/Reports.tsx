@@ -6,6 +6,7 @@ import MembershipDirectoryReport from "./reports/MembershipDirectoryReport";
 import VisitorReportBuilder from "./reports/VisitorReportBuilder";
 import FinancialReportBuilder from "./reports/FinancialReportBuilder";
 import MemberAttendanceReport from "./MemberAttendanceReport";
+import ChurchFormDocument from "./forms/ChurchFormDocument";
 
 // =========================================================
 // TYPES
@@ -380,6 +381,11 @@ const [
     setShowMemberAttendanceReport
 ] = useState(false);
 
+const [
+    selectedForm,
+    setSelectedForm
+] = useState<FormDefinition | null>(null);
+
     const [
         activeCategory,
         setActiveCategory
@@ -544,12 +550,21 @@ case "financial-summary":
     const handleOpenForm = (
         form: FormDefinition
     ): void => {
-
-        alert(
-            `${form.title}\n\n` +
-            "The printable form template will be added in the Forms & Documents phase."
-        );
+        setSelectedForm(form);
     };
+
+    // =====================================================
+    // FORM DOCUMENT VIEW (PRINTABLE CHURCH FORMS)
+    // =====================================================
+
+    if (selectedForm) {
+        return (
+            <ChurchFormDocument
+                form={selectedForm}
+                onBack={() => setSelectedForm(null)}
+            />
+        );
+    }
 
     // =====================================================
     // MEMBERSHIP DIRECTORY VIEW
