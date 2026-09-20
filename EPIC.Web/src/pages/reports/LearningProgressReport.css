@@ -275,14 +275,14 @@
    HOLOGRAPHIC KPI METRICS CARDS (4 COLUMNS)
    ========================================================================= */
 
-.learning-stats-grid {
+.learning-report-page .learning-stats-grid {
     display: grid !important;
     grid-template-columns: repeat(4, 1fr) !important;
     gap: 16px !important;
     margin-bottom: 24px !important;
 }
 
-.learning-stat-card {
+.learning-report-page .learning-stat-card {
     position: relative !important;
     background: linear-gradient(145deg, rgba(15, 23, 42, 0.92) 0%, rgba(30, 41, 59, 0.75) 100%) !important;
     border: 1px solid rgba(255, 255, 255, 0.08) !important;
@@ -297,7 +297,7 @@
     overflow: hidden !important;
 }
 
-.learning-stat-card:hover {
+.learning-report-page .learning-stat-card:hover {
     transform: translateY(-3px) !important;
     box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(56, 189, 248, 0.15) !important;
     border-color: rgba(56, 189, 248, 0.4) !important;
@@ -1273,14 +1273,14 @@
         display: block !important;
     }
 
-    .learning-stats-grid {
+    .learning-report-page .learning-stats-grid {
         display: grid !important;
         grid-template-columns: repeat(4, 1fr) !important;
         gap: 8px !important;
         margin-bottom: 12px !important;
     }
 
-    .learning-stat-card {
+    .learning-report-page .learning-stat-card {
         background: #f8fafc !important;
         border: 1px solid #cbd5e1 !important;
         box-shadow: none !important;

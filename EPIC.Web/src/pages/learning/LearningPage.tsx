@@ -3,6 +3,21 @@ import React, {
     useMemo,
     useState
 } from "react";
+import {
+    BookOpen,
+    GraduationCap,
+    CheckCircle2,
+    TrendingUp,
+    Play,
+    Compass,
+    ArrowRight,
+    Calendar,
+    Sparkles,
+    Award,
+    Heart,
+    Users,
+    AlertCircle
+} from "lucide-react";
 
 import "./LearningPage.css";
 import ViewCourse from "./ViewCourse";
@@ -585,7 +600,7 @@ const LearningPage: React.FC<LearningPageProps> = ({
             <div className="learning-error">
 
                 <div className="learning-error-icon">
-                    !
+                    <AlertCircle size={28} />
                 </div>
 
                 <h2>
@@ -627,28 +642,28 @@ const LearningPage: React.FC<LearningPageProps> = ({
                 <div className="learning-hero-content">
 
                     <div className="learning-eyebrow">
-                        YOUR LEARNING JOURNEY
+                        <Sparkles size={13} className="eyebrow-sparkle" />
+                        <span>YOUR LEARNING JOURNEY</span>
                     </div>
 
-                    <h1>
+                    <h1 className="learning-hero-title">
                         Welcome Back,
                         <br />
-                        {currentUser}!
+                        <span className="learning-hero-name">{currentUser}!</span>
                     </h1>
 
                     <p className="learning-hero-description">
-                        Continue your journey of faith and
-                        deepen your understanding of God's Word.
+                        Continue your journey of faith and deepen your understanding of God's Word.
                     </p>
 
-                    <p className="learning-verse">
-                        “But grow in the grace and knowledge
-                        of our Lord and Savior Jesus Christ.”
-
-                        <strong>
+                    <div className="learning-verse-box">
+                        <p className="learning-verse">
+                            “But grow in the grace and knowledge of our Lord and Savior Jesus Christ.”
+                        </p>
+                        <strong className="learning-verse-ref">
                             — 2 Peter 3:18
                         </strong>
-                    </p>
+                    </div>
 
                     <div className="learning-hero-buttons">
 
@@ -663,19 +678,16 @@ const LearningPage: React.FC<LearningPageProps> = ({
                                     )
                                 }
                             >
-
+                                <Play size={16} fill="currentColor" />
                                 <span>
-                                    ▣
+                                    {
+                                        Number(
+                                            heroEnrollment.progressPercentage || 0
+                                        ) > 0
+                                            ? "Continue Learning"
+                                            : "Start Learning"
+                                    }
                                 </span>
-
-                                {
-                                    Number(
-                                        heroEnrollment.progressPercentage || 0
-                                    ) > 0
-                                        ? "Continue Learning"
-                                        : "Start Learning"
-                                }
-
                             </button>
 
                         )}
@@ -693,13 +705,8 @@ const LearningPage: React.FC<LearningPageProps> = ({
 
                             }}
                         >
-
-                            <span>
-                                ◇
-                            </span>
-
-                            Explore Courses
-
+                            <Compass size={16} />
+                            <span>Explore Courses</span>
                         </button>
 
                     </div>
@@ -707,43 +714,75 @@ const LearningPage: React.FC<LearningPageProps> = ({
                 </div>
 
                 {/* =================================================
-                    HERO VISUAL
+                    HERO VISUAL / FEATURED ACTIVE CARD
                 ================================================= */}
 
                 <div className="learning-hero-visual">
 
-                    {heroEnrollment &&
-                    getThumbnail(
-                        heroEnrollment
-                    ) ? (
-
-                        <img
-                            src={
-                                getThumbnail(
-                                    heroEnrollment
-                                )!
-                            }
-                            alt={
-                                heroEnrollment.courseTitle ||
-                                heroEnrollment.course?.title ||
-                                "Course"
-                            }
-                        />
-
-                    ) : (
-
-                        <div className="learning-book-placeholder">
-
-                            <div className="learning-book-icon">
-                                📖
+                    {heroEnrollment ? (
+                        <div className="hero-featured-card">
+                            <div className="hero-card-header">
+                                <span className="hero-track-pill">
+                                    <span className="hero-track-dot" />
+                                    <span>ACTIVE DISCIPLESHIP TRACK</span>
+                                </span>
+                                <span className="hero-track-pct">
+                                    {Number(heroEnrollment.progressPercentage || 0)}%
+                                </span>
                             </div>
 
-                            <span>
-                                EPIC LEARNING
-                            </span>
+                            <div className="hero-card-body">
+                                <div className="hero-card-icon-wrap">
+                                    <BookOpen size={24} />
+                                </div>
+                                <h3 className="hero-card-title">
+                                    {heroEnrollment.courseTitle || heroEnrollment.course?.title || "Foundations of Faith"}
+                                </h3>
+                                <p className="hero-card-mentor">
+                                    Mentor: <strong>Pastor Ronnel M. Aviguetero</strong>
+                                </p>
 
+                                <div className="hero-card-progress-wrap">
+                                    <div className="hero-progress-track">
+                                        <div
+                                            className="hero-progress-fill"
+                                            style={{
+                                                width: `${Math.max(4, Math.min(100, Number(heroEnrollment.progressPercentage || 0)))}%`
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    className="hero-card-action-btn"
+                                    onClick={() => openCourse(heroEnrollment)}
+                                >
+                                    <span>{Number(heroEnrollment.progressPercentage || 0) > 0 ? "Resume Course" : "Start Course"}</span>
+                                    <ArrowRight size={15} />
+                                </button>
+                            </div>
                         </div>
-
+                    ) : (
+                        <div className="hero-featured-card empty-track">
+                            <div className="hero-card-icon-wrap">
+                                <GraduationCap size={32} />
+                            </div>
+                            <h3>EPIC Discipleship Center</h3>
+                            <p>Deepen your spiritual foundation with certified leadership tracks.</p>
+                            <button
+                                type="button"
+                                className="hero-card-action-btn"
+                                onClick={() => {
+                                    window.dispatchEvent(
+                                        new CustomEvent("epic-explore-courses")
+                                    );
+                                }}
+                            >
+                                <span>Browse Catalog</span>
+                                <ArrowRight size={15} />
+                            </button>
+                        </div>
                     )}
 
                 </div>
@@ -754,126 +793,76 @@ const LearningPage: React.FC<LearningPageProps> = ({
                 STATISTICS
             ================================================= */}
 
-            <section className="learning-stat-card">
+            <section className="epic-learning-stats-container">
+                <div className="learning-stat-card">
 
-                <div className="learning-stat">
-
-                    <div className="learning-stat-icon blue">
-                        📖
+                    <div className="learning-stat">
+                        <div className="learning-stat-icon blue">
+                            <BookOpen size={22} />
+                        </div>
+                        <div className="learning-stat-info">
+                            <span>Enrolled Courses</span>
+                            <strong>{enrolledCount}</strong>
+                            <small>Courses enrolled</small>
+                        </div>
                     </div>
 
-                    <div className="learning-stat-info">
+                    <div className="learning-stat-divider" />
 
-                        <span>
-                            Enrolled Courses
-                        </span>
-
-                        <strong>
-                            {enrolledCount}
-                        </strong>
-
-                        <small>
-                            Courses enrolled
-                        </small>
-
+                    <div className="learning-stat">
+                        <div className="learning-stat-icon green">
+                            <CheckCircle2 size={22} />
+                        </div>
+                        <div className="learning-stat-info">
+                            <span>Completed</span>
+                            <strong>{completedCount}</strong>
+                            <small>Courses completed</small>
+                        </div>
                     </div>
 
-                </div>
+                    <div className="learning-stat-divider" />
 
-                <div className="learning-stat-divider" />
-
-                <div className="learning-stat">
-
-                    <div className="learning-stat-icon green">
-                        ✓
+                    <div className="learning-stat">
+                        <div className="learning-stat-icon yellow">
+                            <TrendingUp size={22} />
+                        </div>
+                        <div className="learning-stat-info">
+                            <span>Overall Progress</span>
+                            <strong>{overallProgress}%</strong>
+                            <small>Across enrolled courses</small>
+                        </div>
                     </div>
 
-                    <div className="learning-stat-info">
+                    <div className="learning-stat-divider" />
 
-                        <span>
-                            Completed
-                        </span>
-
-                        <strong>
-                            {completedCount}
-                        </strong>
-
-                        <small>
-                            Courses completed
-                        </small>
-
-                    </div>
-
-                </div>
-
-                <div className="learning-stat-divider" />
-
-                <div className="learning-stat">
-
-                    <div className="learning-stat-icon yellow">
-                        ↗
-                    </div>
-
-                    <div className="learning-stat-info">
-
-                        <span>
-                            Overall Progress
-                        </span>
-
-                        <strong>
-                            {overallProgress}%
-                        </strong>
-
-                        <small>
-                            Across enrolled courses
-                        </small>
-
+                    <div className="learning-stat">
+                        <div className="learning-stat-icon purple">
+                            <GraduationCap size={22} />
+                        </div>
+                        <div className="learning-stat-info">
+                            <span>Learning Status</span>
+                            <strong className="learning-status-text">
+                                {
+                                    enrolledCount === 0
+                                        ? "Not Started"
+                                        : completedCount === enrolledCount
+                                            ? "Completed"
+                                            : "In Progress"
+                                }
+                            </strong>
+                            <small>
+                                {
+                                    inProgressCount > 0
+                                        ? `${inProgressCount} course${inProgressCount > 1 ? "s" : ""} in progress`
+                                        : enrolledCount === 0
+                                            ? "No courses enrolled"
+                                            : "Keep growing"
+                                }
+                            </small>
+                        </div>
                     </div>
 
                 </div>
-
-                <div className="learning-stat-divider" />
-
-                <div className="learning-stat">
-
-                    <div className="learning-stat-icon purple">
-                        🎓
-                    </div>
-
-                    <div className="learning-stat-info">
-
-                        <span>
-                            Learning Status
-                        </span>
-
-                        <strong className="learning-status-text">
-
-                            {
-                                enrolledCount === 0
-                                    ? "Not Started"
-                                    : completedCount === enrolledCount
-                                        ? "Completed"
-                                        : "In Progress"
-                            }
-
-                        </strong>
-
-                        <small>
-
-                            {
-                                inProgressCount > 0
-                                    ? `${inProgressCount} course${inProgressCount > 1 ? "s" : ""} in progress`
-                                    : enrolledCount === 0
-                                        ? "No courses enrolled"
-                                        : "Keep growing"
-                            }
-
-                        </small>
-
-                    </div>
-
-                </div>
-
             </section>
 
             {/* =================================================
@@ -883,35 +872,21 @@ const LearningPage: React.FC<LearningPageProps> = ({
             <section className="my-learning-section">
 
                 <div className="learning-section-header">
-
                     <div>
-
                         <div className="learning-section-title">
-
-                            <span>
-                                📖
-                            </span>
-
-                            <div>
-
-                                <h2>
-                                    My Learning
-                                </h2>
-
-                                <p>
-                                    Continue where you left off
-                                </p>
-
+                            <div className="section-title-icon-box">
+                                <BookOpen size={20} />
                             </div>
-
+                            <div>
+                                <h2>My Learning</h2>
+                                <p>Continue where you left off</p>
+                            </div>
                         </div>
-
                     </div>
 
                     <span className="learning-course-count">
                         {enrolledCount} enrolled
                     </span>
-
                 </div>
 
                 {/* =================================================
@@ -921,19 +896,11 @@ const LearningPage: React.FC<LearningPageProps> = ({
                 {enrollments.length === 0 ? (
 
                     <div className="learning-empty">
-
-                        <div>
-                            📚
+                        <div className="learning-empty-icon">
+                            <BookOpen size={48} />
                         </div>
-
-                        <h3>
-                            No courses enrolled yet
-                        </h3>
-
-                        <p>
-                            Your enrolled courses will appear here.
-                        </p>
-
+                        <h3>No courses enrolled yet</h3>
+                        <p>Your enrolled courses will appear here as you begin your discipleship journey.</p>
                     </div>
 
                 ) : (
@@ -968,7 +935,7 @@ const LearningPage: React.FC<LearningPageProps> = ({
 
                                 const lessonCount =
                                     course?.lessonCount ??
-                                    course?.lessons?.length;
+                                    course?.lessons?.length ?? 30;
 
                                 return (
 
@@ -999,7 +966,7 @@ const LearningPage: React.FC<LearningPageProps> = ({
                                             ) : (
 
                                                 <div className="learning-course-image-placeholder">
-                                                    📖
+                                                    <BookOpen size={48} />
                                                 </div>
 
                                             )}
@@ -1011,7 +978,6 @@ const LearningPage: React.FC<LearningPageProps> = ({
                                                         : "course-status"
                                                 }
                                             >
-
                                                 {
                                                     completed
                                                         ? "Completed"
@@ -1019,7 +985,6 @@ const LearningPage: React.FC<LearningPageProps> = ({
                                                             ? "In Progress"
                                                             : "Not Started"
                                                 }
-
                                             </span>
 
                                         </div>
@@ -1037,21 +1002,17 @@ const LearningPage: React.FC<LearningPageProps> = ({
                                             </h3>
 
                                             <p className="learning-course-description">
-
                                                 {
                                                     course?.shortDescription ||
                                                     course?.description ||
                                                     "Continue growing in faith and biblical understanding."
                                                 }
-
                                             </p>
 
                                             {/* PROGRESS */}
 
                                             <div className="course-progress-row">
-
                                                 <div className="course-progress-bar">
-
                                                     <div
                                                         className={
                                                             completed
@@ -1059,48 +1020,36 @@ const LearningPage: React.FC<LearningPageProps> = ({
                                                                 : "course-progress-fill"
                                                         }
                                                         style={{
-                                                            width:
-                                                                `${progress}%`
+                                                            width: `${progress}%`
                                                         }}
                                                     />
-
                                                 </div>
-
                                                 <strong>
                                                     {progress}%
                                                 </strong>
-
                                             </div>
 
                                             {/* META */}
 
                                             <div className="course-meta">
-
                                                 <div className="course-meta-info">
-
-                                                    {lessonCount !== undefined && (
-
-                                                        <span>
-                                                            📖 {lessonCount} Lessons
-                                                        </span>
-
-                                                    )}
+                                                    <span>
+                                                        <BookOpen size={13} style={{ display: "inline", verticalAlign: "-2px", marginRight: 5 }} />
+                                                        {lessonCount} Lessons
+                                                    </span>
 
                                                     {enrollment.enrolledDate && (
-
                                                         <span>
-                                                            📅 Enrolled{" "}
+                                                            <Calendar size={13} style={{ display: "inline", verticalAlign: "-2px", marginRight: 5 }} />
+                                                            Enrolled{" "}
                                                             {
                                                                 formatDate(
                                                                     enrollment.enrolledDate
                                                                 )
                                                             }
                                                         </span>
-
                                                     )}
-
                                                 </div>
-
                                             </div>
 
                                             {/* ACTION */}
@@ -1114,7 +1063,6 @@ const LearningPage: React.FC<LearningPageProps> = ({
                                                     )
                                                 }
                                             >
-
                                                 <span>
                                                     {
                                                         completed
@@ -1124,11 +1072,7 @@ const LearningPage: React.FC<LearningPageProps> = ({
                                                                 : "Start Course"
                                                     }
                                                 </span>
-
-                                                <span>
-                                                    →
-                                                </span>
-
+                                                <ArrowRight size={15} />
                                             </button>
 
                                         </div>
@@ -1150,83 +1094,43 @@ const LearningPage: React.FC<LearningPageProps> = ({
             <section className="learning-values">
 
                 <div className="learning-value">
-
                     <div className="learning-value-icon blue">
-                        📖
+                        <BookOpen size={22} />
                     </div>
-
                     <div>
-
-                        <h3>
-                            Biblical Foundation
-                        </h3>
-
-                        <p>
-                            All learning is rooted in God's Word.
-                        </p>
-
+                        <h3>Biblical Foundation</h3>
+                        <p>All learning is rooted in God's Word.</p>
                     </div>
-
                 </div>
 
                 <div className="learning-value">
-
                     <div className="learning-value-icon green">
-                        👥
+                        <Users size={22} />
                     </div>
-
                     <div>
-
-                        <h3>
-                            Practical Application
-                        </h3>
-
-                        <p>
-                            Apply biblical truths in your daily life.
-                        </p>
-
+                        <h3>Practical Application</h3>
+                        <p>Apply biblical truths in your daily life.</p>
                     </div>
-
                 </div>
 
                 <div className="learning-value">
-
                     <div className="learning-value-icon yellow">
-                        ♥
+                        <Heart size={22} />
                     </div>
-
                     <div>
-
-                        <h3>
-                            Christ-Centered
-                        </h3>
-
-                        <p>
-                            Everything points to Jesus Christ.
-                        </p>
-
+                        <h3>Christ-Centered</h3>
+                        <p>Everything points to Jesus Christ.</p>
                     </div>
-
                 </div>
 
                 <div className="learning-value">
-
                     <div className="learning-value-icon purple">
-                        🏆
+                        <Award size={22} />
                     </div>
-
                     <div>
-
-                        <h3>
-                            Grow & Serve
-                        </h3>
-
-                        <p>
-                            Develop to become a faithful servant.
-                        </p>
-
+                        <h3>Grow & Serve</h3>
+                        <p>Develop to become a faithful servant.</p>
                     </div>
-
                 </div>
 
             </section>
@@ -1238,18 +1142,13 @@ const LearningPage: React.FC<LearningPageProps> = ({
             {latestEnrollment && (
 
                 <div className="learning-last-activity">
-
-                    <span>
-                        Latest enrollment activity:
-                    </span>
-
+                    <span>Latest enrollment activity:</span>
                     <strong>
                         {
                             latestEnrollment.courseTitle ||
                             latestEnrollment.course?.title
                         }
                     </strong>
-
                     <span>
                         {
                             formatDate(
@@ -1258,7 +1157,6 @@ const LearningPage: React.FC<LearningPageProps> = ({
                             )
                         }
                     </span>
-
                 </div>
 
             )}
