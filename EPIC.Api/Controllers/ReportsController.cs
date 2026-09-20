@@ -772,9 +772,32 @@ namespace EPIC.Api.Controllers
             // A. Authenticated enrollments
             foreach (var e in enrollments)
             {
-                var name = e.User?.Member != null
-                    ? $"{e.User.Member.FirstName} {e.User.Member.LastName}".Trim()
-                    : (!string.IsNullOrWhiteSpace(e.User?.FullName) ? e.User.FullName : "Disciple");
+                var name = "";
+                if (e.User?.Member != null)
+                {
+                    var mFirst = e.User.Member.FirstName?.Trim() ?? "";
+                    var mLast = e.User.Member.LastName?.Trim() ?? "";
+                    if (!string.IsNullOrWhiteSpace(mFirst) || !string.IsNullOrWhiteSpace(mLast))
+                    {
+                        name = $"{mFirst} {mLast}".Trim();
+                    }
+                }
+                if (string.IsNullOrWhiteSpace(name) && !string.IsNullOrWhiteSpace(e.User?.FullName))
+                {
+                    name = e.User.FullName.Trim();
+                }
+                if (string.IsNullOrWhiteSpace(name) && !string.IsNullOrWhiteSpace(e.User?.Username))
+                {
+                    name = e.User.Username.Trim();
+                }
+                if (string.IsNullOrWhiteSpace(name) && !string.IsNullOrWhiteSpace(e.User?.Email))
+                {
+                    name = e.User.Email.Split('@')[0].Trim();
+                }
+                if (string.IsNullOrWhiteSpace(name))
+                {
+                    name = $"Disciple #{e.UserId}";
+                }
 
                 var courseTitle = e.Course?.Title ?? "Foundations of Faith";
                 var key = $"{name}|{courseTitle}";
@@ -788,27 +811,56 @@ namespace EPIC.Api.Controllers
                     : (totalLessons > 0 ? (int)Math.Round((completed * 100.0) / totalLessons) : 0);
                 if (e.IsCompleted) pct = 100;
 
+                int? gradeScore = null;
+                if (pct >= 100 || e.IsCompleted)
+                {
+                    gradeScore = 98;
+                }
+                else if (pct >= 75)
+                {
+                    gradeScore = 88;
+                }
+
                 studentRecords.Add(new
                 {
                     id = $"ENR-CE-{e.CourseEnrollmentId}",
                     studentName = name,
                     courseTitle = courseTitle,
-                    instructor = GetCourseInstructor(courseTitle),
+                    instructor = "Pastor Ronnel M. Aviguetero",
                     enrolledDate = e.EnrolledDate.ToString("yyyy-MM-dd"),
+                    completedDate = e.CompletedDate?.ToString("yyyy-MM-dd"),
                     progressPercentage = pct,
                     completedLessons = e.IsCompleted ? totalLessons : completed,
                     totalLessons = totalLessons,
                     status = (pct >= 100 || e.IsCompleted) ? "Completed" : "In Progress",
-                    gradeScore = pct >= 100 ? (95 + (e.CourseEnrollmentId % 5)) : (pct >= 70 ? (int?)(85 + (e.CourseEnrollmentId % 10)) : null)
+                    gradeScore = gradeScore,
+                    memberCode = e.User?.Member?.MemberCode ?? $"ENR-CE-{e.CourseEnrollmentId}",
+                    ministry = e.User?.Member?.Ministry ?? (e.User?.Role?.RoleName ?? "Active Disciple"),
+                    contactNumber = e.User?.Member?.ContactNumber ?? ""
                 });
             }
 
             // B. Client portal enrollments
             foreach (var ce in clientEnrollments)
             {
-                var name = ce.ClientMember?.Member != null
-                    ? $"{ce.ClientMember.Member.FirstName} {ce.ClientMember.Member.LastName}".Trim()
-                    : (ce.ClientMember?.Username ?? "Disciple");
+                var name = "";
+                if (ce.ClientMember?.Member != null)
+                {
+                    var mFirst = ce.ClientMember.Member.FirstName?.Trim() ?? "";
+                    var mLast = ce.ClientMember.Member.LastName?.Trim() ?? "";
+                    if (!string.IsNullOrWhiteSpace(mFirst) || !string.IsNullOrWhiteSpace(mLast))
+                    {
+                        name = $"{mFirst} {mLast}".Trim();
+                    }
+                }
+                if (string.IsNullOrWhiteSpace(name) && !string.IsNullOrWhiteSpace(ce.ClientMember?.Username))
+                {
+                    name = ce.ClientMember.Username.Trim();
+                }
+                if (string.IsNullOrWhiteSpace(name))
+                {
+                    name = "Disciple Member";
+                }
 
                 var courseTitle = ce.Course?.Title ?? "Foundations of Faith";
                 var key = $"{name}|{courseTitle}";
@@ -816,21 +868,30 @@ namespace EPIC.Api.Controllers
                 seenStudentCourse.Add(key);
 
                 var ceCompletedCount = clientCompletions.Count(c => c.ClientCourseEnrollmentId == ce.Id);
-                var totalLessons = 30;
+                var totalLessons = ce.Course?.Modules?.SelectMany(m => m.Lessons).Count() ?? 30;
+                if (totalLessons == 0) totalLessons = 30;
                 var pct = totalLessons > 0 ? (int)Math.Round((ceCompletedCount * 100.0) / totalLessons) : 0;
+                if (pct > 100) pct = 100;
+
+                int? gradeScore = null;
+                if (pct >= 100) gradeScore = 96;
+                else if (pct >= 75) gradeScore = 88;
 
                 studentRecords.Add(new
                 {
                     id = $"ENR-CL-{ce.Id}",
                     studentName = name,
                     courseTitle = courseTitle,
-                    instructor = GetCourseInstructor(courseTitle),
+                    instructor = "Pastor Ronnel M. Aviguetero",
                     enrolledDate = ce.EnrolledAt.ToString("yyyy-MM-dd"),
                     progressPercentage = pct,
                     completedLessons = ceCompletedCount,
                     totalLessons = totalLessons,
                     status = pct >= 100 ? "Completed" : "In Progress",
-                    gradeScore = pct >= 100 ? 96 : (pct >= 70 ? (int?)88 : null)
+                    gradeScore = gradeScore,
+                    memberCode = ce.ClientMember?.Member?.MemberCode ?? $"ENR-CL-{ce.Id}",
+                    ministry = ce.ClientMember?.Member?.Ministry ?? "Client Member",
+                    contactNumber = ce.ClientMember?.Member?.ContactNumber ?? ""
                 });
             }
 
@@ -838,6 +899,7 @@ namespace EPIC.Api.Controllers
             foreach (var d in demoRequests)
             {
                 var name = d.FullName.Trim();
+                if (string.IsNullOrWhiteSpace(name)) continue;
                 var courseTitle = "Foundations of Faith";
                 if (d.Message != null && d.Message.Contains("Course Title:"))
                 {
@@ -859,117 +921,21 @@ namespace EPIC.Api.Controllers
                     id = $"ENR-DR-{d.DemoRequestId}",
                     studentName = name,
                     courseTitle = courseTitle,
-                    instructor = GetCourseInstructor(courseTitle),
+                    instructor = "Pastor Ronnel M. Aviguetero",
                     enrolledDate = d.CreatedDate.ToString("yyyy-MM-dd"),
-                    progressPercentage = 35,
-                    completedLessons = 10,
+                    progressPercentage = 0,
+                    completedLessons = 0,
                     totalLessons = 30,
-                    status = "In Progress",
-                    gradeScore = (int?)null
+                    status = "Enrolled",
+                    gradeScore = (int?)null,
+                    memberCode = $"ADM-{d.DemoRequestId:D4}",
+                    ministry = "Intake Applicant",
+                    contactNumber = d.Phone ?? ""
                 });
             }
 
-            // D. Query real church members from database to reflect active disciples in curriculum tracks
-            var churchMembersQuery = _context.Members
-                .AsNoTracking()
-                .Where(m => m.Status == "ACTIVE" || string.IsNullOrEmpty(m.Status));
-
-            if (!IsCurrentUserAdmin() && customerId.HasValue)
-            {
-                churchMembersQuery = churchMembersQuery.Where(m => m.CustomerId == customerId.Value);
-            }
-
-            var churchMembers = await churchMembersQuery
-                .OrderBy(m => m.LastName)
-                .ThenBy(m => m.FirstName)
-                .ToListAsync();
-
-            if (churchMembers.Any())
-            {
-                foreach (var member in churchMembers)
-                {
-                    var fullName = $"{member.FirstName} {member.LastName}".Trim();
-                    if (string.IsNullOrWhiteSpace(fullName)) continue;
-
-                    string targetCourse = "Foundations of Faith";
-                    string mentor = "Pastor Mateo Santos";
-                    int totalLessons = 30;
-
-                    var ministry = (member.Ministry ?? "").ToLower();
-                    if (ministry.Contains("worship") || ministry.Contains("music") || ministry.Contains("choir") || ministry.Contains("praise"))
-                    {
-                        targetCourse = "Worship & Music Ministry Foundations";
-                        mentor = "Sis. Maria Elena Dela Cruz";
-                        totalLessons = 18;
-                    }
-                    else if (ministry.Contains("leadership") || ministry.Contains("pastor") || ministry.Contains("deacon") || ministry.Contains("elder") || ministry.Contains("board"))
-                    {
-                        targetCourse = "Church Leadership & Ministry Mastery";
-                        mentor = "Pastor Mateo Santos";
-                        totalLessons = 24;
-                    }
-                    else if (ministry.Contains("finance") || ministry.Contains("stewardship") || ministry.Contains("treasur") || ministry.Contains("audit"))
-                    {
-                        targetCourse = "Biblical Stewardship & Church Governance";
-                        mentor = "Bro. Benjamin Reyes";
-                        totalLessons = 15;
-                    }
-                    else if (ministry.Contains("youth") || ministry.Contains("discipleship") || ministry.Contains("evangelism") || ministry.Contains("outreach"))
-                    {
-                        targetCourse = "Discipleship & Christian Character";
-                        mentor = "Bro. Joshua Santos";
-                        totalLessons = 18;
-                    }
-
-                    var key = $"{fullName}|{targetCourse}";
-                    if (seenStudentCourse.Contains(key)) continue;
-                    seenStudentCourse.Add(key);
-
-                    var enrolledDate = member.DateJoined.HasValue
-                        ? member.DateJoined.Value.ToString("yyyy-MM-dd")
-                        : (member.CreatedDate != default ? member.CreatedDate.ToString("yyyy-MM-dd") : "2025-09-01");
-
-                    int completed = totalLessons;
-                    int pct = 100;
-                    int? grade = 95 + (member.MemberId % 5);
-                    string status = "Completed";
-
-                    if (member.DateJoined.HasValue && member.DateJoined.Value > DateTime.UtcNow.AddMonths(-6))
-                    {
-                        completed = Math.Max(1, (int)(totalLessons * 0.75));
-                        pct = (int)Math.Round((completed * 100.0) / totalLessons);
-                        status = "In Progress";
-                        grade = 88 + (member.MemberId % 8);
-                    }
-                    else if (member.MemberId % 3 == 0)
-                    {
-                        completed = Math.Max(1, (int)(totalLessons * 0.85));
-                        pct = (int)Math.Round((completed * 100.0) / totalLessons);
-                        status = "In Progress";
-                        grade = 91 + (member.MemberId % 6);
-                    }
-
-                    studentRecords.Add(new
-                    {
-                        id = !string.IsNullOrWhiteSpace(member.MemberCode) ? member.MemberCode : $"MEM-{member.MemberId:D4}",
-                        studentName = fullName,
-                        courseTitle = targetCourse,
-                        instructor = mentor,
-                        enrolledDate = enrolledDate,
-                        progressPercentage = pct,
-                        completedLessons = completed,
-                        totalLessons = totalLessons,
-                        status = status,
-                        gradeScore = grade,
-                        memberCode = member.MemberCode,
-                        ministry = member.Ministry,
-                        contactNumber = member.ContactNumber
-                    });
-                }
-            }
-
-            // E. Populate authentic Luke 4:18 San Vicente roster if database records are empty/few
-            if (studentRecords.Count < 10)
+            // D. Fallback: Only populate demo records if database has ZERO enrollments
+            if (studentRecords.Count == 0)
             {
                 var defaults = GetAuthenticSanVicenteEnrollments();
                 foreach (var item in defaults)
@@ -1007,13 +973,7 @@ namespace EPIC.Api.Controllers
 
         private static string GetCourseInstructor(string courseTitle)
         {
-            if (courseTitle.Contains("Worship") || courseTitle.Contains("Music"))
-                return "Sis. Maria Elena Dela Cruz";
-            if (courseTitle.Contains("Discipleship") || courseTitle.Contains("Character"))
-                return "Bro. Joshua Santos";
-            if (courseTitle.Contains("Stewardship") || courseTitle.Contains("Governance"))
-                return "Bro. Benjamin Reyes";
-            return "Pastor Mateo Santos";
+            return "Pastor Ronnel M. Aviguetero";
         }
 
         private static List<object> GetAuthenticSanVicenteEnrollments()

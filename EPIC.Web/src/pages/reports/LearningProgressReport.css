@@ -742,11 +742,13 @@
     width: 100% !important;
     border-collapse: collapse !important;
     text-align: left !important;
+    background-color: #0b1120 !important;
 }
 
-.learning-table thead {
-    background: rgba(11, 17, 32, 0.9) !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+.learning-table thead,
+.learning-table thead th {
+    background: #070c18 !important;
+    border-bottom: 1px solid rgba(56, 189, 248, 0.25) !important;
 }
 
 .learning-table th {
@@ -757,21 +759,40 @@
     letter-spacing: 1.2px !important;
     text-transform: uppercase !important;
     white-space: nowrap !important;
+    background-color: #070c18 !important;
 }
 
 .learning-table tbody tr.cyber-roster-row {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important;
     transition: all 0.18s ease !important;
 }
 
-.learning-table tbody tr.cyber-roster-row:hover {
-    background: rgba(56, 189, 248, 0.06) !important;
-}
-
-.learning-table td {
+.learning-table td,
+.learning-table tbody td,
+.learning-table tbody tr.cyber-roster-row td,
+.learning-report-page.futuristic-lms-theme .learning-table tbody td,
+.epic-reports .learning-table tbody td,
+.epic-main .learning-table tbody td {
     padding: 15px 18px !important;
     vertical-align: middle !important;
     font-size: 13px !important;
+    background-color: #0b1120 !important;
+    color: #f8fafc !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important;
+}
+
+.learning-table tbody tr.cyber-roster-row:nth-child(even) td,
+.learning-report-page.futuristic-lms-theme .learning-table tbody tr:nth-child(even) td,
+.epic-reports .learning-table tbody tr:nth-child(even) td,
+.epic-main .learning-table tbody tr:nth-child(even) td {
+    background-color: #0e1626 !important;
+}
+
+.learning-table tbody tr.cyber-roster-row:hover td,
+.learning-report-page.futuristic-lms-theme .learning-table tbody tr:hover td,
+.epic-reports .learning-table tbody tr:hover td,
+.epic-main .learning-table tbody tr:hover td {
+    background-color: #17233d !important;
 }
 
 /* Disciple Profile Cell */
@@ -794,7 +815,7 @@
     color: #ffffff !important;
     font-weight: 800 !important;
     font-size: 13px !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
     flex-shrink: 0 !important;
 }
 
@@ -824,13 +845,17 @@
 .disciple-meta-box {
     display: flex !important;
     flex-direction: column !important;
-    gap: 2px !important;
+    gap: 3px !important;
 }
 
 .disciple-name {
-    color: #f8fafc !important;
-    font-size: 13.5px !important;
-    font-weight: 700 !important;
+    color: #ffffff !important;
+    font-size: 15px !important;
+    font-weight: 850 !important;
+    letter-spacing: -0.2px !important;
+    display: block !important;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85) !important;
+    line-height: 1.2 !important;
 }
 
 .disciple-subtags {
@@ -840,17 +865,20 @@
 }
 
 .member-loc-tag {
-    font-size: 10.5px !important;
+    font-size: 11px !important;
     color: #94a3b8 !important;
+    font-weight: 600 !important;
 }
 
 .id-chip {
     font-size: 9.5px !important;
-    font-family: ui-monospace, SFMono-Regular, monospace !important;
-    background: rgba(255, 255, 255, 0.08) !important;
-    color: #cbd5e1 !important;
-    padding: 1px 5px !important;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+    background: rgba(56, 189, 248, 0.12) !important;
+    color: #38bdf8 !important;
+    border: 1px solid rgba(56, 189, 248, 0.3) !important;
+    padding: 1px 6px !important;
     border-radius: 4px !important;
+    font-weight: 700 !important;
 }
 
 /* Course Cell */
@@ -868,8 +896,10 @@
 
 .course-name {
     color: #f1f5f9 !important;
-    font-size: 13px !important;
-    font-weight: 700 !important;
+    font-size: 13.5px !important;
+    font-weight: 750 !important;
+    letter-spacing: -0.1px !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6) !important;
 }
 
 .course-cat-pill {
@@ -905,12 +935,13 @@
 }
 
 .instructor-tag {
-    font-size: 11px !important;
+    font-size: 11.5px !important;
     color: #94a3b8 !important;
 }
 
 .instructor-tag strong {
-    color: #cbd5e1 !important;
+    color: #38bdf8 !important;
+    font-weight: 750 !important;
 }
 
 /* Progress HUD */

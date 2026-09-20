@@ -115,7 +115,7 @@ const AUTHENTIC_SAN_VICENTE_ENROLLMENTS: EnrollmentRecord[] = [
         memberCode: "MEM-2024-001",
         studentName: "Bro. Eduardo Dela Cruz Sr.",
         courseTitle: "Church Leadership & Ministry Mastery",
-        instructor: "Pastor Mateo Santos",
+        instructor: "Pastor Ronnel M. Aviguetero",
         enrolledDate: "2025-10-01",
         completedDate: "2026-01-20",
         progressPercentage: 100,
@@ -131,7 +131,7 @@ const AUTHENTIC_SAN_VICENTE_ENROLLMENTS: EnrollmentRecord[] = [
         memberCode: "MEM-2024-002",
         studentName: "Sis. Maria Elena Dela Cruz",
         courseTitle: "Worship & Music Ministry Foundations",
-        instructor: "Sis. Maria Elena Dela Cruz",
+        instructor: "Pastor Ronnel M. Aviguetero",
         enrolledDate: "2025-09-01",
         completedDate: "2025-12-15",
         progressPercentage: 100,
@@ -147,7 +147,7 @@ const AUTHENTIC_SAN_VICENTE_ENROLLMENTS: EnrollmentRecord[] = [
         memberCode: "MEM-2024-003",
         studentName: "Bro. Eduardo Dela Cruz Jr.",
         courseTitle: "Foundations of Faith",
-        instructor: "Pastor Mateo Santos",
+        instructor: "Pastor Ronnel M. Aviguetero",
         enrolledDate: "2025-09-15",
         completedDate: "2026-02-10",
         progressPercentage: 100,
@@ -163,7 +163,7 @@ const AUTHENTIC_SAN_VICENTE_ENROLLMENTS: EnrollmentRecord[] = [
         memberCode: "MEM-2025-014",
         studentName: "Sis. Grace Joy Dela Cruz",
         courseTitle: "Worship & Music Ministry Foundations",
-        instructor: "Sis. Maria Elena Dela Cruz",
+        instructor: "Pastor Ronnel M. Aviguetero",
         enrolledDate: "2026-01-15",
         completedDate: null,
         progressPercentage: 89,
@@ -179,7 +179,7 @@ const AUTHENTIC_SAN_VICENTE_ENROLLMENTS: EnrollmentRecord[] = [
         memberCode: "MEM-2024-005",
         studentName: "Bro. Joshua Santos",
         courseTitle: "Church Leadership & Ministry Mastery",
-        instructor: "Pastor Mateo Santos",
+        instructor: "Pastor Ronnel M. Aviguetero",
         enrolledDate: "2025-10-01",
         completedDate: "2026-01-25",
         progressPercentage: 100,
@@ -195,7 +195,7 @@ const AUTHENTIC_SAN_VICENTE_ENROLLMENTS: EnrollmentRecord[] = [
         memberCode: "MEM-2024-006",
         studentName: "Sis. Rebecca Santos",
         courseTitle: "Discipleship & Christian Character",
-        instructor: "Bro. Joshua Santos",
+        instructor: "Pastor Ronnel M. Aviguetero",
         enrolledDate: "2025-10-15",
         completedDate: "2026-02-05",
         progressPercentage: 100,
@@ -211,7 +211,7 @@ const AUTHENTIC_SAN_VICENTE_ENROLLMENTS: EnrollmentRecord[] = [
         memberCode: "MEM-2024-007",
         studentName: "Bro. Benjamin Reyes",
         courseTitle: "Biblical Stewardship & Church Governance",
-        instructor: "Bro. Benjamin Reyes",
+        instructor: "Pastor Ronnel M. Aviguetero",
         enrolledDate: "2025-11-15",
         completedDate: "2026-01-30",
         progressPercentage: 100,
@@ -227,7 +227,7 @@ const AUTHENTIC_SAN_VICENTE_ENROLLMENTS: EnrollmentRecord[] = [
         memberCode: "MEM-2025-008",
         studentName: "Sis. Leah Reyes",
         courseTitle: "Biblical Stewardship & Church Governance",
-        instructor: "Bro. Benjamin Reyes",
+        instructor: "Pastor Ronnel M. Aviguetero",
         enrolledDate: "2026-01-20",
         completedDate: "2026-03-01",
         progressPercentage: 100,
@@ -243,7 +243,7 @@ const AUTHENTIC_SAN_VICENTE_ENROLLMENTS: EnrollmentRecord[] = [
         memberCode: "MEM-2026-009",
         studentName: "Bro. Daniel Reyes",
         courseTitle: "Discipleship & Christian Character",
-        instructor: "Bro. Joshua Santos",
+        instructor: "Pastor Ronnel M. Aviguetero",
         enrolledDate: "2026-02-10",
         completedDate: null,
         progressPercentage: 67,
@@ -259,7 +259,7 @@ const AUTHENTIC_SAN_VICENTE_ENROLLMENTS: EnrollmentRecord[] = [
         memberCode: "MEM-2024-010",
         studentName: "Bro. Rolando Bautista",
         courseTitle: "Church Leadership & Ministry Mastery",
-        instructor: "Pastor Mateo Santos",
+        instructor: "Pastor Ronnel M. Aviguetero",
         enrolledDate: "2025-11-12",
         completedDate: null,
         progressPercentage: 83,
@@ -275,7 +275,7 @@ const AUTHENTIC_SAN_VICENTE_ENROLLMENTS: EnrollmentRecord[] = [
         memberCode: "MEM-2024-011",
         studentName: "Sis. Charito Bautista",
         courseTitle: "Foundations of Faith",
-        instructor: "Pastor Mateo Santos",
+        instructor: "Pastor Ronnel M. Aviguetero",
         enrolledDate: "2025-08-20",
         completedDate: "2025-11-30",
         progressPercentage: 100,
@@ -291,7 +291,7 @@ const AUTHENTIC_SAN_VICENTE_ENROLLMENTS: EnrollmentRecord[] = [
         memberCode: "MEM-2026-012",
         studentName: "Bro. Danilo Aquino",
         courseTitle: "Foundations of Faith",
-        instructor: "Pastor Mateo Santos",
+        instructor: "Pastor Ronnel M. Aviguetero",
         enrolledDate: "2026-01-10",
         completedDate: null,
         progressPercentage: 80,
@@ -307,7 +307,7 @@ const AUTHENTIC_SAN_VICENTE_ENROLLMENTS: EnrollmentRecord[] = [
         memberCode: "MEM-2026-013",
         studentName: "Sis. Corazon Aquino",
         courseTitle: "Foundations of Faith",
-        instructor: "Pastor Mateo Santos",
+        instructor: "Pastor Ronnel M. Aviguetero",
         enrolledDate: "2026-01-15",
         completedDate: null,
         progressPercentage: 70,
@@ -323,7 +323,7 @@ const AUTHENTIC_SAN_VICENTE_ENROLLMENTS: EnrollmentRecord[] = [
         memberCode: "MEM-2026-014",
         studentName: "Sis. Hannah Joyce Aquino",
         courseTitle: "Worship & Music Ministry Foundations",
-        instructor: "Sis. Maria Elena Dela Cruz",
+        instructor: "Pastor Ronnel M. Aviguetero",
         enrolledDate: "2026-01-18",
         completedDate: null,
         progressPercentage: 78,
@@ -337,9 +337,9 @@ const AUTHENTIC_SAN_VICENTE_ENROLLMENTS: EnrollmentRecord[] = [
     {
         id: "MEM-2024-000",
         memberCode: "MEM-2024-000",
-        studentName: "Pastor Mateo Santos",
+        studentName: "Pastor Ronnel M. Aviguetero",
         courseTitle: "Church Leadership & Ministry Mastery",
-        instructor: "Pastor Mateo Santos",
+        instructor: "Pastor Ronnel M. Aviguetero",
         enrolledDate: "2025-08-01",
         completedDate: "2025-10-30",
         progressPercentage: 100,
@@ -347,12 +347,12 @@ const AUTHENTIC_SAN_VICENTE_ENROLLMENTS: EnrollmentRecord[] = [
         totalLessons: 24,
         status: "Completed",
         gradeScore: 100,
-        ministry: "Senior Pastor & Presiding Elder",
+        ministry: "Senior Pastor & Discipleship Director",
         contactNumber: "+63 917 000 1122"
     }
 ];
 
-const LOCAL_STORAGE_KEY = "epic_discipleship_roster_v2";
+const LOCAL_STORAGE_KEY = "epic_discipleship_roster_v3_live";
 
 const getToken = (): string | null => {
     const keys = ["token", "accessToken", "jwt", "authToken", "epicToken"];
@@ -508,7 +508,7 @@ const LearningProgressReport: React.FC<LearningProgressReportProps> = ({ onBack 
                             memberCode: e.memberCode || e.id,
                             studentName: e.studentName || "Disciple",
                             courseTitle: e.courseTitle || "Foundations of Faith",
-                            instructor: e.instructor || "Pastor Mateo Santos",
+                            instructor: e.instructor || "Pastor Ronnel M. Aviguetero",
                             enrolledDate: e.enrolledDate ? String(e.enrolledDate).slice(0, 10) : "2026-01-15",
                             progressPercentage: Number(e.progressPercentage || 0),
                             completedLessons: Number(e.completedLessons || 0),
@@ -538,7 +538,7 @@ const LearningProgressReport: React.FC<LearningProgressReportProps> = ({ onBack 
                                 memberCode: e.memberCode || e.id,
                                 studentName: e.studentName || "Disciple",
                                 courseTitle: e.courseTitle || "Foundations of Faith",
-                                instructor: e.instructor || "Pastor Mateo Santos",
+                                instructor: e.instructor || "Pastor Ronnel M. Aviguetero",
                                 enrolledDate: e.enrolledDate ? String(e.enrolledDate).slice(0, 10) : "2026-01-15",
                                 progressPercentage: Number(e.progressPercentage || 0),
                                 completedLessons: Number(e.completedLessons || 0),
@@ -558,25 +558,7 @@ const LearningProgressReport: React.FC<LearningProgressReportProps> = ({ onBack 
             }
 
             if (fetchedFromApi && liveEnrollments.length > 0) {
-                // Check if user had created any local learner enrollments
-                const savedLocal = localStorage.getItem(LOCAL_STORAGE_KEY);
-                if (savedLocal) {
-                    try {
-                        const parsed = JSON.parse(savedLocal);
-                        if (Array.isArray(parsed)) {
-                            parsed.forEach((localItem: EnrollmentRecord) => {
-                                if (!liveEnrollments.some((l) => l.id === localItem.id || l.studentName === localItem.studentName)) {
-                                    liveEnrollments.push({
-                                        ...localItem,
-                                        modules: generateModulesForEnrollment(localItem.courseTitle, localItem.progressPercentage)
-                                    });
-                                }
-                            });
-                        }
-                    } catch {
-                        // ignore
-                    }
-                }
+                // Display real database student enrollments directly
                 saveEnrollments(liveEnrollments);
                 setLastSyncTime(`${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} • LIVE DATABASE`);
                 if (isManualRefresh) {
@@ -619,19 +601,15 @@ const LearningProgressReport: React.FC<LearningProgressReportProps> = ({ onBack 
         const contact = selectedMember ? selectedMember.contactNumber : "+63 917 000 0000";
 
         let total = 30;
-        let mentor = "Pastor Mateo Santos";
+        let mentor = "Pastor Ronnel M. Aviguetero";
         if (newCourseTitle.includes("Leadership")) {
             total = 24;
-            mentor = "Pastor Mateo Santos";
         } else if (newCourseTitle.includes("Worship")) {
             total = 18;
-            mentor = "Sis. Maria Elena Dela Cruz";
         } else if (newCourseTitle.includes("Stewardship")) {
             total = 15;
-            mentor = "Bro. Benjamin Reyes";
         } else if (newCourseTitle.includes("Discipleship")) {
             total = 18;
-            mentor = "Bro. Joshua Santos";
         }
 
         const pct = Number(newPace);
@@ -774,10 +752,11 @@ const LearningProgressReport: React.FC<LearningProgressReportProps> = ({ onBack 
     };
 
     const getInitials = (name: string) => {
-        const clean = name.replace(/^(Bro\.|Sis\.|Pastor)\s+/i, "");
-        const parts = clean.split(" ");
-        if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-        return clean.slice(0, 2).toUpperCase();
+        if (!name || !name.trim()) return "DP";
+        const clean = name.replace(/^(Bro\.|Sis\.|Pastor|Dr\.|Rev\.)\s+/i, "").trim();
+        const parts = clean.split(/\s+/).filter(Boolean);
+        if (parts.length >= 2) return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+        return (clean.slice(0, 2) || "DP").toUpperCase();
     };
 
     const getCourseBadgeClass = (course: string) => {
@@ -1173,54 +1152,83 @@ const LearningProgressReport: React.FC<LearningProgressReportProps> = ({ onBack 
                                     </td>
                                 </tr>
                             ) : (
-                                filtered.map((e) => {
-                                    const initials = getInitials(e.studentName);
+                                filtered.map((e, idx) => {
+                                    const displayName = e.studentName?.trim() || e.memberCode || `Student #${e.id}`;
+                                    const initials = getInitials(displayName);
                                     const badgeClass = getCourseBadgeClass(e.courseTitle);
                                     const isGraduated = e.status === "Completed" || e.progressPercentage === 100;
                                     const isHonorRoll = (e.gradeScore || 0) >= 95;
+                                    const rowBg = idx % 2 === 0 ? "#0b1120" : "#0e1626";
 
                                     return (
                                         <tr
                                             key={e.id}
                                             className="cyber-roster-row"
                                             onClick={() => setSelectedLearner(e)}
-                                            style={{ cursor: "pointer" }}
+                                            style={{ cursor: "pointer", backgroundColor: rowBg }}
                                             title="Click to view full learner progress & transcript"
                                         >
                                             {/* Disciple Profile */}
-                                            <td>
+                                            <td style={{ backgroundColor: rowBg, color: "#f8fafc" }}>
                                                 <div className="disciple-profile-cell">
                                                     <div className={`disciple-cyber-avatar ${isGraduated ? "graduated" : ""}`}>
                                                         <span>{initials}</span>
                                                         {isGraduated && <div className="avatar-crown">★</div>}
                                                     </div>
                                                     <div className="disciple-meta-box">
-                                                        <strong className="disciple-name">{e.studentName}</strong>
+                                                        <strong
+                                                            className="disciple-name"
+                                                            style={{
+                                                                color: "#ffffff",
+                                                                fontSize: "15px",
+                                                                fontWeight: 850,
+                                                                letterSpacing: "-0.2px",
+                                                                display: "block",
+                                                                textShadow: "0 1px 3px rgba(0, 0, 0, 0.85)",
+                                                                lineHeight: 1.2
+                                                            }}
+                                                        >
+                                                            {displayName}
+                                                        </strong>
                                                         <div className="disciple-subtags">
-                                                            <span className="member-loc-tag">{e.ministry || "San Vicente Member"}</span>
-                                                            <span className="id-chip">{e.memberCode || e.id}</span>
+                                                            <span className="member-loc-tag" style={{ color: "#94a3b8" }}>
+                                                                {e.ministry || "San Vicente Member"}
+                                                            </span>
+                                                            <span className="id-chip">
+                                                                {e.memberCode || e.id}
+                                                            </span>
                                                         </div>
                                                     </div>
                                                 </div>
                                             </td>
 
                                             {/* Course */}
-                                            <td>
+                                            <td style={{ backgroundColor: rowBg, color: "#f8fafc" }}>
                                                 <div className="course-cell-box">
                                                     <div className="course-title-row">
-                                                        <strong className="course-name">{e.courseTitle}</strong>
+                                                        <strong
+                                                            className="course-name"
+                                                            style={{
+                                                                color: "#f1f5f9",
+                                                                fontSize: "13.5px",
+                                                                fontWeight: 750,
+                                                                textShadow: "0 1px 2px rgba(0, 0, 0, 0.6)"
+                                                            }}
+                                                        >
+                                                            {e.courseTitle}
+                                                        </strong>
                                                         <span className={`course-cat-pill ${badgeClass}`}>
                                                             {badgeClass.replace("badge-", "").toUpperCase()}
                                                         </span>
                                                     </div>
-                                                    <span className="instructor-tag">
-                                                        <span>Mentor:</span> <strong>{e.instructor}</strong>
+                                                    <span className="instructor-tag" style={{ color: "#94a3b8", fontSize: "11.5px" }}>
+                                                        <span>Mentor:</span> <strong style={{ color: "#38bdf8", fontWeight: 750 }}>{e.instructor}</strong>
                                                     </span>
                                                 </div>
                                             </td>
 
                                             {/* Progress HUD */}
-                                            <td style={{ minWidth: 170 }}>
+                                            <td style={{ minWidth: 170, backgroundColor: rowBg, color: "#f8fafc" }}>
                                                 <div className="cyber-progress-hud">
                                                     <div className="progress-track-cyber">
                                                         <div
@@ -1243,17 +1251,17 @@ const LearningProgressReport: React.FC<LearningProgressReportProps> = ({ onBack 
                                             </td>
 
                                             {/* Modules */}
-                                            <td>
+                                            <td style={{ backgroundColor: rowBg, color: "#f8fafc" }}>
                                                 <div className="lessons-ratio-cell">
-                                                    <strong className="lesson-ratio-main">
+                                                    <strong className="lesson-ratio-main" style={{ color: "#ffffff" }}>
                                                         {e.completedLessons} <span className="dim">/</span> {e.totalLessons}
                                                     </strong>
-                                                    <span className="lesson-unit-sub">Lessons</span>
+                                                    <span className="lesson-unit-sub" style={{ color: "#94a3b8" }}>Lessons</span>
                                                 </div>
                                             </td>
 
                                             {/* Score */}
-                                            <td>
+                                            <td style={{ backgroundColor: rowBg, color: "#f8fafc" }}>
                                                 {e.gradeScore ? (
                                                     <div className={`grade-pill ${isHonorRoll ? "honor" : "proficient"}`}>
                                                         {isHonorRoll && <Star size={11} className="star-icon" />}
@@ -1261,17 +1269,17 @@ const LearningProgressReport: React.FC<LearningProgressReportProps> = ({ onBack 
                                                         <span className="grade-tier">{isHonorRoll ? "A+" : "A"}</span>
                                                     </div>
                                                 ) : (
-                                                    <span className="no-grade-chip">—</span>
+                                                    <span className="no-grade-chip" style={{ color: "#64748b" }}>—</span>
                                                 )}
                                             </td>
 
                                             {/* Enrolled Date */}
-                                            <td>
-                                                <span className="enrolled-date-text">{e.enrolledDate}</span>
+                                            <td style={{ backgroundColor: rowBg, color: "#f8fafc" }}>
+                                                <span className="enrolled-date-text" style={{ color: "#cbd5e1" }}>{e.enrolledDate}</span>
                                             </td>
 
                                             {/* Status */}
-                                            <td>
+                                            <td style={{ backgroundColor: rowBg, color: "#f8fafc" }}>
                                                 <span className={`cyber-status-badge ${isGraduated ? "completed" : "progress"}`}>
                                                     <span className="status-dot-pulse" />
                                                     <span>{isGraduated ? "GRADUATED" : "IN PROGRESS"}</span>
@@ -1279,7 +1287,7 @@ const LearningProgressReport: React.FC<LearningProgressReportProps> = ({ onBack 
                                             </td>
 
                                             {/* Action */}
-                                            <td style={{ textAlign: "center" }} onClick={(event) => event.stopPropagation()}>
+                                            <td style={{ textAlign: "center", backgroundColor: rowBg, color: "#f8fafc" }} onClick={(event) => event.stopPropagation()}>
                                                 <button
                                                     type="button"
                                                     className="roster-action-btn"
@@ -1562,8 +1570,8 @@ const LearningProgressReport: React.FC<LearningProgressReportProps> = ({ onBack 
                 </div>
                 <div className="print-signature-box">
                     <div className="signature-line" />
-                    <div className="signature-name">Pastor Mateo Santos</div>
-                    <div className="signature-title">Senior Pastor, Luke 4:18 Ministries</div>
+                    <div className="signature-name">Pastor Ronnel M. Aviguetero</div>
+                    <div className="signature-title">Senior Pastor &amp; Discipleship Director</div>
                 </div>
             </div>
         </div>
