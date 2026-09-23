@@ -27,7 +27,10 @@ import {
     Award,
     BookOpen,
     Eye,
-    ListOrdered
+    ListOrdered,
+    Copy,
+    RotateCcw,
+    Check
 } from "lucide-react";
 import { API_BASE_URL } from "../config";
 import "./EventManagementPage.css";
@@ -39,7 +42,9 @@ import EventPlanningPanel from "./events/EventPlanningPanel";
 
 type EventStatus =
     | "Upcoming"
+    | "Scheduled"
     | "Ongoing"
+    | "Finished"
     | "Completed"
     | "Cancelled";
 
@@ -116,6 +121,7 @@ interface NewEventForm {
     endTime: string;
     coordinator: string;
     ministry: string;
+    status: EventStatus;
     description: string;
     notes: string;
 }
@@ -181,6 +187,7 @@ const DEFAULT_EVENT_FORM: NewEventForm = {
     endTime: "11:30 AM",
     coordinator: "Pastor Ronnel M. Aviguetero",
     ministry: "Pastoral & Worship",
+    status: "Scheduled",
     description: "",
     notes: "",
 };
@@ -227,6 +234,20 @@ const EventManagementPage: React.FC = () => {
 
     const [newEvent, setNewEvent] = useState<NewEventForm>({
         ...DEFAULT_EVENT_FORM,
+    });
+
+    /* =====================================================
+       DUPLICATE EVENT MODAL
+    ===================================================== */
+    const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+    const [duplicating, setDuplicating] = useState(false);
+    const [duplicateForm, setDuplicateForm] = useState({
+        title: "",
+        startDate: "",
+        startTime: "",
+        endTime: "",
+        copyAssignments: true,
+        copyNeeds: true,
     });
 
     /* =====================================================
@@ -288,11 +309,25 @@ const EventManagementPage: React.FC = () => {
     ===================================================== */
 
     const normalizeStatus = useCallback((value: unknown): EventStatus => {
-        const status = String(value ?? "").trim().toLowerCase().replace(/_/g, " ");
-        if (status === "ongoing" || status === "in progress" || status === "inprogress") return "Ongoing";
-        if (status === "completed" || status === "complete" || status === "finished") return "Completed";
-        if (status === "cancelled" || status === "canceled") return "Cancelled";
-        return "Upcoming";
+        const status = String(value ?? "").trim().toUpperCase().replace(/_/g, " ");
+        if (status === "COMPLETED" || status === "COMPLETE" || status === "FINISHED") return "Finished";
+        if (status === "ONGOING" || status === "IN PROGRESS" || status === "INPROGRESS") return "Ongoing";
+        if (status === "CANCELLED" || status === "CANCELED") return "Cancelled";
+        if (status === "UPCOMING") return "Upcoming";
+        return "Scheduled";
+    }, []);
+
+    const isDateUpcomingOrToday = useCallback((dateStr: string): boolean => {
+        if (!dateStr) return false;
+        try {
+            const datePart = dateStr.includes("T") ? dateStr.split("T")[0] : dateStr;
+            const eventDate = new Date(datePart + "T23:59:59");
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            return eventDate.getTime() >= today.getTime();
+        } catch {
+            return false;
+        }
     }, []);
 
     const normalizeAssignmentStatus = useCallback((value: unknown): AssignmentDisplayStatus => {
@@ -499,6 +534,38 @@ const EventManagementPage: React.FC = () => {
     }, [selectedEventId, loadLogisticsData]);
 
     /* =====================================================
+       FILTERING HELPERS & COUNTS
+    ===================================================== */
+
+    const isEventUpcoming = useCallback((event: ChurchEvent): boolean => {
+        if (event.status === "Finished" || event.status === "Completed" || event.status === "Cancelled") {
+            return false;
+        }
+        return event.status === "Upcoming" || isDateUpcomingOrToday(event.startDate);
+    }, [isDateUpcomingOrToday]);
+
+    const isEventScheduled = useCallback((event: ChurchEvent): boolean => {
+        if (event.status === "Finished" || event.status === "Completed" || event.status === "Cancelled") {
+            return false;
+        }
+        return true;
+    }, []);
+
+    const isEventFinished = useCallback((event: ChurchEvent): boolean => {
+        return event.status === "Finished" || event.status === "Completed";
+    }, []);
+
+    const filterCounts = useMemo(() => {
+        return {
+            all: events.length,
+            upcoming: events.filter(isEventUpcoming).length,
+            scheduled: events.filter(isEventScheduled).length,
+            finished: events.filter(isEventFinished).length,
+            ongoing: events.filter(e => e.status === "Ongoing").length,
+        };
+    }, [events, isEventUpcoming, isEventScheduled, isEventFinished]);
+
+    /* =====================================================
        FILTERED EVENTS
     ===================================================== */
 
@@ -517,11 +584,21 @@ const EventManagementPage: React.FC = () => {
                 .toLowerCase();
 
             const matchesSearch = !query || searchableText.includes(query);
-            const matchesStatus = statusFilter === "ALL" || event.status === statusFilter;
+
+            let matchesStatus = true;
+            if (statusFilter === "Upcoming") {
+                matchesStatus = isEventUpcoming(event);
+            } else if (statusFilter === "Scheduled") {
+                matchesStatus = isEventScheduled(event);
+            } else if (statusFilter === "Finished" || statusFilter === "Completed") {
+                matchesStatus = isEventFinished(event);
+            } else if (statusFilter === "Ongoing") {
+                matchesStatus = event.status === "Ongoing";
+            }
 
             return matchesSearch && matchesStatus;
         });
-    }, [events, search, statusFilter]);
+    }, [events, isEventUpcoming, isEventScheduled, isEventFinished, search, statusFilter]);
 
     /* =====================================================
        SELECTED EVENT
@@ -541,13 +618,14 @@ const EventManagementPage: React.FC = () => {
             const totalVolunteers = events.reduce((sum, e) => sum + (e.assignments?.length || 0), 0);
             return {
                 total: events.length,
-                upcoming: events.filter((e) => e.status === "Upcoming").length,
+                upcoming: events.filter(isEventUpcoming).length,
+                scheduled: events.filter(isEventScheduled).length,
+                finished: events.filter(isEventFinished).length,
                 ongoing: events.filter((e) => e.status === "Ongoing").length,
-                completed: events.filter((e) => e.status === "Completed").length,
                 volunteers: totalVolunteers
             };
         },
-        [events]
+        [events, isEventUpcoming, isEventScheduled, isEventFinished]
     );
 
     /* =====================================================
@@ -580,6 +658,7 @@ const EventManagementPage: React.FC = () => {
             endTime: selectedEvent.endTime,
             coordinator: selectedEvent.coordinator,
             ministry: selectedEvent.ministry,
+            status: selectedEvent.status,
             description: selectedEvent.description,
             notes: selectedEvent.notes,
         });
@@ -607,6 +686,15 @@ const EventManagementPage: React.FC = () => {
         try {
             setCreating(true);
 
+            const statusToSave =
+                newEvent.status === "Finished" || newEvent.status === "Completed"
+                    ? "COMPLETED"
+                    : newEvent.status === "Scheduled"
+                    ? "SCHEDULED"
+                    : newEvent.status === "Upcoming"
+                    ? "UPCOMING"
+                    : newEvent.status.toUpperCase();
+
             const payload = {
                 title,
                 eventType: newEvent.eventType.trim() || "Sunday Worship",
@@ -616,7 +704,7 @@ const EventManagementPage: React.FC = () => {
                 venue: location,
                 speaker: newEvent.coordinator.trim() || null,
                 ministry: newEvent.ministry.trim() || null,
-                status: isEditingEvent && selectedEvent ? selectedEvent.status.toUpperCase() : "SCHEDULED",
+                status: statusToSave,
                 description: newEvent.description.trim() || null,
                 notes: newEvent.notes.trim() || null,
             };
@@ -644,6 +732,161 @@ const EventManagementPage: React.FC = () => {
             alert(getApiErrorMessage(err, "Unable to save the event."));
         } finally {
             setCreating(false);
+        }
+    };
+
+    /* =====================================================
+       DUPLICATION & STATUS ACTIONS
+    ===================================================== */
+
+    const handleOpenDuplicateModal = () => {
+        if (!selectedEvent) return;
+        setDuplicateForm({
+            title: `${selectedEvent.title} (Copy)`,
+            startDate: selectedEvent.startDate ? selectedEvent.startDate.split("T")[0] : new Date().toISOString().split("T")[0],
+            startTime: selectedEvent.startTime || "09:00 AM",
+            endTime: selectedEvent.endTime || "11:30 AM",
+            copyAssignments: (selectedEvent.assignments?.length || 0) > 0,
+            copyNeeds: (eventNeeds?.length || 0) > 0,
+        });
+        setShowDuplicateModal(true);
+    };
+
+    const handleConfirmDuplicate = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedEvent || duplicating) return;
+
+        const title = duplicateForm.title.trim();
+        if (!title) {
+            alert("Please enter a title for the duplicated event.");
+            return;
+        }
+
+        try {
+            setDuplicating(true);
+
+            // 1. Create duplicated event
+            const payload = {
+                title,
+                eventType: selectedEvent.eventType || "Sunday Worship",
+                eventDate: duplicateForm.startDate,
+                startTime: duplicateForm.startTime || null,
+                endTime: duplicateForm.endTime || null,
+                venue: selectedEvent.location || "Main Sanctuary",
+                speaker: selectedEvent.coordinator || null,
+                ministry: selectedEvent.ministry || null,
+                status: "SCHEDULED",
+                description: selectedEvent.description || null,
+                notes: selectedEvent.notes || null,
+            };
+
+            const res = await axios.post(API_BASE_URL + "/Events", payload, {
+                headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+            });
+
+            const newEventId = Number(res.data?.eventId || res.data?.id);
+            if (!newEventId) {
+                throw new Error("Duplicated event was created, but ID was not returned.");
+            }
+
+            // 2. Clone volunteer & committee assignments if checked
+            if (duplicateForm.copyAssignments && selectedEvent.assignments && selectedEvent.assignments.length > 0) {
+                await Promise.allSettled(
+                    selectedEvent.assignments.map(a =>
+                        axios.post(
+                            API_BASE_URL + "/EventAssignments",
+                            {
+                                eventId: newEventId,
+                                roleName: a.role,
+                                assignedPerson: a.person,
+                                departmentName: a.department,
+                                assignmentStatus: "PENDING",
+                                priority: (a.priority || "NORMAL").toUpperCase(),
+                                notes: a.notes || "",
+                            },
+                            { headers: { ...getAuthHeaders(), "Content-Type": "application/json" } }
+                        )
+                    )
+                );
+            }
+
+            // 3. Clone equipment & logistics needs if checked
+            if (duplicateForm.copyNeeds && eventNeeds && eventNeeds.length > 0) {
+                await Promise.allSettled(
+                    eventNeeds.map(n =>
+                        axios.post(
+                            API_BASE_URL + "/EventNeeds",
+                            {
+                                eventId: newEventId,
+                                needName: n.needName,
+                                category: n.category || "Logistics",
+                                quantity: n.quantity || 1,
+                                unit: n.unit || "pcs",
+                                responsiblePerson: n.responsiblePerson || "Operations Lead",
+                                status: "Pending",
+                                priority: n.priority || "Normal",
+                                notes: n.notes || "",
+                            },
+                            { headers: { ...getAuthHeaders(), "Content-Type": "application/json" } }
+                        )
+                    )
+                );
+            }
+
+            setShowDuplicateModal(false);
+            await loadEvents(newEventId);
+            alert(`Event "${title}" duplicated successfully with all chosen directives and staffing!`);
+        } catch (err: any) {
+            console.error("DUPLICATION ERROR:", err);
+            alert(getApiErrorMessage(err, "Unable to duplicate event."));
+        } finally {
+            setDuplicating(false);
+        }
+    };
+
+    const handleToggleCompleteEvent = async (targetEvent: ChurchEvent) => {
+        const isFinished = targetEvent.status === "Finished" || targetEvent.status === "Completed";
+        const newStatus = isFinished ? "SCHEDULED" : "COMPLETED";
+        const actionLabel = isFinished
+            ? `reopen and mark "${targetEvent.title}" as Scheduled`
+            : `mark "${targetEvent.title}" as Complete / Finished`;
+
+        if (!window.confirm(`Are you sure you want to ${actionLabel}?`)) {
+            return;
+        }
+
+        try {
+            const payload = {
+                title: targetEvent.title,
+                eventType: targetEvent.eventType,
+                eventDate: targetEvent.startDate,
+                startTime: targetEvent.startTime || null,
+                endTime: targetEvent.endTime || null,
+                venue: targetEvent.location,
+                speaker: targetEvent.coordinator,
+                ministry: targetEvent.ministry,
+                status: newStatus,
+                description: targetEvent.description,
+                notes: targetEvent.notes,
+            };
+
+            await axios.put(API_BASE_URL + "/Events/" + targetEvent.id, payload, {
+                headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
+            });
+
+            // Optimistic local state update
+            setEvents(prev =>
+                prev.map(e =>
+                    e.id === targetEvent.id
+                        ? { ...e, status: isFinished ? "Scheduled" : "Finished" }
+                        : e
+                )
+            );
+
+            await loadEvents(targetEvent.id);
+        } catch (err: any) {
+            console.error("STATUS UPDATE ERROR:", err);
+            alert(getApiErrorMessage(err, "Unable to update event status."));
         }
     };
 
@@ -1113,16 +1356,43 @@ const EventManagementPage: React.FC = () => {
                     </div>
 
                     <div className="roster-filter-chips">
-                        {(["ALL", "Upcoming", "Ongoing", "Completed"] as const).map((filter) => (
+                        <button
+                            type="button"
+                            className={`filter-chip ${statusFilter === "ALL" ? "active" : ""}`}
+                            onClick={() => setStatusFilter("ALL")}
+                        >
+                            All Events ({filterCounts.all})
+                        </button>
+                        <button
+                            type="button"
+                            className={`filter-chip ${statusFilter === "Upcoming" ? "active" : ""}`}
+                            onClick={() => setStatusFilter("Upcoming")}
+                        >
+                            Upcoming ({filterCounts.upcoming})
+                        </button>
+                        <button
+                            type="button"
+                            className={`filter-chip ${statusFilter === "Scheduled" ? "active" : ""}`}
+                            onClick={() => setStatusFilter("Scheduled")}
+                        >
+                            Scheduled ({filterCounts.scheduled})
+                        </button>
+                        <button
+                            type="button"
+                            className={`filter-chip ${statusFilter === "Finished" ? "active" : ""}`}
+                            onClick={() => setStatusFilter("Finished")}
+                        >
+                            Finished ({filterCounts.finished})
+                        </button>
+                        {filterCounts.ongoing > 0 && (
                             <button
-                                key={filter}
                                 type="button"
-                                className={`filter-chip ${statusFilter === filter ? "active" : ""}`}
-                                onClick={() => setStatusFilter(filter)}
+                                className={`filter-chip ${statusFilter === "Ongoing" ? "active" : ""}`}
+                                onClick={() => setStatusFilter("Ongoing")}
                             >
-                                {filter === "ALL" ? "All Events" : filter}
+                                Ongoing ({filterCounts.ongoing})
                             </button>
-                        ))}
+                        )}
                     </div>
 
                     <div className="roster-event-cards">
@@ -1143,6 +1413,7 @@ const EventManagementPage: React.FC = () => {
 
                         {!loading && filteredEvents.map((evt) => {
                             const isSelected = selectedEventId === evt.id;
+                            const isDone = evt.status === "Finished" || evt.status === "Completed";
                             return (
                                 <div
                                     key={evt.id}
@@ -1157,9 +1428,23 @@ const EventManagementPage: React.FC = () => {
                                     <div className="event-card-info">
                                         <div className="event-card-type-row">
                                             <span className="event-type-badge">{evt.eventType}</span>
-                                            <span className={`event-status-pill ${evt.status.toLowerCase()}`}>
-                                                {evt.status}
-                                            </span>
+                                            <div className="event-pill-group">
+                                                <button
+                                                    type="button"
+                                                    className={`card-complete-toggle ${isDone ? "completed" : ""}`}
+                                                    title={isDone ? "Reopen event (Mark Scheduled)" : "Mark complete (Finished)"}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        void handleToggleCompleteEvent(evt);
+                                                    }}
+                                                >
+                                                    <CheckCircle2 size={13} />
+                                                </button>
+                                                <span className={`event-status-pill ${evt.status.toLowerCase()}`}>
+                                                    {isDone && <Check size={10} className="pill-check-icon" />}
+                                                    {evt.status}
+                                                </span>
+                                            </div>
                                         </div>
                                         <h4 className="event-card-title">{evt.title}</h4>
                                         <div className="event-card-details">
@@ -1196,6 +1481,7 @@ const EventManagementPage: React.FC = () => {
                                         <div className="badge-row">
                                             <span className="event-type-tag">{selectedEvent.eventType}</span>
                                             <span className={`event-status-tag ${selectedEvent.status.toLowerCase()}`}>
+                                                {(selectedEvent.status === "Finished" || selectedEvent.status === "Completed") && <Check size={11} className="pill-check-icon" />}
                                                 {selectedEvent.status}
                                             </span>
                                         </div>
@@ -1216,6 +1502,40 @@ const EventManagementPage: React.FC = () => {
                                             <Printer size={18} />
                                             <span>Print Final Event Plan</span>
                                         </button>
+
+                                        {/* DUPLICATE BUTTON */}
+                                        <button
+                                            type="button"
+                                            className="btn-secondary-action duplicate-btn"
+                                            onClick={handleOpenDuplicateModal}
+                                            title="Duplicate this event and its plan"
+                                        >
+                                            <Copy size={15} />
+                                            <span>Duplicate</span>
+                                        </button>
+
+                                        {/* MARK COMPLETE / REOPEN BUTTON */}
+                                        {selectedEvent.status === "Finished" || selectedEvent.status === "Completed" ? (
+                                            <button
+                                                type="button"
+                                                className="btn-secondary-action reopen-btn"
+                                                onClick={() => void handleToggleCompleteEvent(selectedEvent)}
+                                                title="Reopen event and mark as Scheduled"
+                                            >
+                                                <RotateCcw size={15} />
+                                                <span>Reopen Event</span>
+                                            </button>
+                                        ) : (
+                                            <button
+                                                type="button"
+                                                className="btn-mark-complete-cta"
+                                                onClick={() => void handleToggleCompleteEvent(selectedEvent)}
+                                                title="Mark this event as Finished / Completed"
+                                            >
+                                                <CheckCircle2 size={16} />
+                                                <span>Mark Complete</span>
+                                            </button>
+                                        )}
 
                                         <button
                                             type="button"
@@ -1648,15 +1968,29 @@ const EventManagementPage: React.FC = () => {
                                 </div>
 
                                 <div>
-                                    <label>VENUE / FACILITY *</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        placeholder="e.g. Main Sanctuary, San Vicente"
-                                        value={newEvent.location}
-                                        onChange={(e) => setNewEvent(prev => ({ ...prev, location: e.target.value }))}
-                                    />
+                                    <label>EVENT STATUS</label>
+                                    <select
+                                        value={newEvent.status}
+                                        onChange={(e) => setNewEvent(prev => ({ ...prev, status: e.target.value as EventStatus }))}
+                                    >
+                                        <option value="Scheduled">Scheduled</option>
+                                        <option value="Upcoming">Upcoming</option>
+                                        <option value="Ongoing">Ongoing</option>
+                                        <option value="Finished">Finished / Completed</option>
+                                        <option value="Cancelled">Cancelled</option>
+                                    </select>
                                 </div>
+                            </div>
+
+                            <div className="form-row full">
+                                <label>VENUE / FACILITY *</label>
+                                <input
+                                    type="text"
+                                    required
+                                    placeholder="e.g. Main Sanctuary, San Vicente"
+                                    value={newEvent.location}
+                                    onChange={(e) => setNewEvent(prev => ({ ...prev, location: e.target.value }))}
+                                />
                             </div>
 
                             <div className="form-row third">
@@ -1748,6 +2082,119 @@ const EventManagementPage: React.FC = () => {
                                     disabled={creating}
                                 >
                                     {creating ? "Saving Event..." : isEditingEvent ? "Update Event Plan" : "Create Event Directive"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* =================================================
+                DUPLICATE EVENT MODAL
+            ================================================= */}
+            {showDuplicateModal && selectedEvent && (
+                <div className="event-modal-overlay" onClick={() => !duplicating && setShowDuplicateModal(false)}>
+                    <div className="event-dialog-modal duplicate-event-dialog" onClick={(e) => e.stopPropagation()}>
+                        <div className="dialog-modal-header">
+                            <div>
+                                <span className="modal-eyebrow">EVENT DUPLICATION WIZARD</span>
+                                <h2>Duplicate Event Plan</h2>
+                                <p>Clone “{selectedEvent.title}” into a new operational directive.</p>
+                            </div>
+                            <button
+                                type="button"
+                                className="btn-close-modal"
+                                disabled={duplicating}
+                                onClick={() => setShowDuplicateModal(false)}
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleConfirmDuplicate} className="dialog-modal-form">
+                            <div className="form-row full">
+                                <label>NEW EVENT TITLE *</label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={duplicateForm.title}
+                                    onChange={(e) => setDuplicateForm(prev => ({ ...prev, title: e.target.value }))}
+                                    placeholder="e.g. October Epic Cell Celebration - Week 1"
+                                />
+                            </div>
+
+                            <div className="form-row third">
+                                <div>
+                                    <label>NEW EVENT DATE *</label>
+                                    <input
+                                        type="date"
+                                        required
+                                        value={duplicateForm.startDate}
+                                        onChange={(e) => setDuplicateForm(prev => ({ ...prev, startDate: e.target.value }))}
+                                    />
+                                </div>
+                                <div>
+                                    <label>START TIME</label>
+                                    <input
+                                        type="text"
+                                        value={duplicateForm.startTime}
+                                        onChange={(e) => setDuplicateForm(prev => ({ ...prev, startTime: e.target.value }))}
+                                        placeholder="09:00 AM"
+                                    />
+                                </div>
+                                <div>
+                                    <label>END TIME</label>
+                                    <input
+                                        type="text"
+                                        value={duplicateForm.endTime}
+                                        onChange={(e) => setDuplicateForm(prev => ({ ...prev, endTime: e.target.value }))}
+                                        placeholder="11:30 AM"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="duplicate-options-box">
+                                <span className="duplicate-options-title">DUPLICATION SCOPE:</span>
+                                <label className="duplicate-option-item">
+                                    <input
+                                        type="checkbox"
+                                        checked={duplicateForm.copyAssignments}
+                                        onChange={(e) => setDuplicateForm(prev => ({ ...prev, copyAssignments: e.target.checked }))}
+                                    />
+                                    <div className="option-text">
+                                        <strong>Copy Committee Staffing Matrix ({selectedEvent.assignments?.length || 0} assigned)</strong>
+                                        <span>Duplicates personnel roles, departments, priorities, and duty notes.</span>
+                                    </div>
+                                </label>
+
+                                <label className="duplicate-option-item">
+                                    <input
+                                        type="checkbox"
+                                        checked={duplicateForm.copyNeeds}
+                                        onChange={(e) => setDuplicateForm(prev => ({ ...prev, copyNeeds: e.target.checked }))}
+                                    />
+                                    <div className="option-text">
+                                        <strong>Copy Logistics & Equipment Checklist ({eventNeeds?.length || 0} items)</strong>
+                                        <span>Duplicates required audio/visual equipment, instruments, and sanctuary supplies.</span>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <div className="dialog-modal-actions">
+                                <button
+                                    type="button"
+                                    className="btn-modal-cancel"
+                                    disabled={duplicating}
+                                    onClick={() => setShowDuplicateModal(false)}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="btn-modal-save"
+                                    disabled={duplicating}
+                                >
+                                    {duplicating ? "Duplicating Plan..." : "Create Duplicated Event"}
                                 </button>
                             </div>
                         </form>
