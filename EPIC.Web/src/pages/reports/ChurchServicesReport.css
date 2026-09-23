@@ -291,12 +291,10 @@
 }
 
 /* PRINT SHEET */
-@media print {
 .print-footer-sheet {
     display: none;
 }
 
-/* PRINT SHEET */
 @media print {
     @page {
         size: letter portrait;
