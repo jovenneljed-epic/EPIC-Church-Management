@@ -541,14 +541,14 @@
         height: 100% !important;
     }
 
-    /* Suppress everything on the web page body */
-    body * {
+    /* Suppress everything on the web page body only when church printable sheet is active */
+    body:has(#epic-printable-sheet) * {
         visibility: hidden !important;
     }
 
     /* Make printable sheet and all of its printable children visible */
-    #epic-printable-sheet,
-    #epic-printable-sheet *:not(.screen-only):not(.screen-only *):not(input):not(select):not(textarea):not(button) {
+    body:has(#epic-printable-sheet) #epic-printable-sheet,
+    body:has(#epic-printable-sheet) #epic-printable-sheet *:not(.screen-only):not(.screen-only *):not(input):not(select):not(textarea):not(button) {
         visibility: visible !important;
     }
 

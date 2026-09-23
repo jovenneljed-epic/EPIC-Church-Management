@@ -762,7 +762,14 @@ const EventManagementPage: React.FC = () => {
     ===================================================== */
 
     const handlePrintDirect = () => {
+        const originalTitle = document.title;
+        if (selectedEvent) {
+            document.title = `EPIC_Event_Plan_${selectedEvent.title.replace(/[^a-zA-Z0-9]/g, "_")}`;
+        }
         window.print();
+        setTimeout(() => {
+            document.title = originalTitle;
+        }, 1500);
     };
 
     /* =====================================================
