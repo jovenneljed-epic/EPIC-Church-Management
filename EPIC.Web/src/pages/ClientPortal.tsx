@@ -23,6 +23,7 @@ import ClientMembers from "./ClientMembers";
 import ClientAttendance from "./ClientAttendance";
 import ClientChurchServices from "./ClientChurchServices";
 import GivingManagementPage from "./GivingManagementPage";
+import ChurchInActionPage from "./action/ChurchInActionPage";
 
 
 // =========================================================
@@ -1125,6 +1126,19 @@ const [mobileSidebarOpen, setMobileSidebarOpen] =
                         ) &&
 
                         <ClientRecords key="visitors" kind="visitors" title="Visitors" canCreate={canCreate("Visitors")} canEdit={canEdit("Visitors")} canDelete={canDelete("Visitors")} />
+                    }
+
+                    {/* =========================================
+                        CHURCH IN ACTION
+                    ========================================= */}
+
+                    {
+                        activePage === "church-in-action" && (
+                            <ChurchInActionPage
+                                onBack={() => handleNavigate("dashboard")}
+                                canManage={true}
+                            />
+                        )
                     }
 
                     {/* =========================================

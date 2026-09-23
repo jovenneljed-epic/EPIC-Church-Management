@@ -1,0 +1,1519 @@
+/* ============================================================
+   ChurchInAction.css
+   EPIC Church Management System - Luke 4:18 Ministries
+   ============================================================ */
+
+.church-in-action-container {
+    padding: 24px;
+    background-color: #f8fafc;
+    min-height: calc(100vh - 70px);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #1e293b;
+}
+
+/* ============================================================
+   ALERT BANNER
+   ============================================================ */
+.cia-alert-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 18px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.cia-alert-banner.success {
+    background-color: #ecfdf5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+}
+
+.cia-alert-banner.error {
+    background-color: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+
+.cia-alert-banner button {
+    background: none;
+    border: none;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    color: inherit;
+    opacity: 0.7;
+}
+
+.cia-alert-banner button:hover {
+    opacity: 1;
+}
+
+/* ============================================================
+   HEADER SECTION
+   ============================================================ */
+.cia-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.cia-header-brand {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.cia-header-icon-box {
+    width: 52px;
+    height: 52px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #d97706, #b45309);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(217, 119, 6, 0.25);
+}
+
+.cia-flame-icon {
+    width: 28px;
+    height: 28px;
+}
+
+.cia-ministry-badge {
+    margin-bottom: 4px;
+}
+
+.cia-ministry-badge span {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #d97706;
+    background-color: #fef3c7;
+    padding: 3px 8px;
+    border-radius: 4px;
+}
+
+.cia-title {
+    font-size: 26px;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0 0 4px 0;
+    letter-spacing: -0.5px;
+}
+
+.cia-subtitle {
+    font-size: 13px;
+    color: #64748b;
+    margin: 0;
+}
+
+.cia-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.cia-btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #0284c7, #0369a1);
+    color: #ffffff;
+    padding: 9px 18px;
+    border-radius: 8px;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
+    transition: all 0.2s ease;
+}
+
+.cia-btn-primary:hover {
+    background: linear-gradient(135deg, #0369a1, #075985);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(2, 132, 199, 0.35);
+}
+
+.cia-btn-outline {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background-color: #ffffff;
+    color: #334155;
+    padding: 9px 15px;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.cia-btn-outline:hover {
+    background-color: #f1f5f9;
+    border-color: #94a3b8;
+    color: #0f172a;
+}
+
+.cia-spin {
+    animation: cia-spin 1s linear infinite;
+}
+
+@keyframes cia-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* ============================================================
+   METRICS BAR
+   ============================================================ */
+.cia-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.cia-metric-card {
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 16px 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.cia-metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.cia-highlight-metric {
+    background: linear-gradient(135deg, #ffffff, #fffbeb);
+    border-color: #fde68a;
+}
+
+.cia-metric-icon-wrap {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.cia-icon-amber { background-color: #fef3c7; color: #b45309; }
+.cia-icon-blue { background-color: #e0f2fe; color: #0369a1; }
+.cia-icon-emerald { background-color: #d1fae5; color: #047857; }
+.cia-icon-purple { background-color: #f3e8ff; color: #7e22ce; }
+.cia-icon-gold { background-color: #fef08a; color: #a16207; }
+
+.cia-metric-data {
+    display: flex;
+    flex-direction: column;
+}
+
+.cia-metric-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    margin-bottom: 2px;
+}
+
+.cia-metric-val {
+    font-size: 22px;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.2;
+}
+
+.cia-metric-hint {
+    font-size: 11px;
+    color: #94a3b8;
+    margin-top: 2px;
+}
+
+/* ============================================================
+   TABS NAVIGATION
+   ============================================================ */
+.cia-tabs-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    border-bottom: 2px solid #e2e8f0;
+    margin-bottom: 20px;
+    padding-bottom: 4px;
+}
+
+.cia-tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: none;
+    border: none;
+    padding: 10px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #64748b;
+    border-radius: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.cia-tab-btn:hover {
+    color: #0f172a;
+    background-color: #f1f5f9;
+}
+
+.cia-tab-btn.active {
+    color: #0284c7;
+    background-color: #e0f2fe;
+}
+
+.cia-tab-btn.active::after {
+    content: "";
+    position: absolute;
+    bottom: -6px;
+    left: 12px;
+    right: 12px;
+    height: 3px;
+    background-color: #0284c7;
+    border-radius: 2px;
+}
+
+.cia-badge-pill {
+    background-color: #e2e8f0;
+    color: #475569;
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.cia-tab-btn.active .cia-badge-pill {
+    background-color: #0284c7;
+    color: #ffffff;
+}
+
+/* ============================================================
+   CONTROLS BAR (Search & Filters)
+   ============================================================ */
+.cia-controls-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.cia-search-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 8px 12px;
+    width: 100%;
+    max-width: 380px;
+    color: #64748b;
+}
+
+.cia-search-box input {
+    border: none;
+    outline: none;
+    width: 100%;
+    font-size: 13px;
+    color: #0f172a;
+    background: transparent;
+}
+
+.cia-clear-btn {
+    background: none;
+    border: none;
+    font-size: 16px;
+    color: #94a3b8;
+    cursor: pointer;
+}
+
+.cia-filters {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #64748b;
+    font-size: 13px;
+}
+
+.cia-filters select {
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 7px 12px;
+    font-size: 13px;
+    color: #0f172a;
+    outline: none;
+}
+
+/* ============================================================
+   SECTION BANNER (Inside Tabs)
+   ============================================================ */
+.cia-section-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 18px 22px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+}
+
+.cia-section-banner.amber-theme {
+    background: linear-gradient(135deg, #fffbeb, #fef3c7);
+    border: 1px solid #fde68a;
+    color: #92400e;
+}
+
+.cia-section-banner.blue-theme {
+    background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+    border: 1px solid #bae6fd;
+    color: #075985;
+}
+
+.cia-section-banner.emerald-theme {
+    background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+    border: 1px solid #bbf7d0;
+    color: #166534;
+}
+
+.cia-section-banner.purple-theme {
+    background: linear-gradient(135deg, #faf5ff, #f3e8ff);
+    border: 1px solid #e9d5ff;
+    color: #6b21a8;
+}
+
+.cia-section-banner h3 {
+    margin: 0 0 4px 0;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.cia-section-banner p {
+    margin: 0;
+    font-size: 13px;
+    opacity: 0.9;
+}
+
+.cia-btn-action-banner {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background-color: #0f172a;
+    color: #ffffff;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: none;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.cia-btn-action-banner:hover {
+    opacity: 0.9;
+}
+
+.cia-banner-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.cia-banner-stat strong {
+    font-size: 24px;
+    font-weight: 800;
+}
+
+.cia-banner-stat span {
+    font-size: 12px;
+}
+
+/* ============================================================
+   PIPELINE / KANBAN BOARD
+   ============================================================ */
+.cia-pipeline-info-banner {
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 14px;
+}
+
+.cia-pib-content strong {
+    display: block;
+    font-size: 15px;
+    color: #0f172a;
+    margin-bottom: 2px;
+}
+
+.cia-pib-content p {
+    font-size: 13px;
+    color: #64748b;
+    margin: 0;
+}
+
+.cia-pib-steps {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #94a3b8;
+}
+
+.step-pill {
+    background-color: #f1f5f9;
+    color: #334155;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.cia-kanban-board {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+    align-items: flex-start;
+}
+
+@media (max-width: 1200px) {
+    .cia-kanban-board {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .cia-kanban-board {
+        grid-template-columns: 1fr;
+    }
+}
+
+.cia-kanban-col {
+    background-color: #f1f5f9;
+    border-radius: 12px;
+    padding: 14px;
+    border: 1px solid #e2e8f0;
+    min-height: 480px;
+}
+
+.cia-col-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+    border-bottom: 2px solid;
+}
+
+.cia-col-header.amber { border-color: #d97706; }
+.cia-col-header.blue { border-color: #0284c7; }
+.cia-col-header.emerald { border-color: #059669; }
+.cia-col-header.purple { border-color: #7c3aed; }
+
+.cia-col-step {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.6px;
+    color: #64748b;
+    text-transform: uppercase;
+}
+
+.cia-col-header h4 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.cia-col-count {
+    background-color: #ffffff;
+    color: #0f172a;
+    font-size: 12px;
+    font-weight: 800;
+    padding: 3px 8px;
+    border-radius: 999px;
+    border: 1px solid #cbd5e1;
+}
+
+.cia-col-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.cia-col-empty {
+    padding: 24px 12px;
+    text-align: center;
+    font-size: 13px;
+    color: #94a3b8;
+    background-color: #ffffff;
+    border-radius: 8px;
+    border: 1px dashed #cbd5e1;
+}
+
+.cia-kanban-card {
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 14px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.cia-kanban-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
+.cia-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.cia-id-tag {
+    font-size: 10px;
+    font-weight: 700;
+    color: #64748b;
+    background-color: #f1f5f9;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.cia-card-name {
+    margin: 0 0 6px 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.cia-card-sub {
+    margin: 0 0 4px 0;
+    font-size: 12px;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.cia-card-sub strong {
+    color: #334155;
+}
+
+.cia-card-prayer {
+    background-color: #fefce8;
+    border-left: 3px solid #eab308;
+    padding: 6px 8px;
+    border-radius: 0 6px 6px 0;
+    font-size: 11px;
+    color: #854d0e;
+    margin: 8px 0;
+}
+
+.cia-card-interaction-snippet {
+    margin: 6px 0;
+    font-size: 11px;
+    color: #0284c7;
+    font-weight: 600;
+}
+
+.cia-card-progress {
+    margin: 8px 0;
+}
+
+.cia-progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    margin-bottom: 4px;
+    color: #475569;
+}
+
+.cia-progress-track {
+    width: 100%;
+    height: 6px;
+    background-color: #e2e8f0;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.cia-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #10b981, #059669);
+    border-radius: 999px;
+    transition: width 0.3s ease;
+}
+
+.cia-card-badge-row {
+    margin: 8px 0;
+}
+
+.cia-pill-success {
+    display: inline-flex;
+    align-items: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: #065f46;
+    background-color: #d1fae5;
+    padding: 2px 7px;
+    border-radius: 4px;
+}
+
+.cia-pill-pending {
+    display: inline-flex;
+    align-items: center;
+    font-size: 11px;
+    font-weight: 600;
+    color: #92400e;
+    background-color: #fef3c7;
+    padding: 2px 7px;
+    border-radius: 4px;
+}
+
+.cia-card-fruit-box {
+    background: linear-gradient(135deg, #faf5ff, #f3e8ff);
+    border: 1px solid #e9d5ff;
+    padding: 8px 10px;
+    border-radius: 6px;
+    margin: 8px 0;
+    text-align: center;
+}
+
+.fruit-count {
+    display: block;
+    font-size: 13px;
+    font-weight: 800;
+    color: #6b21a8;
+}
+
+.cia-card-fruit-box small {
+    font-size: 10px;
+    color: #7e22ce;
+}
+
+.cia-card-footer {
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid #f1f5f9;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.cia-card-footer.dual {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+}
+
+.cia-btn-sm-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    background-color: #0284c7;
+    color: #ffffff;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s;
+    width: 100%;
+}
+
+.cia-btn-sm-action:hover {
+    background-color: #0369a1;
+}
+
+.cia-btn-sm-touchpoint {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    background-color: #f8fafc;
+    color: #334155;
+    border: 1px solid #cbd5e1;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    width: 100%;
+}
+
+.cia-btn-sm-touchpoint:hover {
+    background-color: #f1f5f9;
+}
+
+.cia-promoted-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #059669;
+}
+
+/* ============================================================
+   STATUS CHIPS
+   ============================================================ */
+.cia-status-chip {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    display: inline-block;
+    text-transform: capitalize;
+}
+
+.cia-status-chip.in-prayer { background-color: #fef3c7; color: #b45309; }
+.cia-status-chip.invited { background-color: #e0f2fe; color: #0369a1; }
+.cia-status-chip.confirmed-attending { background-color: #ecfdf5; color: #047857; }
+.cia-status-chip.attended { background-color: #d1fae5; color: #065f46; font-weight: 800; }
+.cia-status-chip.follow-up-needed { background-color: #fee2e2; color: #b91c1c; }
+
+.cia-status-chip.new { background-color: #e0f2fe; color: #0369a1; }
+.cia-status-chip.contacted { background-color: #fef3c7; color: #b45309; }
+.cia-status-chip.follow-up { background-color: #fed7aa; color: #c2410c; }
+.cia-status-chip.connected { background-color: #d1fae5; color: #047857; }
+.cia-status-chip.converted { background-color: #ede9fe; color: #6d28d9; }
+
+.cia-status-chip.emerald { background-color: #d1fae5; color: #065f46; }
+.cia-status-chip.purple { background-color: #f3e8ff; color: #7e22ce; }
+
+/* ============================================================
+   TABLES
+   ============================================================ */
+.cia-table-container {
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    overflow-x: auto;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.cia-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    text-align: left;
+}
+
+.cia-table th {
+    background-color: #f8fafc;
+    color: #475569;
+    font-weight: 700;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e2e8f0;
+    white-space: nowrap;
+}
+
+.cia-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid #f1f5f9;
+    color: #1e293b;
+    vertical-align: middle;
+}
+
+.cia-table tr:hover {
+    background-color: #f8fafc;
+}
+
+.cia-table-primary-cell strong {
+    display: block;
+    font-size: 14px;
+    color: #0f172a;
+}
+
+.cia-table-primary-cell small {
+    color: #64748b;
+    font-size: 11px;
+}
+
+.cia-inviter-text {
+    font-weight: 600;
+    color: #334155;
+}
+
+.cia-campaign-badge {
+    background-color: #f1f5f9;
+    color: #475569;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.cia-spiritual-status {
+    color: #64748b;
+    font-weight: 500;
+}
+
+.cia-notes-cell {
+    max-width: 260px;
+}
+
+.cia-prayer-text {
+    margin: 0 0 4px 0;
+    font-size: 12px;
+    color: #854d0e;
+    background-color: #fefce8;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.cia-gen-notes {
+    margin: 0;
+    font-size: 11px;
+    color: #64748b;
+}
+
+.cia-visit-badge {
+    background-color: #e0f2fe;
+    color: #0284c7;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.cia-logs-summary strong {
+    display: block;
+    color: #0f172a;
+    font-size: 12px;
+}
+
+.cia-logs-summary small {
+    color: #64748b;
+    font-size: 10px;
+}
+
+.cia-dept-pill {
+    background-color: #f3e8ff;
+    color: #6b21a8;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.cia-gifts-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.cia-gift-tag {
+    background-color: #f1f5f9;
+    color: #475569;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.cia-fruit-cell {
+    display: flex;
+    flex-direction: column;
+}
+
+.cia-fruit-number {
+    font-size: 15px;
+    font-weight: 800;
+    color: #059669;
+}
+
+.cia-fruit-cell small {
+    font-size: 10px;
+    color: #64748b;
+}
+
+.cia-table-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cia-btn-promote {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background-color: #0284c7;
+    color: #ffffff;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s;
+}
+
+.cia-btn-promote:hover {
+    background-color: #0369a1;
+}
+
+.cia-btn-outline-sm {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background-color: #ffffff;
+    color: #334155;
+    border: 1px solid #cbd5e1;
+    padding: 5px 9px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.cia-btn-outline-sm:hover {
+    background-color: #f8fafc;
+    border-color: #94a3b8;
+}
+
+.cia-icon-btn {
+    background: none;
+    border: 1px solid transparent;
+    padding: 6px;
+    border-radius: 6px;
+    color: #64748b;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cia-icon-btn:hover {
+    background-color: #f1f5f9;
+    color: #0f172a;
+}
+
+.cia-icon-btn.danger:hover {
+    background-color: #fee2e2;
+    color: #dc2626;
+}
+
+.cia-no-data {
+    text-align: center;
+    padding: 32px;
+    color: #94a3b8;
+    font-size: 14px;
+}
+
+/* ============================================================
+   DISCIPLESHIP GRID & CARDS
+   ============================================================ */
+.cia-disciples-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 18px;
+}
+
+.cia-disciple-card {
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 18px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.cia-dcard-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.cia-dcard-header h4 {
+    margin: 4px 0 2px 0;
+    font-size: 16px;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.cia-dcard-contact {
+    font-size: 12px;
+    color: #64748b;
+}
+
+.cia-dcard-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 10px;
+    background-color: #f8fafc;
+    border-radius: 8px;
+    margin-bottom: 14px;
+    font-size: 12px;
+}
+
+.cia-meta-item span {
+    display: block;
+    color: #64748b;
+    font-size: 10px;
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+.cia-meta-item strong {
+    color: #1e293b;
+}
+
+.cia-foundations-box {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+}
+
+.cia-fbox-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    margin-bottom: 10px;
+}
+
+.cia-fbox-header strong {
+    color: #0f172a;
+}
+
+.cia-pct {
+    color: #059669;
+    font-weight: 800;
+}
+
+.cia-lessons-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.cia-lesson-check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #334155;
+    cursor: pointer;
+}
+
+.cia-lesson-check input[type="checkbox"] {
+    width: 15px;
+    height: 15px;
+    accent-color: #059669;
+    cursor: pointer;
+}
+
+.cia-baptism-strip {
+    margin-bottom: 14px;
+}
+
+.cia-strip-baptized {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background-color: #ecfdf5;
+    color: #065f46;
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.cia-strip-unbaptized {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background-color: #fffbeb;
+    color: #92400e;
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.cia-dcard-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    padding-top: 12px;
+    border-top: 1px solid #f1f5f9;
+}
+
+.cia-no-data-card {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 40px;
+    color: #94a3b8;
+    background-color: #ffffff;
+    border-radius: 12px;
+    border: 1px dashed #cbd5e1;
+}
+
+/* ============================================================
+   MODALS
+   ============================================================ */
+.cia-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 16px;
+}
+
+.cia-modal-card {
+    background-color: #ffffff;
+    border-radius: 14px;
+    width: 100%;
+    max-width: 620px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+}
+
+.cia-modal-card.cia-profile-card {
+    max-width: 520px;
+}
+
+.cia-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 24px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.cia-modal-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.cia-modal-header button {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #94a3b8;
+    cursor: pointer;
+}
+
+.cia-modal-header button:hover {
+    color: #0f172a;
+}
+
+.cia-modal-body {
+    padding: 20px 24px;
+}
+
+.cia-modal-info-bar {
+    background-color: #f0f9ff;
+    border-left: 4px solid #0284c7;
+    padding: 10px 14px;
+    border-radius: 0 6px 6px 0;
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: #075985;
+}
+
+.cia-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 14px;
+}
+
+@media (max-width: 600px) {
+    .cia-form-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+.cia-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.cia-form-group.full {
+    margin-bottom: 14px;
+}
+
+.cia-form-group label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+}
+
+.cia-form-group input,
+.cia-form-group select,
+.cia-form-group textarea {
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 13px;
+    color: #0f172a;
+    outline: none;
+    background-color: #ffffff;
+    font-family: inherit;
+}
+
+.cia-form-group input:focus,
+.cia-form-group select:focus,
+.cia-form-group textarea:focus {
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+
+.cia-checkbox-inline {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-top: 8px;
+}
+
+.cia-checkbox-inline input {
+    width: 18px;
+    height: 18px;
+    accent-color: #0284c7;
+    cursor: pointer;
+}
+
+.cia-checkbox-inline label {
+    font-size: 13px;
+    color: #1e293b;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.cia-modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 16px 24px;
+    border-top: 1px solid #e2e8f0;
+    background-color: #f8fafc;
+    border-radius: 0 0 14px 14px;
+}
+
+/* Credentials modal */
+.cia-credentials-box {
+    background: linear-gradient(135deg, #ffffff, #faf5ff);
+    border: 2px solid #e9d5ff;
+    border-radius: 12px;
+    padding: 24px;
+}
+
+.cia-cred-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #e9d5ff;
+}
+
+.cia-cred-seal {
+    color: #d97706;
+}
+
+.cia-cred-header h4 {
+    margin: 0;
+    font-size: 18px;
+    color: #0f172a;
+}
+
+.cia-cred-header p {
+    margin: 2px 0 0 0;
+    font-size: 12px;
+    color: #7c3aed;
+    font-weight: 600;
+}
+
+.cia-cred-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+    font-size: 13px;
+}
+
+.cia-cred-grid span {
+    display: block;
+    color: #64748b;
+    font-size: 11px;
+}
+
+.cia-cred-grid strong {
+    color: #0f172a;
+}
+
+.gold-text {
+    color: #b45309 !important;
+}
+
+.cia-cred-notes {
+    background-color: #ffffff;
+    border: 1px solid #e9d5ff;
+    padding: 10px 12px;
+    border-radius: 8px;
+}
+
+.cia-cred-notes span {
+    font-size: 11px;
+    font-weight: 700;
+    color: #7c3aed;
+    display: block;
+    margin-bottom: 2px;
+}
+
+.cia-cred-notes p {
+    margin: 0;
+    font-size: 12px;
+    color: #334155;
+    font-style: italic;
+}
+
+/* ============================================================
+   PRINT DOCUMENT STYLES (CRITICAL: ZERO GRAY/BLANK OVERLAYS)
+   ============================================================ */
+.cia-print-document {
+    display: none;
+}
+
+@media print {
+    /* Hide all regular UI, sidebars, headers, modals */
+    body * {
+        visibility: hidden !important;
+    }
+
+    .cia-modal-overlay {
+        display: none !important;
+    }
+
+    .epic-client-sidebar,
+    .epic-sidebar,
+    .epic-client-header,
+    .cia-header,
+    .cia-metrics-grid,
+    .cia-tabs-nav,
+    .cia-controls-bar,
+    .cia-pipeline-view,
+    .cia-tab-content {
+        display: none !important;
+    }
+
+    /* Show only printable summary */
+    #cia-printable-summary,
+    #cia-printable-summary * {
+        visibility: visible !important;
+    }
+
+    #cia-printable-summary {
+        display: block !important;
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        padding: 20px !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+    }
+
+    .cia-print-header {
+        text-align: center;
+        margin-bottom: 24px;
+        border-bottom: 2px solid #000000;
+        padding-bottom: 12px;
+    }
+
+    .cia-print-header h2 {
+        font-size: 14pt;
+        margin: 0 0 4px 0;
+        font-weight: 800;
+    }
+
+    .cia-print-header h1 {
+        font-size: 18pt;
+        margin: 0 0 6px 0;
+    }
+
+    .cia-print-header p {
+        font-size: 9pt;
+        margin: 0;
+        color: #444;
+    }
+
+    .cia-print-summary-box {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin-bottom: 20px;
+        padding: 12px;
+        border: 1px solid #666;
+        font-size: 10pt;
+    }
+
+    .cia-print-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 9pt;
+        margin-bottom: 20px;
+    }
+
+    .cia-print-table th,
+    .cia-print-table td {
+        border: 1px solid #999;
+        padding: 6px 8px;
+        text-align: left;
+    }
+
+    .cia-print-table th {
+        background-color: #f0f0f0 !important;
+        font-weight: bold;
+    }
+}

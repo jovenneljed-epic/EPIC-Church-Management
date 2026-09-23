@@ -58,6 +58,7 @@ import EventManagementPage from "./pages/EventManagementPage";
 import MemberAttendanceReport from "./pages/MemberAttendanceReport";
 
 import Visitors from "./pages/Visitors";
+import ChurchInActionPage from "./pages/action/ChurchInActionPage";
 import Giving from "./pages/Giving";
 import Income from "./pages/Income";
 import Ministries from "./pages/Ministries";
@@ -136,7 +137,8 @@ type Page =
   | "blog-management"
   | "whats-new"
   | "blog-detail"
-  | "resources";
+  | "resources"
+  | "church-in-action";
 
 // =========================================================
 // PUBLIC WEBSITE PAGE TYPES
@@ -221,7 +223,7 @@ const PAGE_ROUTES: Record<Page, string> = {
     income: "/income",
     expenses: "/expenses",
     settings: "/settings",
-    
+    "church-in-action": "/cms/church-in-action",
 };
 
 
@@ -336,7 +338,7 @@ const PAGE_TITLES: Record<Page, string> = {
     "blog-detail": "Blog Detail",
     "whats-new": "What's New",
     "resources": "Resources",
-
+    "church-in-action": "Church in Action",
 };
 
 // =========================================================
@@ -417,7 +419,7 @@ const PAGE_SUBTITLES: Record<Page, string> = {
   "blog-detail": "View blog post details",
   "whats-new": "Latest updates and announcements",
   "resources": "Church resources and materials",
-
+  "church-in-action": "Spiritual lifecycle and Great Commission engine (Win -> Consolidate -> Disciple -> Send)",
 };
 
 // =========================================================
@@ -1161,6 +1163,13 @@ const NAVIGATION_SECTIONS:
                 icon: "👤",
                 permission:
                     "Visitors",
+            },
+            {
+                page: "church-in-action",
+                label: "Church in Action",
+                icon: "⚡",
+                permission:
+                    "Church in Action",
             },
             {
                 page: "giving",
@@ -3213,6 +3222,14 @@ case "visitors":
     return renderProtectedPage(
         "Visitors",
         <Visitors />
+    );
+
+
+case "church-in-action":
+
+    return renderProtectedPage(
+        "Church in Action",
+        <ChurchInActionPage />
     );
 
 

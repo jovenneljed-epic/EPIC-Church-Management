@@ -48,6 +48,7 @@ export const EPIC_PERMISSION_MODULES = [
     "Subscriptions",
     "Website Analytics",
     "EPIC Learning",
+    "Church in Action",
 ] as const;
 
 // ============================================================
@@ -699,6 +700,15 @@ class PermissionService {
                 "subscriptions": [
                     "subscription",
                     "subscription management"
+                ],
+
+                "church in action": [
+                    "churchinaction",
+                    "church-in-action",
+                    "evangelism",
+                    "discipleship",
+                    "follow-up",
+                    "sending"
                 ],
             };
 

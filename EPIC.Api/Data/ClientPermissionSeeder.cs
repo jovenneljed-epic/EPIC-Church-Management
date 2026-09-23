@@ -106,7 +106,8 @@ namespace EPIC.Api.Data
                 "Ministries",
                 "Reports",
                 "Learning",
-                "Settings"
+                "Settings",
+                "Church in Action"
             };
 
             var roleIds = roles.Select(r => r.ClientRoleId).ToList();

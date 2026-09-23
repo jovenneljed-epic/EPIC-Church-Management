@@ -86,6 +86,9 @@ id: "expenses", label: "Expenses", icon: "▤", moduleName: "Expenses",
 id: "visitors", label: "Visitors", icon: "▤", moduleName: "Visitors",
 },
 {
+id: "church-in-action", label: "Church in Action", icon: "⚡", moduleName: "Church in Action",
+},
+{
 id: "ministries", label: "Ministries", icon: "▤", moduleName: "Ministries",
 },
 {
@@ -156,10 +159,20 @@ console.log("CLIENT PERMISSIONS:", permissions);
     // =====================================================
 
     const canViewModule = (moduleName: string): boolean => {
+        const norm = moduleName.trim().toLowerCase();
+        if (norm === "church in action" || norm === "churchinaction") {
+            const explicit = permissions.find(
+                (item) => item.moduleName?.trim().toLowerCase() === norm
+            );
+            if (explicit !== undefined) {
+                return explicit.canView === true;
+            }
+            return true;
+        }
+
         const permission = permissions.find(
             (item) =>
-                item.moduleName?.trim().toLowerCase() ===
-                moduleName.trim().toLowerCase()
+                item.moduleName?.trim().toLowerCase() === norm
         );
 
         if (!permission) {

@@ -26,7 +26,8 @@ namespace EPIC.Api.Data
             "Reports",
             "Learning",
             "Settings",
-            "ChurchProfile"
+            "ChurchProfile",
+            "Church in Action"
         };
 
         // =========================================================
