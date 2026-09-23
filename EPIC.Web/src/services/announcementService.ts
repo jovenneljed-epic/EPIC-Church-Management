@@ -1,6 +1,4 @@
-const API_BASE_URL =
-    import.meta.env.VITE_API_URL ||
-    "https://localhost:7001/api";
+import { API_BASE_URL } from "../config";
 
 
 export interface Announcement {

@@ -1,6 +1,4 @@
-const API_BASE_URL =
-    import.meta.env.VITE_API_URL ||
-    "https://epic-api-m2av.onrender.com/api";
+import { API_BASE_URL } from "../config";
 
 interface WebsiteVisitData {
     visitorId: string;

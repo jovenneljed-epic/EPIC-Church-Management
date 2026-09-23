@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/api/proxy/:path*",
+      "destination": "https://epic-api-m2av.onrender.com/api/:path*"
+    },
+    {
       "source": "/(blog.*|articles.*|)",
       "has": [
         {

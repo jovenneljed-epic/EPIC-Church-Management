@@ -1,5 +1,4 @@
-const API_URL =
-    import.meta.env.VITE_API_URL || "http://localhost:5109/api";
+import { API_BASE_URL as API_URL } from "../config";
 
 const STORAGE_KEY = "epic_cms_admin_blogs";
 

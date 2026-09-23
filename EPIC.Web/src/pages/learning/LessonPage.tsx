@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "./LessonPage.css";
-
-const API_BASE_URL =
-    import.meta.env.VITE_API_URL || "http://localhost:5109/api";
+import { API_BASE_URL } from "../../config";
 
 // =========================================================
 // TYPES
