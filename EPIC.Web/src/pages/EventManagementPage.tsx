@@ -805,6 +805,201 @@ const EventManagementPage: React.FC = () => {
         return getDefaultProgramRundown(selectedEvent);
     }, [selectedEvent]);
 
+    const renderPrintSheet = (containerId: string) => {
+        if (!selectedEvent) return null;
+        return (
+            <div className="event-print-sheet" id={containerId}>
+                {/* OFFICIAL CHURCH HEADER */}
+                <div className="print-doc-header">
+                    <div className="print-church-brand">
+                        <div className="print-church-logo">EPIC</div>
+                        <div className="print-church-details">
+                            <h1 className="church-main-title">EPIC CHURCH MANAGEMENT SYSTEM</h1>
+                            <h2 className="church-branch">LUKE 4:18 MINISTRIES • SAN VICENTE CHURCH</h2>
+                            <span className="church-location">San Vicente, Philippines • Ministry Operations & Secretariat</span>
+                        </div>
+                    </div>
+
+                    <div className="print-doc-id-box">
+                        <span className="doc-type-tag">OFFICIAL OPERATIONAL DIRECTIVE</span>
+                        <strong className="doc-num">EPIC-EOD-2026-{String(selectedEvent.id).padStart(4, "0")}</strong>
+                        <span className="doc-date">Issued: {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</span>
+                    </div>
+                </div>
+
+                <div className="print-doc-divider" />
+
+                <div className="print-document-title-block">
+                    <h2 className="directive-subject-title">EVENT MASTER OPERATIONAL DIRECTIVE & FINAL EVENT PLAN</h2>
+                    <span className="directive-tagline">Authorized Executive Plan for Production, Staffing, and Order of Service</span>
+                </div>
+
+                {/* SECTION 1: EXECUTIVE EVENT SUMMARY */}
+                <div className="print-section-box">
+                    <h3 className="print-section-title">I. EXECUTIVE EVENT PROFILE</h3>
+                    <div className="print-profile-grid">
+                        <div className="profile-cell">
+                            <span className="cell-label">EVENT TITLE:</span>
+                            <strong className="cell-value">{selectedEvent.title}</strong>
+                        </div>
+                        <div className="profile-cell">
+                            <span className="cell-label">EVENT CLASSIFICATION:</span>
+                            <span className="cell-value">{selectedEvent.eventType}</span>
+                        </div>
+                        <div className="profile-cell">
+                            <span className="cell-label">EVENT DATE:</span>
+                            <strong className="cell-value">{formatDate(selectedEvent.startDate)}</strong>
+                        </div>
+                        <div className="profile-cell">
+                            <span className="cell-label">SCHEDULED TIME:</span>
+                            <span className="cell-value">{selectedEvent.startTime || "09:00 AM"} – {selectedEvent.endTime || "11:30 AM"}</span>
+                        </div>
+                        <div className="profile-cell">
+                            <span className="cell-label">VENUE / SANCTUARY:</span>
+                            <strong className="cell-value">{selectedEvent.location}</strong>
+                        </div>
+                        <div className="profile-cell">
+                            <span className="cell-label">PRESIDING MINISTER:</span>
+                            <span className="cell-value">{selectedEvent.coordinator}</span>
+                        </div>
+                        <div className="profile-cell" style={{ gridColumn: "1 / -1" }}>
+                            <span className="cell-label">MINISTRY THEME / SCRIPTURE:</span>
+                            <span className="cell-value italic">
+                                “The Spirit of the Lord is on me, because he has anointed me to proclaim good news to the poor.” (Luke 4:18)
+                            </span>
+                        </div>
+                        {selectedEvent.description && (
+                            <div className="profile-cell" style={{ gridColumn: "1 / -1" }}>
+                                <span className="cell-label">EVENT PURPOSE & DIRECTIVE:</span>
+                                <span className="cell-value">{selectedEvent.description}</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* SECTION 2: PROGRAM RUNDOWN */}
+                <div className="print-section-box">
+                    <h3 className="print-section-title">II. PROGRAM RUNDOWN & ORDER OF SERVICE</h3>
+                    <table className="print-table">
+                        <thead>
+                            <tr>
+                                <th style={{ width: "120px" }}>TIME SLOT</th>
+                                <th>PROGRAM SEGMENT / ACTIVITY</th>
+                                <th style={{ width: "220px" }}>LEAD PERSON / TEAM</th>
+                                <th style={{ width: "240px" }}>TECHNICAL & PRODUCTION CUE</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {currentRundown.map((item, idx) => (
+                                <tr key={idx}>
+                                    <td className="center bold">{item.time}</td>
+                                    <td className="bold">{item.activity}</td>
+                                    <td>{item.leader}</td>
+                                    <td className="cue-cell">{item.technicalCue}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* SECTION 3: MINISTRY ASSIGNMENTS MATRIX */}
+                <div className="print-section-box">
+                    <h3 className="print-section-title">III. COMMITTEE & MINISTRY STAFFING MATRIX</h3>
+                    {selectedEvent.assignments.length === 0 ? (
+                        <p className="print-empty-note">General volunteer mobilization. All active church ministry members on duty.</p>
+                    ) : (
+                        <table className="print-table">
+                            <thead>
+                                <tr>
+                                    <th style={{ width: "180px" }}>DEPARTMENT / MINISTRY</th>
+                                    <th style={{ width: "200px" }}>ASSIGNED ROLE</th>
+                                    <th>PERSONNEL IN-CHARGE</th>
+                                    <th style={{ width: "100px" }}>PRIORITY</th>
+                                    <th style={{ width: "110px" }}>CONFIRMATION</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {selectedEvent.assignments.map((a, idx) => (
+                                    <tr key={idx}>
+                                        <td className="bold">{a.department || "Church Operations"}</td>
+                                        <td>{a.role}</td>
+                                        <td className="bold">{a.person}</td>
+                                        <td className="center">{a.priority}</td>
+                                        <td className="center">{a.status}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
+                </div>
+
+                {/* SECTION 4: LOGISTICS & EQUIPMENT VERIFICATION */}
+                <div className="print-section-box">
+                    <h3 className="print-section-title">IV. LOGISTICS & EQUIPMENT READINESS VERIFICATION</h3>
+                    {eventNeeds.length === 0 ? (
+                        <div className="print-logistics-standard">
+                            <p>Standard Sanctuary Setup Applied: FOH Sound Console, Stage Microphones, Video Projectors, Sanctuary Air Conditioning, Emergency Medical Kit, Welcome Registration Table, and Offering Buckets.</p>
+                        </div>
+                    ) : (
+                        <table className="print-table">
+                            <thead>
+                                <tr>
+                                    <th>EQUIPMENT / ITEM</th>
+                                    <th style={{ width: "140px" }}>CATEGORY</th>
+                                    <th style={{ width: "80px" }}>QTY</th>
+                                    <th style={{ width: "180px" }}>RESPONSIBLE PERSON</th>
+                                    <th style={{ width: "110px" }}>STATUS</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {eventNeeds.map((n, idx) => (
+                                    <tr key={idx}>
+                                        <td className="bold">{n.needName}</td>
+                                        <td>{n.category || "Logistics"}</td>
+                                        <td className="center">{n.quantity || 1} {n.unit || ""}</td>
+                                        <td>{n.responsiblePerson || "Operations Lead"}</td>
+                                        <td className="center">{n.status || "Ready"}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    )}
+                </div>
+
+                {/* SECTION 5: SIGNATURES & ENDORSEMENT */}
+                <div className="print-endorsement-block">
+                    <h3 className="print-section-title">V. OFFICIAL AUTHORIZATION & ENDORSEMENTS</h3>
+                    <div className="print-signatures-grid">
+                        <div className="sig-box">
+                            <span className="sig-label">PREPARED BY:</span>
+                            <div className="sig-line" />
+                            <strong className="sig-name">{selectedEvent.coordinator || "Event Coordinator"}</strong>
+                            <span className="sig-title">Event Operations Director</span>
+                        </div>
+
+                        <div className="sig-box">
+                            <span className="sig-label">NOTED BY:</span>
+                            <div className="sig-line" />
+                            <strong className="sig-name">Head of Ministries</strong>
+                            <span className="sig-title">Luke 4:18 Pastoral Secretariat</span>
+                        </div>
+
+                        <div className="sig-box">
+                            <span className="sig-label">APPROVED BY:</span>
+                            <div className="sig-line" />
+                            <strong className="sig-name">PASTOR RONNEL M. AVIGUETERO</strong>
+                            <span className="sig-title">Senior Pastor • Luke 4:18 Ministries</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="print-footer-notice">
+                    <span>Official Church Directive • Luke 4:18 Ministries San Vicente • Generated via EPIC Church Management System</span>
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className="event-management">
             {/* =================================================
@@ -1347,8 +1542,12 @@ const EventManagementPage: React.FC = () => {
             {/* =================================================
                 PRINT PREVIEW MODAL (OFFICIAL DIRECTIVE FORMAT)
             ================================================= */}
+            {/* =================================================
+                PRINT PREVIEW MODAL (ON-SCREEN PREVIEW ONLY)
+                Strictly marked with .no-print so it NEVER casts a backdrop or overlay during print
+            ================================================= */}
             {showPrintModal && selectedEvent && (
-                <div className="event-modal-overlay" onClick={() => setShowPrintModal(false)}>
+                <div className="event-modal-overlay no-print" onClick={() => setShowPrintModal(false)}>
                     <div className="event-print-preview-modal" onClick={(e) => e.stopPropagation()}>
                         <div className="print-modal-header no-print">
                             <div className="print-modal-title">
@@ -1377,197 +1576,20 @@ const EventManagementPage: React.FC = () => {
                             </div>
                         </div>
 
-                        {/* PRINTABLE LETTERHEAD DOCUMENT */}
-                        <div className="event-print-sheet" id="final-event-plan-print">
-                            {/* OFFICIAL CHURCH HEADER */}
-                            <div className="print-doc-header">
-                                <div className="print-church-brand">
-                                    <div className="print-church-logo">EPIC</div>
-                                    <div className="print-church-details">
-                                        <h1 className="church-main-title">EPIC CHURCH MANAGEMENT SYSTEM</h1>
-                                        <h2 className="church-branch">LUKE 4:18 MINISTRIES • SAN VICENTE CHURCH</h2>
-                                        <span className="church-location">San Vicente, Philippines • Ministry Operations & Secretariat</span>
-                                    </div>
-                                </div>
-
-                                <div className="print-doc-id-box">
-                                    <span className="doc-type-tag">OFFICIAL OPERATIONAL DIRECTIVE</span>
-                                    <strong className="doc-num">EPIC-EOD-2026-{String(selectedEvent.id).padStart(4, "0")}</strong>
-                                    <span className="doc-date">Issued: {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</span>
-                                </div>
-                            </div>
-
-                            <div className="print-doc-divider" />
-
-                            <div className="print-document-title-block">
-                                <h2 className="directive-subject-title">EVENT MASTER OPERATIONAL DIRECTIVE & FINAL EVENT PLAN</h2>
-                                <span className="directive-tagline">Authorized Executive Plan for Production, Staffing, and Order of Service</span>
-                            </div>
-
-                            {/* SECTION 1: EXECUTIVE EVENT SUMMARY */}
-                            <div className="print-section-box">
-                                <h3 className="print-section-title">I. EXECUTIVE EVENT PROFILE</h3>
-                                <div className="print-profile-grid">
-                                    <div className="profile-cell">
-                                        <span className="cell-label">EVENT TITLE:</span>
-                                        <strong className="cell-value">{selectedEvent.title}</strong>
-                                    </div>
-                                    <div className="profile-cell">
-                                        <span className="cell-label">EVENT CLASSIFICATION:</span>
-                                        <span className="cell-value">{selectedEvent.eventType}</span>
-                                    </div>
-                                    <div className="profile-cell">
-                                        <span className="cell-label">EVENT DATE:</span>
-                                        <strong className="cell-value">{formatDate(selectedEvent.startDate)}</strong>
-                                    </div>
-                                    <div className="profile-cell">
-                                        <span className="cell-label">SCHEDULED TIME:</span>
-                                        <span className="cell-value">{selectedEvent.startTime || "09:00 AM"} – {selectedEvent.endTime || "11:30 AM"}</span>
-                                    </div>
-                                    <div className="profile-cell">
-                                        <span className="cell-label">VENUE / SANCTUARY:</span>
-                                        <strong className="cell-value">{selectedEvent.location}</strong>
-                                    </div>
-                                    <div className="profile-cell">
-                                        <span className="cell-label">PRESIDING MINISTER:</span>
-                                        <span className="cell-value">{selectedEvent.coordinator}</span>
-                                    </div>
-                                    <div className="profile-cell" style={{ gridColumn: "1 / -1" }}>
-                                        <span className="cell-label">MINISTRY THEME / SCRIPTURE:</span>
-                                        <span className="cell-value italic">
-                                            “The Spirit of the Lord is on me, because he has anointed me to proclaim good news to the poor.” (Luke 4:18)
-                                        </span>
-                                    </div>
-                                    {selectedEvent.description && (
-                                        <div className="profile-cell" style={{ gridColumn: "1 / -1" }}>
-                                            <span className="cell-label">EVENT PURPOSE & DIRECTIVE:</span>
-                                            <span className="cell-value">{selectedEvent.description}</span>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* SECTION 2: PROGRAM RUNDOWN */}
-                            <div className="print-section-box">
-                                <h3 className="print-section-title">II. PROGRAM RUNDOWN & ORDER OF SERVICE</h3>
-                                <table className="print-table">
-                                    <thead>
-                                        <tr>
-                                            <th style={{ width: "120px" }}>TIME SLOT</th>
-                                            <th>PROGRAM SEGMENT / ACTIVITY</th>
-                                            <th style={{ width: "220px" }}>LEAD PERSON / TEAM</th>
-                                            <th style={{ width: "240px" }}>TECHNICAL & PRODUCTION CUE</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {currentRundown.map((item, idx) => (
-                                            <tr key={idx}>
-                                                <td className="center bold">{item.time}</td>
-                                                <td className="bold">{item.activity}</td>
-                                                <td>{item.leader}</td>
-                                                <td className="cue-cell">{item.technicalCue}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            {/* SECTION 3: MINISTRY ASSIGNMENTS MATRIX */}
-                            <div className="print-section-box">
-                                <h3 className="print-section-title">III. COMMITTEE & MINISTRY STAFFING MATRIX</h3>
-                                {selectedEvent.assignments.length === 0 ? (
-                                    <p className="print-empty-note">General volunteer mobilization. All active church ministry members on duty.</p>
-                                ) : (
-                                    <table className="print-table">
-                                        <thead>
-                                            <tr>
-                                                <th style={{ width: "180px" }}>DEPARTMENT / MINISTRY</th>
-                                                <th style={{ width: "200px" }}>ASSIGNED ROLE</th>
-                                                <th>PERSONNEL IN-CHARGE</th>
-                                                <th style={{ width: "100px" }}>PRIORITY</th>
-                                                <th style={{ width: "110px" }}>CONFIRMATION</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {selectedEvent.assignments.map((a, idx) => (
-                                                <tr key={idx}>
-                                                    <td className="bold">{a.department || "Church Operations"}</td>
-                                                    <td>{a.role}</td>
-                                                    <td className="bold">{a.person}</td>
-                                                    <td className="center">{a.priority}</td>
-                                                    <td className="center">{a.status}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                )}
-                            </div>
-
-                            {/* SECTION 4: LOGISTICS & EQUIPMENT VERIFICATION */}
-                            <div className="print-section-box">
-                                <h3 className="print-section-title">IV. LOGISTICS & EQUIPMENT READINESS VERIFICATION</h3>
-                                {eventNeeds.length === 0 ? (
-                                    <div className="print-logistics-standard">
-                                        <p>Standard Sanctuary Setup Applied: FOH Sound Console, Stage Microphones, Video Projectors, Sanctuary Air Conditioning, Emergency Medical Kit, Welcome Registration Table, and Offering Buckets.</p>
-                                    </div>
-                                ) : (
-                                    <table className="print-table">
-                                        <thead>
-                                            <tr>
-                                                <th>EQUIPMENT / ITEM</th>
-                                                <th style={{ width: "140px" }}>CATEGORY</th>
-                                                <th style={{ width: "80px" }}>QTY</th>
-                                                <th style={{ width: "180px" }}>RESPONSIBLE PERSON</th>
-                                                <th style={{ width: "110px" }}>STATUS</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {eventNeeds.map((n, idx) => (
-                                                <tr key={idx}>
-                                                    <td className="bold">{n.needName}</td>
-                                                    <td>{n.category || "Logistics"}</td>
-                                                    <td className="center">{n.quantity || 1} {n.unit || ""}</td>
-                                                    <td>{n.responsiblePerson || "Operations Lead"}</td>
-                                                    <td className="center">{n.status || "Ready"}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                )}
-                            </div>
-
-                            {/* SECTION 5: SIGNATURES & ENDORSEMENT */}
-                            <div className="print-endorsement-block">
-                                <h3 className="print-section-title">V. OFFICIAL AUTHORIZATION & ENDORSEMENTS</h3>
-                                <div className="print-signatures-grid">
-                                    <div className="sig-box">
-                                        <span className="sig-label">PREPARED BY:</span>
-                                        <div className="sig-line" />
-                                        <strong className="sig-name">{selectedEvent.coordinator || "Event Coordinator"}</strong>
-                                        <span className="sig-title">Event Operations Director</span>
-                                    </div>
-
-                                    <div className="sig-box">
-                                        <span className="sig-label">NOTED BY:</span>
-                                        <div className="sig-line" />
-                                        <strong className="sig-name">Head of Ministries</strong>
-                                        <span className="sig-title">Luke 4:18 Pastoral Secretariat</span>
-                                    </div>
-
-                                    <div className="sig-box">
-                                        <span className="sig-label">APPROVED BY:</span>
-                                        <div className="sig-line" />
-                                        <strong className="sig-name">PASTOR RONNEL M. AVIGUETERO</strong>
-                                        <span className="sig-title">Senior Pastor • Luke 4:18 Ministries</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="print-footer-notice">
-                                <span>Official Church Directive • Luke 4:18 Ministries San Vicente • Generated via EPIC Church Management System</span>
-                            </div>
+                        <div className="event-print-preview-scroll">
+                            {renderPrintSheet("final-event-plan-preview")}
                         </div>
                     </div>
+                </div>
+            )}
+
+            {/* =================================================
+                STANDALONE PRINT ROOT FOR PAPER OUTPUT
+                Rendered directly under root, hidden on screen, printed on paper
+            ================================================= */}
+            {selectedEvent && (
+                <div className="event-standalone-print-root" aria-hidden="true">
+                    {renderPrintSheet("final-event-plan-print")}
                 </div>
             )}
 
