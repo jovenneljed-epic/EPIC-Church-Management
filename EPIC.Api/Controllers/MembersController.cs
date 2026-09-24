@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -1167,14 +1167,15 @@ namespace EPIC.Api.Controllers
         }
 
         // =========================================================
-        // DEACTIVATE MEMBER
-        // DELETE: /api/Members/{id}
+        // DELETE / DEACTIVATE MEMBER
+        // DELETE: /api/Members/{id}?permanent=true
         // =========================================================
 
         [HttpDelete("{id:int}")]
         [Permission("Members", "delete")]
-        public async Task<IActionResult> DeactivateMember(
-            int id)
+        public async Task<IActionResult> DeleteMember(
+            int id,
+            [FromQuery] bool permanent = true)
         {
             var member =
                 await FindTenantMemberAsync(id);
@@ -1191,45 +1192,128 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            member.Status =
-                "INACTIVE";
-
-            member.UpdatedDate =
-                DateTime.UtcNow;
-
-            // Also deactivate the member login account.
-            var user =
-                await _context.Users
-                    .FirstOrDefaultAsync(
-                        u => u.MemberId == id);
-
-            if (user != null)
+            if (!permanent)
             {
-                user.IsActive = false;
-                user.UpdatedDate = DateTime.UtcNow;
+                member.Status =
+                    "INACTIVE";
+
+                member.UpdatedDate =
+                    DateTime.UtcNow;
+
+                // Also deactivate the member login account.
+                var user =
+                    await _context.Users
+                        .FirstOrDefaultAsync(
+                            u => u.MemberId == id);
+
+                if (user != null)
+                {
+                    user.IsActive = false;
+                    user.UpdatedDate = DateTime.UtcNow;
+                }
+
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    message =
+                        "MEMBER AND MEMBER ACCOUNT DEACTIVATED SUCCESSFULLY.",
+
+                    memberId =
+                        member.MemberId,
+
+                    customerId =
+                        member.CustomerId,
+
+                    memberCode =
+                        member.MemberCode,
+
+                    status =
+                        member.Status,
+
+                    accountDeactivated =
+                        user != null
+                });
             }
 
+            // =====================================================
+            // PERMANENT DELETE: Cascade cleanup to prevent FK errors
+            // =====================================================
+
+            DeleteExistingPhoto(member.PhotoPath);
+
+            var attendances = await _context.Attendances.Where(a => a.MemberId == id).ToListAsync();
+            if (attendances.Any()) _context.Attendances.RemoveRange(attendances);
+
+            var eventAttendances = await _context.EventAttendances.Where(ea => ea.MemberId == id).ToListAsync();
+            if (eventAttendances.Any()) _context.EventAttendances.RemoveRange(eventAttendances);
+
+            var qrIdentities = await _context.MemberQrIdentities.Where(q => q.MemberId == id).ToListAsync();
+            if (qrIdentities.Any()) _context.MemberQrIdentities.RemoveRange(qrIdentities);
+
+            var scanLogs = await _context.QrScanLogs.Where(s => s.MemberId == id).ToListAsync();
+            if (scanLogs.Any()) _context.QrScanLogs.RemoveRange(scanLogs);
+
+            var ministryMembers = await _context.MinistryMembers.Where(mm => mm.MemberId == id).ToListAsync();
+            if (ministryMembers.Any()) _context.MinistryMembers.RemoveRange(ministryMembers);
+
+            var clientMembers = await _context.ClientMembers.Where(cm => cm.MemberId == id).ToListAsync();
+            if (clientMembers.Any()) _context.ClientMembers.RemoveRange(clientMembers);
+
+            var crPasses = await _context.CRBreakPasses.Where(p => p.MemberId == id).ToListAsync();
+            if (crPasses.Any()) _context.CRBreakPasses.RemoveRange(crPasses);
+
+            var foodRes = await _context.FoodReservations.Where(fr => fr.MemberId == id).ToListAsync();
+            if (foodRes.Any()) _context.FoodReservations.RemoveRange(foodRes);
+
+            var notifs = await _context.MemberNotifications.Where(n => n.MemberId == id).ToListAsync();
+            if (notifs.Any()) _context.MemberNotifications.RemoveRange(notifs);
+
+            var rewards = await _context.MemberRewards.Where(r => r.MemberId == id).ToListAsync();
+            if (rewards.Any()) _context.MemberRewards.RemoveRange(rewards);
+
+            var memberUser = await _context.Users.FirstOrDefaultAsync(u => u.MemberId == id);
+            if (memberUser != null) _context.Users.Remove(memberUser);
+
+            var visitors = await _context.Visitors.Where(v => v.ConvertedMemberId == id).ToListAsync();
+            foreach (var v in visitors)
+            {
+                v.ConvertedMemberId = null;
+                v.IsConvertedToMember = false;
+            }
+
+            var givings = await _context.Givings.Where(g => g.MemberId == id).ToListAsync();
+            foreach (var g in givings) g.MemberId = null;
+
+            var assignments = await _context.EventAssignments.Where(ea => ea.MemberId == id).ToListAsync();
+            foreach (var a in assignments) a.MemberId = null;
+
+            var checklists = await _context.EventChecklists.Where(ec => ec.AssignedMemberId == id || ec.CompletedByMemberId == id).ToListAsync();
+            foreach (var c in checklists)
+            {
+                if (c.AssignedMemberId == id) c.AssignedMemberId = null;
+                if (c.CompletedByMemberId == id) c.CompletedByMemberId = null;
+            }
+
+            var deptHeads = await _context.EventDepartments.Where(ed => ed.DepartmentHeadMemberId == id).ToListAsync();
+            foreach (var dh in deptHeads) dh.DepartmentHeadMemberId = null;
+
+            var eventNeeds = await _context.EventNeeds.Where(en => en.ResponsibleMemberId == id).ToListAsync();
+            foreach (var en in eventNeeds) en.ResponsibleMemberId = null;
+
+            _context.Members.Remove(member);
             await _context.SaveChangesAsync();
 
             return Ok(new
             {
                 message =
-                    "MEMBER AND MEMBER ACCOUNT DEACTIVATED SUCCESSFULLY.",
+                    "MEMBER PERMANENTLY DELETED FROM DATABASE.",
 
                 memberId =
-                    member.MemberId,
+                    id,
 
-                customerId =
-                    member.CustomerId,
-
-                memberCode =
-                    member.MemberCode,
-
-                status =
-                    member.Status,
-
-                accountDeactivated =
-                    user != null
+                deleted =
+                    true
             });
         }
 

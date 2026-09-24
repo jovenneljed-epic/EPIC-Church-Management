@@ -1,4 +1,4 @@
-﻿/* =========================================================
+/* =========================================================
    EPIC MEMBERS MODULE
    Professional Church Management UI
 ========================================================= */
@@ -505,6 +505,8 @@
 
 .actions-column {
     text-align: center !important;
+    width: 120px;
+    min-width: 120px;
 }
 
 /* =========================================================
@@ -657,18 +659,21 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 5px;
+    gap: 6px;
 }
 
 .member-action-btn {
-    width: 30px;
-    height: 30px;
-    border: 1px solid #e0e5ec;
+    width: 32px;
+    height: 32px;
+    border: 1px solid #e2e8f0;
     border-radius: 7px;
     background: #ffffff;
     cursor: pointer;
-    font-size: 13px;
-    transition: transform 0.15s ease, background 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #64748b;
+    transition: all 0.15s ease;
 }
 
     .member-action-btn:hover {
@@ -676,15 +681,21 @@
     }
 
 .view-action:hover {
-    background: #edf5ff;
+    background: #eff6ff;
+    color: #2563eb;
+    border-color: #bfdbfe;
 }
 
 .edit-action:hover {
-    background: #fff7e8;
+    background: #fffbeb;
+    color: #d97706;
+    border-color: #fde68a;
 }
 
 .delete-action:hover {
-    background: #fff0f0;
+    background: #fef2f2;
+    color: #dc2626;
+    border-color: #fecaca;
 }
 
 /* =========================================================

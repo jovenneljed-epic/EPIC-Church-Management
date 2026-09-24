@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import "./Members.css";
 import PermissionService from "./PermissionService";
 import { API_BASE_URL } from "./config";
+import { Eye, Pencil, Trash2 } from "lucide-react";
 
 /* =========================================================
    TYPES
@@ -353,107 +354,12 @@ async function apiFetch<T>(
     }
 }
 /* =========================================================
-   MEMBER FORM DATA
-========================================================= */
-
-const buildMemberFormData = (
-    form: MemberForm,
-    statusOverride?: string
-): FormData => {
-
-    const formData =
-        new FormData();
-
-    formData.append(
-        "MemberCode",
-        form.memberCode.trim()
-    );
-
-    formData.append(
-        "FirstName",
-        form.firstName.trim()
-    );
-
-    formData.append(
-        "MiddleName",
-        form.middleName.trim()
-    );
-
-    formData.append(
-        "LastName",
-        form.lastName.trim()
-    );
-
-    formData.append(
-        "Suffix",
-        form.suffix.trim()
-    );
-
-    formData.append(
-        "Gender",
-        form.gender || ""
-    );
-
-    formData.append(
-        "BirthDate",
-        form.birthDate || ""
-    );
-
-    formData.append(
-        "CivilStatus",
-        form.civilStatus || ""
-    );
-
-    formData.append(
-        "ContactNumber",
-        form.contactNumber.trim()
-    );
-
-    formData.append(
-        "Email",
-        form.email.trim()
-    );
-
-    formData.append(
-        "Address",
-        form.address.trim()
-    );
-
-    formData.append(
-        "Ministry",
-        form.ministry.trim()
-    );
-
-    formData.append(
-        "Status",
-        statusOverride ||
-        form.status
-    );
-
-    formData.append(
-        "DateJoined",
-        form.dateJoined || ""
-    );
-
-    formData.append(
-        "Occupation",
-        form.occupation.trim()
-    );
-
-    formData.append(
-        "Notes",
-        form.notes.trim()
-    );
-
-    return formData;
-};
-
-/* =========================================================
    MEMBER JSON PAYLOAD
 ========================================================= */
 
 const buildMemberPayload = (
-    form: MemberForm
+    form: MemberForm,
+    statusOverride?: string
 ) => ({
     memberCode:
         form.memberCode.trim(),
@@ -492,6 +398,7 @@ const buildMemberPayload = (
         form.ministry.trim(),
 
     status:
+        statusOverride ||
         form.status,
 
     dateJoined:
@@ -1107,8 +1014,8 @@ const Members: React.FC = () => {
                     );
                 }
 
-                const formData =
-                    buildMemberFormData(
+                const payload =
+                    buildMemberPayload(
                         form
                     );
 
@@ -1132,7 +1039,9 @@ const Members: React.FC = () => {
                             "PUT",
 
                         body:
-                            formData
+                            JSON.stringify(
+                                payload
+                            )
                     }
                 );
 
@@ -1191,7 +1100,7 @@ const Members: React.FC = () => {
 
         const confirmed =
             window.confirm(
-                `Are you sure you want to delete ${getFullName(member)}?`
+                `Are you sure you want to permanently delete ${getFullName(member)}? This action cannot be undone.`
             );
 
         if (!confirmed) {
@@ -1204,7 +1113,7 @@ const Members: React.FC = () => {
         try {
 
             const endpoint =
-                `/Members/${member.memberId}`;
+                `/Members/${member.memberId}?permanent=true`;
 
             await apiFetch(
                 endpoint,
@@ -1267,8 +1176,8 @@ const Members: React.FC = () => {
 
         try {
 
-            const formData =
-                buildMemberFormData(
+            const payload =
+                buildMemberPayload(
                     {
                         memberCode:
                             member.memberCode ||
@@ -1348,7 +1257,9 @@ const Members: React.FC = () => {
                         "PUT",
 
                     body:
-                        formData
+                        JSON.stringify(
+                            payload
+                        )
                 }
             );
 
@@ -2158,7 +2069,7 @@ const Members: React.FC = () => {
                                                             )
                                                         }
                                                     >
-                                                        👁
+                                                        <Eye size={15} />
                                                     </button>
 
                                                     {canEditMembers && (
@@ -2173,7 +2084,7 @@ const Members: React.FC = () => {
                                                                 )
                                                             }
                                                         >
-                                                            ✎
+                                                            <Pencil size={15} />
                                                         </button>
 
                                                     )}
@@ -2190,7 +2101,7 @@ const Members: React.FC = () => {
                                                                 )
                                                             }
                                                         >
-                                                            🗑
+                                                            <Trash2 size={15} />
                                                         </button>
 
                                                     )}
