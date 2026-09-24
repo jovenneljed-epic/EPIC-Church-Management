@@ -47,11 +47,12 @@ import type {
     Prospect,
 } from "../../services/churchInActionService";
 
-type ActiveTab = "delegation" | "pipeline" | "followup" | "discipleship" | "sending" | "evangelism";
+type ActiveTab = "delegation" | "members" | "pipeline" | "followup" | "discipleship" | "sending" | "evangelism";
 
 interface ChurchInActionPageProps {
     onBack?: () => void;
     canManage?: boolean;
+    onNavigate?: (page: string) => void;
 }
 
 // ------------------------------------------------------------
@@ -78,9 +79,39 @@ function getLeaderRoleTag(ministry: string = ""): { tag: "pastor" | "adult" | "y
     return { tag: "member", label: "Member", icon: "👤" };
 }
 
+// ------------------------------------------------------------
+// MEMBER DEPARTMENT CLASSIFICATION HELPER
+// Categorizes congregation into official church departments
+// ------------------------------------------------------------
+function getMemberDepartment(ministry: string = ""): {
+    deptKey: "pastoral" | "adult" | "youth" | "children" | "worship" | "general";
+    name: string;
+    icon: string;
+    badgeClass: string;
+} {
+    const min = (ministry || "").toUpperCase().trim();
+    if (min.includes("PASTOR")) {
+        return { deptKey: "pastoral", name: "Pastoral Staff", icon: "👑", badgeClass: "pastor" };
+    }
+    if (min.includes("ADULT")) {
+        return { deptKey: "adult", name: "Adult Department", icon: "🌟", badgeClass: "adult" };
+    }
+    if (min.includes("YOUTH") || min.includes("FUTURE")) {
+        return { deptKey: "youth", name: "Youth Department", icon: "🔥", badgeClass: "youth" };
+    }
+    if (min.includes("CHILDREN") || min.includes("KIDS") || min.includes("SUNDAY SCHOOL")) {
+        return { deptKey: "children", name: "Children's Ministry", icon: "👶", badgeClass: "children" };
+    }
+    if (min.includes("WORSHIP") || min.includes("MUSIC") || min.includes("BAND")) {
+        return { deptKey: "worship", name: "Worship & Music Team", icon: "🎵", badgeClass: "worship" };
+    }
+    return { deptKey: "general", name: ministry?.trim() || "General Congregation", icon: "👥", badgeClass: "general" };
+}
+
 const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
     onBack,
     canManage = true,
+    onNavigate,
 }) => {
     // ============================================================
     // STATE
@@ -92,6 +123,20 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
     const [statusFilter, setStatusFilter] = useState<string>("ALL");
     const [leaderFilter, setLeaderFilter] = useState<string>("ALL");
     const [leaderCategoryTab, setLeaderCategoryTab] = useState<"ALL" | "PASTOR" | "ADULT" | "YOUTH" | "OTHER">("ALL");
+
+    // Church Members & Departments View State
+    const [memberSearchTerm, setMemberSearchTerm] = useState<string>("");
+    const [memberDeptFilter, setMemberDeptFilter] = useState<string>("ALL");
+    const [memberRoleFilter, setMemberRoleFilter] = useState<"ALL" | "LEADERS" | "MEMBERS">("ALL");
+
+    const handleNavigatePage = useCallback((page: string) => {
+        if (onNavigate) {
+            onNavigate(page);
+        } else {
+            const target = page.startsWith("/cms") ? page : `/cms/${page}`;
+            window.location.href = target;
+        }
+    }, [onNavigate]);
 
     // Real Database Collections
     const [realVisitors, setRealVisitors] = useState<any[]>([]);
@@ -356,6 +401,115 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
         if (leaderCategoryTab === "OTHER") return otherLeaders;
         return realLeaders;
     }, [leaderCategoryTab, realLeaders, assistantPastors, adultLeaders, youthLeaders, otherLeaders]);
+
+    const selectedLeader = useMemo(() => {
+        if (leaderFilter === "ALL") return null;
+        return realLeaders.find((m) => m.memberId === Number(leaderFilter)) || realMembers.find((m) => m.memberId === Number(leaderFilter)) || null;
+    }, [leaderFilter, realLeaders, realMembers]);
+
+    // Department members count breakdown
+    const departmentCounts = useMemo(() => {
+        let pastoral = 0;
+        let adult = 0;
+        let youth = 0;
+        let children = 0;
+        let worship = 0;
+        let general = 0;
+
+        realMembers.forEach((m) => {
+            const dept = getMemberDepartment(m.ministry);
+            if (dept.deptKey === "pastoral") pastoral++;
+            else if (dept.deptKey === "adult") adult++;
+            else if (dept.deptKey === "youth") youth++;
+            else if (dept.deptKey === "children") children++;
+            else if (dept.deptKey === "worship") worship++;
+            else general++;
+        });
+
+        return { pastoral, adult, youth, children, worship, general };
+    }, [realMembers]);
+
+    // Flock belonging to selected leader or selected category
+    const selectedLeaderFlock = useMemo(() => {
+        if (selectedLeader) {
+            const dept = getMemberDepartment(selectedLeader.ministry);
+            const flock = realMembers.filter((m) => getMemberDepartment(m.ministry).deptKey === dept.deptKey);
+            return {
+                title: `${dept.name} Flock (${flock.length} Total: Leaders & Members)`,
+                roleTag: getLeaderRoleTag(selectedLeader.ministry),
+                leaderName: selectedLeader.fullName,
+                members: flock,
+            };
+        }
+
+        if (leaderCategoryTab === "ADULT") {
+            const flock = realMembers.filter((m) => getMemberDepartment(m.ministry).deptKey === "adult");
+            return {
+                title: `Adult Department Flock (${flock.length} Total: ${adultLeaders.length} Leaders, ${flock.length - adultLeaders.length} Members)`,
+                roleTag: { tag: "adult" as const, label: "Adult Leader", icon: "🌟" },
+                leaderName: "Adult Ministry",
+                members: flock,
+            };
+        }
+
+        if (leaderCategoryTab === "YOUTH") {
+            const flock = realMembers.filter((m) => getMemberDepartment(m.ministry).deptKey === "youth");
+            return {
+                title: `Youth Department Flock (${flock.length} Total: ${youthLeaders.length} Leaders, ${flock.length - youthLeaders.length} Members)`,
+                roleTag: { tag: "youth" as const, label: "Youth Leader", icon: "🔥" },
+                leaderName: "Youth Ministry",
+                members: flock,
+            };
+        }
+
+        if (leaderCategoryTab === "PASTOR") {
+            const flock = realMembers.filter((m) => getMemberDepartment(m.ministry).deptKey === "pastoral");
+            return {
+                title: `Pastoral Staff & Ordained Ministers (${flock.length} Assistant Pastors)`,
+                roleTag: { tag: "pastor" as const, label: "Assistant Pastor", icon: "👑" },
+                leaderName: "Pastoral Staff",
+                members: flock,
+            };
+        }
+
+        return null;
+    }, [selectedLeader, leaderCategoryTab, realMembers, adultLeaders.length, youthLeaders.length]);
+
+    // Filtered Church Members list for Tab 2
+    const filteredMembersList = useMemo(() => {
+        return realMembers.filter((m) => {
+            const fullName = (m.fullName || `${m.firstName || ""} ${m.lastName || ""}`).toLowerCase();
+            const code = (m.memberCode || "").toLowerCase();
+            const contact = (m.contactNumber || "").toLowerCase();
+            const address = (m.address || "").toLowerCase();
+            const ministry = (m.ministry || "").toLowerCase();
+
+            const search = memberSearchTerm.toLowerCase();
+            const matchesSearch =
+                !memberSearchTerm ||
+                fullName.includes(search) ||
+                code.includes(search) ||
+                contact.includes(search) ||
+                address.includes(search) ||
+                ministry.includes(search);
+
+            const dept = getMemberDepartment(m.ministry);
+            let matchesDept = true;
+            if (memberDeptFilter !== "ALL") {
+                matchesDept = dept.deptKey.toUpperCase() === memberDeptFilter.toUpperCase();
+            }
+
+            const roleTag = getLeaderRoleTag(m.ministry);
+            let matchesRole = true;
+            if (memberRoleFilter === "LEADERS") {
+                matchesRole = roleTag.tag !== "member";
+            } else if (memberRoleFilter === "MEMBERS") {
+                matchesRole = roleTag.tag === "member";
+            }
+
+            return matchesSearch && matchesDept && matchesRole;
+        });
+    }, [realMembers, memberSearchTerm, memberDeptFilter, memberRoleFilter]);
 
     // ============================================================
     // DELEGATION ACTIONS
@@ -768,11 +922,29 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                     <button
                         type="button"
                         className="cia-btn-outline"
+                        onClick={() => handleNavigatePage("members")}
+                        title="Open full Church Members module"
+                    >
+                        <Users size={15} />
+                        <span>Members Module ({realMembers.length})</span>
+                    </button>
+                    <button
+                        type="button"
+                        className="cia-btn-outline"
+                        onClick={() => handleNavigatePage("visitors")}
+                        title="Open full Visitors module"
+                    >
+                        <UserCheck size={15} />
+                        <span>Visitors Module ({realVisitors.length})</span>
+                    </button>
+                    <button
+                        type="button"
+                        className="cia-btn-outline"
                         onClick={loadRealData}
                         title="Sync with live database"
                     >
                         <RefreshCw size={15} className={loading ? "cia-spin" : ""} />
-                        <span>Sync Database</span>
+                        <span>Sync</span>
                     </button>
                     <button
                         type="button"
@@ -781,7 +953,7 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                         title="Print clean report"
                     >
                         <Printer size={15} />
-                        <span>Print Report</span>
+                        <span>Print</span>
                     </button>
                     {canManage && (
                         <button
@@ -798,7 +970,15 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
 
             {/* MONITORING METRICS BAR (FROM REAL DATABASE) */}
             <section className="cia-metrics-grid">
-                <div className="cia-metric-card">
+                <div
+                    className="cia-metric-card clickable"
+                    onClick={() => {
+                        setActiveTab("delegation");
+                        setStatusFilter("ALL");
+                        setLeaderFilter("ALL");
+                    }}
+                    title="Click to view all newcomers in Delegation Center"
+                >
                     <div className="cia-metric-icon-wrap cia-icon-blue">
                         <Users size={20} />
                     </div>
@@ -809,7 +989,15 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                     </div>
                 </div>
 
-                <div className={`cia-metric-card ${metrics.unassignedCount > 0 ? "cia-metric-card-warn" : ""}`}>
+                <div
+                    className={`cia-metric-card clickable ${metrics.unassignedCount > 0 ? "cia-metric-card-warn" : ""}`}
+                    onClick={() => {
+                        setActiveTab("delegation");
+                        setStatusFilter("UNASSIGNED");
+                        setLeaderFilter("ALL");
+                    }}
+                    title="Click to view unassigned newcomers requiring a leader"
+                >
                     <div className="cia-metric-icon-wrap cia-icon-amber">
                         <AlertCircle size={20} />
                     </div>
@@ -820,7 +1008,14 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                     </div>
                 </div>
 
-                <div className="cia-metric-card">
+                <div
+                    className="cia-metric-card clickable"
+                    onClick={() => {
+                        setActiveTab("delegation");
+                        setStatusFilter("ASSIGNED");
+                    }}
+                    title="Click to view newcomers assigned to leaders"
+                >
                     <div className="cia-metric-icon-wrap cia-icon-purple">
                         <UserCog size={20} />
                     </div>
@@ -831,18 +1026,26 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                     </div>
                 </div>
 
-                <div className="cia-metric-card cia-highlight-metric">
+                <div
+                    className="cia-metric-card cia-highlight-metric clickable"
+                    onClick={() => setActiveTab("members")}
+                    title="Click to view all Church Members & Departments"
+                >
                     <div className="cia-metric-icon-wrap cia-icon-gold">
                         <Crown size={20} />
                     </div>
                     <div className="cia-metric-data">
-                        <span className="cia-metric-label">Turned to Members</span>
-                        <strong className="cia-metric-val text-gold">{metrics.convertedToMembersCount}</strong>
-                        <span className="cia-metric-hint">Converted & Baptized</span>
+                        <span className="cia-metric-label">Total Church Members</span>
+                        <strong className="cia-metric-val text-gold">{realMembers.length}</strong>
+                        <span className="cia-metric-hint">{realLeaders.length} Authorized Leaders • {realMembers.length - realLeaders.length} Members</span>
                     </div>
                 </div>
 
-                <div className="cia-metric-card">
+                <div
+                    className="cia-metric-card clickable"
+                    onClick={() => setActiveTab("discipleship")}
+                    title="Click to view Discipleship & Foundations"
+                >
                     <div className="cia-metric-icon-wrap cia-icon-emerald">
                         <BookOpen size={20} />
                     </div>
@@ -871,11 +1074,21 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
 
                 <button
                     type="button"
+                    className={`cia-tab-btn ${activeTab === "members" ? "active" : ""}`}
+                    onClick={() => setActiveTab("members")}
+                >
+                    <Users size={16} />
+                    <span>2. Church Members & Departments</span>
+                    <span className="cia-badge-pill">{realMembers.length}</span>
+                </button>
+
+                <button
+                    type="button"
                     className={`cia-tab-btn ${activeTab === "pipeline" ? "active" : ""}`}
                     onClick={() => setActiveTab("pipeline")}
                 >
                     <Layers size={16} />
-                    <span>2. Lifecycle Pipeline (Kanban)</span>
+                    <span>3. Lifecycle Pipeline (Kanban)</span>
                 </button>
 
                 <button
@@ -884,7 +1097,7 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                     onClick={() => setActiveTab("followup")}
                 >
                     <HeartHandshake size={16} />
-                    <span>3. Touchpoints & Logs</span>
+                    <span>4. Touchpoints & Logs</span>
                     <span className="cia-badge-pill">{followUpLogs.length}</span>
                 </button>
 
@@ -894,7 +1107,7 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                     onClick={() => setActiveTab("discipleship")}
                 >
                     <BookOpen size={16} />
-                    <span>4. Discipleship & Foundations</span>
+                    <span>5. Discipleship & Foundations</span>
                     <span className="cia-badge-pill">{disciples.length}</span>
                 </button>
 
@@ -904,7 +1117,7 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                     onClick={() => setActiveTab("sending")}
                 >
                     <Send size={16} />
-                    <span>5. Sending & Mobilization</span>
+                    <span>6. Sending & Mobilization</span>
                     <span className="cia-badge-pill">{sentLeaders.length}</span>
                 </button>
 
@@ -944,28 +1157,40 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                             <button
                                 type="button"
                                 className={`cia-category-pill ${leaderCategoryTab === "ALL" ? "active" : ""}`}
-                                onClick={() => setLeaderCategoryTab("ALL")}
+                                onClick={() => {
+                                    setLeaderCategoryTab("ALL");
+                                    setLeaderFilter("ALL");
+                                }}
                             >
                                 All Leaders ({realLeaders.length})
                             </button>
                             <button
                                 type="button"
                                 className={`cia-category-pill pastor ${leaderCategoryTab === "PASTOR" ? "active" : ""}`}
-                                onClick={() => setLeaderCategoryTab("PASTOR")}
+                                onClick={() => {
+                                    setLeaderCategoryTab("PASTOR");
+                                    setLeaderFilter("ALL");
+                                }}
                             >
                                 👑 Assistant Pastors ({assistantPastors.length})
                             </button>
                             <button
                                 type="button"
                                 className={`cia-category-pill adult ${leaderCategoryTab === "ADULT" ? "active" : ""}`}
-                                onClick={() => setLeaderCategoryTab("ADULT")}
+                                onClick={() => {
+                                    setLeaderCategoryTab("ADULT");
+                                    setLeaderFilter("ALL");
+                                }}
                             >
                                 🌟 Adult Leaders ({adultLeaders.length})
                             </button>
                             <button
                                 type="button"
                                 className={`cia-category-pill youth ${leaderCategoryTab === "YOUTH" ? "active" : ""}`}
-                                onClick={() => setLeaderCategoryTab("YOUTH")}
+                                onClick={() => {
+                                    setLeaderCategoryTab("YOUTH");
+                                    setLeaderFilter("ALL");
+                                }}
                             >
                                 🔥 Youth Leaders ({youthLeaders.length})
                             </button>
@@ -973,7 +1198,10 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                                 <button
                                     type="button"
                                     className={`cia-category-pill other ${leaderCategoryTab === "OTHER" ? "active" : ""}`}
-                                    onClick={() => setLeaderCategoryTab("OTHER")}
+                                    onClick={() => {
+                                        setLeaderCategoryTab("OTHER");
+                                        setLeaderFilter("ALL");
+                                    }}
                                 >
                                     ⚡ Other Leaders ({otherLeaders.length})
                                 </button>
@@ -984,10 +1212,24 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                         <div className="cia-leaders-chip-row">
                             <button
                                 type="button"
-                                className={`cia-leader-filter-chip ${leaderFilter === "ALL" ? "active" : ""}`}
-                                onClick={() => setLeaderFilter("ALL")}
+                                className={`cia-leader-filter-chip ${leaderFilter === "ALL" && statusFilter !== "UNASSIGNED" ? "active" : ""}`}
+                                onClick={() => {
+                                    setLeaderFilter("ALL");
+                                    setStatusFilter("ALL");
+                                }}
                             >
                                 <span>All ({realVisitors.length} Newcomers)</span>
+                            </button>
+
+                            <button
+                                type="button"
+                                className={`cia-leader-filter-chip warn-chip ${statusFilter === "UNASSIGNED" ? "active" : ""}`}
+                                onClick={() => {
+                                    setLeaderFilter("ALL");
+                                    setStatusFilter(statusFilter === "UNASSIGNED" ? "ALL" : "UNASSIGNED");
+                                }}
+                            >
+                                <span>⚠️ Needs Leader ({metrics.unassignedCount})</span>
                             </button>
 
                             {displayedLeaders.map((m) => {
@@ -1044,6 +1286,28 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                             </select>
                         </div>
                     </div>
+
+                    {/* ACTIVE LEADER FILTER BANNER */}
+                    {leaderFilter !== "ALL" && selectedLeader && (
+                        <div className="cia-active-leader-banner">
+                            <div className="cia-alb-info">
+                                <span className="cia-alb-icon">{getLeaderRoleTag(selectedLeader.ministry).icon}</span>
+                                <div>
+                                    <strong>Showing Newcomers Assigned to: {selectedLeader.fullName}</strong>
+                                    <span className="cia-alb-sub">
+                                        {getLeaderRoleTag(selectedLeader.ministry).label} • {filteredDelegationList.length} Assigned Newcomer(s)
+                                    </span>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                className="cia-btn-clear-filter"
+                                onClick={() => setLeaderFilter("ALL")}
+                            >
+                                ✕ Show All {realVisitors.length} Newcomers
+                            </button>
+                        </div>
+                    )}
 
                     {/* DELEGATION MONITORING TABLE */}
                     <div className="cia-table-container">
@@ -1174,10 +1438,400 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
 
                                 {filteredDelegationList.length === 0 && (
                                     <tr>
+                                        <td colSpan={7} className="cia-no-data-cell">
+                                            {leaderFilter !== "ALL" && selectedLeader ? (
+                                                <div className="cia-empty-leader-box">
+                                                    <div className="cia-empty-leader-avatar">
+                                                        {getLeaderRoleTag(selectedLeader.ministry).icon}
+                                                    </div>
+                                                    <h3>No Newcomers Currently Assigned to {selectedLeader.fullName}</h3>
+                                                    <p>
+                                                        <strong>{selectedLeader.fullName}</strong> is an authorized <strong>{getLeaderRoleTag(selectedLeader.ministry).label}</strong> ready to receive and follow up new souls. There are currently <span className="text-amber"><strong>{metrics.unassignedCount} unassigned newcomers</strong></span> in Luke 4:18 Ministries waiting for discipleship!
+                                                    </p>
+                                                    <div className="cia-empty-leader-actions">
+                                                        {metrics.unassignedCount > 0 && (
+                                                            <button
+                                                                type="button"
+                                                                className="cia-btn-primary"
+                                                                onClick={() => {
+                                                                    const firstUnassigned = realVisitors.find(
+                                                                        (v) => !v.isConvertedToMember && !delegations.some((d) => d.visitorId === v.visitorId)
+                                                                    );
+                                                                    if (firstUnassigned) {
+                                                                        setSelectedVisitorForDelegation(firstUnassigned);
+                                                                        setDelegationForm({
+                                                                            assignedLeaderId: selectedLeader.memberId,
+                                                                            assignedLeaderName: selectedLeader.fullName,
+                                                                            targetContactDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+                                                                            priority: "High",
+                                                                            delegationNotes: "",
+                                                                        });
+                                                                        setShowDelegateModal(true);
+                                                                    }
+                                                                }}
+                                                            >
+                                                                <UserPlus size={15} />
+                                                                <span>Delegate an Unassigned Newcomer to {selectedLeader.fullName}</span>
+                                                            </button>
+                                                        )}
+                                                        <button
+                                                            type="button"
+                                                            className="cia-btn-outline"
+                                                            onClick={() => {
+                                                                setLeaderFilter("ALL");
+                                                                setStatusFilter("ALL");
+                                                            }}
+                                                        >
+                                                            <Users size={15} />
+                                                            <span>Show All {realVisitors.length} Newcomers</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="cia-no-data-simple">
+                                                    {realVisitors.length === 0
+                                                        ? "No newcomers recorded in database yet. Click 'Register Newcomer' above to add your first visitor!"
+                                                        : "No newcomers match the selected search or status filter."}
+                                                </div>
+                                            )}
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* DEPARTMENT CONGREGATION & FLOCK SECTION */}
+                    {selectedLeaderFlock && (
+                        <div className="cia-flock-section">
+                            <div className="cia-flock-header">
+                                <div className="cia-flock-title">
+                                    <span className="cia-flock-icon">{selectedLeaderFlock.roleTag.icon}</span>
+                                    <div>
+                                        <h4>{selectedLeaderFlock.title}</h4>
+                                        <p>
+                                            Congregation members and leaders belonging to this department flock in Luke 4:18 Ministries.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="cia-flock-actions">
+                                    <button
+                                        type="button"
+                                        className="cia-btn-outline"
+                                        onClick={() => {
+                                            setActiveTab("members");
+                                            if (leaderCategoryTab === "ADULT") setMemberDeptFilter("ADULT");
+                                            else if (leaderCategoryTab === "YOUTH") setMemberDeptFilter("YOUTH");
+                                            else if (leaderCategoryTab === "PASTOR") setMemberDeptFilter("PASTORAL");
+                                            else setMemberDeptFilter("ALL");
+                                        }}
+                                    >
+                                        <Users size={14} />
+                                        <span>Open in Members Directory ({selectedLeaderFlock.members.length})</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="cia-flock-grid">
+                                {selectedLeaderFlock.members.map((m) => {
+                                    const roleTag = getLeaderRoleTag(m.ministry);
+                                    const isLeader = roleTag.tag !== "member";
+                                    return (
+                                        <div key={m.memberId} className={`cia-flock-card ${isLeader ? "is-leader" : ""}`}>
+                                            <div className="cia-flock-avatar">
+                                                {roleTag.icon}
+                                            </div>
+                                            <div className="cia-flock-info">
+                                                <div className="cia-flock-name-row">
+                                                    <strong>{m.fullName || `${m.firstName || ""} ${m.lastName || ""}`}</strong>
+                                                    <span className={`cia-chip-role-tag ${roleTag.tag}`}>
+                                                        {roleTag.label}
+                                                    </span>
+                                                </div>
+                                                <small className="cia-flock-meta">
+                                                    {m.memberCode || `ID #${m.memberId}`} • {m.contactNumber || "No Phone"}
+                                                </small>
+                                                <span className="cia-flock-address">
+                                                    {m.address || "San Vicente"}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* ============================================================ */}
+            {/* VIEW 2: CHURCH MEMBERS & DEPARTMENTS DIRECTORY                */}
+            {/* ============================================================ */}
+            {activeTab === "members" && (
+                <div className="cia-tab-content">
+                    {/* MEMBERS BANNER */}
+                    <div className="cia-section-banner blue-theme">
+                        <div>
+                            <div className="cia-mini-tag">LUKE 4:18 CONGREGATION DIRECTORY</div>
+                            <h3>Church Members & Department Directory ({realMembers.length} Total Members)</h3>
+                            <p>
+                                Complete overview of church members, pastoral staff, and department flocks in Luke 4:18 Ministries.
+                            </p>
+                        </div>
+                        <div className="cia-banner-btn-group">
+                            <button
+                                type="button"
+                                className="cia-btn-action-banner"
+                                onClick={() => handleNavigatePage("members")}
+                            >
+                                <Users size={15} />
+                                <span>Manage in Members Module ↗</span>
+                            </button>
+                            <button
+                                type="button"
+                                className="cia-btn-action-banner secondary"
+                                onClick={() => {
+                                    setActiveTab("delegation");
+                                    setLeaderFilter("ALL");
+                                }}
+                            >
+                                <UserCog size={15} />
+                                <span>Go to Delegation Center</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* DEPARTMENT CARDS GRID */}
+                    <div className="cia-dept-grid">
+                        <div
+                            className={`cia-dept-card pastoral ${memberDeptFilter === "PASTORAL" ? "active" : ""}`}
+                            onClick={() => setMemberDeptFilter(memberDeptFilter === "PASTORAL" ? "ALL" : "PASTORAL")}
+                        >
+                            <div className="cia-dept-card-icon">👑</div>
+                            <div className="cia-dept-card-info">
+                                <span className="cia-dept-name">Pastoral Staff</span>
+                                <strong className="cia-dept-count">{departmentCounts.pastoral} Ministers</strong>
+                                <small>Assistant Pastors & Ordained</small>
+                            </div>
+                        </div>
+
+                        <div
+                            className={`cia-dept-card adult ${memberDeptFilter === "ADULT" ? "active" : ""}`}
+                            onClick={() => setMemberDeptFilter(memberDeptFilter === "ADULT" ? "ALL" : "ADULT")}
+                        >
+                            <div className="cia-dept-card-icon">🌟</div>
+                            <div className="cia-dept-card-info">
+                                <span className="cia-dept-name">Adult Department</span>
+                                <strong className="cia-dept-count">{departmentCounts.adult} Members</strong>
+                                <small>{adultLeaders.length} Leaders • {departmentCounts.adult - adultLeaders.length} Members</small>
+                            </div>
+                        </div>
+
+                        <div
+                            className={`cia-dept-card youth ${memberDeptFilter === "YOUTH" ? "active" : ""}`}
+                            onClick={() => setMemberDeptFilter(memberDeptFilter === "YOUTH" ? "ALL" : "YOUTH")}
+                        >
+                            <div className="cia-dept-card-icon">🔥</div>
+                            <div className="cia-dept-card-info">
+                                <span className="cia-dept-name">Youth Department</span>
+                                <strong className="cia-dept-count">{departmentCounts.youth} Members</strong>
+                                <small>{youthLeaders.length} Leaders • {departmentCounts.youth - youthLeaders.length} Members</small>
+                            </div>
+                        </div>
+
+                        <div
+                            className={`cia-dept-card children ${memberDeptFilter === "CHILDREN" ? "active" : ""}`}
+                            onClick={() => setMemberDeptFilter(memberDeptFilter === "CHILDREN" ? "ALL" : "CHILDREN")}
+                        >
+                            <div className="cia-dept-card-icon">👶</div>
+                            <div className="cia-dept-card-info">
+                                <span className="cia-dept-name">Children's Ministry</span>
+                                <strong className="cia-dept-count">{departmentCounts.children} Children</strong>
+                                <small>Sunday School & Kids Flock</small>
+                            </div>
+                        </div>
+
+                        <div
+                            className={`cia-dept-card worship ${memberDeptFilter === "WORSHIP" ? "active" : ""}`}
+                            onClick={() => setMemberDeptFilter(memberDeptFilter === "WORSHIP" ? "ALL" : "WORSHIP")}
+                        >
+                            <div className="cia-dept-card-icon">🎵</div>
+                            <div className="cia-dept-card-info">
+                                <span className="cia-dept-name">Worship & Music</span>
+                                <strong className="cia-dept-count">{departmentCounts.worship} Members</strong>
+                                <small>Praise & Worship Team</small>
+                            </div>
+                        </div>
+
+                        <div
+                            className={`cia-dept-card general ${memberDeptFilter === "GENERAL" ? "active" : ""}`}
+                            onClick={() => setMemberDeptFilter(memberDeptFilter === "GENERAL" ? "ALL" : "GENERAL")}
+                        >
+                            <div className="cia-dept-card-icon">👥</div>
+                            <div className="cia-dept-card-info">
+                                <span className="cia-dept-name">General Congregation</span>
+                                <strong className="cia-dept-count">{departmentCounts.general} Members</strong>
+                                <small>Fellowship & Life Groups</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* CONTROLS BAR */}
+                    <div className="cia-controls-bar">
+                        <div className="cia-search-box">
+                            <Search size={16} />
+                            <input
+                                type="text"
+                                placeholder="Search members by name, code, contact, ministry..."
+                                value={memberSearchTerm}
+                                onChange={(e) => setMemberSearchTerm(e.target.value)}
+                            />
+                            {memberSearchTerm && (
+                                <button type="button" className="cia-clear-btn" onClick={() => setMemberSearchTerm("")}>
+                                    ×
+                                </button>
+                            )}
+                        </div>
+
+                        <div className="cia-filters">
+                            <Filter size={15} />
+                            <label>Department:</label>
+                            <select value={memberDeptFilter} onChange={(e) => setMemberDeptFilter(e.target.value)}>
+                                <option value="ALL">All Departments ({realMembers.length})</option>
+                                <option value="PASTORAL">👑 Pastoral Staff ({departmentCounts.pastoral})</option>
+                                <option value="ADULT">🌟 Adult Department ({departmentCounts.adult})</option>
+                                <option value="YOUTH">🔥 Youth Department ({departmentCounts.youth})</option>
+                                <option value="CHILDREN">👶 Children's Ministry ({departmentCounts.children})</option>
+                                <option value="WORSHIP">🎵 Worship & Music ({departmentCounts.worship})</option>
+                                <option value="GENERAL">👥 General Congregation ({departmentCounts.general})</option>
+                            </select>
+
+                            <label>Role:</label>
+                            <select value={memberRoleFilter} onChange={(e) => setMemberRoleFilter(e.target.value as any)}>
+                                <option value="ALL">All Roles ({realMembers.length})</option>
+                                <option value="LEADERS">Authorized Leaders Only ({realLeaders.length})</option>
+                                <option value="MEMBERS">Congregation Members Only ({realMembers.length - realLeaders.length})</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* MEMBERS DIRECTORY TABLE */}
+                    <div className="cia-table-container">
+                        <table className="cia-table">
+                            <thead>
+                                <tr>
+                                    <th>Member Name</th>
+                                    <th>Department</th>
+                                    <th>Role / Designation</th>
+                                    <th>Contact & Address</th>
+                                    <th>Civil Status / Gender</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredMembersList.map((m) => {
+                                    const mName = m.fullName || `${m.firstName || ""} ${m.lastName || ""}`;
+                                    const dept = getMemberDepartment(m.ministry);
+                                    const roleTag = getLeaderRoleTag(m.ministry);
+                                    const isLeader = roleTag.tag !== "member";
+                                    const assignedVisitorsCount = leaderWorkloadMap[m.memberId] || 0;
+
+                                    return (
+                                        <tr key={m.memberId} className={isLeader ? "row-leader" : ""}>
+                                            <td>
+                                                <div className="cia-table-primary-cell">
+                                                    <div className="cia-member-row-header">
+                                                        <div className={`cia-avatar-circle ${roleTag.tag}`}>
+                                                            {roleTag.icon}
+                                                        </div>
+                                                        <div>
+                                                            <strong>{mName}</strong>
+                                                            <small className="d-block text-muted">
+                                                                {m.memberCode || `MEM-${m.memberId}`}
+                                                            </small>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span className={`cia-dept-pill ${dept.badgeClass}`}>
+                                                    {dept.icon} {dept.name}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span className={`cia-chip-role-tag ${roleTag.tag}`}>
+                                                    {roleTag.icon} {roleTag.label}
+                                                </span>
+                                                {isLeader && (
+                                                    <small className="d-block mt-1 text-muted">
+                                                        {assignedVisitorsCount} Newcomer(s) Assigned
+                                                    </small>
+                                                )}
+                                            </td>
+                                            <td>
+                                                <div className="cia-contact-cell">
+                                                    <div><Phone size={12} /> {m.contactNumber || "No Phone"}</div>
+                                                    <small className="text-muted">{m.address || "San Vicente"}</small>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span>{m.civilStatus || "Single"} • {m.gender || "Other"}</span>
+                                            </td>
+                                            <td>
+                                                <span className={`cia-status-chip ${m.status?.toLowerCase() === "active" ? "active" : "inactive"}`}>
+                                                    {m.status || "Active"}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div className="cia-table-actions">
+                                                    {isLeader ? (
+                                                        <button
+                                                            type="button"
+                                                            className="cia-btn-delegate"
+                                                            onClick={() => {
+                                                                setActiveTab("delegation");
+                                                                setLeaderFilter(String(m.memberId));
+                                                                if (roleTag.tag === "pastor") setLeaderCategoryTab("PASTOR");
+                                                                else if (roleTag.tag === "adult") setLeaderCategoryTab("ADULT");
+                                                                else if (roleTag.tag === "youth") setLeaderCategoryTab("YOUTH");
+                                                                else setLeaderCategoryTab("ALL");
+                                                            }}
+                                                            title="View or assign newcomer follow-ups in Delegation Center"
+                                                        >
+                                                            <UserCog size={13} />
+                                                            <span>Delegation Center</span>
+                                                        </button>
+                                                    ) : (
+                                                        <button
+                                                            type="button"
+                                                            className="cia-btn-outline small"
+                                                            onClick={() => {
+                                                                setActiveTab("discipleship");
+                                                                setDiscipleshipForm((prev) => ({
+                                                                    ...prev,
+                                                                    fullName: mName,
+                                                                    contactNumber: m.contactNumber || "",
+                                                                    memberId: m.memberId,
+                                                                }));
+                                                                setShowDiscipleshipModal(true);
+                                                            }}
+                                                            title="Enroll in Discipleship & Foundations track"
+                                                        >
+                                                            <BookOpen size={13} />
+                                                            <span>Discipleship Track</span>
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+
+                                {filteredMembersList.length === 0 && (
+                                    <tr>
                                         <td colSpan={7} className="cia-no-data">
-                                            {realVisitors.length === 0
-                                                ? "No newcomers recorded in database yet. Click 'Register Newcomer' above to add your first visitor!"
-                                                : "No newcomers match the selected search or leader filter."}
+                                            No members match the selected search, department, or role filter.
                                         </td>
                                     </tr>
                                 )}
@@ -1188,7 +1842,7 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
             )}
 
             {/* ============================================================ */}
-            {/* VIEW 2: LIFECYCLE PIPELINE (KANBAN BOARD)                    */}
+            {/* VIEW 3: LIFECYCLE PIPELINE (KANBAN BOARD)                    */}
             {/* ============================================================ */}
             {activeTab === "pipeline" && (
                 <div className="cia-pipeline-view">

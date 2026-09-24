@@ -3229,7 +3229,7 @@ case "church-in-action":
 
     return renderProtectedPage(
         "Church in Action",
-        <ChurchInActionPage />
+        <ChurchInActionPage onNavigate={(page) => navigateToUrl(page.startsWith("/cms") ? page : `/cms/${page}`)} />
     );
 
 

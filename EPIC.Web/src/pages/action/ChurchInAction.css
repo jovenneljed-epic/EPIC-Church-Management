@@ -1824,3 +1824,430 @@
         font-weight: bold;
     }
 }
+
+/* ============================================================
+   CLICKABLE METRIC CARDS & WARN CHIP
+   ============================================================ */
+.cia-metric-card.clickable {
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.cia-metric-card.clickable:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.cia-leader-filter-chip.warn-chip {
+    border-color: #fde68a;
+    background-color: #fffbeb;
+    color: #b45309;
+    font-weight: 600;
+}
+
+.cia-leader-filter-chip.warn-chip:hover {
+    background-color: #fef3c7;
+    border-color: #f59e0b;
+}
+
+.cia-leader-filter-chip.warn-chip.active {
+    background-color: #d97706 !important;
+    color: #ffffff !important;
+    border-color: #d97706 !important;
+}
+
+/* ============================================================
+   ACTIVE LEADER FILTER BANNER
+   ============================================================ */
+.cia-active-leader-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    padding: 10px 16px;
+    margin-bottom: 16px;
+}
+
+.cia-alb-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.cia-alb-icon {
+    font-size: 24px;
+}
+
+.cia-alb-info strong {
+    font-size: 14px;
+    color: #1e3a8a;
+    display: block;
+}
+
+.cia-alb-sub {
+    font-size: 12px;
+    color: #3b82f6;
+    font-weight: 500;
+}
+
+.cia-btn-clear-filter {
+    background-color: #ffffff;
+    color: #2563eb;
+    border: 1px solid #93c5fd;
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.cia-btn-clear-filter:hover {
+    background-color: #2563eb;
+    color: #ffffff;
+    border-color: #2563eb;
+}
+
+/* ============================================================
+   EMPTY LEADER HELPER BOX
+   ============================================================ */
+.cia-no-data-cell {
+    padding: 36px 16px !important;
+    text-align: center;
+}
+
+.cia-empty-leader-box {
+    max-width: 580px;
+    margin: 0 auto;
+    padding: 24px;
+    background-color: #ffffff;
+    border: 1px dashed #cbd5e1;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.cia-empty-leader-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: #fef3c7;
+    border: 2px solid #fde68a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 30px;
+    margin: 0 auto 16px auto;
+}
+
+.cia-empty-leader-box h3 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 8px 0;
+}
+
+.cia-empty-leader-box p {
+    font-size: 14px;
+    color: #64748b;
+    line-height: 1.5;
+    margin: 0 0 20px 0;
+}
+
+.cia-empty-leader-actions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.cia-no-data-simple {
+    padding: 24px;
+    color: #64748b;
+    font-style: italic;
+    font-size: 14px;
+}
+
+/* ============================================================
+   DEPARTMENT FLOCK SECTION (BELOW DELEGATION TABLE)
+   ============================================================ */
+.cia-flock-section {
+    margin-top: 28px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 20px 24px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+}
+
+.cia-flock-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.cia-flock-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.cia-flock-icon {
+    font-size: 24px;
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cia-flock-title h4 {
+    font-size: 16px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0 0 3px 0;
+}
+
+.cia-flock-title p {
+    font-size: 13px;
+    color: #64748b;
+    margin: 0;
+}
+
+.cia-flock-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+}
+
+.cia-flock-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    transition: all 0.15s ease;
+}
+
+.cia-flock-card:hover {
+    border-color: #cbd5e1;
+    background-color: #f1f5f9;
+}
+
+.cia-flock-card.is-leader {
+    background-color: #fffbeb;
+    border-color: #fde68a;
+}
+
+.cia-flock-avatar {
+    font-size: 22px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background-color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.cia-flock-info {
+    min-width: 0;
+    flex: 1;
+}
+
+.cia-flock-name-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 2px;
+}
+
+.cia-flock-name-row strong {
+    font-size: 13px;
+    color: #0f172a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cia-flock-meta {
+    display: block;
+    font-size: 11px;
+    color: #64748b;
+    margin-bottom: 2px;
+}
+
+.cia-flock-address {
+    display: block;
+    font-size: 11px;
+    color: #94a3b8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ============================================================
+   CHURCH MEMBERS & DEPARTMENTS VIEW (TAB 2)
+   ============================================================ */
+.cia-dept-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+}
+
+.cia-dept-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.cia-dept-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    border-color: #94a3b8;
+}
+
+.cia-dept-card.active {
+    border-width: 2px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.cia-dept-card.pastoral.active { border-color: #eab308; background-color: #fefce8; }
+.cia-dept-card.adult.active { border-color: #0284c7; background-color: #f0f9ff; }
+.cia-dept-card.youth.active { border-color: #f97316; background-color: #fff7ed; }
+.cia-dept-card.children.active { border-color: #10b981; background-color: #f0fdf4; }
+.cia-dept-card.worship.active { border-color: #8b5cf6; background-color: #faf5ff; }
+.cia-dept-card.general.active { border-color: #64748b; background-color: #f8fafc; }
+
+.cia-dept-card-icon {
+    font-size: 26px;
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background-color: #f8fafc;
+    border: 1px solid #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.cia-dept-card-info {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.cia-dept-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+}
+
+.cia-dept-count {
+    font-size: 16px;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.2;
+    margin: 2px 0;
+}
+
+.cia-dept-card-info small {
+    font-size: 11px;
+    color: #94a3b8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cia-member-row-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.cia-avatar-circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+    background-color: #f1f5f9;
+    border: 1px solid #e2e8f0;
+}
+
+.cia-avatar-circle.pastor { background-color: #fef3c7; border-color: #fde68a; }
+.cia-avatar-circle.adult { background-color: #e0f2fe; border-color: #bae6fd; }
+.cia-avatar-circle.youth { background-color: #ffedd5; border-color: #fed7aa; }
+.cia-avatar-circle.member { background-color: #f1f5f9; border-color: #e2e8f0; }
+
+.row-leader {
+    background-color: #fafbfc;
+}
+
+.cia-dept-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.cia-dept-pill.pastor { background-color: #fef3c7; color: #92400e; }
+.cia-dept-pill.adult { background-color: #e0f2fe; color: #075985; }
+.cia-dept-pill.youth { background-color: #ffedd5; color: #9a3412; }
+.cia-dept-pill.children { background-color: #d1fae5; color: #065f46; }
+.cia-dept-pill.worship { background-color: #ede9fe; color: #5b21b6; }
+.cia-dept-pill.general { background-color: #f1f5f9; color: #475569; }
+
+.cia-btn-outline.small {
+    padding: 4px 10px;
+    font-size: 12px;
+}
+
+.cia-banner-btn-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.cia-btn-action-banner.secondary {
+    background: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.cia-btn-action-banner.secondary:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+

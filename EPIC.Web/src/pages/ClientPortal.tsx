@@ -1137,6 +1137,7 @@ const [mobileSidebarOpen, setMobileSidebarOpen] =
                             <ChurchInActionPage
                                 onBack={() => handleNavigate("dashboard")}
                                 canManage={true}
+                                onNavigate={handleNavigate}
                             />
                         )
                     }
