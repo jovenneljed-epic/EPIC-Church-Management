@@ -1,10 +1,13 @@
 // ============================================================
 // ChurchInActionPage.tsx
 // EPIC CHURCH MANAGEMENT SYSTEM - Luke 4:18 Ministries
-// Module: Church in Action (Spiritual Lifecycle & Great Commission Engine)
+// Module: Church in Action (Newcomers Monitoring & Leaders Delegation System)
+//
+// 100% Real Database Connectivity (Visitors, Members, Ministries)
+// Zero Mock Seeds
 // ============================================================
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
     Flame,
     Users,
@@ -17,7 +20,6 @@ import {
     Sparkles,
     CheckCircle2,
     Clock,
-    ArrowRight,
     Filter,
     Search,
     Plus,
@@ -29,19 +31,23 @@ import {
     GraduationCap,
     Layers,
     ShieldCheck,
+    UserCog,
+    AlertCircle,
+    Calendar,
+    Crown,
 } from "lucide-react";
 
 import "./ChurchInAction.css";
 import churchInActionService from "../../services/churchInActionService";
 import type {
-    Prospect,
+    LeaderDelegation,
     FollowUpLog,
     DiscipleshipProfile,
     SendingDeployment,
-    SpiritualJourneyStage,
+    Prospect,
 } from "../../services/churchInActionService";
 
-type ActiveTab = "pipeline" | "evangelism" | "followup" | "discipleship" | "sending";
+type ActiveTab = "delegation" | "pipeline" | "followup" | "discipleship" | "sending" | "evangelism";
 
 interface ChurchInActionPageProps {
     onBack?: () => void;
@@ -56,22 +62,29 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
     // STATE
     // ============================================================
 
-    const [activeTab, setActiveTab] = useState<ActiveTab>("pipeline");
+    const [activeTab, setActiveTab] = useState<ActiveTab>("delegation");
     const [loading, setLoading] = useState<boolean>(true);
     const [searchTerm, setSearchTerm] = useState<string>("");
     const [statusFilter, setStatusFilter] = useState<string>("ALL");
+    const [leaderFilter, setLeaderFilter] = useState<string>("ALL");
 
-    // Core Data
-    const [prospects, setProspects] = useState<Prospect[]>([]);
-    const [visitors, setVisitors] = useState<any[]>([]);
+    // Real Database Collections
+    const [realVisitors, setRealVisitors] = useState<any[]>([]);
+    const [realMembers, setRealMembers] = useState<any[]>([]);
+    const [realMinistries, setRealMinistries] = useState<any[]>([]);
+
+    // Local Tracking Metadata
+    const [delegations, setDelegations] = useState<LeaderDelegation[]>([]);
     const [followUpLogs, setFollowUpLogs] = useState<FollowUpLog[]>([]);
     const [disciples, setDisciples] = useState<DiscipleshipProfile[]>([]);
     const [sentLeaders, setSentLeaders] = useState<SendingDeployment[]>([]);
+    const [prospects, setProspects] = useState<Prospect[]>([]);
 
     // Modals
-    const [showProspectModal, setShowProspectModal] = useState<boolean>(false);
-    const [editingProspect, setEditingProspect] = useState<Prospect | null>(null);
+    const [showDelegateModal, setShowDelegateModal] = useState<boolean>(false);
+    const [selectedVisitorForDelegation, setSelectedVisitorForDelegation] = useState<any | null>(null);
 
+    const [showRegisterVisitorModal, setShowRegisterVisitorModal] = useState<boolean>(false);
     const [showFollowUpModal, setShowFollowUpModal] = useState<boolean>(false);
     const [selectedVisitorForFollowUp, setSelectedVisitorForFollowUp] = useState<any | null>(null);
 
@@ -81,29 +94,35 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
     const [showSendingModal, setShowSendingModal] = useState<boolean>(false);
     const [editingDeployment, setEditingDeployment] = useState<SendingDeployment | null>(null);
 
-    const [viewingProfile, setViewingProfile] = useState<{
-        name: string;
-        contact: string;
-        stage: SpiritualJourneyStage;
-        details: any;
-    } | null>(null);
+    const [showProspectModal, setShowProspectModal] = useState<boolean>(false);
 
-    // Feedback message
-    const [alertMessage, setAlertMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+    // Feedback
+    const [alertMessage, setAlertMessage] = useState<{ type: "success" | "error" | "info"; text: string } | null>(null);
 
-    // Form inputs state
-    const [prospectForm, setProspectForm] = useState<Partial<Prospect>>({
-        fullName: "",
+    // Form States
+    const [delegationForm, setDelegationForm] = useState<{
+        assignedLeaderId: number | "";
+        assignedLeaderName: string;
+        targetContactDate: string;
+        priority: "Normal" | "High" | "Urgent";
+        delegationNotes: string;
+    }>({
+        assignedLeaderId: "",
+        assignedLeaderName: "",
+        targetContactDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+        priority: "High",
+        delegationNotes: "",
+    });
+
+    const [newVisitorForm, setNewVisitorForm] = useState({
+        firstName: "",
+        middleName: "",
+        lastName: "",
+        gender: "Other",
         contactNumber: "",
         address: "",
-        gender: "Not Specified",
         invitedBy: "",
-        outreachCampaign: "Personal Outreach",
-        relationship: "Friend",
-        spiritualStatus: "Seeking",
-        prayerRequests: "",
-        invitationStatus: "In Prayer",
-        targetServiceDate: "",
+        ministry: "",
         notes: "",
     });
 
@@ -127,7 +146,7 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
         fullName: "",
         contactNumber: "",
         disciplerName: "",
-        cellGroupName: "Victory San Vicente",
+        cellGroupName: "San Vicente Life Group",
         cellLeaderName: "",
         startDate: new Date().toISOString().split("T")[0],
         stage: "New Believer",
@@ -139,133 +158,252 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
     const [sendingForm, setSendingForm] = useState<Partial<SendingDeployment>>({
         fullName: "",
         contactNumber: "",
-        ministryDepartment: "Worship & Arts",
-        ministryRole: "Ministry Worker",
+        ministryDepartment: "",
+        ministryRole: "",
         commissioningStatus: "In Preparation",
         commissioningDate: new Date().toISOString().split("T")[0],
         mentorPastor: "Pastor Roberto Garcia",
-        activeFruitCount: 1,
-        spiritualGifts: ["Serving", "Encouragement"],
+        activeFruitCount: 0,
+        spiritualGifts: ["Serving"],
+        notes: "",
+    });
+
+    const [prospectForm, setProspectForm] = useState<Partial<Prospect>>({
+        fullName: "",
+        contactNumber: "",
+        address: "",
+        gender: "Not Specified",
+        invitedBy: "",
+        outreachCampaign: "Church Outreach",
+        relationship: "Friend",
+        spiritualStatus: "Seeking",
+        prayerRequests: "",
+        invitationStatus: "In Prayer",
         notes: "",
     });
 
     // ============================================================
-    // LOAD DATA
+    // REAL DATABASE LOADER
     // ============================================================
 
-    const loadData = async () => {
+    const loadRealData = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await churchInActionService.getLifecyclePipeline();
-            setProspects(data.prospects);
-            setVisitors(data.visitors);
+            const [visitorsData, membersData, ministriesData] = await Promise.all([
+                churchInActionService.getLiveVisitors(),
+                churchInActionService.getLiveMembers(),
+                churchInActionService.getLiveMinistries(),
+            ]);
+
+            setRealVisitors(visitorsData);
+            setRealMembers(membersData);
+            setRealMinistries(ministriesData);
+
+            setDelegations(churchInActionService.getDelegations());
             setFollowUpLogs(churchInActionService.getFollowUpLogs());
-            setDisciples(data.disciples);
-            setSentLeaders(data.sentLeaders);
+            setDisciples(churchInActionService.getDiscipleshipProfiles());
+            setSentLeaders(churchInActionService.getSendingDeployments());
+            setProspects(churchInActionService.getProspects());
         } catch (error) {
-            console.error("Failed to load Church in Action data", error);
-            showAlert("error", "Failed to sync some Church in Action data.");
+            console.error("Failed to load real database records", error);
+            showAlert("error", "Error connecting to database. Please check authentication.");
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadRealData();
+    }, [loadRealData]);
+
+    const showAlert = (type: "success" | "error" | "info", text: string) => {
+        setAlertMessage({ type, text });
+        setTimeout(() => setAlertMessage(null), 4500);
+    };
+
+    // ============================================================
+    // METRICS COMPUTATION (FROM REAL DB)
+    // ============================================================
+
+    const metrics = useMemo(() => {
+        const totalNewcomers = realVisitors.length;
+        const assignedVisitorIds = new Set(delegations.map((d) => d.visitorId));
+        
+        const unassignedCount = realVisitors.filter(
+            (v) => !v.isConvertedToMember && !assignedVisitorIds.has(v.visitorId)
+        ).length;
+
+        const activeDelegationsCount = delegations.filter(
+            (d) => d.delegationStatus !== "Converted to Member"
+        ).length;
+
+        const connectedCount = realVisitors.filter(
+            (v) => (v.visitCount || 1) >= 2 && !v.isConvertedToMember
+        ).length;
+
+        const convertedToMembersCount = realVisitors.filter(
+            (v) => v.isConvertedToMember || v.convertedMemberId
+        ).length;
+
+        const totalDisciples = disciples.length;
+        const totalSent = sentLeaders.length;
+
+        return {
+            totalNewcomers,
+            unassignedCount,
+            activeDelegationsCount,
+            connectedCount,
+            convertedToMembersCount,
+            totalDisciples,
+            totalSent,
+        };
+    }, [realVisitors, delegations, disciples, sentLeaders]);
+
+    // Leader workload map: leaderId -> number of assigned newcomers
+    const leaderWorkloadMap = useMemo(() => {
+        const counts: Record<number, number> = {};
+        delegations.forEach((d) => {
+            if (d.delegationStatus !== "Converted to Member") {
+                counts[d.assignedLeaderId] = (counts[d.assignedLeaderId] || 0) + 1;
+            }
+        });
+        return counts;
+    }, [delegations]);
+
+    // ============================================================
+    // DELEGATION ACTIONS
+    // ============================================================
+
+    const handleOpenDelegateModal = (visitor: any) => {
+        setSelectedVisitorForDelegation(visitor);
+        const existing = delegations.find((d) => d.visitorId === visitor.visitorId);
+
+        if (existing) {
+            setDelegationForm({
+                assignedLeaderId: existing.assignedLeaderId,
+                assignedLeaderName: existing.assignedLeaderName,
+                targetContactDate: existing.targetContactDate || new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+                priority: existing.priority,
+                delegationNotes: existing.delegationNotes || "",
+            });
+        } else {
+            // Default to first member if available
+            const defaultLeader = realMembers[0];
+            setDelegationForm({
+                assignedLeaderId: defaultLeader ? defaultLeader.memberId : "",
+                assignedLeaderName: defaultLeader ? defaultLeader.fullName : "",
+                targetContactDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+                priority: "High",
+                delegationNotes: "",
+            });
+        }
+        setShowDelegateModal(true);
+    };
+
+    const handleSaveDelegation = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedVisitorForDelegation || !delegationForm.assignedLeaderId) {
+            showAlert("error", "Please select a leader from the church database.");
+            return;
+        }
+
+        const leader = realMembers.find((m) => m.memberId === Number(delegationForm.assignedLeaderId));
+        const leaderName = leader ? leader.fullName : delegationForm.assignedLeaderName || "Church Leader";
+
+        churchInActionService.saveDelegation({
+            visitorId: selectedVisitorForDelegation.visitorId,
+            assignedLeaderId: Number(delegationForm.assignedLeaderId),
+            assignedLeaderName: leaderName,
+            assignedLeaderContact: leader?.contactNumber || "",
+            delegatedBy: "Pastoral Team",
+            delegatedDate: new Date().toISOString().split("T")[0],
+            targetContactDate: delegationForm.targetContactDate,
+            priority: delegationForm.priority,
+            delegationStatus: "Assigned",
+            delegationNotes: delegationForm.delegationNotes,
+        });
+
+        setShowDelegateModal(false);
+        const vName = selectedVisitorForDelegation.fullName || `${selectedVisitorForDelegation.firstName} ${selectedVisitorForDelegation.lastName}`;
+        showAlert("success", `Delegated follow-up for ${vName} to ${leaderName}!`);
+        loadRealData();
+    };
+
+    // ============================================================
+    // REAL DATABASE CONVERSION (VISITOR -> MEMBER)
+    // ============================================================
+
+    const handleConvertToMember = async (visitor: any) => {
+        const vName = visitor.fullName || `${visitor.firstName} ${visitor.lastName}`;
+        const confirmMsg = `Are you ready to officially convert ${vName} into a church member in the database?\n\nThis will:\n1. Create their official Member record in the database.\n2. Assign them an official MEM code.\n3. Automatically graduate them into Discipleship & Foundations!`;
+        
+        if (!window.confirm(confirmMsg)) return;
+
+        try {
+            setLoading(true);
+            const result = await churchInActionService.convertVisitorToMember(visitor.visitorId);
+            
+            // Check if there was an assigned leader to become their discipler
+            const delegation = delegations.find((d) => d.visitorId === visitor.visitorId);
+            const discipler = delegation?.assignedLeaderName || visitor.invitedBy || "Church Mentor";
+
+            // Automatically register in Discipleship & Foundations
+            churchInActionService.saveDiscipleshipProfile({
+                visitorId: visitor.visitorId,
+                memberId: result.memberId,
+                fullName: vName,
+                contactNumber: visitor.contactNumber || "",
+                disciplerName: discipler,
+                cellGroupName: visitor.ministry || "San Vicente Life Group",
+                cellLeaderName: discipler,
+                stage: "New Believer",
+                startDate: new Date().toISOString().split("T")[0],
+                spiritualHealthScore: 5,
+                waterBaptism: { isBaptized: false },
+                notes: `Promoted from Newcomer Visitor. Official Member Code: ${result.memberCode || "MEM"}.`,
+            });
+
+            showAlert("success", `Praise God! ${vName} is now an official Church Member (${result.memberCode || "MEM"}) and enrolled into Discipleship!`);
+            await loadRealData();
+        } catch (error: any) {
+            showAlert("error", error?.message || "Failed to convert visitor to member in database.");
         } finally {
             setLoading(false);
         }
     };
 
-    useEffect(() => {
-        loadData();
-    }, []);
-
-    const showAlert = (type: "success" | "error", text: string) => {
-        setAlertMessage({ type, text });
-        setTimeout(() => setAlertMessage(null), 4000);
-    };
-
     // ============================================================
-    // METRICS COMPUTATION
+    // REGISTER REAL VISITOR MODAL
     // ============================================================
 
-    const stats = useMemo(() => {
-        const totalProspects = prospects.length;
-        const totalVisitors = visitors.length;
-        const activeFollowUps = followUpLogs.length;
-        const totalDisciples = disciples.length;
-        const totalSent = sentLeaders.length;
-        const waterBaptized = disciples.filter((d) => d.waterBaptism?.isBaptized).length;
-        const totalFruit = sentLeaders.reduce((sum, s) => sum + (s.activeFruitCount || 0), 0);
-
-        return {
-            totalProspects,
-            totalVisitors,
-            activeFollowUps,
-            totalDisciples,
-            totalSent,
-            waterBaptized,
-            totalFruit,
-        };
-    }, [prospects, visitors, followUpLogs, disciples, sentLeaders]);
-
-    // ============================================================
-    // EVANGELISM ACTIONS
-    // ============================================================
-
-    const handleOpenAddProspect = () => {
-        setEditingProspect(null);
-        setProspectForm({
-            fullName: "",
-            contactNumber: "",
-            address: "",
-            gender: "Not Specified",
-            invitedBy: "",
-            outreachCampaign: "Personal Outreach",
-            relationship: "Friend",
-            spiritualStatus: "Seeking",
-            prayerRequests: "",
-            invitationStatus: "In Prayer",
-            targetServiceDate: "",
-            notes: "",
-        });
-        setShowProspectModal(true);
-    };
-
-    const handleEditProspect = (prospect: Prospect) => {
-        setEditingProspect(prospect);
-        setProspectForm({ ...prospect });
-        setShowProspectModal(true);
-    };
-
-    const handleSaveProspect = (e: React.FormEvent) => {
+    const handleSaveNewVisitor = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!prospectForm.fullName?.trim() || !prospectForm.contactNumber?.trim()) {
-            showAlert("error", "Full name and contact number are required.");
+        if (!newVisitorForm.firstName.trim() || !newVisitorForm.lastName.trim()) {
+            showAlert("error", "First name and last name are required.");
             return;
         }
 
-        churchInActionService.saveProspect({
-            ...prospectForm,
-            id: editingProspect?.id,
-            fullName: prospectForm.fullName.trim(),
-            contactNumber: prospectForm.contactNumber.trim(),
-        });
-
-        setShowProspectModal(false);
-        showAlert("success", editingProspect ? "Prospect updated successfully." : "New soul added to Evangelism & Prayer list!");
-        loadData();
-    };
-
-    const handleDeleteProspect = (id: string, name: string) => {
-        if (window.confirm(`Are you sure you want to remove ${name} from the outreach list?`)) {
-            churchInActionService.deleteProspect(id);
-            showAlert("success", "Prospect removed.");
-            loadData();
-        }
-    };
-
-    const handlePromoteToVisitor = async (prospect: Prospect) => {
         try {
-            const res = await churchInActionService.promoteProspectToVisitor(prospect.id);
-            showAlert("success", res.message || `${prospect.fullName} is now an active visitor!`);
-            loadData();
+            setLoading(true);
+            const created = await churchInActionService.createLiveVisitor(newVisitorForm);
+            setShowRegisterVisitorModal(false);
+            setNewVisitorForm({
+                firstName: "",
+                middleName: "",
+                lastName: "",
+                gender: "Other",
+                contactNumber: "",
+                address: "",
+                invitedBy: "",
+                ministry: "",
+                notes: "",
+            });
+            showAlert("success", `Newcomer ${created?.firstName || newVisitorForm.firstName} registered in church database!`);
+            await loadRealData();
         } catch (error: any) {
-            showAlert("error", error?.message || "Failed to promote prospect to visitor.");
+            showAlert("error", error?.message || "Failed to register visitor.");
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -275,10 +413,11 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
 
     const handleOpenLogFollowUp = (visitor: any) => {
         setSelectedVisitorForFollowUp(visitor);
+        const delegation = delegations.find((d) => d.visitorId === visitor.visitorId);
         setFollowUpForm({
             interactionDate: new Date().toISOString().split("T")[0],
             type: "Phone Call",
-            ministerName: visitor.invitedBy || "Follow-up Worker",
+            ministerName: delegation?.assignedLeaderName || visitor.invitedBy || "",
             notes: "",
             outcome: "Receptive & Warm",
             nextFollowUpDate: "",
@@ -294,41 +433,25 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
             visitorId: selectedVisitorForFollowUp.visitorId,
             interactionDate: followUpForm.interactionDate,
             type: followUpForm.type,
-            ministerName: followUpForm.ministerName.trim() || "Worker",
+            ministerName: followUpForm.ministerName.trim() || "Leader",
             notes: followUpForm.notes.trim(),
             outcome: followUpForm.outcome,
             nextFollowUpDate: followUpForm.nextFollowUpDate || undefined,
         });
 
         setShowFollowUpModal(false);
-        showAlert("success", `Follow-up touchpoint recorded for ${selectedVisitorForFollowUp.firstName || selectedVisitorForFollowUp.fullName}!`);
-        loadData();
-    };
-
-    const handleEnrollInDiscipleship = (visitor: any) => {
-        const name = visitor.fullName || `${visitor.firstName} ${visitor.lastName}`;
-        churchInActionService.saveDiscipleshipProfile({
-            visitorId: visitor.visitorId,
-            fullName: name,
-            contactNumber: visitor.contactNumber || "0900-000-0000",
-            disciplerName: visitor.invitedBy || "Spiritual Mentor",
-            cellGroupName: "San Vicente Life Group",
-            cellLeaderName: "Cell Leader",
-            stage: "New Believer",
-            startDate: new Date().toISOString().split("T")[0],
-            spiritualHealthScore: 5,
-            waterBaptism: { isBaptized: false },
-            notes: `Enrolled from Visitor record (Code: ${visitor.visitorCode || visitor.visitorId}).`,
-        });
-
-        showAlert("success", `${name} enrolled in Consolidation & Discipleship journey!`);
-        loadData();
-        setActiveTab("discipleship");
+        showAlert("success", "Follow-up touchpoint recorded.");
+        loadRealData();
     };
 
     // ============================================================
-    // DISCIPLESHIP ACTIONS
+    // DISCIPLESHIP & SENDING
     // ============================================================
+
+    const handleToggleFoundation = (profileId: string, lessonKey: keyof DiscipleshipProfile["foundations"]) => {
+        churchInActionService.toggleFoundationLesson(profileId, lessonKey);
+        loadRealData();
+    };
 
     const handleOpenAddDisciple = () => {
         setEditingDisciple(null);
@@ -336,7 +459,7 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
             fullName: "",
             contactNumber: "",
             disciplerName: "",
-            cellGroupName: "Victory San Vicente - Life Group",
+            cellGroupName: "San Vicente Life Group",
             cellLeaderName: "",
             startDate: new Date().toISOString().split("T")[0],
             stage: "New Believer",
@@ -347,16 +470,24 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
         setShowDiscipleshipModal(true);
     };
 
-    const handleEditDisciple = (disciple: DiscipleshipProfile) => {
-        setEditingDisciple(disciple);
-        setDiscipleshipForm({ ...disciple });
+    const handleOpenEditDisciple = (d: DiscipleshipProfile) => {
+        setEditingDisciple(d);
+        setDiscipleshipForm({ ...d });
         setShowDiscipleshipModal(true);
+    };
+
+    const handleDeleteDisciple = (id: string) => {
+        if (window.confirm("Are you sure you want to remove this disciple profile?")) {
+            churchInActionService.deleteDiscipleshipProfile(id);
+            showAlert("info", "Discipleship profile removed.");
+            loadRealData();
+        }
     };
 
     const handleSaveDisciple = (e: React.FormEvent) => {
         e.preventDefault();
         if (!discipleshipForm.fullName?.trim() || !discipleshipForm.contactNumber?.trim()) {
-            showAlert("error", "Name and contact number are required.");
+            showAlert("error", "Name and contact are required.");
             return;
         }
 
@@ -368,74 +499,45 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
         });
 
         setShowDiscipleshipModal(false);
-        showAlert("success", editingDisciple ? "Discipleship profile updated." : "New disciple registered!");
-        loadData();
+        showAlert("success", "Discipleship profile saved.");
+        loadRealData();
     };
-
-    const handleToggleFoundation = (profileId: string, lessonKey: keyof DiscipleshipProfile["foundations"]) => {
-        churchInActionService.toggleFoundationLesson(profileId, lessonKey);
-        loadData();
-    };
-
-    const handleDeleteDisciple = (id: string, name: string) => {
-        if (window.confirm(`Remove ${name} from discipleship tracking?`)) {
-            churchInActionService.deleteDiscipleshipProfile(id);
-            showAlert("success", "Disciple record removed.");
-            loadData();
-        }
-    };
-
-    const handleMobilizeToSending = (disciple: DiscipleshipProfile) => {
-        churchInActionService.saveSendingDeployment({
-            discipleshipId: disciple.id,
-            fullName: disciple.fullName,
-            contactNumber: disciple.contactNumber,
-            ministryDepartment: "Evangelism & Outreach",
-            ministryRole: "Soul Winning Worker",
-            commissioningStatus: "In Preparation",
-            commissioningDate: new Date().toISOString().split("T")[0],
-            mentorPastor: disciple.disciplerName || "Senior Pastor",
-            activeFruitCount: 1,
-            spiritualGifts: ["Evangelism", "Serving"],
-            notes: `Mobilized from discipleship track (${disciple.cellGroupName}).`,
-        });
-
-        showAlert("success", `${disciple.fullName} mobilized into Sending & Ministry preparation!`);
-        loadData();
-        setActiveTab("sending");
-    };
-
-    // ============================================================
-    // SENDING ACTIONS
-    // ============================================================
 
     const handleOpenAddSending = () => {
         setEditingDeployment(null);
         setSendingForm({
             fullName: "",
             contactNumber: "",
-            ministryDepartment: "Worship & Arts",
-            ministryRole: "Ministry Worker",
+            ministryDepartment: "",
+            ministryRole: "",
             commissioningStatus: "In Preparation",
             commissioningDate: new Date().toISOString().split("T")[0],
             mentorPastor: "Pastor Roberto Garcia",
-            activeFruitCount: 1,
-            spiritualGifts: ["Serving", "Encouragement"],
+            activeFruitCount: 0,
+            spiritualGifts: ["Serving"],
             notes: "",
         });
         setShowSendingModal(true);
     };
 
-    const handleEditSending = (deployment: SendingDeployment) => {
-        setEditingDeployment(deployment);
-        setSendingForm({ ...deployment });
+    const handleOpenEditSending = (s: SendingDeployment) => {
+        setEditingDeployment(s);
+        setSendingForm({ ...s });
         setShowSendingModal(true);
+    };
+
+    const handleDeleteSending = (id: string) => {
+        if (window.confirm("Are you sure you want to remove this commissioned worker record?")) {
+            churchInActionService.deleteSendingDeployment(id);
+            showAlert("info", "Commissioning record removed.");
+            loadRealData();
+        }
     };
 
     const handleSaveSending = (e: React.FormEvent) => {
         e.preventDefault();
         if (!sendingForm.fullName?.trim() || !sendingForm.ministryRole?.trim()) {
-            showAlert("error", "Full name and ministry role are required.");
+            showAlert("error", "Name and ministry role are required.");
             return;
         }
 
@@ -443,74 +545,99 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
             ...sendingForm,
             id: editingDeployment?.id,
             fullName: sendingForm.fullName.trim(),
-            ministryDepartment: sendingForm.ministryDepartment || "Worship & Arts",
+            ministryDepartment: sendingForm.ministryDepartment || "General Ministry",
             ministryRole: sendingForm.ministryRole.trim(),
         });
 
         setShowSendingModal(false);
-        showAlert("success", editingDeployment ? "Ministry deployment updated." : "Servant-leader commissioned!");
-        loadData();
+        showAlert("success", "Commissioned leader saved.");
+        loadRealData();
     };
 
-    const handleDeleteSending = (id: string, name: string) => {
-        if (window.confirm(`Remove ${name} from sending deployments?`)) {
-            churchInActionService.deleteSendingDeployment(id);
-            showAlert("success", "Deployment removed.");
-            loadData();
+    const handleOpenAddProspect = () => {
+        setProspectForm({
+            fullName: "",
+            contactNumber: "",
+            address: "",
+            gender: "Not Specified",
+            invitedBy: "",
+            outreachCampaign: "Church Outreach",
+            relationship: "Friend",
+            spiritualStatus: "Seeking",
+            prayerRequests: "",
+            invitationStatus: "In Prayer",
+            notes: "",
+        });
+        setShowProspectModal(true);
+    };
+
+    const handleDeleteProspect = (id: string) => {
+        if (window.confirm("Are you sure you want to remove this prospect from the prayer list?")) {
+            churchInActionService.deleteProspect(id);
+            showAlert("info", "Prospect removed.");
+            loadRealData();
+        }
+    };
+
+    const handleSaveProspect = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!prospectForm.fullName?.trim() || !prospectForm.contactNumber?.trim()) {
+            showAlert("error", "Name and contact number are required.");
+            return;
+        }
+
+        churchInActionService.saveProspect({
+            ...prospectForm,
+            fullName: prospectForm.fullName.trim(),
+            contactNumber: prospectForm.contactNumber.trim(),
+        });
+
+        setShowProspectModal(false);
+        showAlert("success", "Outreach prospect added.");
+        loadRealData();
+    };
+
+    const handlePromoteProspect = async (prospectId: string) => {
+        try {
+            await churchInActionService.promoteProspectToVisitor(prospectId);
+            showAlert("success", "Prospect promoted to active database Visitor!");
+            loadRealData();
+        } catch (e: any) {
+            showAlert("error", e?.message || "Failed to promote prospect.");
         }
     };
 
     // ============================================================
-    // PRINT PREVIEW HELPER
+    // FILTERED VIEWS
     // ============================================================
 
-    const handlePrintLifecycleReport = () => {
-        window.print();
-    };
+    const filteredDelegationList = useMemo(() => {
+        return realVisitors.filter((v) => {
+            const vName = (v.fullName || `${v.firstName || ""} ${v.lastName || ""}`).toLowerCase();
+            const delegation = delegations.find((d) => d.visitorId === v.visitorId);
+            const leaderName = (delegation?.assignedLeaderName || "").toLowerCase();
 
-    // Filter logic
-    const filteredProspects = useMemo(() => {
-        return prospects.filter((p) => {
-            const matchesSearch =
-                p.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                p.invitedBy.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                p.outreachCampaign.toLowerCase().includes(searchTerm.toLowerCase());
-            const matchesStatus = statusFilter === "ALL" || p.invitationStatus === statusFilter;
-            return matchesSearch && matchesStatus;
-        });
-    }, [prospects, searchTerm, statusFilter]);
+            const matchesSearch = vName.includes(searchTerm.toLowerCase()) || leaderName.includes(searchTerm.toLowerCase());
 
-    const filteredVisitors = useMemo(() => {
-        return visitors.filter((v) => {
-            const name = (v.fullName || `${v.firstName || ""} ${v.lastName || ""}`).toLowerCase();
-            const inv = (v.invitedBy || "").toLowerCase();
-            const matchesSearch = name.includes(searchTerm.toLowerCase()) || inv.includes(searchTerm.toLowerCase());
-            const matchesStatus = statusFilter === "ALL" || v.followUpStatus === statusFilter;
-            return matchesSearch && matchesStatus;
-        });
-    }, [visitors, searchTerm, statusFilter]);
+            // Status filter
+            let matchesStatus = true;
+            if (statusFilter === "UNASSIGNED") {
+                matchesStatus = !v.isConvertedToMember && !delegation;
+            } else if (statusFilter === "ASSIGNED") {
+                matchesStatus = Boolean(delegation && delegation.delegationStatus !== "Converted to Member");
+            } else if (statusFilter === "CONVERTED") {
+                matchesStatus = Boolean(v.isConvertedToMember || delegation?.delegationStatus === "Converted to Member");
+            }
 
-    const filteredDisciples = useMemo(() => {
-        return disciples.filter((d) => {
-            const matchesSearch =
-                d.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                d.disciplerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                d.cellGroupName.toLowerCase().includes(searchTerm.toLowerCase());
-            const matchesStatus = statusFilter === "ALL" || d.stage === statusFilter;
-            return matchesSearch && matchesStatus;
-        });
-    }, [disciples, searchTerm, statusFilter]);
+            // Leader filter
+            let matchesLeader = true;
+            if (leaderFilter !== "ALL") {
+                matchesLeader = delegation?.assignedLeaderId === Number(leaderFilter);
+            }
 
-    const filteredSentLeaders = useMemo(() => {
-        return sentLeaders.filter((s) => {
-            const matchesSearch =
-                s.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                s.ministryRole.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                s.ministryDepartment.toLowerCase().includes(searchTerm.toLowerCase());
-            const matchesStatus = statusFilter === "ALL" || s.commissioningStatus === statusFilter;
-            return matchesSearch && matchesStatus;
+            return matchesSearch && matchesStatus && matchesLeader;
         });
-    }, [sentLeaders, searchTerm, statusFilter]);
+    }, [realVisitors, delegations, searchTerm, statusFilter, leaderFilter]);
 
     return (
         <div className="church-in-action-container">
@@ -518,7 +645,7 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
             {alertMessage && (
                 <div className={`cia-alert-banner ${alertMessage.type}`}>
                     <span>{alertMessage.text}</span>
-                    <button onClick={() => setAlertMessage(null)}>×</button>
+                    <button type="button" onClick={() => setAlertMessage(null)}>×</button>
                 </div>
             )}
 
@@ -532,9 +659,9 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                         <div className="cia-ministry-badge">
                             <span>LUKE 4:18 MINISTRIES • SAN VICENTE CHURCH</span>
                         </div>
-                        <h1 className="cia-title">Church in Action</h1>
+                        <h1 className="cia-title">Church in Action: Monitoring & Delegation System</h1>
                         <p className="cia-subtitle">
-                            Spiritual Lifecycle & Great Commission Engine: From Newcomer to Real Follower of Christ
+                            Empowering leaders to follow up newcomers and nurture them into real church members and disciples of Christ.
                         </p>
                     </div>
                 </div>
@@ -545,7 +672,7 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                             type="button"
                             className="cia-btn-outline"
                             onClick={onBack}
-                            title="Back to previous screen"
+                            title="Back to dashboard"
                         >
                             ← Back
                         </button>
@@ -553,437 +680,497 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                     <button
                         type="button"
                         className="cia-btn-outline"
-                        onClick={loadData}
-                        title="Refresh data from live API"
+                        onClick={loadRealData}
+                        title="Sync with live database"
                     >
-                        <RefreshCw size={16} className={loading ? "cia-spin" : ""} />
-                        <span>Refresh</span>
+                        <RefreshCw size={15} className={loading ? "cia-spin" : ""} />
+                        <span>Sync Database</span>
                     </button>
                     <button
                         type="button"
                         className="cia-btn-outline"
-                        onClick={handlePrintLifecycleReport}
-                        title="Print clean summary document"
+                        onClick={() => window.print()}
+                        title="Print clean report"
                     >
-                        <Printer size={16} />
+                        <Printer size={15} />
                         <span>Print Report</span>
                     </button>
                     {canManage && (
                         <button
                             type="button"
                             className="cia-btn-primary"
-                        onClick={() => {
-                            if (activeTab === "evangelism") handleOpenAddProspect();
-                            else if (activeTab === "discipleship") handleOpenAddDisciple();
-                            else if (activeTab === "sending") handleOpenAddSending();
-                            else handleOpenAddProspect();
-                        }}
-                    >
-                        <Plus size={18} />
-                        <span>
-                            {activeTab === "evangelism"
-                                ? "Add Prospect"
-                                : activeTab === "discipleship"
-                                ? "Enroll Disciple"
-                                : activeTab === "sending"
-                                ? "Commission Leader"
-                                : "Add New Person"}
-                        </span>
-                    </button>
+                            onClick={() => setShowRegisterVisitorModal(true)}
+                        >
+                            <UserPlus size={16} />
+                            <span>Register Newcomer</span>
+                        </button>
                     )}
                 </div>
             </header>
 
-            {/* LIFECYCLE METRICS BAR */}
+            {/* MONITORING METRICS BAR (FROM REAL DATABASE) */}
             <section className="cia-metrics-grid">
                 <div className="cia-metric-card">
-                    <div className="cia-metric-icon-wrap cia-icon-amber">
-                        <UserPlus size={22} />
-                    </div>
-                    <div className="cia-metric-data">
-                        <span className="cia-metric-label">1. Evangelism & Prospects</span>
-                        <strong className="cia-metric-val">{stats.totalProspects}</strong>
-                        <span className="cia-metric-hint">In Prayer & Outreach</span>
-                    </div>
-                </div>
-
-                <div className="cia-metric-card">
                     <div className="cia-metric-icon-wrap cia-icon-blue">
-                        <HeartHandshake size={22} />
+                        <Users size={20} />
                     </div>
                     <div className="cia-metric-data">
-                        <span className="cia-metric-label">2. Visitors & Follow-Up</span>
-                        <strong className="cia-metric-val">{stats.totalVisitors}</strong>
-                        <span className="cia-metric-hint">{stats.activeFollowUps} Touchpoints Logged</span>
+                        <span className="cia-metric-label">Total Newcomers in DB</span>
+                        <strong className="cia-metric-val">{metrics.totalNewcomers}</strong>
+                        <span className="cia-metric-hint">Official Visitors Table</span>
                     </div>
                 </div>
 
-                <div className="cia-metric-card">
-                    <div className="cia-metric-icon-wrap cia-icon-emerald">
-                        <BookOpen size={22} />
+                <div className={`cia-metric-card ${metrics.unassignedCount > 0 ? "cia-metric-card-warn" : ""}`}>
+                    <div className="cia-metric-icon-wrap cia-icon-amber">
+                        <AlertCircle size={20} />
                     </div>
                     <div className="cia-metric-data">
-                        <span className="cia-metric-label">3. Discipleship & Cell</span>
-                        <strong className="cia-metric-val">{stats.totalDisciples}</strong>
-                        <span className="cia-metric-hint">{stats.waterBaptized} Baptized in Water</span>
+                        <span className="cia-metric-label">Unassigned (Need Leader)</span>
+                        <strong className="cia-metric-val text-amber">{metrics.unassignedCount}</strong>
+                        <span className="cia-metric-hint">Requires Delegation</span>
                     </div>
                 </div>
 
                 <div className="cia-metric-card">
                     <div className="cia-metric-icon-wrap cia-icon-purple">
-                        <Send size={22} />
+                        <UserCog size={20} />
                     </div>
                     <div className="cia-metric-data">
-                        <span className="cia-metric-label">4. Sending & Mobilization</span>
-                        <strong className="cia-metric-val">{stats.totalSent}</strong>
-                        <span className="cia-metric-hint">Commissioned Workers</span>
+                        <span className="cia-metric-label">In Active Follow-Up</span>
+                        <strong className="cia-metric-val">{metrics.activeDelegationsCount}</strong>
+                        <span className="cia-metric-hint">Assigned to Leaders</span>
                     </div>
                 </div>
 
                 <div className="cia-metric-card cia-highlight-metric">
                     <div className="cia-metric-icon-wrap cia-icon-gold">
-                        <Sparkles size={22} />
+                        <Crown size={20} />
                     </div>
                     <div className="cia-metric-data">
-                        <span className="cia-metric-label">Disciples Multiplied</span>
-                        <strong className="cia-metric-val">{stats.totalFruit}</strong>
-                        <span className="cia-metric-hint">Spiritual Fruit Bearing</span>
+                        <span className="cia-metric-label">Turned to Members</span>
+                        <strong className="cia-metric-val text-gold">{metrics.convertedToMembersCount}</strong>
+                        <span className="cia-metric-hint">Converted & Baptized</span>
+                    </div>
+                </div>
+
+                <div className="cia-metric-card">
+                    <div className="cia-metric-icon-wrap cia-icon-emerald">
+                        <BookOpen size={20} />
+                    </div>
+                    <div className="cia-metric-data">
+                        <span className="cia-metric-label">Disciples & Sent</span>
+                        <strong className="cia-metric-val">{metrics.totalDisciples + metrics.totalSent}</strong>
+                        <span className="cia-metric-hint">Foundations & Workers</span>
                     </div>
                 </div>
             </section>
 
             {/* TAB NAVIGATION */}
-            <nav className="cia-tabs-nav" aria-label="Church in Action Sub-systems">
+            <nav className="cia-tabs-nav" aria-label="Monitoring Subsystems">
                 <button
                     type="button"
-                    className={`cia-tab-btn ${activeTab === "pipeline" ? "active" : ""}`}
+                    className={`cia-tab-btn ${activeTab === "delegation" ? "active" : ""}`}
                     onClick={() => {
-                        setActiveTab("pipeline");
+                        setActiveTab("delegation");
                         setStatusFilter("ALL");
                     }}
                 >
-                    <Layers size={17} />
-                    <span>Spiritual Lifecycle Pipeline</span>
-                    <span className="cia-badge-pill">
-                        {stats.totalProspects + stats.totalVisitors + stats.totalDisciples + stats.totalSent}
-                    </span>
+                    <UserCog size={16} />
+                    <span>1. Leaders Delegation Center</span>
+                    <span className="cia-badge-pill">{metrics.totalNewcomers}</span>
                 </button>
 
                 <button
                     type="button"
-                    className={`cia-tab-btn ${activeTab === "evangelism" ? "active" : ""}`}
-                    onClick={() => {
-                        setActiveTab("evangelism");
-                        setStatusFilter("ALL");
-                    }}
+                    className={`cia-tab-btn ${activeTab === "pipeline" ? "active" : ""}`}
+                    onClick={() => setActiveTab("pipeline")}
                 >
-                    <UserPlus size={17} />
-                    <span>1. Invitation / Evangelism</span>
-                    <span className="cia-badge-pill">{stats.totalProspects}</span>
+                    <Layers size={16} />
+                    <span>2. Lifecycle Pipeline (Kanban)</span>
                 </button>
 
                 <button
                     type="button"
                     className={`cia-tab-btn ${activeTab === "followup" ? "active" : ""}`}
-                    onClick={() => {
-                        setActiveTab("followup");
-                        setStatusFilter("ALL");
-                    }}
+                    onClick={() => setActiveTab("followup")}
                 >
-                    <HeartHandshake size={17} />
-                    <span>2. Visitor Follow-Up</span>
-                    <span className="cia-badge-pill">{stats.totalVisitors}</span>
+                    <HeartHandshake size={16} />
+                    <span>3. Touchpoints & Logs</span>
+                    <span className="cia-badge-pill">{followUpLogs.length}</span>
                 </button>
 
                 <button
                     type="button"
                     className={`cia-tab-btn ${activeTab === "discipleship" ? "active" : ""}`}
-                    onClick={() => {
-                        setActiveTab("discipleship");
-                        setStatusFilter("ALL");
-                    }}
+                    onClick={() => setActiveTab("discipleship")}
                 >
-                    <BookOpen size={17} />
-                    <span>3. Consolidation / Discipleship</span>
-                    <span className="cia-badge-pill">{stats.totalDisciples}</span>
+                    <BookOpen size={16} />
+                    <span>4. Discipleship & Foundations</span>
+                    <span className="cia-badge-pill">{disciples.length}</span>
                 </button>
 
                 <button
                     type="button"
                     className={`cia-tab-btn ${activeTab === "sending" ? "active" : ""}`}
-                    onClick={() => {
-                        setActiveTab("sending");
-                        setStatusFilter("ALL");
-                    }}
+                    onClick={() => setActiveTab("sending")}
                 >
-                    <Send size={17} />
-                    <span>4. Sending & Mobilization</span>
-                    <span className="cia-badge-pill">{stats.totalSent}</span>
+                    <Send size={16} />
+                    <span>5. Sending & Mobilization</span>
+                    <span className="cia-badge-pill">{sentLeaders.length}</span>
+                </button>
+
+                <button
+                    type="button"
+                    className={`cia-tab-btn ${activeTab === "evangelism" ? "active" : ""}`}
+                    onClick={() => setActiveTab("evangelism")}
+                >
+                    <Sparkles size={16} />
+                    <span>Outreach & Prospects</span>
+                    <span className="cia-badge-pill">{prospects.length}</span>
                 </button>
             </nav>
 
-            {/* SEARCH AND CONTROLS BAR (FOR NON-PIPELINE TABS) */}
-            {activeTab !== "pipeline" && (
-                <div className="cia-controls-bar">
-                    <div className="cia-search-box">
-                        <Search size={16} />
-                        <input
-                            type="text"
-                            placeholder="Search by name, inviter, discipler, or campaign..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                        {searchTerm && (
-                            <button type="button" className="cia-clear-btn" onClick={() => setSearchTerm("")}>
-                                ×
+            {/* ============================================================ */}
+            {/* VIEW 1: LEADERS DELEGATION CENTER                            */}
+            {/* ============================================================ */}
+            {activeTab === "delegation" && (
+                <div className="cia-tab-content">
+                    {/* LEADER WORKLOAD MATRIX BANNER */}
+                    <div className="cia-leaders-summary-panel">
+                        <div className="cia-lsp-header">
+                            <div>
+                                <h4>Available Leaders & Workers ({realMembers.length} Members in Database)</h4>
+                                <p>Select a leader to view their assigned newcomer caseload, or assign leaders to newcomers below.</p>
+                            </div>
+                            <div className="cia-lsp-badge">
+                                <ShieldCheck size={16} />
+                                <span>Real Database Members</span>
+                            </div>
+                        </div>
+
+                        <div className="cia-leaders-chip-row">
+                            <button
+                                type="button"
+                                className={`cia-leader-filter-chip ${leaderFilter === "ALL" ? "active" : ""}`}
+                                onClick={() => setLeaderFilter("ALL")}
+                            >
+                                <span>All Leaders</span>
+                                <span className="chip-cnt">{realVisitors.length}</span>
                             </button>
-                        )}
+
+                            {realMembers.slice(0, 10).map((m) => {
+                                const assignedCount = leaderWorkloadMap[m.memberId] || 0;
+                                return (
+                                    <button
+                                        key={m.memberId}
+                                        type="button"
+                                        className={`cia-leader-filter-chip ${leaderFilter === String(m.memberId) ? "active" : ""}`}
+                                        onClick={() => setLeaderFilter(String(m.memberId))}
+                                        title={`${m.fullName} (${m.ministry || "Member"})`}
+                                    >
+                                        <span className="leader-name">{m.fullName}</span>
+                                        <span className={`chip-cnt ${assignedCount > 0 ? "active" : ""}`}>
+                                            {assignedCount}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
 
-                    <div className="cia-filters">
-                        <Filter size={16} />
-                        <label>Filter:</label>
-                        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                            <option value="ALL">All Statuses</option>
-                            {activeTab === "evangelism" && (
-                                <>
-                                    <option value="In Prayer">In Prayer</option>
-                                    <option value="Invited">Invited</option>
-                                    <option value="Confirmed Attending">Confirmed Attending</option>
-                                    <option value="Attended">Attended (Promoted)</option>
-                                </>
+                    {/* CONTROLS BAR */}
+                    <div className="cia-controls-bar">
+                        <div className="cia-search-box">
+                            <Search size={16} />
+                            <input
+                                type="text"
+                                placeholder="Search newcomers or assigned leaders..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                            {searchTerm && (
+                                <button type="button" className="cia-clear-btn" onClick={() => setSearchTerm("")}>
+                                    ×
+                                </button>
                             )}
-                            {activeTab === "followup" && (
-                                <>
-                                    <option value="NEW">New (1st Visit)</option>
-                                    <option value="CONTACTED">Contacted</option>
-                                    <option value="FOLLOW-UP">Follow-Up (2nd Visit)</option>
-                                    <option value="CONNECTED">Connected (3+ Visits)</option>
-                                    <option value="CONVERTED">Converted to Member</option>
-                                </>
-                            )}
-                            {activeTab === "discipleship" && (
-                                <>
-                                    <option value="New Believer">New Believer</option>
-                                    <option value="Foundation Track">Foundation Track</option>
-                                    <option value="Baptized Disciple">Baptized Disciple</option>
-                                    <option value="Cell Member">Cell Member</option>
-                                    <option value="Leader in Training">Leader in Training</option>
-                                </>
-                            )}
-                            {activeTab === "sending" && (
-                                <>
-                                    <option value="In Preparation">In Preparation</option>
-                                    <option value="Ministry Intern">Ministry Intern</option>
-                                    <option value="Commissioned Worker">Commissioned Worker</option>
-                                    <option value="Cell Leader / Disciple-Maker">Cell Leader / Disciple-Maker</option>
-                                </>
-                            )}
-                        </select>
+                        </div>
+
+                        <div className="cia-filters">
+                            <Filter size={15} />
+                            <label>Filter By Status:</label>
+                            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                                <option value="ALL">All Newcomers</option>
+                                <option value="UNASSIGNED">⚠️ Unassigned (Need Leader)</option>
+                                <option value="ASSIGNED">🔄 In Follow-Up (Assigned)</option>
+                                <option value="CONVERTED">👑 Converted to Members</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* DELEGATION MONITORING TABLE */}
+                    <div className="cia-table-container">
+                        <table className="cia-table">
+                            <thead>
+                                <tr>
+                                    <th>Newcomer / Visitor</th>
+                                    <th>First Visit Date</th>
+                                    <th>Visit Count</th>
+                                    <th>Assigned Leader</th>
+                                    <th>Target Contact Date</th>
+                                    <th>Delegation Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredDelegationList.map((v) => {
+                                    const vName = v.fullName || `${v.firstName || ""} ${v.lastName || ""}`;
+                                    const delegation = delegations.find((d) => d.visitorId === v.visitorId);
+                                    const isConverted = v.isConvertedToMember || delegation?.delegationStatus === "Converted to Member";
+
+                                    return (
+                                        <tr key={v.visitorId} className={!delegation && !isConverted ? "row-warn" : ""}>
+                                            <td>
+                                                <div className="cia-table-primary-cell">
+                                                    <strong>{vName}</strong>
+                                                    <small>
+                                                        {v.visitorCode || `ID #${v.visitorId}`} • {v.contactNumber || "No Phone"} • {v.address || "San Vicente"}
+                                                    </small>
+                                                </div>
+                                            </td>
+                                            <td>{v.firstVisitDate || "Recent"}</td>
+                                            <td>
+                                                <span className="cia-visit-badge">{v.visitCount || 1} Time(s)</span>
+                                            </td>
+                                            <td>
+                                                {delegation ? (
+                                                    <div className="cia-leader-assigned-cell">
+                                                        <div className="leader-pill">
+                                                            <UserCheck size={13} />
+                                                            <strong>{delegation.assignedLeaderName}</strong>
+                                                        </div>
+                                                        <small>Priority: <strong>{delegation.priority}</strong></small>
+                                                    </div>
+                                                ) : isConverted ? (
+                                                    <span className="cia-status-chip converted">
+                                                        <Crown size={12} /> Member
+                                                    </span>
+                                                ) : (
+                                                    <span className="cia-status-chip unassigned">
+                                                        ⚠️ Needs Leader
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td>
+                                                {delegation?.targetContactDate ? (
+                                                    <div className="cia-target-date">
+                                                        <Calendar size={12} />
+                                                        <span>{delegation.targetContactDate}</span>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-muted">—</span>
+                                                )}
+                                            </td>
+                                            <td>
+                                                {isConverted ? (
+                                                    <span className="cia-status-chip converted">
+                                                        👑 Church Member
+                                                    </span>
+                                                ) : delegation ? (
+                                                    <span className={`cia-status-chip ${delegation.delegationStatus.toLowerCase().replace(/\s+/g, "-")}`}>
+                                                        {delegation.delegationStatus}
+                                                    </span>
+                                                ) : (
+                                                    <span className="cia-status-chip unassigned">
+                                                        Unassigned
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td>
+                                                <div className="cia-table-actions">
+                                                    {!isConverted && (
+                                                        <button
+                                                            type="button"
+                                                            className="cia-btn-delegate"
+                                                            onClick={() => handleOpenDelegateModal(v)}
+                                                            title={delegation ? "Reassign to another leader" : "Assign follow-up leader"}
+                                                        >
+                                                            <UserCog size={13} />
+                                                            <span>{delegation ? "Reassign" : "Delegate Leader"}</span>
+                                                        </button>
+                                                    )}
+
+                                                    <button
+                                                        type="button"
+                                                        className="cia-icon-btn"
+                                                        onClick={() => handleOpenLogFollowUp(v)}
+                                                        title="Log Contact Touchpoint"
+                                                    >
+                                                        <HeartHandshake size={14} />
+                                                    </button>
+
+                                                    {!isConverted && (
+                                                        <button
+                                                            type="button"
+                                                            className="cia-btn-convert"
+                                                            onClick={() => handleConvertToMember(v)}
+                                                            title="Convert Newcomer to Official Church Member in SQL Database"
+                                                        >
+                                                            <Crown size={13} />
+                                                            <span>Convert to Member</span>
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+
+                                {filteredDelegationList.length === 0 && (
+                                    <tr>
+                                        <td colSpan={7} className="cia-no-data">
+                                            {realVisitors.length === 0
+                                                ? "No newcomers recorded in database yet. Click 'Register Newcomer' above to add your first visitor!"
+                                                : "No newcomers match the selected search or leader filter."}
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             )}
 
             {/* ============================================================ */}
-            {/* VIEW 1: SPIRITUAL LIFECYCLE PIPELINE (KANBAN / FUNNEL)       */}
+            {/* VIEW 2: LIFECYCLE PIPELINE (KANBAN BOARD)                    */}
             {/* ============================================================ */}
             {activeTab === "pipeline" && (
                 <div className="cia-pipeline-view">
                     <div className="cia-pipeline-info-banner">
                         <div className="cia-pib-content">
-                            <strong>The Great Commission Pipeline (Matthew 28:19-20)</strong>
-                            <p>
-                                Monitor the complete journey from initial invitation, to visitor hospitality, into foundational discipleship, and finally sending them as multiplying leaders.
-                            </p>
-                        </div>
-                        <div className="cia-pib-steps">
-                            <span className="step-pill">1. Win</span>
-                            <ArrowRight size={14} />
-                            <span className="step-pill">2. Consolidate</span>
-                            <ArrowRight size={14} />
-                            <span className="step-pill">3. Disciple</span>
-                            <ArrowRight size={14} />
-                            <span className="step-pill">4. Send</span>
+                            <strong>Live Spiritual Growth Funnel: Newcomer ➔ Church Member ➔ Disciple ➔ Leader</strong>
+                            <p>Real-time lifecycle monitoring derived directly from your live church database records.</p>
                         </div>
                     </div>
 
                     <div className="cia-kanban-board">
-                        {/* COLUMN 1: PROSPECTS */}
+                        {/* COLUMN 1: NEW ARRIVALS (UNASSIGNED) */}
                         <div className="cia-kanban-col">
                             <div className="cia-col-header amber">
                                 <div>
                                     <span className="cia-col-step">STAGE 1</span>
-                                    <h4>Outreach & Invites</h4>
+                                    <h4>New Arrivals (Unassigned)</h4>
                                 </div>
-                                <span className="cia-col-count">{prospects.length}</span>
+                                <span className="cia-col-count">
+                                    {realVisitors.filter((v) => !v.isConvertedToMember && !delegations.some((d) => d.visitorId === v.visitorId)).length}
+                                </span>
                             </div>
                             <div className="cia-col-cards">
-                                {prospects.map((p) => (
-                                    <div key={p.id} className="cia-kanban-card">
-                                        <div className="cia-card-top">
-                                            <span className="cia-id-tag">{p.id}</span>
-                                            <span className={`cia-status-chip ${p.invitationStatus.toLowerCase().replace(/\s+/g, "-")}`}>
-                                                {p.invitationStatus}
-                                            </span>
-                                        </div>
-                                        <h5 className="cia-card-name">{p.fullName}</h5>
-                                        <p className="cia-card-sub">
-                                            <Users size={12} /> Inviter: <strong>{p.invitedBy}</strong>
-                                        </p>
-                                        <p className="cia-card-sub">
-                                            <Flame size={12} /> {p.outreachCampaign}
-                                        </p>
-                                        {p.prayerRequests && (
-                                            <div className="cia-card-prayer">
-                                                <span>🙏 {p.prayerRequests}</span>
-                                            </div>
-                                        )}
-                                        <div className="cia-card-footer">
-                                            {p.invitationStatus !== "Attended" ? (
-                                                <button
-                                                    type="button"
-                                                    className="cia-btn-sm-action"
-                                                    onClick={() => handlePromoteToVisitor(p)}
-                                                    title="Mark as attended church and create Visitor profile"
-                                                >
-                                                    <UserCheck size={13} />
-                                                    <span>Promote to Visitor</span>
-                                                </button>
-                                            ) : (
-                                                <span className="cia-promoted-label">✓ Promoted to Visitor</span>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
-                                {prospects.length === 0 && (
-                                    <div className="cia-col-empty">No active prospects in prayer list.</div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* COLUMN 2: VISITORS */}
-                        <div className="cia-kanban-col">
-                            <div className="cia-col-header blue">
-                                <div>
-                                    <span className="cia-col-step">STAGE 2</span>
-                                    <h4>Guests & Follow-Up</h4>
-                                </div>
-                                <span className="cia-col-count">{visitors.length}</span>
-                            </div>
-                            <div className="cia-col-cards">
-                                {visitors.map((v) => {
-                                    const name = v.fullName || `${v.firstName || ""} ${v.lastName || ""}`;
-                                    const logs = followUpLogs.filter((l) => l.visitorId === v.visitorId);
-                                    return (
+                                {realVisitors
+                                    .filter((v) => !v.isConvertedToMember && !delegations.some((d) => d.visitorId === v.visitorId))
+                                    .map((v) => (
                                         <div key={v.visitorId} className="cia-kanban-card">
                                             <div className="cia-card-top">
                                                 <span className="cia-id-tag">{v.visitorCode || `VIS-${v.visitorId}`}</span>
-                                                <span className={`cia-status-chip ${v.followUpStatus?.toLowerCase() || "new"}`}>
-                                                    {v.followUpStatus || "NEW"}
-                                                </span>
+                                                <span className="cia-status-chip unassigned">Needs Leader</span>
                                             </div>
-                                            <h5 className="cia-card-name">{name}</h5>
-                                            <p className="cia-card-sub">
-                                                <Clock size={12} /> Visits: <strong>{v.visitCount || 1} time(s)</strong>
-                                            </p>
-                                            <p className="cia-card-sub">
-                                                <Phone size={12} /> {v.contactNumber || "No contact"}
-                                            </p>
-                                            <div className="cia-card-interaction-snippet">
-                                                <small>{logs.length} follow-up touchpoint(s)</small>
-                                            </div>
-                                            <div className="cia-card-footer dual">
-                                                <button
-                                                    type="button"
-                                                    className="cia-btn-sm-touchpoint"
-                                                    onClick={() => handleOpenLogFollowUp(v)}
-                                                >
-                                                    <HeartHandshake size={13} />
-                                                    <span>Log Contact</span>
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    className="cia-btn-sm-action"
-                                                    onClick={() => handleEnrollInDiscipleship(v)}
-                                                    title="Transfer into Discipleship track"
-                                                >
-                                                    <BookOpen size={13} />
-                                                    <span>Disciple</span>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                                {visitors.length === 0 && (
-                                    <div className="cia-col-empty">No visitors recorded yet.</div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* COLUMN 3: FOUNDATIONS & NEW BELIEVER */}
-                        <div className="cia-kanban-col">
-                            <div className="cia-col-header emerald">
-                                <div>
-                                    <span className="cia-col-step">STAGE 3</span>
-                                    <h4>Discipleship & Cell</h4>
-                                </div>
-                                <span className="cia-col-count">{disciples.length}</span>
-                            </div>
-                            <div className="cia-col-cards">
-                                {disciples.map((d) => {
-                                    const lessonsDone = Object.values(d.foundations || {}).filter(Boolean).length;
-                                    return (
-                                        <div key={d.id} className="cia-kanban-card">
-                                            <div className="cia-card-top">
-                                                <span className="cia-id-tag">{d.id}</span>
-                                                <span className="cia-status-chip emerald">{d.stage}</span>
-                                            </div>
-                                            <h5 className="cia-card-name">{d.fullName}</h5>
-                                            <p className="cia-card-sub">
-                                                <Users size={12} /> Mentor: <strong>{d.disciplerName}</strong>
-                                            </p>
-                                            <p className="cia-card-sub">
-                                                <ShieldCheck size={12} /> Cell: {d.cellGroupName}
-                                            </p>
-                                            {/* PROGRESS BAR */}
-                                            <div className="cia-card-progress">
-                                                <div className="cia-progress-label">
-                                                    <span>Foundations Progress</span>
-                                                    <strong>{lessonsDone}/6 Lessons</strong>
-                                                </div>
-                                                <div className="cia-progress-track">
-                                                    <div
-                                                        className="cia-progress-fill"
-                                                        style={{ width: `${(lessonsDone / 6) * 100}%` }}
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <div className="cia-card-badge-row">
-                                                {d.waterBaptism?.isBaptized ? (
-                                                    <span className="cia-pill-success">🌊 Water Baptized</span>
-                                                ) : (
-                                                    <span className="cia-pill-pending">⏳ Baptism Pending</span>
-                                                )}
-                                            </div>
-
+                                            <h5 className="cia-card-name">{v.fullName || `${v.firstName} ${v.lastName}`}</h5>
+                                            <p className="cia-card-sub"><Phone size={12} /> {v.contactNumber || "No Phone"}</p>
+                                            <p className="cia-card-sub"><Clock size={12} /> First Visit: {v.firstVisitDate || "Recent"}</p>
                                             <div className="cia-card-footer">
                                                 <button
                                                     type="button"
                                                     className="cia-btn-sm-action"
-                                                    onClick={() => handleMobilizeToSending(d)}
-                                                    title="Mobilize into ministry service"
+                                                    onClick={() => handleOpenDelegateModal(v)}
                                                 >
-                                                    <Send size={13} />
-                                                    <span>Send / Mobilize</span>
+                                                    <UserCog size={13} />
+                                                    <span>Delegate Leader</span>
                                                 </button>
                                             </div>
                                         </div>
-                                    );
-                                })}
-                                {disciples.length === 0 && (
-                                    <div className="cia-col-empty">No disciples currently registered.</div>
-                                )}
+                                    ))}
+                            </div>
+                        </div>
+
+                        {/* COLUMN 2: IN ACTIVE FOLLOW-UP */}
+                        <div className="cia-kanban-col">
+                            <div className="cia-col-header blue">
+                                <div>
+                                    <span className="cia-col-step">STAGE 2</span>
+                                    <h4>In Follow-Up (Assigned)</h4>
+                                </div>
+                                <span className="cia-col-count">
+                                    {realVisitors.filter((v) => !v.isConvertedToMember && delegations.some((d) => d.visitorId === v.visitorId)).length}
+                                </span>
+                            </div>
+                            <div className="cia-col-cards">
+                                {realVisitors
+                                    .filter((v) => !v.isConvertedToMember && delegations.some((d) => d.visitorId === v.visitorId))
+                                    .map((v) => {
+                                        const del = delegations.find((d) => d.visitorId === v.visitorId);
+                                        return (
+                                            <div key={v.visitorId} className="cia-kanban-card">
+                                                <div className="cia-card-top">
+                                                    <span className="cia-id-tag">{v.visitorCode || `VIS-${v.visitorId}`}</span>
+                                                    <span className="cia-status-chip contacted">{del?.delegationStatus}</span>
+                                                </div>
+                                                <h5 className="cia-card-name">{v.fullName || `${v.firstName} ${v.lastName}`}</h5>
+                                                <p className="cia-card-sub"><UserCheck size={12} /> Leader: <strong>{del?.assignedLeaderName}</strong></p>
+                                                <p className="cia-card-sub"><Clock size={12} /> Target: {del?.targetContactDate || "Soon"}</p>
+                                                <div className="cia-card-footer dual">
+                                                    <button
+                                                        type="button"
+                                                        className="cia-btn-sm-touchpoint"
+                                                        onClick={() => handleOpenLogFollowUp(v)}
+                                                    >
+                                                        <HeartHandshake size={12} />
+                                                        <span>Log Contact</span>
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        className="cia-btn-sm-action"
+                                                        onClick={() => handleConvertToMember(v)}
+                                                    >
+                                                        <Crown size={12} />
+                                                        <span>To Member</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                            </div>
+                        </div>
+
+                        {/* COLUMN 3: CONVERTED CHURCH MEMBERS */}
+                        <div className="cia-kanban-col">
+                            <div className="cia-col-header emerald">
+                                <div>
+                                    <span className="cia-col-step">STAGE 3</span>
+                                    <h4>Church Members & Disciples</h4>
+                                </div>
+                                <span className="cia-col-count">
+                                    {realVisitors.filter((v) => v.isConvertedToMember).length + disciples.length}
+                                </span>
+                            </div>
+                            <div className="cia-col-cards">
+                                {disciples.map((d) => (
+                                    <div key={d.id} className="cia-kanban-card">
+                                        <div className="cia-card-top">
+                                            <span className="cia-id-tag">{d.id}</span>
+                                            <span className="cia-status-chip emerald">{d.stage}</span>
+                                        </div>
+                                        <h5 className="cia-card-name">{d.fullName}</h5>
+                                        <p className="cia-card-sub"><Users size={12} /> Mentor: {d.disciplerName}</p>
+                                        <p className="cia-card-sub"><ShieldCheck size={12} /> Cell: {d.cellGroupName}</p>
+                                        <div className="cia-card-badge-row">
+                                            {d.waterBaptism?.isBaptized ? (
+                                                <span className="cia-pill-success">🌊 Water Baptized</span>
+                                            ) : (
+                                                <span className="cia-pill-pending">⏳ Baptism Pending</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         </div>
 
@@ -992,7 +1179,7 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                             <div className="cia-col-header purple">
                                 <div>
                                     <span className="cia-col-step">STAGE 4</span>
-                                    <h4>Sent & Multiplying</h4>
+                                    <h4>Sent & Commissioned</h4>
                                 </div>
                                 <span className="cia-col-count">{sentLeaders.length}</span>
                             </div>
@@ -1004,40 +1191,14 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                                             <span className="cia-status-chip purple">{s.commissioningStatus}</span>
                                         </div>
                                         <h5 className="cia-card-name">{s.fullName}</h5>
-                                        <p className="cia-card-sub">
-                                            <Award size={12} /> Ministry: <strong>{s.ministryDepartment}</strong>
-                                        </p>
-                                        <p className="cia-card-sub">
-                                            <Sparkles size={12} /> Role: {s.ministryRole}
-                                        </p>
-
+                                        <p className="cia-card-sub"><Award size={12} /> Dept: {s.ministryDepartment}</p>
+                                        <p className="cia-card-sub"><Sparkles size={12} /> Role: {s.ministryRole}</p>
                                         <div className="cia-card-fruit-box">
                                             <span className="fruit-count">🌱 {s.activeFruitCount} Disciples</span>
-                                            <small>Currently multiplying spiritual fruit</small>
-                                        </div>
-
-                                        <div className="cia-card-footer">
-                                            <button
-                                                type="button"
-                                                className="cia-btn-sm-touchpoint"
-                                                onClick={() => {
-                                                    setViewingProfile({
-                                                        name: s.fullName,
-                                                        contact: s.contactNumber || "N/A",
-                                                        stage: "COMMISSIONED_LEADER",
-                                                        details: s,
-                                                    });
-                                                }}
-                                            >
-                                                <GraduationCap size={13} />
-                                                <span>View Credentials</span>
-                                            </button>
+                                            <small>Reproducing spiritual fruit</small>
                                         </div>
                                     </div>
                                 ))}
-                                {sentLeaders.length === 0 && (
-                                    <div className="cia-col-empty">No sent workers commissioned yet.</div>
-                                )}
                             </div>
                         </div>
                     </div>
@@ -1045,126 +1206,14 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
             )}
 
             {/* ============================================================ */}
-            {/* VIEW 2: EVANGELISM & INVITATIONS SUB-SYSTEM                  */}
-            {/* ============================================================ */}
-            {activeTab === "evangelism" && (
-                <div className="cia-tab-content">
-                    <div className="cia-section-banner amber-theme">
-                        <div>
-                            <h3>Soul-Winning & Evangelism Invitation System</h3>
-                            <p>
-                                Manage church outreach campaigns, Operation Andrew / "My 3" personal prayer lists, and track prospects before they visit.
-                            </p>
-                        </div>
-                        <button type="button" className="cia-btn-action-banner" onClick={handleOpenAddProspect}>
-                            <UserPlus size={16} />
-                            <span>Add Outreach Prospect</span>
-                        </button>
-                    </div>
-
-                    <div className="cia-table-container">
-                        <table className="cia-table">
-                            <thead>
-                                <tr>
-                                    <th>Code / Name</th>
-                                    <th>Invited By (Church Member)</th>
-                                    <th>Outreach Campaign</th>
-                                    <th>Spiritual Background</th>
-                                    <th>Prayer Request / Notes</th>
-                                    <th>Status</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredProspects.map((p) => (
-                                    <tr key={p.id}>
-                                        <td>
-                                            <div className="cia-table-primary-cell">
-                                                <strong>{p.fullName}</strong>
-                                                <small>{p.contactNumber} • {p.relationship}</small>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span className="cia-inviter-text">{p.invitedBy}</span>
-                                        </td>
-                                        <td>
-                                            <span className="cia-campaign-badge">{p.outreachCampaign}</span>
-                                        </td>
-                                        <td>
-                                            <span className="cia-spiritual-status">{p.spiritualStatus}</span>
-                                        </td>
-                                        <td className="cia-notes-cell">
-                                            {p.prayerRequests && (
-                                                <p className="cia-prayer-text">🙏 {p.prayerRequests}</p>
-                                            )}
-                                            {p.notes && <p className="cia-gen-notes">{p.notes}</p>}
-                                        </td>
-                                        <td>
-                                            <span className={`cia-status-chip ${p.invitationStatus.toLowerCase().replace(/\s+/g, "-")}`}>
-                                                {p.invitationStatus}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <div className="cia-table-actions">
-                                                {p.invitationStatus !== "Attended" && (
-                                                    <button
-                                                        type="button"
-                                                        className="cia-btn-promote"
-                                                        onClick={() => handlePromoteToVisitor(p)}
-                                                        title="1-Click Promote to Visitors Data"
-                                                    >
-                                                        <UserCheck size={14} />
-                                                        <span>Promote to Visitor</span>
-                                                    </button>
-                                                )}
-                                                <button
-                                                    type="button"
-                                                    className="cia-icon-btn"
-                                                    onClick={() => handleEditProspect(p)}
-                                                    title="Edit Prospect"
-                                                >
-                                                    <Edit size={14} />
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    className="cia-icon-btn danger"
-                                                    onClick={() => handleDeleteProspect(p.id, p.fullName)}
-                                                    title="Remove"
-                                                >
-                                                    <Trash2 size={14} />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))}
-                                {filteredProspects.length === 0 && (
-                                    <tr>
-                                        <td colSpan={7} className="cia-no-data">
-                                            No prospects found matching your search.
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            )}
-
-            {/* ============================================================ */}
-            {/* VIEW 3: VISITOR FOLLOW-UP SUB-SYSTEM                         */}
+            {/* VIEW 3: TOUCHPOINTS & INTERACTION LOGS                       */}
             {/* ============================================================ */}
             {activeTab === "followup" && (
                 <div className="cia-tab-content">
                     <div className="cia-section-banner blue-theme">
                         <div>
-                            <h3>Visitor Follow-Up Management (Connected to Live Visitors)</h3>
-                            <p>
-                                Direct real-time connection to church visitor records. Record contact history, phone calls, home visits, and prayer delivery.
-                            </p>
-                        </div>
-                        <div className="cia-banner-stat">
-                            <strong>{visitors.length}</strong>
-                            <span>Total Visitors Linked</span>
+                            <h3>Follow-Up Touchpoints Log</h3>
+                            <p>History of personal calls, visits, messages, and prayers delivered by assigned leaders.</p>
                         </div>
                     </div>
 
@@ -1172,74 +1221,35 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                         <table className="cia-table">
                             <thead>
                                 <tr>
+                                    <th>Date</th>
                                     <th>Visitor</th>
-                                    <th>First Visit Date</th>
-                                    <th>Visit Count</th>
-                                    <th>Invited By</th>
-                                    <th>Follow-Up Status</th>
-                                    <th>Touchpoints Logged</th>
-                                    <th>Actions</th>
+                                    <th>Interaction Type</th>
+                                    <th>Leader / Worker</th>
+                                    <th>Spiritual Response / Outcome</th>
+                                    <th>Next Follow-up</th>
+                                    <th>Notes</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredVisitors.map((v) => {
-                                    const name = v.fullName || `${v.firstName || ""} ${v.lastName || ""}`;
-                                    const logs = followUpLogs.filter((l) => l.visitorId === v.visitorId);
+                                {followUpLogs.map((log) => {
+                                    const visitor = realVisitors.find((v) => v.visitorId === log.visitorId);
+                                    const vName = visitor ? (visitor.fullName || `${visitor.firstName} ${visitor.lastName}`) : `Visitor #${log.visitorId}`;
                                     return (
-                                        <tr key={v.visitorId}>
-                                            <td>
-                                                <div className="cia-table-primary-cell">
-                                                    <strong>{name}</strong>
-                                                    <small>{v.visitorCode || `ID #${v.visitorId}`} • {v.contactNumber || "No phone"}</small>
-                                                </div>
-                                            </td>
-                                            <td>{v.firstVisitDate || "Recent"}</td>
-                                            <td>
-                                                <span className="cia-visit-badge">{v.visitCount || 1} Visit(s)</span>
-                                            </td>
-                                            <td>{v.invitedBy || "Walk-In"}</td>
-                                            <td>
-                                                <span className={`cia-status-chip ${v.followUpStatus?.toLowerCase() || "new"}`}>
-                                                    {v.followUpStatus || "NEW"}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <div className="cia-logs-summary">
-                                                    <strong>{logs.length} touchpoint(s)</strong>
-                                                    {logs.length > 0 && (
-                                                        <small>Last: {logs[0].type} ({logs[0].interactionDate})</small>
-                                                    )}
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <div className="cia-table-actions">
-                                                    <button
-                                                        type="button"
-                                                        className="cia-btn-promote"
-                                                        onClick={() => handleOpenLogFollowUp(v)}
-                                                        title="Record Call, Visit, or Message"
-                                                    >
-                                                        <HeartHandshake size={14} />
-                                                        <span>Log Touchpoint</span>
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        className="cia-btn-outline-sm"
-                                                        onClick={() => handleEnrollInDiscipleship(v)}
-                                                        title="Transfer to Consolidation & Discipleship"
-                                                    >
-                                                        <BookOpen size={14} />
-                                                        <span>Enroll in Discipleship</span>
-                                                    </button>
-                                                </div>
-                                            </td>
+                                        <tr key={log.id}>
+                                            <td><strong>{log.interactionDate}</strong></td>
+                                            <td>{vName}</td>
+                                            <td><span className="cia-dept-pill">{log.type}</span></td>
+                                            <td><strong>{log.ministerName}</strong></td>
+                                            <td><span className="cia-status-chip contacted">{log.outcome}</span></td>
+                                            <td>{log.nextFollowUpDate || "—"}</td>
+                                            <td className="cia-notes-cell"><small>{log.notes}</small></td>
                                         </tr>
                                     );
                                 })}
-                                {filteredVisitors.length === 0 && (
+                                {followUpLogs.length === 0 && (
                                     <tr>
                                         <td colSpan={7} className="cia-no-data">
-                                            No visitors found in the system.
+                                            No touchpoints recorded yet. Click the heart icon on any newcomer to log a contact!
                                         </td>
                                     </tr>
                                 )}
@@ -1250,25 +1260,23 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
             )}
 
             {/* ============================================================ */}
-            {/* VIEW 4: CONSOLIDATION & DISCIPLESHIP SUB-SYSTEM               */}
+            {/* VIEW 4: CONSOLIDATION & DISCIPLESHIP                         */}
             {/* ============================================================ */}
             {activeTab === "discipleship" && (
                 <div className="cia-tab-content">
                     <div className="cia-section-banner emerald-theme">
                         <div>
-                            <h3>Consolidation & Discipleship Management</h3>
-                            <p>
-                                Ground new believers in faith: 6 foundational lessons, water baptism obedience, cell group integration, and spiritual mentorship.
-                            </p>
+                            <h3>Consolidation & Discipleship Foundations</h3>
+                            <p>Grounding new believers into the body of Christ with the 6 Foundations track and water baptism.</p>
                         </div>
                         <button type="button" className="cia-btn-action-banner" onClick={handleOpenAddDisciple}>
-                            <Plus size={16} />
-                            <span>Enroll New Disciple</span>
+                            <Plus size={15} />
+                            <span>Enroll Disciple</span>
                         </button>
                     </div>
 
                     <div className="cia-disciples-grid">
-                        {filteredDisciples.map((d) => {
+                        {disciples.map((d) => {
                             const completedCount = Object.values(d.foundations || {}).filter(Boolean).length;
                             return (
                                 <div key={d.id} className="cia-disciple-card">
@@ -1278,12 +1286,34 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                                             <h4>{d.fullName}</h4>
                                             <span className="cia-dcard-contact">{d.contactNumber}</span>
                                         </div>
-                                        <span className="cia-status-chip emerald">{d.stage}</span>
+                                        <div className="cia-dcard-header-actions">
+                                            <span className="cia-status-chip emerald">
+                                                <GraduationCap size={12} /> {d.stage}
+                                            </span>
+                                            <div className="cia-table-actions">
+                                                <button
+                                                    type="button"
+                                                    className="cia-icon-btn"
+                                                    onClick={() => handleOpenEditDisciple(d)}
+                                                    title="Edit Disciple Profile"
+                                                >
+                                                    <Edit size={14} />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="cia-icon-btn danger"
+                                                    onClick={() => handleDeleteDisciple(d.id)}
+                                                    title="Remove Disciple Record"
+                                                >
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
 
                                     <div className="cia-dcard-meta">
                                         <div className="cia-meta-item">
-                                            <span>Spiritual Mentor:</span>
+                                            <span>Discipler / Leader:</span>
                                             <strong>{d.disciplerName}</strong>
                                         </div>
                                         <div className="cia-meta-item">
@@ -1292,13 +1322,11 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                                         </div>
                                     </div>
 
-                                    {/* 6 FOUNDATIONAL MILESTONES CHECKLIST */}
                                     <div className="cia-foundations-box">
                                         <div className="cia-fbox-header">
-                                            <strong>Foundations Track ({completedCount}/6)</strong>
+                                            <strong>Foundations Progress ({completedCount}/6)</strong>
                                             <span className="cia-pct">{Math.round((completedCount / 6) * 100)}%</span>
                                         </div>
-
                                         <div className="cia-lessons-list">
                                             <label className="cia-lesson-check">
                                                 <input
@@ -1308,7 +1336,6 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                                                 />
                                                 <span>1. Assurance of Salvation</span>
                                             </label>
-
                                             <label className="cia-lesson-check">
                                                 <input
                                                     type="checkbox"
@@ -1317,16 +1344,14 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                                                 />
                                                 <span>2. Word of God & Prayer Life</span>
                                             </label>
-
                                             <label className="cia-lesson-check">
                                                 <input
                                                     type="checkbox"
                                                     checked={d.foundations.lesson3HolySpirit}
                                                     onChange={() => handleToggleFoundation(d.id, "lesson3HolySpirit")}
                                                 />
-                                                <span>3. Holy Spirit & Christian Walk</span>
+                                                <span>3. Holy Spirit & Power</span>
                                             </label>
-
                                             <label className="cia-lesson-check">
                                                 <input
                                                     type="checkbox"
@@ -1335,33 +1360,30 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                                                 />
                                                 <span>4. Water Baptism & Obedience</span>
                                             </label>
-
                                             <label className="cia-lesson-check">
                                                 <input
                                                     type="checkbox"
                                                     checked={d.foundations.lesson5ChurchLife}
                                                     onChange={() => handleToggleFoundation(d.id, "lesson5ChurchLife")}
                                                 />
-                                                <span>5. Church Community & Fellowship</span>
+                                                <span>5. Church Community & Life</span>
                                             </label>
-
                                             <label className="cia-lesson-check">
                                                 <input
                                                     type="checkbox"
                                                     checked={d.foundations.lesson6Stewardship}
                                                     onChange={() => handleToggleFoundation(d.id, "lesson6Stewardship")}
                                                 />
-                                                <span>6. Stewardship & The Great Commission</span>
+                                                <span>6. Stewardship & Great Commission</span>
                                             </label>
                                         </div>
                                     </div>
 
-                                    {/* BAPTISM STATUS */}
                                     <div className="cia-baptism-strip">
                                         {d.waterBaptism?.isBaptized ? (
                                             <div className="cia-strip-baptized">
                                                 <CheckCircle2 size={16} />
-                                                <span>Water Baptized on {d.waterBaptism.baptismDate || "Recorded"}</span>
+                                                <span>Water Baptized ({d.waterBaptism.baptismDate || "Recorded"})</span>
                                             </div>
                                         ) : (
                                             <div className="cia-strip-unbaptized">
@@ -1370,58 +1392,30 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                                             </div>
                                         )}
                                     </div>
-
-                                    <div className="cia-dcard-footer">
-                                        <button
-                                            type="button"
-                                            className="cia-btn-outline-sm"
-                                            onClick={() => handleEditDisciple(d)}
-                                        >
-                                            <Edit size={13} />
-                                            <span>Edit Profile</span>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className="cia-btn-promote"
-                                            onClick={() => handleMobilizeToSending(d)}
-                                            title="Mobilize into active ministry service"
-                                        >
-                                            <Send size={13} />
-                                            <span>Mobilize & Send</span>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className="cia-icon-btn danger"
-                                            onClick={() => handleDeleteDisciple(d.id, d.fullName)}
-                                            title="Delete"
-                                        >
-                                            <Trash2 size={14} />
-                                        </button>
-                                    </div>
                                 </div>
                             );
                         })}
-                        {filteredDisciples.length === 0 && (
-                            <div className="cia-no-data-card">No disciples found. Click "Enroll New Disciple" to add someone.</div>
+                        {disciples.length === 0 && (
+                            <div className="cia-no-data-card">
+                                No disciples currently enrolled. When newcomers are converted to members, they automatically graduate into Discipleship!
+                            </div>
                         )}
                     </div>
                 </div>
             )}
 
             {/* ============================================================ */}
-            {/* VIEW 5: SENDING & MOBILIZATION SUB-SYSTEM                     */}
+            {/* VIEW 5: SENDING & MOBILIZATION                               */}
             {/* ============================================================ */}
             {activeTab === "sending" && (
                 <div className="cia-tab-content">
                     <div className="cia-section-banner purple-theme">
                         <div>
-                            <h3>Sending & Ministry Mobilization System</h3>
-                            <p>
-                                Commissioning disciples into faithful servants, ministry workers, cell leaders, and soul-winners who reproduce new believers.
-                            </p>
+                            <h3>Sending & Ministry Mobilization</h3>
+                            <p>Commissioning mature believers into active church departments and disciple-making leaders.</p>
                         </div>
                         <button type="button" className="cia-btn-action-banner" onClick={handleOpenAddSending}>
-                            <Send size={16} />
+                            <Send size={15} />
                             <span>Commission Worker</span>
                         </button>
                     </div>
@@ -1430,61 +1424,40 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                         <table className="cia-table">
                             <thead>
                                 <tr>
-                                    <th>Commissioned Worker</th>
-                                    <th>Ministry Department</th>
+                                    <th>Commissioned Leader</th>
+                                    <th>Department</th>
                                     <th>Assigned Role</th>
-                                    <th>Spiritual Gifts</th>
                                     <th>Commissioning Status</th>
-                                    <th>Disciples Multiplying (Fruit)</th>
+                                    <th>Fruit Multiplied</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredSentLeaders.map((s) => (
+                                {sentLeaders.map((s) => (
                                     <tr key={s.id}>
                                         <td>
-                                            <div className="cia-table-primary-cell">
-                                                <strong>{s.fullName}</strong>
-                                                <small>{s.contactNumber || "No contact"} • Mentor: {s.mentorPastor}</small>
-                                            </div>
+                                            <strong>{s.fullName}</strong>
+                                            <small className="d-block">{s.contactNumber || "No phone"}</small>
                                         </td>
-                                        <td>
-                                            <span className="cia-dept-pill">{s.ministryDepartment}</span>
-                                        </td>
-                                        <td>
-                                            <strong>{s.ministryRole}</strong>
-                                        </td>
-                                        <td>
-                                            <div className="cia-gifts-wrap">
-                                                {s.spiritualGifts?.map((gift, idx) => (
-                                                    <span key={idx} className="cia-gift-tag">{gift}</span>
-                                                ))}
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span className="cia-status-chip purple">{s.commissioningStatus}</span>
-                                        </td>
-                                        <td>
-                                            <div className="cia-fruit-cell">
-                                                <span className="cia-fruit-number">{s.activeFruitCount}</span>
-                                                <small>Spiritual Offspring</small>
-                                            </div>
-                                        </td>
+                                        <td><span className="cia-dept-pill">{s.ministryDepartment}</span></td>
+                                        <td><strong>{s.ministryRole}</strong></td>
+                                        <td><span className="cia-status-chip purple">{s.commissioningStatus}</span></td>
+                                        <td><strong className="text-emerald">🌱 {s.activeFruitCount} Disciples</strong></td>
                                         <td>
                                             <div className="cia-table-actions">
                                                 <button
                                                     type="button"
                                                     className="cia-icon-btn"
-                                                    onClick={() => handleEditSending(s)}
-                                                    title="Edit Commissioning"
+                                                    onClick={() => handleOpenEditSending(s)}
+                                                    title="Edit Commissioned Leader"
                                                 >
                                                     <Edit size={14} />
                                                 </button>
                                                 <button
                                                     type="button"
                                                     className="cia-icon-btn danger"
-                                                    onClick={() => handleDeleteSending(s.id, s.fullName)}
-                                                    title="Remove"
+                                                    onClick={() => handleDeleteSending(s.id)}
+                                                    title="Remove Leader Record"
                                                 >
                                                     <Trash2 size={14} />
                                                 </button>
@@ -1492,11 +1465,9 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                                         </td>
                                     </tr>
                                 ))}
-                                {filteredSentLeaders.length === 0 && (
+                                {sentLeaders.length === 0 && (
                                     <tr>
-                                        <td colSpan={7} className="cia-no-data">
-                                            No commissioned workers found.
-                                        </td>
+                                        <td colSpan={6} className="cia-no-data">No commissioned leaders registered yet.</td>
                                     </tr>
                                 )}
                             </tbody>
@@ -1506,136 +1477,172 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
             )}
 
             {/* ============================================================ */}
-            {/* MODAL 1: ADD / EDIT PROSPECT MODAL                           */}
+            {/* VIEW 6: OUTREACH & PROSPECTS (PRE-VISITOR)                    */}
             {/* ============================================================ */}
-            {showProspectModal && (
+            {activeTab === "evangelism" && (
+                <div className="cia-tab-content">
+                    <div className="cia-section-banner amber-theme">
+                        <div>
+                            <h3>Outreach & Soul-Winning Prayer List</h3>
+                            <p>Track friends, family, and prospects being prayed for before their first Sunday church visit.</p>
+                        </div>
+                        <button type="button" className="cia-btn-action-banner" onClick={handleOpenAddProspect}>
+                            <Plus size={15} />
+                            <span>Add Outreach Prospect</span>
+                        </button>
+                    </div>
+
+                    <div className="cia-table-container">
+                        <table className="cia-table">
+                            <thead>
+                                <tr>
+                                    <th>Prospect Name</th>
+                                    <th>Invited By</th>
+                                    <th>Campaign</th>
+                                    <th>Spiritual Status</th>
+                                    <th>Prayer Requests</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {prospects.map((p) => (
+                                    <tr key={p.id}>
+                                        <td>
+                                            <strong>{p.fullName}</strong>
+                                            <small className="d-block">{p.contactNumber}</small>
+                                        </td>
+                                        <td>{p.invitedBy}</td>
+                                        <td><span className="cia-campaign-badge">{p.outreachCampaign}</span></td>
+                                        <td>{p.spiritualStatus}</td>
+                                        <td><small className="cia-prayer-text">{p.prayerRequests || "General salvation"}</small></td>
+                                        <td><span className={`cia-status-chip ${p.invitationStatus.toLowerCase().replace(/\s+/g, "-")}`}>{p.invitationStatus}</span></td>
+                                        <td>
+                                            <div className="cia-table-actions">
+                                                {p.invitationStatus !== "Attended" ? (
+                                                    <button
+                                                        type="button"
+                                                        className="cia-btn-promote"
+                                                        onClick={() => handlePromoteProspect(p.id)}
+                                                        title="Create real Visitor in database"
+                                                    >
+                                                        <UserCheck size={13} />
+                                                        <span>Mark Attended</span>
+                                                    </button>
+                                                ) : (
+                                                    <span className="text-emerald">✓ In Database</span>
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    className="cia-icon-btn danger"
+                                                    onClick={() => handleDeleteProspect(p.id)}
+                                                    title="Remove Prospect"
+                                                >
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {prospects.length === 0 && (
+                                    <tr>
+                                        <td colSpan={7} className="cia-no-data">No prospects on prayer list. Click 'Add Outreach Prospect' to begin.</td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {/* ============================================================ */}
+            {/* MODAL: DELEGATE LEADER MODAL (CONNECTED TO REAL MEMBERS)     */}
+            {/* ============================================================ */}
+            {showDelegateModal && selectedVisitorForDelegation && (
                 <div className="cia-modal-overlay">
                     <div className="cia-modal-card">
                         <div className="cia-modal-header">
-                            <h3>{editingProspect ? "Edit Outreach Prospect" : "Add Soul to Outreach & Prayer List"}</h3>
-                            <button type="button" onClick={() => setShowProspectModal(false)}>×</button>
+                            <h3>Delegate Follow-Up Leader</h3>
+                            <button type="button" onClick={() => setShowDelegateModal(false)}>×</button>
                         </div>
-                        <form onSubmit={handleSaveProspect}>
+                        <form onSubmit={handleSaveDelegation}>
                             <div className="cia-modal-body">
-                                <div className="cia-form-row">
-                                    <div className="cia-form-group">
-                                        <label>Full Name *</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            placeholder="e.g. Juan Santos Dela Cruz"
-                                            value={prospectForm.fullName}
-                                            onChange={(e) => setProspectForm({ ...prospectForm, fullName: e.target.value })}
-                                        />
-                                    </div>
-                                    <div className="cia-form-group">
-                                        <label>Contact Number *</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            placeholder="e.g. 0917-123-4567"
-                                            value={prospectForm.contactNumber}
-                                            onChange={(e) => setProspectForm({ ...prospectForm, contactNumber: e.target.value })}
-                                        />
-                                    </div>
+                                <div className="cia-modal-info-bar">
+                                    <strong>Newcomer:</strong> {selectedVisitorForDelegation.fullName || `${selectedVisitorForDelegation.firstName} ${selectedVisitorForDelegation.lastName}`}
+                                    <span> • Phone: {selectedVisitorForDelegation.contactNumber || "N/A"}</span>
+                                    <span> • Visit Count: {selectedVisitorForDelegation.visitCount || 1} time(s)</span>
+                                </div>
+
+                                <div className="cia-form-group full">
+                                    <label>Select Leader / Worker (From Real Church Members) *</label>
+                                    <select
+                                        required
+                                        value={delegationForm.assignedLeaderId}
+                                        onChange={(e) => {
+                                            const leaderId = e.target.value;
+                                            const member = realMembers.find((m) => m.memberId === Number(leaderId));
+                                            setDelegationForm({
+                                                ...delegationForm,
+                                                assignedLeaderId: leaderId ? Number(leaderId) : "",
+                                                assignedLeaderName: member ? member.fullName : "",
+                                            });
+                                        }}
+                                    >
+                                        <option value="">-- Choose Church Leader / Discipler --</option>
+                                        {realMembers.map((m) => {
+                                            const count = leaderWorkloadMap[m.memberId] || 0;
+                                            return (
+                                                <option key={m.memberId} value={m.memberId}>
+                                                    {m.fullName} ({m.memberCode || `ID #${m.memberId}`}) — {m.ministry || "Member"} [{count} active assigned]
+                                                </option>
+                                            );
+                                        })}
+                                    </select>
+                                    <small className="form-hint">
+                                        💡 Choose a leader who can build relationship and disciple this newcomer.
+                                    </small>
                                 </div>
 
                                 <div className="cia-form-row">
                                     <div className="cia-form-group">
-                                        <label>Invited By (Church Member / Evangelist)</label>
-                                        <input
-                                            type="text"
-                                            placeholder="e.g. Bro. Jonathan Santos"
-                                            value={prospectForm.invitedBy}
-                                            onChange={(e) => setProspectForm({ ...prospectForm, invitedBy: e.target.value })}
-                                        />
-                                    </div>
-                                    <div className="cia-form-group">
-                                        <label>Relationship</label>
-                                        <input
-                                            type="text"
-                                            placeholder="e.g. Neighbor, Colleague, Family"
-                                            value={prospectForm.relationship}
-                                            onChange={(e) => setProspectForm({ ...prospectForm, relationship: e.target.value })}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="cia-form-row">
-                                    <div className="cia-form-group">
-                                        <label>Outreach Campaign</label>
-                                        <input
-                                            type="text"
-                                            placeholder="e.g. Easter Celebration, Youth Life Night, Sunday Service"
-                                            value={prospectForm.outreachCampaign}
-                                            onChange={(e) => setProspectForm({ ...prospectForm, outreachCampaign: e.target.value })}
-                                        />
-                                    </div>
-                                    <div className="cia-form-group">
-                                        <label>Spiritual Background</label>
+                                        <label>Follow-Up Priority</label>
                                         <select
-                                            value={prospectForm.spiritualStatus}
-                                            onChange={(e) => setProspectForm({ ...prospectForm, spiritualStatus: e.target.value as any })}
+                                            value={delegationForm.priority}
+                                            onChange={(e) => setDelegationForm({ ...delegationForm, priority: e.target.value as any })}
                                         >
-                                            <option value="Unchurched">Unchurched</option>
-                                            <option value="Seeking">Seeking God</option>
-                                            <option value="Backslidden">Backslidden (Needs Restoration)</option>
-                                            <option value="Believer Relocating">Believer Relocating</option>
-                                            <option value="Other">Other</option>
+                                            <option value="Urgent">🚨 Urgent (Within 24 Hours)</option>
+                                            <option value="High">⭐ High (Within 48 Hours)</option>
+                                            <option value="Normal">Normal (This Week)</option>
                                         </select>
                                     </div>
-                                </div>
 
-                                <div className="cia-form-row">
                                     <div className="cia-form-group">
-                                        <label>Invitation Status</label>
-                                        <select
-                                            value={prospectForm.invitationStatus}
-                                            onChange={(e) => setProspectForm({ ...prospectForm, invitationStatus: e.target.value as any })}
-                                        >
-                                            <option value="In Prayer">In Prayer</option>
-                                            <option value="Invited">Invited</option>
-                                            <option value="Confirmed Attending">Confirmed Attending</option>
-                                            <option value="Follow-up Needed">Follow-up Needed</option>
-                                            <option value="Attended">Attended</option>
-                                        </select>
-                                    </div>
-                                    <div className="cia-form-group">
-                                        <label>Target Service Date</label>
+                                        <label>Target Contact Date</label>
                                         <input
                                             type="date"
-                                            value={prospectForm.targetServiceDate}
-                                            onChange={(e) => setProspectForm({ ...prospectForm, targetServiceDate: e.target.value })}
+                                            value={delegationForm.targetContactDate}
+                                            onChange={(e) => setDelegationForm({ ...delegationForm, targetContactDate: e.target.value })}
                                         />
                                     </div>
                                 </div>
 
                                 <div className="cia-form-group full">
-                                    <label>Prayer Requests</label>
+                                    <label>Pastoral Instructions / Notes for Leader</label>
                                     <textarea
-                                        rows={2}
-                                        placeholder="Specific prayers for their salvation, family, health, or career..."
-                                        value={prospectForm.prayerRequests}
-                                        onChange={(e) => setProspectForm({ ...prospectForm, prayerRequests: e.target.value })}
-                                    />
-                                </div>
-
-                                <div className="cia-form-group full">
-                                    <label>Outreach Notes</label>
-                                    <textarea
-                                        rows={2}
-                                        placeholder="Notes on discussions, receptivity, next steps..."
-                                        value={prospectForm.notes}
-                                        onChange={(e) => setProspectForm({ ...prospectForm, notes: e.target.value })}
+                                        rows={3}
+                                        placeholder="e.g. Please call brother to welcome him, pray for his family, and invite him to Thursday cell group..."
+                                        value={delegationForm.delegationNotes}
+                                        onChange={(e) => setDelegationForm({ ...delegationForm, delegationNotes: e.target.value })}
                                     />
                                 </div>
                             </div>
+
                             <div className="cia-modal-footer">
-                                <button type="button" className="cia-btn-outline" onClick={() => setShowProspectModal(false)}>
+                                <button type="button" className="cia-btn-outline" onClick={() => setShowDelegateModal(false)}>
                                     Cancel
                                 </button>
                                 <button type="submit" className="cia-btn-primary">
-                                    {editingProspect ? "Update Prospect" : "Save Soul to Outreach List"}
+                                    Confirm Leader Delegation
                                 </button>
                             </div>
                         </form>
@@ -1644,19 +1651,123 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
             )}
 
             {/* ============================================================ */}
-            {/* MODAL 2: LOG FOLLOW-UP TOUCHPOINT MODAL                      */}
+            {/* MODAL: REGISTER REAL VISITOR MODAL                           */}
+            {/* ============================================================ */}
+            {showRegisterVisitorModal && (
+                <div className="cia-modal-overlay">
+                    <div className="cia-modal-card">
+                        <div className="cia-modal-header">
+                            <h3>Register Newcomer / Visitor (Saved to Live Database)</h3>
+                            <button type="button" onClick={() => setShowRegisterVisitorModal(false)}>×</button>
+                        </div>
+                        <form onSubmit={handleSaveNewVisitor}>
+                            <div className="cia-modal-body">
+                                <div className="cia-form-row">
+                                    <div className="cia-form-group">
+                                        <label>First Name *</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={newVisitorForm.firstName}
+                                            onChange={(e) => setNewVisitorForm({ ...newVisitorForm, firstName: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="cia-form-group">
+                                        <label>Last Name *</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={newVisitorForm.lastName}
+                                            onChange={(e) => setNewVisitorForm({ ...newVisitorForm, lastName: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="cia-form-row">
+                                    <div className="cia-form-group">
+                                        <label>Contact Number</label>
+                                        <input
+                                            type="text"
+                                            placeholder="0917-000-0000"
+                                            value={newVisitorForm.contactNumber}
+                                            onChange={(e) => setNewVisitorForm({ ...newVisitorForm, contactNumber: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="cia-form-group">
+                                        <label>Invited By (Church Member)</label>
+                                        <input
+                                            type="text"
+                                            placeholder="Member or evangelist name"
+                                            value={newVisitorForm.invitedBy}
+                                            onChange={(e) => setNewVisitorForm({ ...newVisitorForm, invitedBy: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="cia-form-row">
+                                    <div className="cia-form-group">
+                                        <label>Address / Barangay</label>
+                                        <input
+                                            type="text"
+                                            placeholder="e.g. Barangay San Vicente"
+                                            value={newVisitorForm.address}
+                                            onChange={(e) => setNewVisitorForm({ ...newVisitorForm, address: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="cia-form-group">
+                                        <label>Church Ministry Interest</label>
+                                        <select
+                                            value={newVisitorForm.ministry}
+                                            onChange={(e) => setNewVisitorForm({ ...newVisitorForm, ministry: e.target.value })}
+                                        >
+                                            <option value="">-- General Congregation --</option>
+                                            {realMinistries.map((m) => (
+                                                <option key={m.ministryId} value={m.name}>
+                                                    {m.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="cia-form-group full">
+                                    <label>First Visit Notes & Prayer Requests</label>
+                                    <textarea
+                                        rows={2}
+                                        placeholder="Notes on spiritual background or prayer needs..."
+                                        value={newVisitorForm.notes}
+                                        onChange={(e) => setNewVisitorForm({ ...newVisitorForm, notes: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="cia-modal-footer">
+                                <button type="button" className="cia-btn-outline" onClick={() => setShowRegisterVisitorModal(false)}>
+                                    Cancel
+                                </button>
+                                <button type="submit" className="cia-btn-primary">
+                                    Save Newcomer to Database
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* ============================================================ */}
+            {/* MODAL: LOG FOLLOW-UP TOUCHPOINT                              */}
             {/* ============================================================ */}
             {showFollowUpModal && selectedVisitorForFollowUp && (
                 <div className="cia-modal-overlay">
                     <div className="cia-modal-card">
                         <div className="cia-modal-header">
-                            <h3>Record Follow-Up Touchpoint</h3>
+                            <h3>Record Follow-Up Contact</h3>
                             <button type="button" onClick={() => setShowFollowUpModal(false)}>×</button>
                         </div>
                         <form onSubmit={handleSaveFollowUp}>
                             <div className="cia-modal-body">
                                 <div className="cia-modal-info-bar">
-                                    <strong>Visitor:</strong> {selectedVisitorForFollowUp.fullName || `${selectedVisitorForFollowUp.firstName} ${selectedVisitorForFollowUp.lastName}`}
+                                    <strong>Newcomer:</strong> {selectedVisitorForFollowUp.fullName || `${selectedVisitorForFollowUp.firstName} ${selectedVisitorForFollowUp.lastName}`}
                                     <span> • Phone: {selectedVisitorForFollowUp.contactNumber || "N/A"}</span>
                                 </div>
 
@@ -1671,7 +1782,7 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                                         />
                                     </div>
                                     <div className="cia-form-group">
-                                        <label>Interaction Type</label>
+                                        <label>Channel / Type</label>
                                         <select
                                             value={followUpForm.type}
                                             onChange={(e) => setFollowUpForm({ ...followUpForm, type: e.target.value as any })}
@@ -1688,11 +1799,10 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
 
                                 <div className="cia-form-row">
                                     <div className="cia-form-group">
-                                        <label>Minister / Worker Name *</label>
+                                        <label>Leader / Worker Name *</label>
                                         <input
                                             type="text"
                                             required
-                                            placeholder="Who made this contact?"
                                             value={followUpForm.ministerName}
                                             onChange={(e) => setFollowUpForm({ ...followUpForm, ministerName: e.target.value })}
                                         />
@@ -1714,7 +1824,7 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                                 </div>
 
                                 <div className="cia-form-group full">
-                                    <label>Next Scheduled Follow-up Date (Optional)</label>
+                                    <label>Next Follow-Up Date (Optional)</label>
                                     <input
                                         type="date"
                                         value={followUpForm.nextFollowUpDate}
@@ -1723,16 +1833,17 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                                 </div>
 
                                 <div className="cia-form-group full">
-                                    <label>Notes & Feedback</label>
+                                    <label>Follow-Up Notes & Discussion Summary</label>
                                     <textarea
                                         rows={3}
                                         required
-                                        placeholder="Summary of conversation, prayer needs, family updates..."
+                                        placeholder="What was discussed? How is their spiritual hunger? Specific prayer points..."
                                         value={followUpForm.notes}
                                         onChange={(e) => setFollowUpForm({ ...followUpForm, notes: e.target.value })}
                                     />
                                 </div>
                             </div>
+
                             <div className="cia-modal-footer">
                                 <button type="button" className="cia-btn-outline" onClick={() => setShowFollowUpModal(false)}>
                                     Cancel
@@ -1747,24 +1858,24 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
             )}
 
             {/* ============================================================ */}
-            {/* MODAL 3: ENROLL / EDIT DISCIPLE MODAL                        */}
+            {/* MODAL: CONSOLIDATION & DISCIPLESHIP MODAL                    */}
             {/* ============================================================ */}
             {showDiscipleshipModal && (
                 <div className="cia-modal-overlay">
                     <div className="cia-modal-card">
                         <div className="cia-modal-header">
-                            <h3>{editingDisciple ? "Edit Discipleship Profile" : "Enroll Believer in Discipleship"}</h3>
+                            <h3>{editingDisciple ? "Edit Discipleship Profile" : "Enroll New Disciple"}</h3>
                             <button type="button" onClick={() => setShowDiscipleshipModal(false)}>×</button>
                         </div>
                         <form onSubmit={handleSaveDisciple}>
                             <div className="cia-modal-body">
                                 <div className="cia-form-row">
                                     <div className="cia-form-group">
-                                        <label>Full Name *</label>
+                                        <label>Disciple Full Name *</label>
                                         <input
                                             type="text"
                                             required
-                                            value={discipleshipForm.fullName}
+                                            value={discipleshipForm.fullName || ""}
                                             onChange={(e) => setDiscipleshipForm({ ...discipleshipForm, fullName: e.target.value })}
                                         />
                                     </div>
@@ -1773,7 +1884,8 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                                         <input
                                             type="text"
                                             required
-                                            value={discipleshipForm.contactNumber}
+                                            placeholder="0917-000-0000"
+                                            value={discipleshipForm.contactNumber || ""}
                                             onChange={(e) => setDiscipleshipForm({ ...discipleshipForm, contactNumber: e.target.value })}
                                         />
                                     </div>
@@ -1781,20 +1893,24 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
 
                                 <div className="cia-form-row">
                                     <div className="cia-form-group">
-                                        <label>Assigned Spiritual Mentor / Discipler</label>
-                                        <input
-                                            type="text"
-                                            placeholder="e.g. Elder Michael Cruz"
-                                            value={discipleshipForm.disciplerName}
+                                        <label>Discipler / Mentor</label>
+                                        <select
+                                            value={discipleshipForm.disciplerName || ""}
                                             onChange={(e) => setDiscipleshipForm({ ...discipleshipForm, disciplerName: e.target.value })}
-                                        />
+                                        >
+                                            <option value="">-- Select Member / Leader --</option>
+                                            {realMembers.map((m) => (
+                                                <option key={m.memberId} value={m.fullName}>
+                                                    {m.fullName} ({m.memberCode || `#${m.memberId}`})
+                                                </option>
+                                            ))}
+                                        </select>
                                     </div>
                                     <div className="cia-form-group">
                                         <label>Cell / Life Group Name</label>
                                         <input
                                             type="text"
-                                            placeholder="e.g. Victory San Vicente"
-                                            value={discipleshipForm.cellGroupName}
+                                            value={discipleshipForm.cellGroupName || ""}
                                             onChange={(e) => setDiscipleshipForm({ ...discipleshipForm, cellGroupName: e.target.value })}
                                         />
                                     </div>
@@ -1802,9 +1918,9 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
 
                                 <div className="cia-form-row">
                                     <div className="cia-form-group">
-                                        <label>Current Growth Stage</label>
+                                        <label>Discipleship Stage</label>
                                         <select
-                                            value={discipleshipForm.stage}
+                                            value={discipleshipForm.stage || "New Believer"}
                                             onChange={(e) => setDiscipleshipForm({ ...discipleshipForm, stage: e.target.value as any })}
                                         >
                                             <option value="New Believer">New Believer</option>
@@ -1815,28 +1931,35 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                                         </select>
                                     </div>
                                     <div className="cia-form-group">
-                                        <label>Water Baptism Status</label>
-                                        <div className="cia-checkbox-inline">
-                                            <input
-                                                type="checkbox"
-                                                id="chk-baptized"
-                                                checked={discipleshipForm.waterBaptism?.isBaptized}
-                                                onChange={(e) =>
-                                                    setDiscipleshipForm({
-                                                        ...discipleshipForm,
-                                                        waterBaptism: {
-                                                            ...discipleshipForm.waterBaptism,
-                                                            isBaptized: e.target.checked,
-                                                            baptismDate: e.target.checked
-                                                                ? discipleshipForm.waterBaptism?.baptismDate || new Date().toISOString().split("T")[0]
-                                                                : undefined,
-                                                        },
-                                                    })
-                                                }
-                                            />
-                                            <label htmlFor="chk-baptized">Believer is Water Baptized</label>
-                                        </div>
+                                        <label>Start Date</label>
+                                        <input
+                                            type="date"
+                                            value={discipleshipForm.startDate || ""}
+                                            onChange={(e) => setDiscipleshipForm({ ...discipleshipForm, startDate: e.target.value })}
+                                        />
                                     </div>
+                                </div>
+
+                                <div className="cia-form-group full">
+                                    <label className="cia-checkbox-label">
+                                        <input
+                                            type="checkbox"
+                                            checked={discipleshipForm.waterBaptism?.isBaptized || false}
+                                            onChange={(e) =>
+                                                setDiscipleshipForm({
+                                                    ...discipleshipForm,
+                                                    waterBaptism: {
+                                                        ...(discipleshipForm.waterBaptism || {}),
+                                                        isBaptized: e.target.checked,
+                                                        baptismDate: e.target.checked
+                                                            ? (discipleshipForm.waterBaptism?.baptismDate || new Date().toISOString().split("T")[0])
+                                                            : undefined,
+                                                    },
+                                                })
+                                            }
+                                        />
+                                        <span> Water Baptized in the Name of Jesus Christ</span>
+                                    </label>
                                 </div>
 
                                 {discipleshipForm.waterBaptism?.isBaptized && (
@@ -1845,12 +1968,12 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                                             <label>Baptism Date</label>
                                             <input
                                                 type="date"
-                                                value={discipleshipForm.waterBaptism.baptismDate || ""}
+                                                value={discipleshipForm.waterBaptism?.baptismDate || ""}
                                                 onChange={(e) =>
                                                     setDiscipleshipForm({
                                                         ...discipleshipForm,
                                                         waterBaptism: {
-                                                            ...discipleshipForm.waterBaptism!,
+                                                            ...(discipleshipForm.waterBaptism || { isBaptized: true }),
                                                             baptismDate: e.target.value,
                                                         },
                                                     })
@@ -1858,16 +1981,16 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                                             />
                                         </div>
                                         <div className="cia-form-group">
-                                            <label>Officiating Pastor</label>
+                                            <label>Officiating Minister</label>
                                             <input
                                                 type="text"
-                                                placeholder="e.g. Pastor Roberto Garcia"
-                                                value={discipleshipForm.waterBaptism.officiatingPastor || ""}
+                                                placeholder="Pastor or Minister name"
+                                                value={discipleshipForm.waterBaptism?.officiatingPastor || ""}
                                                 onChange={(e) =>
                                                     setDiscipleshipForm({
                                                         ...discipleshipForm,
                                                         waterBaptism: {
-                                                            ...discipleshipForm.waterBaptism!,
+                                                            ...(discipleshipForm.waterBaptism || { isBaptized: true }),
                                                             officiatingPastor: e.target.value,
                                                         },
                                                     })
@@ -1878,20 +2001,22 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                                 )}
 
                                 <div className="cia-form-group full">
-                                    <label>Pastoral Notes</label>
+                                    <label>Notes & Pastoral Comments</label>
                                     <textarea
-                                        rows={2}
-                                        value={discipleshipForm.notes}
+                                        rows={3}
+                                        placeholder="Spiritual growth notes, life stage, testimony..."
+                                        value={discipleshipForm.notes || ""}
                                         onChange={(e) => setDiscipleshipForm({ ...discipleshipForm, notes: e.target.value })}
                                     />
                                 </div>
                             </div>
+
                             <div className="cia-modal-footer">
                                 <button type="button" className="cia-btn-outline" onClick={() => setShowDiscipleshipModal(false)}>
                                     Cancel
                                 </button>
                                 <button type="submit" className="cia-btn-primary">
-                                    Save Discipleship Profile
+                                    {editingDisciple ? "Update Discipleship Profile" : "Save Disciple Profile"}
                                 </button>
                             </div>
                         </form>
@@ -1900,24 +2025,24 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
             )}
 
             {/* ============================================================ */}
-            {/* MODAL 4: COMMISSION / SENDING MODAL                          */}
+            {/* MODAL: COMMISSIONING & SENDING MODAL                         */}
             {/* ============================================================ */}
             {showSendingModal && (
                 <div className="cia-modal-overlay">
                     <div className="cia-modal-card">
                         <div className="cia-modal-header">
-                            <h3>{editingDeployment ? "Edit Ministry Deployment" : "Commission Servant-Leader / Worker"}</h3>
+                            <h3>{editingDeployment ? "Edit Commissioned Leader" : "Commission Worker / Leader"}</h3>
                             <button type="button" onClick={() => setShowSendingModal(false)}>×</button>
                         </div>
                         <form onSubmit={handleSaveSending}>
                             <div className="cia-modal-body">
                                 <div className="cia-form-row">
                                     <div className="cia-form-group">
-                                        <label>Full Name *</label>
+                                        <label>Leader Full Name *</label>
                                         <input
                                             type="text"
                                             required
-                                            value={sendingForm.fullName}
+                                            value={sendingForm.fullName || ""}
                                             onChange={(e) => setSendingForm({ ...sendingForm, fullName: e.target.value })}
                                         />
                                     </div>
@@ -1925,7 +2050,8 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                                         <label>Contact Number</label>
                                         <input
                                             type="text"
-                                            value={sendingForm.contactNumber}
+                                            placeholder="0917-000-0000"
+                                            value={sendingForm.contactNumber || ""}
                                             onChange={(e) => setSendingForm({ ...sendingForm, contactNumber: e.target.value })}
                                         />
                                     </div>
@@ -1935,16 +2061,18 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                                     <div className="cia-form-group">
                                         <label>Ministry Department *</label>
                                         <select
-                                            value={sendingForm.ministryDepartment}
-                                            onChange={(e) => setSendingForm({ ...sendingForm, ministryDepartment: e.target.value as any })}
+                                            value={sendingForm.ministryDepartment || ""}
+                                            onChange={(e) => setSendingForm({ ...sendingForm, ministryDepartment: e.target.value })}
                                         >
-                                            <option value="Worship & Arts">Worship & Arts</option>
-                                            <option value="Ushering & Greeters">Ushering & Greeters</option>
-                                            <option value="Media & Production">Media & Production</option>
-                                            <option value="Kids & Youth Ministry">Kids & Youth Ministry</option>
+                                            <option value="">-- Select Church Ministry --</option>
+                                            {realMinistries.map((m) => (
+                                                <option key={m.ministryId} value={m.name}>
+                                                    {m.name}
+                                                </option>
+                                            ))}
+                                            <option value="Cell Ministry">Cell Ministry & Life Groups</option>
                                             <option value="Evangelism & Outreach">Evangelism & Outreach</option>
-                                            <option value="Prayer & Intercession">Prayer & Intercession</option>
-                                            <option value="Pastoral Care">Pastoral Care</option>
+                                            <option value="Discipleship & Follow-up">Discipleship & Follow-up</option>
                                         </select>
                                     </div>
                                     <div className="cia-form-group">
@@ -1952,8 +2080,8 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                                         <input
                                             type="text"
                                             required
-                                            placeholder="e.g. Lead Acoustic, Sunday School Teacher, Cell Leader"
-                                            value={sendingForm.ministryRole}
+                                            placeholder="e.g. Life Group Leader, Worship Director"
+                                            value={sendingForm.ministryRole || ""}
                                             onChange={(e) => setSendingForm({ ...sendingForm, ministryRole: e.target.value })}
                                         />
                                     </div>
@@ -1963,7 +2091,7 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                                     <div className="cia-form-group">
                                         <label>Commissioning Status</label>
                                         <select
-                                            value={sendingForm.commissioningStatus}
+                                            value={sendingForm.commissioningStatus || "In Preparation"}
                                             onChange={(e) => setSendingForm({ ...sendingForm, commissioningStatus: e.target.value as any })}
                                         >
                                             <option value="In Preparation">In Preparation</option>
@@ -1974,50 +2102,53 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                                         </select>
                                     </div>
                                     <div className="cia-form-group">
-                                        <label>Disciples Being Multiplied (Count)</label>
+                                        <label>Commissioning Date</label>
                                         <input
-                                            type="number"
-                                            min="0"
-                                            value={sendingForm.activeFruitCount}
-                                            onChange={(e) => setSendingForm({ ...sendingForm, activeFruitCount: parseInt(e.target.value) || 0 })}
+                                            type="date"
+                                            value={sendingForm.commissioningDate || ""}
+                                            onChange={(e) => setSendingForm({ ...sendingForm, commissioningDate: e.target.value })}
                                         />
                                     </div>
                                 </div>
 
                                 <div className="cia-form-row">
                                     <div className="cia-form-group">
-                                        <label>Mentor Pastor</label>
+                                        <label>Active Spiritual Fruit (Disciples Count)</label>
                                         <input
-                                            type="text"
-                                            value={sendingForm.mentorPastor}
-                                            onChange={(e) => setSendingForm({ ...sendingForm, mentorPastor: e.target.value })}
+                                            type="number"
+                                            min={0}
+                                            value={sendingForm.activeFruitCount || 0}
+                                            onChange={(e) => setSendingForm({ ...sendingForm, activeFruitCount: Number(e.target.value) || 0 })}
                                         />
                                     </div>
                                     <div className="cia-form-group">
-                                        <label>Commissioning Date</label>
+                                        <label>Overseeing / Mentor Pastor</label>
                                         <input
-                                            type="date"
-                                            value={sendingForm.commissioningDate}
-                                            onChange={(e) => setSendingForm({ ...sendingForm, commissioningDate: e.target.value })}
+                                            type="text"
+                                            placeholder="Senior Pastor / Overseer"
+                                            value={sendingForm.mentorPastor || ""}
+                                            onChange={(e) => setSendingForm({ ...sendingForm, mentorPastor: e.target.value })}
                                         />
                                     </div>
                                 </div>
 
                                 <div className="cia-form-group full">
-                                    <label>Commissioning Notes & Credentials</label>
+                                    <label>Commissioning Notes & Field Assignment</label>
                                     <textarea
-                                        rows={2}
-                                        value={sendingForm.notes}
+                                        rows={3}
+                                        placeholder="Ministry calling, field area, goals..."
+                                        value={sendingForm.notes || ""}
                                         onChange={(e) => setSendingForm({ ...sendingForm, notes: e.target.value })}
                                     />
                                 </div>
                             </div>
+
                             <div className="cia-modal-footer">
                                 <button type="button" className="cia-btn-outline" onClick={() => setShowSendingModal(false)}>
                                     Cancel
                                 </button>
                                 <button type="submit" className="cia-btn-primary">
-                                    Save Commissioning
+                                    {editingDeployment ? "Update Commissioning" : "Commission Leader"}
                                 </button>
                             </div>
                         </form>
@@ -2026,151 +2157,175 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
             )}
 
             {/* ============================================================ */}
-            {/* MODAL 5: SPIRITUAL CREDENTIALS MODAL                         */}
+            {/* MODAL: ADD OUTREACH PROSPECT MODAL                           */}
             {/* ============================================================ */}
-            {viewingProfile && (
+            {showProspectModal && (
                 <div className="cia-modal-overlay">
-                    <div className="cia-modal-card cia-profile-card">
+                    <div className="cia-modal-card">
                         <div className="cia-modal-header">
-                            <h3>Spiritual Journey & Commissioning Credentials</h3>
-                            <button type="button" onClick={() => setViewingProfile(null)}>×</button>
+                            <h3>Add Outreach & Evangelism Prospect</h3>
+                            <button type="button" onClick={() => setShowProspectModal(false)}>×</button>
                         </div>
-                        <div className="cia-modal-body">
-                            <div className="cia-credentials-box">
-                                <div className="cia-cred-header">
-                                    <Award size={36} className="cia-cred-seal" />
-                                    <div>
-                                        <h4>{viewingProfile.name}</h4>
-                                        <p>Luke 4:18 Ministries • Commissioned Leader</p>
+                        <form onSubmit={handleSaveProspect}>
+                            <div className="cia-modal-body">
+                                <div className="cia-form-row">
+                                    <div className="cia-form-group">
+                                        <label>Full Name *</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            placeholder="Prospect / Soul to win"
+                                            value={prospectForm.fullName || ""}
+                                            onChange={(e) => setProspectForm({ ...prospectForm, fullName: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="cia-form-group">
+                                        <label>Contact Number *</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            placeholder="0917-000-0000"
+                                            value={prospectForm.contactNumber || ""}
+                                            onChange={(e) => setProspectForm({ ...prospectForm, contactNumber: e.target.value })}
+                                        />
                                     </div>
                                 </div>
-                                <div className="cia-cred-grid">
-                                    <div>
-                                        <span>Ministry:</span>
-                                        <strong>{viewingProfile.details.ministryDepartment}</strong>
+
+                                <div className="cia-form-row">
+                                    <div className="cia-form-group">
+                                        <label>Invited By (Church Member)</label>
+                                        <select
+                                            value={prospectForm.invitedBy || ""}
+                                            onChange={(e) => setProspectForm({ ...prospectForm, invitedBy: e.target.value })}
+                                        >
+                                            <option value="">-- Select Member / Believer --</option>
+                                            {realMembers.map((m) => (
+                                                <option key={m.memberId} value={m.fullName}>
+                                                    {m.fullName}
+                                                </option>
+                                            ))}
+                                        </select>
                                     </div>
-                                    <div>
-                                        <span>Role:</span>
-                                        <strong>{viewingProfile.details.ministryRole}</strong>
-                                    </div>
-                                    <div>
-                                        <span>Commissioning Status:</span>
-                                        <strong>{viewingProfile.details.commissioningStatus}</strong>
-                                    </div>
-                                    <div>
-                                        <span>Disciples Multiplied:</span>
-                                        <strong className="gold-text">🌱 {viewingProfile.details.activeFruitCount} Souls Nurtured</strong>
+                                    <div className="cia-form-group">
+                                        <label>Outreach Campaign / Event</label>
+                                        <input
+                                            type="text"
+                                            placeholder="e.g. Easter Sunday, Youth Night, Cell Harvest"
+                                            value={prospectForm.outreachCampaign || ""}
+                                            onChange={(e) => setProspectForm({ ...prospectForm, outreachCampaign: e.target.value })}
+                                        />
                                     </div>
                                 </div>
-                                {viewingProfile.details.notes && (
-                                    <div className="cia-cred-notes">
-                                        <span>Pastoral Endorsement:</span>
-                                        <p>{viewingProfile.details.notes}</p>
+
+                                <div className="cia-form-row">
+                                    <div className="cia-form-group">
+                                        <label>Relationship</label>
+                                        <select
+                                            value={prospectForm.relationship || "Friend"}
+                                            onChange={(e) => setProspectForm({ ...prospectForm, relationship: e.target.value })}
+                                        >
+                                            <option value="Friend">Friend</option>
+                                            <option value="Family Member">Family Member</option>
+                                            <option value="Work Colleague">Work Colleague</option>
+                                            <option value="Neighbor">Neighbor</option>
+                                            <option value="Street Outreach">Street Outreach</option>
+                                            <option value="Other">Other</option>
+                                        </select>
                                     </div>
-                                )}
+                                    <div className="cia-form-group">
+                                        <label>Spiritual Status</label>
+                                        <select
+                                            value={prospectForm.spiritualStatus || "Seeking"}
+                                            onChange={(e) => setProspectForm({ ...prospectForm, spiritualStatus: e.target.value as any })}
+                                        >
+                                            <option value="Seeking">Seeking God</option>
+                                            <option value="Unchurched">Unchurched</option>
+                                            <option value="Backslidden">Backslidden (Needs Restoration)</option>
+                                            <option value="Believer Relocating">Believer Relocating</option>
+                                            <option value="Other">Other</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="cia-form-group full">
+                                    <label>Address / Community</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Barangay or address"
+                                        value={prospectForm.address || ""}
+                                        onChange={(e) => setProspectForm({ ...prospectForm, address: e.target.value })}
+                                    />
+                                </div>
+
+                                <div className="cia-form-group full">
+                                    <label>Prayer Requests / Needs</label>
+                                    <textarea
+                                        rows={2}
+                                        placeholder="Specific salvation, healing, or family prayer requests..."
+                                        value={prospectForm.prayerRequests || ""}
+                                        onChange={(e) => setProspectForm({ ...prospectForm, prayerRequests: e.target.value })}
+                                    />
+                                </div>
                             </div>
-                        </div>
-                        <div className="cia-modal-footer">
-                            <button type="button" className="cia-btn-outline" onClick={() => window.print()}>
-                                <Printer size={15} />
-                                <span>Print Certificate</span>
-                            </button>
-                            <button type="button" className="cia-btn-primary" onClick={() => setViewingProfile(null)}>
-                                Close
-                            </button>
-                        </div>
+
+                            <div className="cia-modal-footer">
+                                <button type="button" className="cia-btn-outline" onClick={() => setShowProspectModal(false)}>
+                                    Cancel
+                                </button>
+                                <button type="submit" className="cia-btn-primary">
+                                    Add to Soul-Winning Prayer List
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}
 
             {/* ============================================================ */}
-            {/* PRINT-ONLY DOCUMENT (DECUPLED FROM OVERLAYS)                 */}
+            {/* PRINT-ONLY SECTION (ZERO BLANK/GRAY OVERLAYS)                */}
             {/* ============================================================ */}
             <div className="cia-print-document" id="cia-printable-summary">
                 <div className="cia-print-header">
                     <h2>LUKE 4:18 MINISTRIES • SAN VICENTE CHURCH</h2>
-                    <h1>CHURCH IN ACTION — SPIRITUAL LIFECYCLE SUMMARY REPORT</h1>
+                    <h1>CHURCH IN ACTION — NEWCOMERS MONITORING & DELEGATION REPORT</h1>
                     <p>Report Date: {new Date().toLocaleDateString()} • Generated via EPIC Church Management System</p>
                 </div>
 
                 <div className="cia-print-summary-box">
-                    <div>Outreach Prospects: <strong>{stats.totalProspects}</strong></div>
-                    <div>Visitors in Follow-Up: <strong>{stats.totalVisitors}</strong></div>
-                    <div>Disciples in Training: <strong>{stats.totalDisciples}</strong></div>
-                    <div>Water Baptized: <strong>{stats.waterBaptized}</strong></div>
-                    <div>Commissioned Leaders: <strong>{stats.totalSent}</strong></div>
-                    <div>Spiritual Fruit Multiplied: <strong>{stats.totalFruit}</strong></div>
+                    <div>Total Newcomers in DB: <strong>{metrics.totalNewcomers}</strong></div>
+                    <div>Unassigned (Need Leader): <strong>{metrics.unassignedCount}</strong></div>
+                    <div>In Follow-Up (Assigned): <strong>{metrics.activeDelegationsCount}</strong></div>
+                    <div>Turned to Church Members: <strong>{metrics.convertedToMembersCount}</strong></div>
+                    <div>Disciples & Leaders: <strong>{metrics.totalDisciples + metrics.totalSent}</strong></div>
                 </div>
 
-                <h3>1. Active Evangelism & Prayer List</h3>
+                <h3>Active Newcomer Follow-Up Caseload</h3>
                 <table className="cia-print-table">
                     <thead>
                         <tr>
-                            <th>Name</th>
+                            <th>Newcomer Name</th>
                             <th>Contact</th>
-                            <th>Invited By</th>
-                            <th>Campaign</th>
+                            <th>Visit Count</th>
+                            <th>Assigned Leader</th>
+                            <th>Target Date</th>
                             <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {prospects.map((p) => (
-                            <tr key={p.id}>
-                                <td>{p.fullName}</td>
-                                <td>{p.contactNumber}</td>
-                                <td>{p.invitedBy}</td>
-                                <td>{p.outreachCampaign}</td>
-                                <td>{p.invitationStatus}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-
-                <h3 style={{ marginTop: "20px" }}>2. Consolidation & Discipleship Track</h3>
-                <table className="cia-print-table">
-                    <thead>
-                        <tr>
-                            <th>Disciple Name</th>
-                            <th>Mentor</th>
-                            <th>Cell Group</th>
-                            <th>Stage</th>
-                            <th>Water Baptism</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {disciples.map((d) => (
-                            <tr key={d.id}>
-                                <td>{d.fullName}</td>
-                                <td>{d.disciplerName}</td>
-                                <td>{d.cellGroupName}</td>
-                                <td>{d.stage}</td>
-                                <td>{d.waterBaptism?.isBaptized ? "Baptized" : "Pending"}</td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-
-                <h3 style={{ marginTop: "20px" }}>3. Commissioned Workers & Leaders</h3>
-                <table className="cia-print-table">
-                    <thead>
-                        <tr>
-                            <th>Leader Name</th>
-                            <th>Department</th>
-                            <th>Role</th>
-                            <th>Commissioning Status</th>
-                            <th>Fruit Multiplied</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {sentLeaders.map((s) => (
-                            <tr key={s.id}>
-                                <td>{s.fullName}</td>
-                                <td>{s.ministryDepartment}</td>
-                                <td>{s.ministryRole}</td>
-                                <td>{s.commissioningStatus}</td>
-                                <td>{s.activeFruitCount} Disciples</td>
-                            </tr>
-                        ))}
+                        {realVisitors.map((v) => {
+                            const vName = v.fullName || `${v.firstName || ""} ${v.lastName || ""}`;
+                            const del = delegations.find((d) => d.visitorId === v.visitorId);
+                            return (
+                                <tr key={v.visitorId}>
+                                    <td>{vName}</td>
+                                    <td>{v.contactNumber || "—"}</td>
+                                    <td>{v.visitCount || 1}</td>
+                                    <td>{del?.assignedLeaderName || "⚠️ Unassigned"}</td>
+                                    <td>{del?.targetContactDate || "—"}</td>
+                                    <td>{v.isConvertedToMember ? "👑 Church Member" : (del?.delegationStatus || "New")}</td>
+                                </tr>
+                            );
+                        })}
                     </tbody>
                 </table>
             </div>
