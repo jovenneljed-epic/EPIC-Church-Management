@@ -2065,12 +2065,12 @@ function MemberForm({
                         <div className="form-group">
 
                             <label>
-                                Ministry
+                                Ministry / Role
                             </label>
 
-                            <input
+                            <select
                                 value={
-                                    form.ministry
+                                    form.ministry || ""
                                 }
                                 onChange={(
                                     e
@@ -2082,8 +2082,40 @@ function MemberForm({
                                             .value
                                     )
                                 }
-                                placeholder="e.g. WORSHIP"
-                            />
+                            >
+                                <option value="">
+                                    General Member (No Specific Role / Ministry)
+                                </option>
+
+                                <optgroup label="👑 Pastoral & Ordained Leaders (Delegable Leaders)">
+                                    <option value="ASSISTANT PASTOR">👑 Assistant Pastor (Delegable Leader)</option>
+                                    <option value="ADULT LEADER">🌟 Adult Leader (Delegable Leader)</option>
+                                    <option value="YOUTH DEPARTMENT LEADER">🔥 Youth Department Leader (Delegable Leader)</option>
+                                    <option value="YOUTH FUTURE LEADER">🔥 Youth Future Leader (Delegable Leader)</option>
+                                    <option value="CHURCH LEADER">⚡ Church Leader / Coordinator (Delegable Leader)</option>
+                                </optgroup>
+
+                                <optgroup label="👥 Ministry Departments (Members & Workers)">
+                                    <option value="ADULT DEPARTMENT">🌟 Adult Department (Regular Member)</option>
+                                    <option value="YOUTH DEPARTMENT">🔥 Youth Department (Regular Member)</option>
+                                    <option value="CHILDREN DEPARTMENT">👶 Children Department</option>
+                                    <option value="WORSHIP TEAM DEPARTMENT">🎵 Worship Team Department</option>
+                                    <option value="USHERING & HOSPITALITY">🤝 Ushering & Hospitality</option>
+                                    <option value="MEDIA & PRODUCTION">🎥 Media & Production</option>
+                                    <option value="EVANGELISM & OUTREACH">🌍 Evangelism & Outreach</option>
+                                    <option value="ADMINISTRATION">📋 Administration</option>
+                                </optgroup>
+
+                                {form.ministry && ![
+                                    "ASSISTANT PASTOR", "ADULT LEADER", "YOUTH DEPARTMENT LEADER", "YOUTH FUTURE LEADER", "CHURCH LEADER",
+                                    "ADULT DEPARTMENT", "YOUTH DEPARTMENT", "CHILDREN DEPARTMENT", "WORSHIP TEAM DEPARTMENT",
+                                    "USHERING & HOSPITALITY", "MEDIA & PRODUCTION", "EVANGELISM & OUTREACH", "ADMINISTRATION"
+                                ].includes(form.ministry.trim().toUpperCase()) && (
+                                    <optgroup label="📌 Current Assigned Ministry">
+                                        <option value={form.ministry}>{form.ministry} (Current Assigned)</option>
+                                    </optgroup>
+                                )}
+                            </select>
 
                         </div>
 

@@ -63,6 +63,26 @@ interface MembersResponse {
 }
 
 /* =========================================================
+   STANDARD MINISTRY ROLES
+========================================================= */
+
+const ALL_STANDARD_MINISTRY_ROLES = new Set<string>([
+    "ASSISTANT PASTOR",
+    "ADULT LEADER",
+    "YOUTH DEPARTMENT LEADER",
+    "YOUTH FUTURE LEADER",
+    "CHURCH LEADER",
+    "ADULT DEPARTMENT",
+    "YOUTH DEPARTMENT",
+    "CHILDREN DEPARTMENT",
+    "WORSHIP TEAM DEPARTMENT",
+    "USHERING & HOSPITALITY",
+    "MEDIA & PRODUCTION",
+    "EVANGELISM & OUTREACH",
+    "ADMINISTRATION",
+]);
+
+/* =========================================================
    EMPTY FORM
 ========================================================= */
 
@@ -464,6 +484,9 @@ const Members: React.FC = () => {
             createEmptyForm()
         );
 
+    const [isCustomMinistry, setIsCustomMinistry] =
+        useState<boolean>(false);
+
     const [message, setMessage] =
         useState<string>("");
 
@@ -810,6 +833,7 @@ const Members: React.FC = () => {
         }
 
         setEditingMember(null);
+        setIsCustomMinistry(false);
 
         setForm({
             ...createEmptyForm(),
@@ -833,6 +857,7 @@ const Members: React.FC = () => {
         setEditingMember(
             member
         );
+        setIsCustomMinistry(false);
 
         setForm({
 
@@ -923,6 +948,7 @@ const Members: React.FC = () => {
 
         setShowModal(false);
         setEditingMember(null);
+        setIsCustomMinistry(false);
         setForm(
             createEmptyForm()
         );
@@ -2738,36 +2764,91 @@ const Members: React.FC = () => {
                                                 MINISTRY / ROLE
                                             </label>
 
-                                            <input
-                                                type="text"
-                                                list="members-ministry-datalist"
+                                            <select
                                                 disabled={
                                                     formDisabled
                                                 }
                                                 value={
-                                                    form.ministry
+                                                    isCustomMinistry
+                                                        ? "__CUSTOM__"
+                                                        : ALL_STANDARD_MINISTRY_ROLES.has((form.ministry || "").trim().toUpperCase())
+                                                            ? (form.ministry || "").trim().toUpperCase()
+                                                            : (form.ministry || "")
                                                 }
                                                 onChange={
-                                                    event =>
-                                                        handleInputChange(
-                                                            "ministry",
-                                                            event.target.value
-                                                        )
+                                                    event => {
+                                                        const val = event.target.value;
+                                                        if (val === "__CUSTOM__") {
+                                                            setIsCustomMinistry(true);
+                                                            handleInputChange("ministry", "");
+                                                        } else {
+                                                            setIsCustomMinistry(false);
+                                                            handleInputChange("ministry", val);
+                                                        }
+                                                    }
                                                 }
-                                                placeholder="e.g. ASSISTANT PASTOR, ADULT LEADER"
-                                            />
+                                            >
+                                                <option value="">
+                                                    General Member (No Specific Role / Ministry)
+                                                </option>
 
-                                            <datalist id="members-ministry-datalist">
-                                                <option value="ASSISTANT PASTOR">👑 Assistant Pastor (Delegable Leader)</option>
-                                                <option value="ADULT LEADER">🌟 Adult Leader (Delegable Leader)</option>
-                                                <option value="YOUTH DEPARTMENT LEADER">🔥 Youth Department Leader (Delegable Leader)</option>
-                                                <option value="YOUTH FUTURE LEADER">🔥 Youth Future Leader (Delegable Leader)</option>
-                                                <option value="ADULT DEPARTMENT">Adult Department (Regular Member)</option>
-                                                <option value="YOUTH DEPARTMENT">Youth Department (Regular Member)</option>
-                                                <option value="CHILDREN DEPARTMENT">Children Department</option>
-                                                <option value="WORSHIP TEAM DEPARTMENT">Worship Team Department</option>
-                                                <option value="ADMINISTRATION">Administration</option>
-                                            </datalist>
+                                                <optgroup label="👑 Pastoral & Ordained Leaders (Delegable Leaders)">
+                                                    <option value="ASSISTANT PASTOR">👑 Assistant Pastor (Delegable Leader)</option>
+                                                    <option value="ADULT LEADER">🌟 Adult Leader (Delegable Leader)</option>
+                                                    <option value="YOUTH DEPARTMENT LEADER">🔥 Youth Department Leader (Delegable Leader)</option>
+                                                    <option value="YOUTH FUTURE LEADER">🔥 Youth Future Leader (Delegable Leader)</option>
+                                                    <option value="CHURCH LEADER">⚡ Church Leader / Coordinator (Delegable Leader)</option>
+                                                </optgroup>
+
+                                                <optgroup label="👥 Ministry Departments (Members & Workers)">
+                                                    <option value="ADULT DEPARTMENT">🌟 Adult Department (Regular Member)</option>
+                                                    <option value="YOUTH DEPARTMENT">🔥 Youth Department (Regular Member)</option>
+                                                    <option value="CHILDREN DEPARTMENT">👶 Children Department</option>
+                                                    <option value="WORSHIP TEAM DEPARTMENT">🎵 Worship Team Department</option>
+                                                    <option value="USHERING & HOSPITALITY">🤝 Ushering & Hospitality</option>
+                                                    <option value="MEDIA & PRODUCTION">🎥 Media & Production</option>
+                                                    <option value="EVANGELISM & OUTREACH">🌍 Evangelism & Outreach</option>
+                                                    <option value="ADMINISTRATION">📋 Administration</option>
+                                                </optgroup>
+
+                                                {form.ministry &&
+                                                    !ALL_STANDARD_MINISTRY_ROLES.has(form.ministry.trim().toUpperCase()) &&
+                                                    !isCustomMinistry && (
+                                                        <optgroup label="📌 Current Assigned Ministry">
+                                                            <option value={form.ministry}>
+                                                                {form.ministry} (Current Assigned)
+                                                            </option>
+                                                        </optgroup>
+                                                    )}
+
+                                                <option value="__CUSTOM__">
+                                                    ➕ Enter Other / Custom Role...
+                                                </option>
+                                            </select>
+
+                                            {isCustomMinistry && (
+                                                <input
+                                                    type="text"
+                                                    disabled={
+                                                        formDisabled
+                                                    }
+                                                    value={
+                                                        form.ministry
+                                                    }
+                                                    onChange={
+                                                        event =>
+                                                            handleInputChange(
+                                                                "ministry",
+                                                                event.target.value
+                                                            )
+                                                    }
+                                                    placeholder="Type custom ministry role name..."
+                                                    style={{
+                                                        marginTop: "6px"
+                                                    }}
+                                                    autoFocus
+                                                />
+                                            )}
 
                                         </div>
 
