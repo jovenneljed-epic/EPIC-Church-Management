@@ -981,6 +981,12 @@ const PAGE_BY_ROUTE: Record<
         >
     );
 
+// Alias routes so navigating via /cms/ or direct paths both correctly resolve
+PAGE_BY_ROUTE["/cms/members"] = "members";
+PAGE_BY_ROUTE["/cms/visitors"] = "visitors";
+PAGE_BY_ROUTE["/cms/attendance"] = "attendance";
+PAGE_BY_ROUTE["/cms/reports"] = "reports";
+
 const getPageFromPath = (
     path: string
 ): Page => {
@@ -3229,7 +3235,10 @@ case "church-in-action":
 
     return renderProtectedPage(
         "Church in Action",
-        <ChurchInActionPage onNavigate={(page) => navigateToUrl(page.startsWith("/cms") ? page : `/cms/${page}`)} />
+        <ChurchInActionPage onNavigate={(page) => {
+            const targetRoute = PAGE_ROUTES[page as Page] || (page.startsWith("/") ? page : `/${page}`);
+            navigateToUrl(targetRoute);
+        }} />
     );
 
 

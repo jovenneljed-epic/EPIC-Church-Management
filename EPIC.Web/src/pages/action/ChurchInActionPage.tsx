@@ -29,7 +29,6 @@ import {
     RefreshCw,
     Phone,
     GraduationCap,
-    Layers,
     ShieldCheck,
     UserCog,
     AlertCircle,
@@ -47,7 +46,16 @@ import type {
     Prospect,
 } from "../../services/churchInActionService";
 
-type ActiveTab = "delegation" | "members" | "pipeline" | "followup" | "discipleship" | "sending" | "evangelism";
+type ActiveTab =
+    | "delegation"
+    | "members"
+    | "visitors-lifecycle"
+    | "members-lifecycle"
+    | "pipeline"
+    | "followup"
+    | "discipleship"
+    | "sending"
+    | "evangelism";
 
 interface ChurchInActionPageProps {
     onBack?: () => void;
@@ -129,11 +137,27 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
     const [memberDeptFilter, setMemberDeptFilter] = useState<string>("ALL");
     const [memberRoleFilter, setMemberRoleFilter] = useState<"ALL" | "LEADERS" | "MEMBERS">("ALL");
 
+    // Separate Lifecycle Monitoring State
+    const [activeLifecycleTab, setActiveLifecycleTab] = useState<"visitors" | "members">("visitors");
+
     const handleNavigatePage = useCallback((page: string) => {
         if (onNavigate) {
             onNavigate(page);
         } else {
-            const target = page.startsWith("/cms") ? page : `/cms/${page}`;
+            const pageRouteMap: Record<string, string> = {
+                members: "/members",
+                visitors: "/visitors",
+                attendance: "/attendance",
+                dashboard: "/dashboard",
+                services: "/services",
+                ministries: "/cms/ministries",
+                events: "/cms/events",
+                giving: "/cms/giving",
+                income: "/income",
+                expenses: "/expenses",
+                settings: "/settings",
+            };
+            const target = pageRouteMap[page] || (page.startsWith("/") ? page : `/${page}`);
             window.location.href = target;
         }
     }, [onNavigate]);
@@ -510,6 +534,94 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
             return matchesSearch && matchesDept && matchesRole;
         });
     }, [realMembers, memberSearchTerm, memberDeptFilter, memberRoleFilter]);
+
+    // ============================================================
+    // SEPARATED LIFECYCLE 1: VISITORS ONLY (100% Visitors Pipeline)
+    // ============================================================
+    const visitorsLifecycle = useMemo(() => {
+        // Stage 4: Milestone Reached / Converted to Member (4+ visits or converted in DB)
+        const stage4Converted = realVisitors.filter(
+            (v) => v.isConvertedToMember || v.convertedMemberId || (v.visitCount || 1) >= 4
+        );
+        const stage4Ids = new Set(stage4Converted.map((v) => v.visitorId));
+
+        // Stage 3: Connected & Returning (2-3 Visits)
+        const stage3Returning = realVisitors.filter(
+            (v) => !stage4Ids.has(v.visitorId) && (v.visitCount || 1) >= 2
+        );
+        const stage3Ids = new Set(stage3Returning.map((v) => v.visitorId));
+
+        // Stage 2: In Follow-Up (Assigned to Pastoral Leader)
+        const stage2FollowUp = realVisitors.filter(
+            (v) => !stage4Ids.has(v.visitorId) && !stage3Ids.has(v.visitorId) && delegations.some((d) => d.visitorId === v.visitorId)
+        );
+        const stage2Ids = new Set(stage2FollowUp.map((v) => v.visitorId));
+
+        // Stage 1: New Arrivals (Unassigned / Needs Leader)
+        const stage1NewArrivals = realVisitors.filter(
+            (v) => !stage4Ids.has(v.visitorId) && !stage3Ids.has(v.visitorId) && !stage2Ids.has(v.visitorId)
+        );
+
+        return {
+            stage1NewArrivals,
+            stage2FollowUp,
+            stage3Returning,
+            stage4Converted,
+        };
+    }, [realVisitors, delegations]);
+
+    // ============================================================
+    // SEPARATED LIFECYCLE 2: MEMBERS ONLY (100% Church Members Pipeline)
+    // ============================================================
+    const membersLifecycle = useMemo(() => {
+        const sentLeaderIds = new Set(sentLeaders.map((s) => s.id));
+        const sentLeaderNames = new Set(sentLeaders.map((s) => (s.fullName || "").toLowerCase().trim()));
+        const discipleIds = new Set(disciples.map((d) => d.id));
+        const discipleNames = new Set(disciples.map((d) => (d.fullName || "").toLowerCase().trim()));
+
+        // Stage 4: Commissioned Leaders & Pastoral Staff (Pastors, Adult Leaders, Youth Leaders, Sent Ministers)
+        const stage4Leaders = realMembers.filter((m) => {
+            const roleTag = getLeaderRoleTag(m.ministry);
+            const isOrdainedOrLeader = roleTag.tag !== "member";
+            const mName = (m.fullName || `${m.firstName || ""} ${m.lastName || ""}`).toLowerCase().trim();
+            const isSent = sentLeaderIds.has(m.memberId) || sentLeaderNames.has(mName);
+            return isOrdainedOrLeader || isSent;
+        });
+        const stage4Ids = new Set(stage4Leaders.map((m) => m.memberId));
+
+        // Stage 3: Ministry Department Workers (Music, Ushers, Youth, Children, Media, etc.)
+        const stage3Workers = realMembers.filter((m) => {
+            if (stage4Ids.has(m.memberId)) return false;
+            const dept = getMemberDepartment(m.ministry);
+            return dept.deptKey !== "general";
+        });
+        const stage3Ids = new Set(stage3Workers.map((m) => m.memberId));
+
+        // Stage 2: Discipleship & Spiritual Growth (Life Class / Cell Group Disciples)
+        const stage2Disciples = realMembers.filter((m) => {
+            if (stage4Ids.has(m.memberId) || stage3Ids.has(m.memberId)) return false;
+            const mName = (m.fullName || `${m.firstName || ""} ${m.lastName || ""}`).toLowerCase().trim();
+            const isDisciple = discipleIds.has(m.memberId) || discipleNames.has(mName);
+            const hasDiscipleshipNotes =
+                (m.notes || "").toLowerCase().includes("disciple") ||
+                (m.notes || "").toLowerCase().includes("life class") ||
+                (m.notes || "").toLowerCase().includes("cell");
+            return isDisciple || hasDiscipleshipNotes;
+        });
+        const stage2Ids = new Set(stage2Disciples.map((m) => m.memberId));
+
+        // Stage 1: New Members & Onboarding (Orientation / Foundations / General Congregation)
+        const stage1NewMembers = realMembers.filter((m) => {
+            return !stage4Ids.has(m.memberId) && !stage3Ids.has(m.memberId) && !stage2Ids.has(m.memberId);
+        });
+
+        return {
+            stage1NewMembers,
+            stage2Disciples,
+            stage3Workers,
+            stage4Leaders,
+        };
+    }, [realMembers, sentLeaders, disciples]);
 
     // ============================================================
     // DELEGATION ACTIONS
@@ -973,11 +1085,10 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                 <div
                     className="cia-metric-card clickable"
                     onClick={() => {
-                        setActiveTab("delegation");
-                        setStatusFilter("ALL");
-                        setLeaderFilter("ALL");
+                        setActiveTab("visitors-lifecycle");
+                        setActiveLifecycleTab("visitors");
                     }}
-                    title="Click to view all newcomers in Delegation Center"
+                    title="Click to view dedicated Visitors Lifecycle Funnel"
                 >
                     <div className="cia-metric-icon-wrap cia-icon-blue">
                         <Users size={20} />
@@ -992,11 +1103,10 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                 <div
                     className={`cia-metric-card clickable ${metrics.unassignedCount > 0 ? "cia-metric-card-warn" : ""}`}
                     onClick={() => {
-                        setActiveTab("delegation");
-                        setStatusFilter("UNASSIGNED");
-                        setLeaderFilter("ALL");
+                        setActiveTab("visitors-lifecycle");
+                        setActiveLifecycleTab("visitors");
                     }}
-                    title="Click to view unassigned newcomers requiring a leader"
+                    title="Click to view unassigned newcomers in Visitors Lifecycle"
                 >
                     <div className="cia-metric-icon-wrap cia-icon-amber">
                         <AlertCircle size={20} />
@@ -1011,10 +1121,10 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                 <div
                     className="cia-metric-card clickable"
                     onClick={() => {
-                        setActiveTab("delegation");
-                        setStatusFilter("ASSIGNED");
+                        setActiveTab("visitors-lifecycle");
+                        setActiveLifecycleTab("visitors");
                     }}
-                    title="Click to view newcomers assigned to leaders"
+                    title="Click to view newcomers assigned to leaders in Visitors Lifecycle"
                 >
                     <div className="cia-metric-icon-wrap cia-icon-purple">
                         <UserCog size={20} />
@@ -1028,8 +1138,11 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
 
                 <div
                     className="cia-metric-card cia-highlight-metric clickable"
-                    onClick={() => setActiveTab("members")}
-                    title="Click to view all Church Members & Departments"
+                    onClick={() => {
+                        setActiveTab("members-lifecycle");
+                        setActiveLifecycleTab("members");
+                    }}
+                    title="Click to view dedicated Members Lifecycle Pipeline"
                 >
                     <div className="cia-metric-icon-wrap cia-icon-gold">
                         <Crown size={20} />
@@ -1084,11 +1197,28 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
 
                 <button
                     type="button"
-                    className={`cia-tab-btn ${activeTab === "pipeline" ? "active" : ""}`}
-                    onClick={() => setActiveTab("pipeline")}
+                    className={`cia-tab-btn ${activeTab === "visitors-lifecycle" || (activeTab === "pipeline" && activeLifecycleTab === "visitors") ? "active" : ""}`}
+                    onClick={() => {
+                        setActiveTab("visitors-lifecycle");
+                        setActiveLifecycleTab("visitors");
+                    }}
                 >
-                    <Layers size={16} />
-                    <span>3. Lifecycle Pipeline (Kanban)</span>
+                    <UserCheck size={16} />
+                    <span>3. Visitors Lifecycle</span>
+                    <span className="cia-badge-pill">{realVisitors.length}</span>
+                </button>
+
+                <button
+                    type="button"
+                    className={`cia-tab-btn ${activeTab === "members-lifecycle" || (activeTab === "pipeline" && activeLifecycleTab === "members") ? "active" : ""}`}
+                    onClick={() => {
+                        setActiveTab("members-lifecycle");
+                        setActiveLifecycleTab("members");
+                    }}
+                >
+                    <Crown size={16} />
+                    <span>4. Members Lifecycle</span>
+                    <span className="cia-badge-pill">{realMembers.length}</span>
                 </button>
 
                 <button
@@ -1097,7 +1227,7 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                     onClick={() => setActiveTab("followup")}
                 >
                     <HeartHandshake size={16} />
-                    <span>4. Touchpoints & Logs</span>
+                    <span>5. Touchpoints & Logs</span>
                     <span className="cia-badge-pill">{followUpLogs.length}</span>
                 </button>
 
@@ -1107,7 +1237,7 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                     onClick={() => setActiveTab("discipleship")}
                 >
                     <BookOpen size={16} />
-                    <span>5. Discipleship & Foundations</span>
+                    <span>6. Discipleship & Foundations</span>
                     <span className="cia-badge-pill">{disciples.length}</span>
                 </button>
 
@@ -1117,7 +1247,7 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                     onClick={() => setActiveTab("sending")}
                 >
                     <Send size={16} />
-                    <span>6. Sending & Mobilization</span>
+                    <span>7. Sending & Mobilization</span>
                     <span className="cia-badge-pill">{sentLeaders.length}</span>
                 </button>
 
@@ -1127,7 +1257,7 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                     onClick={() => setActiveTab("evangelism")}
                 >
                     <Sparkles size={16} />
-                    <span>Outreach & Prospects</span>
+                    <span>8. Outreach & Prospects</span>
                     <span className="cia-badge-pill">{prospects.length}</span>
                 </button>
             </nav>
@@ -1842,14 +1972,42 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
             )}
 
             {/* ============================================================ */}
-            {/* VIEW 3: LIFECYCLE PIPELINE (KANBAN BOARD)                    */}
+            {/* VIEW 3: VISITORS LIFECYCLE MONITORING (100% VISITORS ONLY)  */}
             {/* ============================================================ */}
-            {activeTab === "pipeline" && (
+            {(activeTab === "visitors-lifecycle" || (activeTab === "pipeline" && activeLifecycleTab === "visitors")) && (
                 <div className="cia-pipeline-view">
+                    {/* SEPARATE LIFECYCLE SWITCHER BAR */}
+                    <div className="cia-lifecycle-switcher-bar">
+                        <button
+                            type="button"
+                            className="cia-lsb-btn active-visitors"
+                            onClick={() => {
+                                setActiveLifecycleTab("visitors");
+                                setActiveTab("visitors-lifecycle");
+                            }}
+                        >
+                            <UserCheck size={18} />
+                            <span className="lsb-title">Visitors Lifecycle Funnel</span>
+                            <span className="lsb-badge visitors">{realVisitors.length} Newcomers</span>
+                        </button>
+                        <button
+                            type="button"
+                            className="cia-lsb-btn"
+                            onClick={() => {
+                                setActiveLifecycleTab("members");
+                                setActiveTab("members-lifecycle");
+                            }}
+                        >
+                            <Crown size={18} />
+                            <span className="lsb-title">Members Lifecycle Pipeline</span>
+                            <span className="lsb-badge members">{realMembers.length} Members</span>
+                        </button>
+                    </div>
+
                     <div className="cia-pipeline-info-banner">
                         <div className="cia-pib-content">
-                            <strong>Live Spiritual Growth Funnel: Newcomer ➔ Church Member ➔ Disciple ➔ Leader</strong>
-                            <p>Real-time lifecycle monitoring derived directly from your live church database records.</p>
+                            <strong>100% Visitors Lifecycle Funnel: 1st Visit ➔ Pastoral Care ➔ Retained ➔ Church Member</strong>
+                            <p>Tracking all {realVisitors.length} newcomers from arrival to church integration. Completely separated from member discipleship.</p>
                         </div>
                     </div>
 
@@ -1861,34 +2019,36 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                                     <span className="cia-col-step">STAGE 1</span>
                                     <h4>New Arrivals (Unassigned)</h4>
                                 </div>
-                                <span className="cia-col-count">
-                                    {realVisitors.filter((v) => !v.isConvertedToMember && !delegations.some((d) => d.visitorId === v.visitorId)).length}
-                                </span>
+                                <span className="cia-col-count">{visitorsLifecycle.stage1NewArrivals.length}</span>
                             </div>
                             <div className="cia-col-cards">
-                                {realVisitors
-                                    .filter((v) => !v.isConvertedToMember && !delegations.some((d) => d.visitorId === v.visitorId))
-                                    .map((v) => (
-                                        <div key={v.visitorId} className="cia-kanban-card">
-                                            <div className="cia-card-top">
-                                                <span className="cia-id-tag">{v.visitorCode || `VIS-${v.visitorId}`}</span>
-                                                <span className="cia-status-chip unassigned">Needs Leader</span>
-                                            </div>
-                                            <h5 className="cia-card-name">{v.fullName || `${v.firstName} ${v.lastName}`}</h5>
-                                            <p className="cia-card-sub"><Phone size={12} /> {v.contactNumber || "No Phone"}</p>
-                                            <p className="cia-card-sub"><Clock size={12} /> First Visit: {v.firstVisitDate || "Recent"}</p>
-                                            <div className="cia-card-footer">
-                                                <button
-                                                    type="button"
-                                                    className="cia-btn-sm-action"
-                                                    onClick={() => handleOpenDelegateModal(v)}
-                                                >
-                                                    <UserCog size={13} />
-                                                    <span>Delegate Leader</span>
-                                                </button>
-                                            </div>
+                                {visitorsLifecycle.stage1NewArrivals.map((v) => (
+                                    <div key={v.visitorId} className="cia-kanban-card">
+                                        <div className="cia-card-top">
+                                            <span className="cia-id-tag">{v.visitorCode || `VIS-${v.visitorId}`}</span>
+                                            <span className="cia-status-chip unassigned">Needs Leader</span>
                                         </div>
-                                    ))}
+                                        <h5 className="cia-card-name">{v.fullName || `${v.firstName} ${v.lastName}`}</h5>
+                                        <p className="cia-card-sub"><Phone size={12} /> {v.contactNumber || "No Phone"}</p>
+                                        <p className="cia-card-sub"><Clock size={12} /> First Visit: {v.firstVisitDate || "Recent"}</p>
+                                        {v.invitedBy && (
+                                            <p className="cia-card-sub"><Users size={12} /> Invited by: {v.invitedBy}</p>
+                                        )}
+                                        <div className="cia-card-footer">
+                                            <button
+                                                type="button"
+                                                className="cia-btn-sm-action"
+                                                onClick={() => handleOpenDelegateModal(v)}
+                                            >
+                                                <UserCog size={13} />
+                                                <span>Delegate Leader</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                                {visitorsLifecycle.stage1NewArrivals.length === 0 && (
+                                    <div className="cia-col-empty">All new arrivals have been delegated to pastoral leaders!</div>
+                                )}
                             </div>
                         </div>
 
@@ -1899,106 +2059,393 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                                     <span className="cia-col-step">STAGE 2</span>
                                     <h4>In Follow-Up (Assigned)</h4>
                                 </div>
-                                <span className="cia-col-count">
-                                    {realVisitors.filter((v) => !v.isConvertedToMember && delegations.some((d) => d.visitorId === v.visitorId)).length}
-                                </span>
+                                <span className="cia-col-count">{visitorsLifecycle.stage2FollowUp.length}</span>
                             </div>
                             <div className="cia-col-cards">
-                                {realVisitors
-                                    .filter((v) => !v.isConvertedToMember && delegations.some((d) => d.visitorId === v.visitorId))
-                                    .map((v) => {
-                                        const del = delegations.find((d) => d.visitorId === v.visitorId);
-                                        return (
-                                            <div key={v.visitorId} className="cia-kanban-card">
-                                                <div className="cia-card-top">
-                                                    <span className="cia-id-tag">{v.visitorCode || `VIS-${v.visitorId}`}</span>
-                                                    <span className="cia-status-chip contacted">{del?.delegationStatus}</span>
-                                                </div>
-                                                <h5 className="cia-card-name">{v.fullName || `${v.firstName} ${v.lastName}`}</h5>
-                                                <p className="cia-card-sub"><UserCheck size={12} /> Leader: <strong>{del?.assignedLeaderName}</strong></p>
-                                                <p className="cia-card-sub"><Clock size={12} /> Target: {del?.targetContactDate || "Soon"}</p>
-                                                <div className="cia-card-footer dual">
-                                                    <button
-                                                        type="button"
-                                                        className="cia-btn-sm-touchpoint"
-                                                        onClick={() => handleOpenLogFollowUp(v)}
-                                                    >
-                                                        <HeartHandshake size={12} />
-                                                        <span>Log Contact</span>
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        className="cia-btn-sm-action"
-                                                        onClick={() => handleConvertToMember(v)}
-                                                    >
-                                                        <Crown size={12} />
-                                                        <span>To Member</span>
-                                                    </button>
-                                                </div>
+                                {visitorsLifecycle.stage2FollowUp.map((v) => {
+                                    const del = delegations.find((d) => d.visitorId === v.visitorId);
+                                    return (
+                                        <div key={v.visitorId} className="cia-kanban-card">
+                                            <div className="cia-card-top">
+                                                <span className="cia-id-tag">{v.visitorCode || `VIS-${v.visitorId}`}</span>
+                                                <span className="cia-status-chip contacted">{del?.delegationStatus || "Assigned"}</span>
                                             </div>
-                                        );
-                                    })}
+                                            <h5 className="cia-card-name">{v.fullName || `${v.firstName} ${v.lastName}`}</h5>
+                                            <p className="cia-card-sub"><UserCheck size={12} /> Leader: <strong>{del?.assignedLeaderName || "Pastoral Team"}</strong></p>
+                                            <p className="cia-card-sub"><Clock size={12} /> Target: {del?.targetContactDate || "Soon"}</p>
+                                            <div className="cia-card-footer dual">
+                                                <button
+                                                    type="button"
+                                                    className="cia-btn-sm-touchpoint"
+                                                    onClick={() => handleOpenLogFollowUp(v)}
+                                                >
+                                                    <HeartHandshake size={12} />
+                                                    <span>Log Contact</span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="cia-btn-sm-action"
+                                                    onClick={() => handleConvertToMember(v)}
+                                                >
+                                                    <Crown size={12} />
+                                                    <span>To Member</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                                {visitorsLifecycle.stage2FollowUp.length === 0 && (
+                                    <div className="cia-col-empty">No visitors currently in active follow-up stage.</div>
+                                )}
                             </div>
                         </div>
 
-                        {/* COLUMN 3: CONVERTED CHURCH MEMBERS */}
+                        {/* COLUMN 3: CONNECTED & RETURNING (2-3 VISITS) */}
                         <div className="cia-kanban-col">
                             <div className="cia-col-header emerald">
                                 <div>
                                     <span className="cia-col-step">STAGE 3</span>
-                                    <h4>Church Members & Disciples</h4>
+                                    <h4>Connected & Returning</h4>
                                 </div>
-                                <span className="cia-col-count">
-                                    {realVisitors.filter((v) => v.isConvertedToMember).length + disciples.length}
-                                </span>
+                                <span className="cia-col-count">{visitorsLifecycle.stage3Returning.length}</span>
                             </div>
                             <div className="cia-col-cards">
-                                {disciples.map((d) => (
-                                    <div key={d.id} className="cia-kanban-card">
-                                        <div className="cia-card-top">
-                                            <span className="cia-id-tag">{d.id}</span>
-                                            <span className="cia-status-chip emerald">{d.stage}</span>
-                                        </div>
-                                        <h5 className="cia-card-name">{d.fullName}</h5>
-                                        <p className="cia-card-sub"><Users size={12} /> Mentor: {d.disciplerName}</p>
-                                        <p className="cia-card-sub"><ShieldCheck size={12} /> Cell: {d.cellGroupName}</p>
-                                        <div className="cia-card-badge-row">
-                                            {d.waterBaptism?.isBaptized ? (
-                                                <span className="cia-pill-success">🌊 Water Baptized</span>
+                                {visitorsLifecycle.stage3Returning.map((v) => {
+                                    const del = delegations.find((d) => d.visitorId === v.visitorId);
+                                    return (
+                                        <div key={v.visitorId} className="cia-kanban-card">
+                                            <div className="cia-card-top">
+                                                <span className="cia-id-tag">{v.visitorCode || `VIS-${v.visitorId}`}</span>
+                                                <span className="cia-pill-success">⭐ {v.visitCount || 2} Visits</span>
+                                            </div>
+                                            <h5 className="cia-card-name">{v.fullName || `${v.firstName} ${v.lastName}`}</h5>
+                                            <p className="cia-card-sub"><Phone size={12} /> {v.contactNumber || "No Phone"}</p>
+                                            {del ? (
+                                                <p className="cia-card-sub"><UserCheck size={12} /> Leader: <strong>{del.assignedLeaderName}</strong></p>
                                             ) : (
-                                                <span className="cia-pill-pending">⏳ Baptism Pending</span>
+                                                <p className="cia-card-sub"><Clock size={12} /> Consistently Attending</p>
                                             )}
+                                            <div className="cia-card-footer dual">
+                                                <button
+                                                    type="button"
+                                                    className="cia-btn-sm-touchpoint"
+                                                    onClick={() => handleOpenLogFollowUp(v)}
+                                                >
+                                                    <HeartHandshake size={12} />
+                                                    <span>Touchpoint</span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="cia-btn-sm-action"
+                                                    onClick={() => handleConvertToMember(v)}
+                                                >
+                                                    <Crown size={12} />
+                                                    <span>To Member</span>
+                                                </button>
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
+                                {visitorsLifecycle.stage3Returning.length === 0 && (
+                                    <div className="cia-col-empty">No returning visitors in this stage yet.</div>
+                                )}
                             </div>
                         </div>
 
-                        {/* COLUMN 4: COMMISSIONED WORKERS */}
+                        {/* COLUMN 4: MILESTONE REACHED / CONVERTED TO MEMBER */}
                         <div className="cia-kanban-col">
                             <div className="cia-col-header purple">
                                 <div>
                                     <span className="cia-col-step">STAGE 4</span>
-                                    <h4>Sent & Commissioned</h4>
+                                    <h4>Milestone Reached / Member</h4>
                                 </div>
-                                <span className="cia-col-count">{sentLeaders.length}</span>
+                                <span className="cia-col-count">{visitorsLifecycle.stage4Converted.length}</span>
                             </div>
                             <div className="cia-col-cards">
-                                {sentLeaders.map((s) => (
-                                    <div key={s.id} className="cia-kanban-card sent-card">
+                                {visitorsLifecycle.stage4Converted.map((v) => (
+                                    <div key={v.visitorId} className="cia-kanban-card sent-card">
                                         <div className="cia-card-top">
-                                            <span className="cia-id-tag">{s.id}</span>
-                                            <span className="cia-status-chip purple">{s.commissioningStatus}</span>
+                                            <span className="cia-id-tag">{v.visitorCode || `VIS-${v.visitorId}`}</span>
+                                            <span className="cia-status-chip emerald">🎉 Converted</span>
                                         </div>
-                                        <h5 className="cia-card-name">{s.fullName}</h5>
-                                        <p className="cia-card-sub"><Award size={12} /> Dept: {s.ministryDepartment}</p>
-                                        <p className="cia-card-sub"><Sparkles size={12} /> Role: {s.ministryRole}</p>
-                                        <div className="cia-card-fruit-box">
-                                            <span className="fruit-count">🌱 {s.activeFruitCount} Disciples</span>
-                                            <small>Reproducing spiritual fruit</small>
+                                        <h5 className="cia-card-name">{v.fullName || `${v.firstName} ${v.lastName}`}</h5>
+                                        <p className="cia-card-sub"><Phone size={12} /> {v.contactNumber || "No Phone"}</p>
+                                        <p className="cia-card-sub"><CheckCircle2 size={12} /> Official Member Milestone</p>
+                                        <div className="cia-card-footer dual">
+                                            <button
+                                                type="button"
+                                                className="cia-btn-sm-touchpoint"
+                                                onClick={() => handleNavigatePage("members")}
+                                                title="View in Church Members module"
+                                            >
+                                                <Users size={12} />
+                                                <span>Members</span>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className="cia-btn-sm-action"
+                                                onClick={() => {
+                                                    setDiscipleshipForm((prev) => ({
+                                                        ...prev,
+                                                        fullName: v.fullName || `${v.firstName} ${v.lastName}`,
+                                                        contactNumber: v.contactNumber,
+                                                    }));
+                                                    setShowDiscipleshipModal(true);
+                                                }}
+                                                title="Enroll in Discipleship & Foundations"
+                                            >
+                                                <BookOpen size={12} />
+                                                <span>Discipleship</span>
+                                            </button>
                                         </div>
                                     </div>
                                 ))}
+                                {visitorsLifecycle.stage4Converted.length === 0 && (
+                                    <div className="cia-col-empty">No visitors converted to members yet.</div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ============================================================ */}
+            {/* VIEW 4: MEMBERS LIFECYCLE MONITORING (100% MEMBERS ONLY)    */}
+            {/* ============================================================ */}
+            {(activeTab === "members-lifecycle" || (activeTab === "pipeline" && activeLifecycleTab === "members")) && (
+                <div className="cia-pipeline-view">
+                    {/* SEPARATE LIFECYCLE SWITCHER BAR */}
+                    <div className="cia-lifecycle-switcher-bar">
+                        <button
+                            type="button"
+                            className="cia-lsb-btn"
+                            onClick={() => {
+                                setActiveLifecycleTab("visitors");
+                                setActiveTab("visitors-lifecycle");
+                            }}
+                        >
+                            <UserCheck size={18} />
+                            <span className="lsb-title">Visitors Lifecycle Funnel</span>
+                            <span className="lsb-badge visitors">{realVisitors.length} Newcomers</span>
+                        </button>
+                        <button
+                            type="button"
+                            className="cia-lsb-btn active-members"
+                            onClick={() => {
+                                setActiveLifecycleTab("members");
+                                setActiveTab("members-lifecycle");
+                            }}
+                        >
+                            <Crown size={18} />
+                            <span className="lsb-title">Members Lifecycle Pipeline</span>
+                            <span className="lsb-badge members">{realMembers.length} Members</span>
+                        </button>
+                    </div>
+
+                    <div className="cia-pipeline-info-banner">
+                        <div className="cia-pib-content">
+                            <strong>100% Church Members Lifecycle Pipeline: Onboarding ➔ Discipleship ➔ Ministry Workers ➔ Leaders</strong>
+                            <p>Tracking all {realMembers.length} official church members through spiritual growth, ministry involvement, and leadership commissioning.</p>
+                        </div>
+                    </div>
+
+                    <div className="cia-kanban-board">
+                        {/* COLUMN 1: NEW MEMBERS & ONBOARDING */}
+                        <div className="cia-kanban-col">
+                            <div className="cia-col-header amber">
+                                <div>
+                                    <span className="cia-col-step">STAGE 1</span>
+                                    <h4>New Members & Onboarding</h4>
+                                </div>
+                                <span className="cia-col-count">{membersLifecycle.stage1NewMembers.length}</span>
+                            </div>
+                            <div className="cia-col-cards">
+                                {membersLifecycle.stage1NewMembers.map((m) => (
+                                    <div key={m.memberId} className="cia-kanban-card">
+                                        <div className="cia-card-top">
+                                            <span className="cia-id-tag">{m.memberCode || `MEM-${m.memberId}`}</span>
+                                            <span className="cia-status-chip unassigned">Onboarding</span>
+                                        </div>
+                                        <h5 className="cia-card-name">{m.fullName || `${m.firstName} ${m.lastName}`}</h5>
+                                        <p className="cia-card-sub"><Phone size={12} /> {m.contactNumber || "No Phone"}</p>
+                                        <p className="cia-card-sub"><Clock size={12} /> Joined: {m.joinedDate || "Active"}</p>
+                                        <div className="cia-card-footer">
+                                            <button
+                                                type="button"
+                                                className="cia-btn-sm-action"
+                                                onClick={() => {
+                                                    setDiscipleshipForm((prev) => ({
+                                                        ...prev,
+                                                        fullName: m.fullName || `${m.firstName} ${m.lastName}`,
+                                                        contactNumber: m.contactNumber,
+                                                        memberId: m.memberId,
+                                                    }));
+                                                    setShowDiscipleshipModal(true);
+                                                }}
+                                                title="Enroll in Discipleship & Foundations"
+                                            >
+                                                <BookOpen size={13} />
+                                                <span>Enroll Discipleship</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                                {membersLifecycle.stage1NewMembers.length === 0 && (
+                                    <div className="cia-col-empty">No members currently in onboarding stage.</div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* COLUMN 2: DISCIPLESHIP & SPIRITUAL GROWTH */}
+                        <div className="cia-kanban-col">
+                            <div className="cia-col-header blue">
+                                <div>
+                                    <span className="cia-col-step">STAGE 2</span>
+                                    <h4>Discipleship & Growth</h4>
+                                </div>
+                                <span className="cia-col-count">{membersLifecycle.stage2Disciples.length}</span>
+                            </div>
+                            <div className="cia-col-cards">
+                                {membersLifecycle.stage2Disciples.map((m) => {
+                                    const disc = disciples.find(
+                                        (d) => d.id === m.memberId || d.fullName.toLowerCase().trim() === (m.fullName || `${m.firstName} ${m.lastName}`).toLowerCase().trim()
+                                    );
+                                    return (
+                                        <div key={m.memberId} className="cia-kanban-card">
+                                            <div className="cia-card-top">
+                                                <span className="cia-id-tag">{m.memberCode || `MEM-${m.memberId}`}</span>
+                                                <span className="cia-status-chip contacted">{disc?.stage || "Disciple"}</span>
+                                            </div>
+                                            <h5 className="cia-card-name">{m.fullName || `${m.firstName} ${m.lastName}`}</h5>
+                                            <p className="cia-card-sub"><Users size={12} /> Mentor: <strong>{disc?.disciplerName || "Assigned Discipler"}</strong></p>
+                                            <p className="cia-card-sub"><ShieldCheck size={12} /> Cell: {disc?.cellGroupName || "San Vicente Life Group"}</p>
+                                            <div className="cia-card-badge-row">
+                                                {disc?.waterBaptism?.isBaptized ? (
+                                                    <span className="cia-pill-success">🌊 Water Baptized</span>
+                                                ) : (
+                                                    <span className="cia-pill-pending">⏳ Baptism Pending</span>
+                                                )}
+                                            </div>
+                                            <div className="cia-card-footer">
+                                                <button
+                                                    type="button"
+                                                    className="cia-btn-sm-touchpoint"
+                                                    onClick={() => setActiveTab("discipleship")}
+                                                    title="View full discipleship profile"
+                                                >
+                                                    <BookOpen size={12} />
+                                                    <span>View Foundations</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                                {membersLifecycle.stage2Disciples.length === 0 && (
+                                    <div className="cia-col-empty">No members currently in discipleship stage.</div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* COLUMN 3: MINISTRY DEPARTMENT WORKERS */}
+                        <div className="cia-kanban-col">
+                            <div className="cia-col-header emerald">
+                                <div>
+                                    <span className="cia-col-step">STAGE 3</span>
+                                    <h4>Ministry Workers</h4>
+                                </div>
+                                <span className="cia-col-count">{membersLifecycle.stage3Workers.length}</span>
+                            </div>
+                            <div className="cia-col-cards">
+                                {membersLifecycle.stage3Workers.map((m) => {
+                                    const dept = getMemberDepartment(m.ministry);
+                                    return (
+                                        <div key={m.memberId} className="cia-kanban-card">
+                                            <div className="cia-card-top">
+                                                <span className="cia-id-tag">{m.memberCode || `MEM-${m.memberId}`}</span>
+                                                <span className={`cia-dept-chip ${dept.badgeClass}`}>
+                                                    {dept.icon} {dept.name}
+                                                </span>
+                                            </div>
+                                            <h5 className="cia-card-name">{m.fullName || `${m.firstName} ${m.lastName}`}</h5>
+                                            <p className="cia-card-sub"><Award size={12} /> Role: {m.position || m.ministry || "Active Servant"}</p>
+                                            <p className="cia-card-sub"><Phone size={12} /> {m.contactNumber || "No Phone"}</p>
+                                            <div className="cia-card-footer">
+                                                <button
+                                                    type="button"
+                                                    className="cia-btn-sm-action"
+                                                    onClick={() => {
+                                                        setSendingForm((prev) => ({
+                                                            ...prev,
+                                                            fullName: m.fullName || `${m.firstName} ${m.lastName}`,
+                                                            contactNumber: m.contactNumber,
+                                                            ministryDepartment: dept.name,
+                                                            ministryRole: m.position || "Leader Candidate",
+                                                        }));
+                                                        setShowSendingModal(true);
+                                                    }}
+                                                    title="Commission to Leadership Track"
+                                                >
+                                                    <Sparkles size={12} />
+                                                    <span>Commission Leader</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                                {membersLifecycle.stage3Workers.length === 0 && (
+                                    <div className="cia-col-empty">No department workers in this stage.</div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* COLUMN 4: COMMISSIONED LEADERS & PASTORAL STAFF */}
+                        <div className="cia-kanban-col">
+                            <div className="cia-col-header purple">
+                                <div>
+                                    <span className="cia-col-step">STAGE 4</span>
+                                    <h4>Commissioned Leaders</h4>
+                                </div>
+                                <span className="cia-col-count">{membersLifecycle.stage4Leaders.length}</span>
+                            </div>
+                            <div className="cia-col-cards">
+                                {membersLifecycle.stage4Leaders.map((m) => {
+                                    const roleTag = getLeaderRoleTag(m.ministry);
+                                    const workload = leaderWorkloadMap[m.memberId] || 0;
+                                    return (
+                                        <div key={m.memberId} className="cia-kanban-card sent-card">
+                                            <div className="cia-card-top">
+                                                <span className="cia-id-tag">{m.memberCode || `MEM-${m.memberId}`}</span>
+                                                <span className={`cia-role-chip ${roleTag.tag}`}>
+                                                    {roleTag.icon} {roleTag.label}
+                                                </span>
+                                            </div>
+                                            <h5 className="cia-card-name">{m.fullName || `${m.firstName} ${m.lastName}`}</h5>
+                                            <p className="cia-card-sub"><Crown size={12} /> Ministry: <strong>{m.ministry || roleTag.label}</strong></p>
+                                            <p className="cia-card-sub"><Phone size={12} /> {m.contactNumber || "No Phone"}</p>
+                                            <div className="cia-card-fruit-box">
+                                                <span className="fruit-count">👥 {workload} Assigned Newcomers</span>
+                                                <small>Under pastoral care</small>
+                                            </div>
+                                            <div className="cia-card-footer">
+                                                <button
+                                                    type="button"
+                                                    className="cia-btn-sm-action"
+                                                    onClick={() => {
+                                                        setLeaderFilter(String(m.memberId));
+                                                        setActiveTab("delegation");
+                                                    }}
+                                                    title="View assigned newcomers in Delegation Center"
+                                                >
+                                                    <UserCog size={12} />
+                                                    <span>View Assigned Flock</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                                {membersLifecycle.stage4Leaders.length === 0 && (
+                                    <div className="cia-col-empty">No commissioned leaders recorded yet.</div>
+                                )}
                             </div>
                         </div>
                     </div>
