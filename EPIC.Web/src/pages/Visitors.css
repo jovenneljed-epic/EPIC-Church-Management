@@ -647,8 +647,8 @@
 .visitors-table th:last-child,
 .visitors-table td:last-child {
     white-space: nowrap;
-    width: 135px;
-    min-width: 135px;
+    width: 260px;
+    min-width: 260px;
 }
 
 .action-buttons {
@@ -656,9 +656,9 @@
     flex-direction: row;
     align-items: center;
     justify-content: flex-start;
-    gap: 6px;
+    gap: 5px;
     width: max-content;
-    min-width: 125px;
+    min-width: 250px;
     height: 31px;
     white-space: nowrap;
 }
@@ -693,20 +693,35 @@
 
     box-sizing: border-box;
     cursor: pointer;
+    transition: all 0.15s ease;
 }
 
 .action-buttons .action-primary {
-    min-width: 68px;
+    min-width: 60px;
     color: #ffffff;
     background: #2563eb;
     border-color: #2563eb;
 }
 
 .action-buttons .action-secondary {
-    min-width: 62px;
+    min-width: 56px;
     color: #475569;
     background: #ffffff;
     border-color: #dbe2ea;
+}
+
+.action-buttons .action-edit {
+    min-width: 52px;
+    color: #0284c7;
+    background: #f0f9ff;
+    border-color: #bae6fd;
+}
+
+.action-buttons .action-delete {
+    min-width: 58px;
+    color: #dc2626;
+    background: #fef2f2;
+    border-color: #fecaca;
 }
 
 .action-buttons .action-primary:hover {
@@ -716,6 +731,25 @@
 .action-buttons .action-secondary:hover {
     background: #f8fafc;
 }
+
+.action-buttons .action-edit:hover:not(:disabled) {
+    background: #e0f2fe;
+    border-color: #7dd3fc;
+    color: #0369a1;
+}
+
+.action-buttons .action-delete:hover:not(:disabled) {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    color: #b91c1c;
+}
+
+.action-buttons button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    filter: grayscale(0.8);
+}
+
 .action-primary {
     color: #ffffff;
     background: #2563eb;
@@ -828,6 +862,40 @@
     grid-template-columns: 1fr 1fr;
     gap: 8px;
     margin-top: 16px;
+}
+
+.card-actions .btn-edit {
+    color: #0284c7;
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    font-weight: 650;
+    transition: all 0.15s ease;
+}
+
+.card-actions .btn-edit:hover:not(:disabled) {
+    background: #e0f2fe;
+    border-color: #7dd3fc;
+    color: #0369a1;
+}
+
+.card-actions .btn-delete {
+    color: #dc2626;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    font-weight: 650;
+    transition: all 0.15s ease;
+}
+
+.card-actions .btn-delete:hover:not(:disabled) {
+    background: #fee2e2;
+    border-color: #fca5a5;
+    color: #b91c1c;
+}
+
+.card-actions .btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    filter: grayscale(0.8);
 }
 
 /* =========================================================

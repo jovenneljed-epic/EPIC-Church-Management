@@ -520,6 +520,12 @@ export default function Visitors() {
     const [showAddModal, setShowAddModal] =
         useState(false);
 
+    const [showEditModal, setShowEditModal] =
+        useState(false);
+
+    const [editingVisitor, setEditingVisitor] =
+        useState<Visitor | null>(null);
+
     const [showVisitModal, setShowVisitModal] =
         useState(false);
 
@@ -908,6 +914,144 @@ export default function Visitors() {
         };
 
     // ========================================================
+    // OPEN EDIT MODAL
+    // ========================================================
+
+    const openEditModal = (visitor: Visitor) => {
+        if (visitor.isConvertedToMember) {
+            setError(
+                `Visitor "${getFullName(visitor)}" has already been converted to an official member and cannot be edited as a visitor.`
+            );
+            return;
+        }
+
+        setEditingVisitor(visitor);
+        setForm({
+            firstName: visitor.firstName || "",
+            middleName: visitor.middleName || "",
+            lastName: visitor.lastName || "",
+            gender: visitor.gender || "",
+            birthDate: visitor.birthDate ? visitor.birthDate.split("T")[0] : "",
+            contactNumber: visitor.contactNumber || "",
+            address: visitor.address || "",
+            invitedBy: visitor.invitedBy || "",
+            ministry: visitor.ministry || "",
+            firstVisitDate: visitor.firstVisitDate ? visitor.firstVisitDate.split("T")[0] : getToday(),
+            notes: visitor.notes || "",
+        });
+
+        setError("");
+        setSuccess("");
+        setShowEditModal(true);
+    };
+
+    // ========================================================
+    // UPDATE VISITOR
+    // ========================================================
+
+    const handleUpdateVisitor = async (event: React.FormEvent) => {
+        event.preventDefault();
+
+        if (!editingVisitor) {
+            return;
+        }
+
+        if (!form.firstName.trim() || !form.lastName.trim()) {
+            setError("First name and last name are required.");
+            return;
+        }
+
+        try {
+            setSaving(true);
+            setError("");
+            setSuccess("");
+
+            await apiFetch(`/Visitors/${editingVisitor.visitorId}`, {
+                method: "PUT",
+                body: JSON.stringify({
+                    firstName: form.firstName.trim(),
+                    middleName: form.middleName.trim() || null,
+                    lastName: form.lastName.trim(),
+                    gender: form.gender || null,
+                    birthDate: form.birthDate || null,
+                    contactNumber: form.contactNumber.trim() || null,
+                    address: form.address.trim() || null,
+                    invitedBy: form.invitedBy.trim() || null,
+                    ministry: form.ministry.trim() || null,
+                    firstVisitDate: form.firstVisitDate || null,
+                    notes: form.notes.trim() || null,
+                }),
+            });
+
+            setShowEditModal(false);
+            setEditingVisitor(null);
+            setForm({
+                ...EMPTY_FORM,
+                firstVisitDate: getToday(),
+            });
+
+            setSuccess("Visitor information updated successfully.");
+
+            await Promise.all([
+                loadVisitors(),
+                loadDashboard(),
+            ]);
+        } catch (err) {
+            console.error("Update visitor error:", err);
+            setError(
+                err instanceof Error
+                    ? err.message
+                    : "Unable to update visitor information."
+            );
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    // ========================================================
+    // DELETE VISITOR
+    // ========================================================
+
+    const handleDeleteVisitor = async (visitor: Visitor) => {
+        const fullName = getFullName(visitor);
+        const confirmMsg = visitor.isConvertedToMember
+            ? `Visitor "${fullName}" (${visitor.visitorCode}) has already been converted to an official member.\n\nDeleting will deactivate the visitor record. Do you want to proceed?`
+            : `Are you sure you want to permanently delete visitor "${fullName}" (${visitor.visitorCode})?\n\nThis action cannot be undone.`;
+
+        if (!window.confirm(confirmMsg)) {
+            return;
+        }
+
+        try {
+            setError("");
+            setSuccess("");
+
+            const res = await apiFetch<{ message: string }>(
+                `/Visitors/${visitor.visitorId}`,
+                {
+                    method: "DELETE",
+                }
+            );
+
+            setSuccess(
+                res?.message || `Visitor "${fullName}" was deleted successfully.`
+            );
+
+            await Promise.all([
+                loadVisitors(),
+                loadDashboard(),
+            ]);
+        } catch (err) {
+            console.error("Delete visitor error:", err);
+            setError(
+                err instanceof Error
+                    ? err.message
+                    : "Unable to delete visitor."
+            );
+        }
+    };
+
+    // ========================================================
     // OPEN RECORD VISIT
     // ========================================================
 
@@ -1238,8 +1382,10 @@ export default function Visitors() {
         }
 
         setShowAddModal(false);
+        setShowEditModal(false);
         setShowVisitModal(false);
         setShowHistoryModal(false);
+        setEditingVisitor(null);
     };
 
     // ========================================================
@@ -2250,6 +2396,37 @@ export default function Visitors() {
                                                             History
                                                         </button>
 
+                                                        <button
+                                                            type="button"
+                                                            className="action-edit"
+                                                            onClick={() =>
+                                                                openEditModal(
+                                                                    visitor
+                                                                )
+                                                            }
+                                                            title={
+                                                                visitor.isConvertedToMember
+                                                                    ? "Converted to official member (record locked)"
+                                                                    : "Edit visitor details"
+                                                            }
+                                                            disabled={visitor.isConvertedToMember}
+                                                        >
+                                                            ✎ Edit
+                                                        </button>
+
+                                                        <button
+                                                            type="button"
+                                                            className="action-delete"
+                                                            onClick={() =>
+                                                                void handleDeleteVisitor(
+                                                                    visitor
+                                                                )
+                                                            }
+                                                            title="Delete visitor"
+                                                        >
+                                                            🗑 Delete
+                                                        </button>
+
                                                     </div>
 
                                                 </td>
@@ -2449,6 +2626,37 @@ export default function Visitors() {
                                                 }
                                             >
                                                 View History
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                className="btn btn-edit"
+                                                onClick={() =>
+                                                    openEditModal(
+                                                        visitor
+                                                    )
+                                                }
+                                                disabled={visitor.isConvertedToMember}
+                                                title={
+                                                    visitor.isConvertedToMember
+                                                        ? "Converted to official member (record locked)"
+                                                        : "Edit visitor details"
+                                                }
+                                            >
+                                                ✎ Edit
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                className="btn btn-delete"
+                                                onClick={() =>
+                                                    void handleDeleteVisitor(
+                                                        visitor
+                                                    )
+                                                }
+                                                title="Delete visitor"
+                                            >
+                                                🗑 Delete
                                             </button>
 
                                         </div>
@@ -2784,6 +2992,229 @@ export default function Visitors() {
 
                     </div>
 
+                </div>
+            )}
+
+            {/* =========================================================
+                EDIT VISITOR MODAL
+            ========================================================= */}
+
+            {showEditModal && editingVisitor && (
+                <div
+                    className="modal-backdrop"
+                    onMouseDown={e => {
+                        if (e.target === e.currentTarget) {
+                            closeModals();
+                        }
+                    }}
+                >
+                    <div className="modal modal-large">
+                        <div className="modal-header">
+                            <div>
+                                <span className="section-kicker">
+                                    EDIT RECORD ({editingVisitor.visitorCode})
+                                </span>
+                                <h2>
+                                    Edit Visitor Information
+                                </h2>
+                                <p>
+                                    Update visitor personal, contact, and visit details to ensure church records are accurate.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                className="modal-close"
+                                onClick={closeModals}
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleUpdateVisitor}>
+                            {/* PERSONAL */}
+                            <div className="form-section">
+                                <h3>Personal Information</h3>
+                                <div className="form-grid">
+                                    <label>
+                                        First Name *
+                                        <input
+                                            value={form.firstName}
+                                            onChange={e =>
+                                                updateForm(
+                                                    "firstName",
+                                                    e.target.value
+                                                )
+                                            }
+                                            required
+                                        />
+                                    </label>
+
+                                    <label>
+                                        Middle Name
+                                        <input
+                                            value={form.middleName}
+                                            onChange={e =>
+                                                updateForm(
+                                                    "middleName",
+                                                    e.target.value
+                                                )
+                                            }
+                                        />
+                                    </label>
+
+                                    <label>
+                                        Last Name *
+                                        <input
+                                            value={form.lastName}
+                                            onChange={e =>
+                                                updateForm(
+                                                    "lastName",
+                                                    e.target.value
+                                                )
+                                            }
+                                            required
+                                        />
+                                    </label>
+
+                                    <label>
+                                        Gender
+                                        <select
+                                            value={form.gender}
+                                            onChange={e =>
+                                                updateForm(
+                                                    "gender",
+                                                    e.target.value
+                                                )
+                                            }
+                                        >
+                                            <option value="">Select</option>
+                                            <option value="MALE">Male</option>
+                                            <option value="FEMALE">Female</option>
+                                        </select>
+                                    </label>
+
+                                    <label>
+                                        Birth Date
+                                        <input
+                                            type="date"
+                                            value={form.birthDate}
+                                            onChange={e =>
+                                                updateForm(
+                                                    "birthDate",
+                                                    e.target.value
+                                                )
+                                            }
+                                        />
+                                    </label>
+
+                                    <label>
+                                        Contact Number
+                                        <input
+                                            value={form.contactNumber}
+                                            onChange={e =>
+                                                updateForm(
+                                                    "contactNumber",
+                                                    e.target.value
+                                                )
+                                            }
+                                        />
+                                    </label>
+
+                                    <label className="form-full">
+                                        Address
+                                        <input
+                                            value={form.address}
+                                            onChange={e =>
+                                                updateForm(
+                                                    "address",
+                                                    e.target.value
+                                                )
+                                            }
+                                        />
+                                    </label>
+                                </div>
+                            </div>
+
+                            {/* VISIT */}
+                            <div className="form-section">
+                                <h3>Visit Information</h3>
+                                <div className="form-grid">
+                                    <label>
+                                        Invited By
+                                        <input
+                                            value={form.invitedBy}
+                                            onChange={e =>
+                                                updateForm(
+                                                    "invitedBy",
+                                                    e.target.value
+                                                )
+                                            }
+                                        />
+                                    </label>
+
+                                    <label>
+                                        Ministry
+                                        <input
+                                            value={form.ministry}
+                                            onChange={e =>
+                                                updateForm(
+                                                    "ministry",
+                                                    e.target.value
+                                                )
+                                            }
+                                        />
+                                    </label>
+
+                                    <label>
+                                        First Visit Date
+                                        <input
+                                            type="date"
+                                            value={form.firstVisitDate}
+                                            onChange={e =>
+                                                updateForm(
+                                                    "firstVisitDate",
+                                                    e.target.value
+                                                )
+                                            }
+                                        />
+                                    </label>
+
+                                    <label className="form-full">
+                                        Notes
+                                        <textarea
+                                            rows={4}
+                                            value={form.notes}
+                                            onChange={e =>
+                                                updateForm(
+                                                    "notes",
+                                                    e.target.value
+                                                )
+                                            }
+                                        />
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div className="modal-footer">
+                                <button
+                                    type="button"
+                                    className="btn btn-secondary"
+                                    onClick={closeModals}
+                                    disabled={saving}
+                                >
+                                    Cancel
+                                </button>
+
+                                <button
+                                    type="submit"
+                                    className="btn btn-primary"
+                                    disabled={saving}
+                                >
+                                    {saving ? "Updating..." : "Update Visitor"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             )}
 
