@@ -557,6 +557,9 @@ export default function Visitors() {
     const [isScanning, setIsScanning] =
         useState(false);
 
+    const [isDeduplicating, setIsDeduplicating] =
+        useState(false);
+
     // ========================================================
     // LOAD VISITORS
     // ========================================================
@@ -820,6 +823,46 @@ export default function Visitors() {
                 return;
             }
 
+            // DUPLICATE CHECK: Prevent adding duplicate visitor
+            const normFirst = form.firstName.trim().toLowerCase();
+            const normLast = form.lastName.trim().toLowerCase();
+            const normMiddle = form.middleName.trim().toLowerCase();
+
+            const existingVisitor = visitors.find(v => {
+                const vFirst = v.firstName.trim().toLowerCase();
+                const vLast = v.lastName.trim().toLowerCase();
+                const vMiddle = (v.middleName || "").trim().toLowerCase();
+
+                if (vFirst !== normFirst || vLast !== normLast) {
+                    return false;
+                }
+
+                if (!normMiddle || !vMiddle) {
+                    return true;
+                }
+
+                if (vMiddle === normMiddle) {
+                    return true;
+                }
+
+                if (normMiddle.length === 1 && vMiddle.startsWith(normMiddle)) {
+                    return true;
+                }
+
+                if (vMiddle.length === 1 && normMiddle.startsWith(vMiddle)) {
+                    return true;
+                }
+
+                return false;
+            });
+
+            if (existingVisitor) {
+                setError(
+                    `A visitor with the name "${getFullName(existingVisitor)}" (${existingVisitor.visitorCode}) already exists in the system. Duplicate entries are not allowed.`
+                );
+                return;
+            }
+
             try {
 
                 setSaving(true);
@@ -958,6 +1001,50 @@ export default function Visitors() {
 
         if (!form.firstName.trim() || !form.lastName.trim()) {
             setError("First name and last name are required.");
+            return;
+        }
+
+        // DUPLICATE CHECK: Prevent updating name to another existing visitor
+        const normFirst = form.firstName.trim().toLowerCase();
+        const normLast = form.lastName.trim().toLowerCase();
+        const normMiddle = form.middleName.trim().toLowerCase();
+
+        const existingVisitor = visitors.find(v => {
+            if (v.visitorId === editingVisitor.visitorId) {
+                return false;
+            }
+
+            const vFirst = v.firstName.trim().toLowerCase();
+            const vLast = v.lastName.trim().toLowerCase();
+            const vMiddle = (v.middleName || "").trim().toLowerCase();
+
+            if (vFirst !== normFirst || vLast !== normLast) {
+                return false;
+            }
+
+            if (!normMiddle || !vMiddle) {
+                return true;
+            }
+
+            if (vMiddle === normMiddle) {
+                return true;
+            }
+
+            if (normMiddle.length === 1 && vMiddle.startsWith(normMiddle)) {
+                return true;
+            }
+
+            if (vMiddle.length === 1 && normMiddle.startsWith(vMiddle)) {
+                return true;
+            }
+
+            return false;
+        });
+
+        if (existingVisitor) {
+            setError(
+                `Another visitor with the name "${getFullName(existingVisitor)}" (${existingVisitor.visitorCode}) already exists. Please choose a distinct name to avoid duplicates.`
+            );
             return;
         }
 
@@ -1243,6 +1330,43 @@ export default function Visitors() {
             );
         } finally {
             setIsScanning(false);
+        }
+    };
+
+    // ========================================================
+    // RUN DEDUPLICATION CLEANUP
+    // ========================================================
+
+    const runDeduplication = async () => {
+        try {
+            setIsDeduplicating(true);
+            setError("");
+            setSuccess("");
+
+            const res = await apiFetch<{
+                message: string;
+                duplicatesRemoved: number;
+                mergedGroups: number;
+                mergedVisitors?: string[];
+            }>("/Visitors/deduplicate", {
+                method: "POST"
+            });
+
+            setSuccess(`🧹 ${res.message}`);
+
+            await Promise.all([
+                loadVisitors(),
+                loadDashboard(),
+            ]);
+        } catch (err) {
+            console.error("Deduplication error:", err);
+            setError(
+                err instanceof Error
+                    ? err.message
+                    : "Deduplication scan failed."
+            );
+        } finally {
+            setIsDeduplicating(false);
         }
     };
 
@@ -1537,6 +1661,17 @@ export default function Visitors() {
                         >
                             <span>{isScanning ? "⏳" : "⚡"}</span>
                             <span>{isScanning ? "Scanning..." : "Auto-Convert Scan"}</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            className="btn btn-dedup"
+                            onClick={runDeduplication}
+                            disabled={isDeduplicating || loading}
+                            title="Scan database to merge and clean duplicate visitor records, preserving all attendances"
+                        >
+                            <span>{isDeduplicating ? "⏳" : "🧹"}</span>
+                            <span>{isDeduplicating ? "Cleaning..." : "Clean Duplicates"}</span>
                         </button>
 
                         <button

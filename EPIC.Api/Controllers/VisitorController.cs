@@ -325,6 +325,51 @@ namespace EPIC.Api.Controllers
                 return validation;
             }
 
+            // -----------------------------------------------------
+            // DUPLICATE PREVENTION LOGIC
+            // Ensure no duplicate visitor is registered with the same name.
+            // -----------------------------------------------------
+            var reqFirst = request.FirstName.Trim();
+            var reqLast = request.LastName.Trim();
+            var reqMiddle = request.MiddleName?.Trim() ?? "";
+
+            var existingCandidates = await _context.Visitors
+                .AsNoTracking()
+                .Where(v =>
+                    v.FirstName.ToLower() == reqFirst.ToLower() &&
+                    v.LastName.ToLower() == reqLast.ToLower())
+                .ToListAsync();
+
+            var duplicate = existingCandidates.FirstOrDefault(c =>
+            {
+                var cMiddle = c.MiddleName?.Trim() ?? "";
+                if (string.IsNullOrWhiteSpace(reqMiddle) || string.IsNullOrWhiteSpace(cMiddle))
+                {
+                    return true;
+                }
+                if (cMiddle.Equals(reqMiddle, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+                if (reqMiddle.Length == 1 && cMiddle.StartsWith(reqMiddle, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+                if (cMiddle.Length == 1 && reqMiddle.StartsWith(cMiddle, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+                return false;
+            });
+
+            if (duplicate != null)
+            {
+                return Conflict(new
+                {
+                    message = $"A visitor with the name \"{duplicate.FirstName} {duplicate.LastName}\" already exists ({duplicate.VisitorCode}). Duplicate entries are not allowed."
+                });
+            }
+
             var now =
                 DateTime.Now;
 
@@ -483,6 +528,52 @@ namespace EPIC.Api.Controllers
                 {
                     message =
                         "THIS VISITOR HAS ALREADY BEEN CONVERTED TO A MEMBER."
+                });
+            }
+
+            // -----------------------------------------------------
+            // DUPLICATE PREVENTION LOGIC
+            // Ensure no other visitor already has this name.
+            // -----------------------------------------------------
+            var reqFirst = request.FirstName.Trim();
+            var reqLast = request.LastName.Trim();
+            var reqMiddle = request.MiddleName?.Trim() ?? "";
+
+            var existingCandidates = await _context.Visitors
+                .AsNoTracking()
+                .Where(v =>
+                    v.VisitorId != id &&
+                    v.FirstName.ToLower() == reqFirst.ToLower() &&
+                    v.LastName.ToLower() == reqLast.ToLower())
+                .ToListAsync();
+
+            var duplicate = existingCandidates.FirstOrDefault(c =>
+            {
+                var cMiddle = c.MiddleName?.Trim() ?? "";
+                if (string.IsNullOrWhiteSpace(reqMiddle) || string.IsNullOrWhiteSpace(cMiddle))
+                {
+                    return true;
+                }
+                if (cMiddle.Equals(reqMiddle, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+                if (reqMiddle.Length == 1 && cMiddle.StartsWith(reqMiddle, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+                if (cMiddle.Length == 1 && reqMiddle.StartsWith(cMiddle, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+                return false;
+            });
+
+            if (duplicate != null)
+            {
+                return Conflict(new
+                {
+                    message = $"Another visitor with the name \"{duplicate.FirstName} {duplicate.LastName}\" already exists ({duplicate.VisitorCode}). Duplicate entries are not allowed."
                 });
             }
 
@@ -1102,6 +1193,116 @@ namespace EPIC.Api.Controllers
                 .GetConversionMetricsAsync(customerId: null, threshold: threshold);
 
             return Ok(metrics);
+        }
+
+        // =========================================================
+        // REMOVE / MERGE DUPLICATE VISITORS
+        // POST: /api/Visitors/deduplicate
+        // Permission: Visitors / edit
+        // =========================================================
+
+        [HttpPost("deduplicate")]
+        [Permission("Visitors", "edit")]
+        public async Task<IActionResult> DeduplicateVisitors()
+        {
+            var allVisitors = await _context.Visitors
+                .Include(v => v.VisitorAttendances)
+                .OrderBy(v => v.CreatedDate)
+                .ToListAsync();
+
+            var grouped = allVisitors
+                .GroupBy(v => new
+                {
+                    First = v.FirstName.Trim().ToUpperInvariant(),
+                    Last = v.LastName.Trim().ToUpperInvariant()
+                })
+                .Where(g => g.Count() > 1)
+                .ToList();
+
+            if (!grouped.Any())
+            {
+                return Ok(new
+                {
+                    message = "Zero duplicate visitor entries found. Your records are completely clean and unique!",
+                    duplicatesRemoved = 0,
+                    mergedGroups = 0
+                });
+            }
+
+            int duplicatesRemoved = 0;
+            int groupsMerged = 0;
+            var details = new List<string>();
+
+            foreach (var group in grouped)
+            {
+                // Select keeper/primary: prioritize converted first, then attendance count, then visit count, then oldest
+                var primary = group
+                    .OrderByDescending(v => v.IsConvertedToMember)
+                    .ThenByDescending(v => v.VisitorAttendances.Count)
+                    .ThenByDescending(v => v.VisitCount)
+                    .ThenBy(v => v.CreatedDate)
+                    .First();
+
+                var duplicates = group
+                    .Where(v => v.VisitorId != primary.VisitorId)
+                    .ToList();
+
+                foreach (var dup in duplicates)
+                {
+                    foreach (var att in dup.VisitorAttendances.ToList())
+                    {
+                        bool alreadyHas = primary.VisitorAttendances
+                            .Any(a => a.ChurchServiceId == att.ChurchServiceId);
+
+                        if (!alreadyHas)
+                        {
+                            att.VisitorId = primary.VisitorId;
+                            primary.VisitorAttendances.Add(att);
+                        }
+                        else
+                        {
+                            _context.VisitorAttendances.Remove(att);
+                        }
+                    }
+
+                    if (string.IsNullOrWhiteSpace(primary.MiddleName) && !string.IsNullOrWhiteSpace(dup.MiddleName))
+                    {
+                        primary.MiddleName = dup.MiddleName;
+                    }
+                    if (string.IsNullOrWhiteSpace(primary.ContactNumber) && !string.IsNullOrWhiteSpace(dup.ContactNumber))
+                    {
+                        primary.ContactNumber = dup.ContactNumber;
+                    }
+                    if (string.IsNullOrWhiteSpace(primary.Address) && !string.IsNullOrWhiteSpace(dup.Address))
+                    {
+                        primary.Address = dup.Address;
+                    }
+                    if (string.IsNullOrWhiteSpace(primary.InvitedBy) && !string.IsNullOrWhiteSpace(dup.InvitedBy))
+                    {
+                        primary.InvitedBy = dup.InvitedBy;
+                    }
+
+                    _context.Visitors.Remove(dup);
+                    duplicatesRemoved++;
+                }
+
+                primary.VisitCount = primary.VisitorAttendances.Count;
+                primary.FollowUpStatus = CalculateFollowUpStatus(primary);
+                primary.UpdatedDate = DateTime.Now;
+
+                groupsMerged++;
+                details.Add($"{primary.FirstName} {primary.LastName} ({primary.VisitorCode})");
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                message = $"Successfully cleaned records! Removed {duplicatesRemoved} duplicate visitor record(s) across {groupsMerged} group(s).",
+                duplicatesRemoved,
+                mergedGroups = groupsMerged,
+                mergedVisitors = details
+            });
         }
 
         // =========================================================

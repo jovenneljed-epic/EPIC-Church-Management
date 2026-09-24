@@ -107,6 +107,28 @@
         background: #f8fafc;
     }
 
+.btn-scan {
+    color: #4338ca;
+    background: #eef2ff;
+    border: 1px solid #c7d2fe;
+}
+
+    .btn-scan:hover:not(:disabled) {
+        background: #e0e7ff;
+        border-color: #a5b4fc;
+    }
+
+.btn-dedup {
+    color: #0f766e;
+    background: #f0fdfa;
+    border: 1px solid #99f6e4;
+}
+
+    .btn-dedup:hover:not(:disabled) {
+        background: #ccfbf1;
+        border-color: #5eead4;
+    }
+
 /* =========================================================
    ALERTS
    ========================================================= */
