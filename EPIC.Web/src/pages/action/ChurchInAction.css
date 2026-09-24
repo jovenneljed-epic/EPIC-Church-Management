@@ -1465,6 +1465,121 @@
     font-weight: 600;
 }
 
+.cia-lsp-badge-gold {
+    background-color: #fef3c7 !important;
+    color: #92400e !important;
+    border: 1px solid #fde68a;
+}
+
+/* Category Filter Pills */
+.cia-leader-category-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.cia-category-pill {
+    background-color: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    color: #475569;
+    padding: 5px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.cia-category-pill:hover {
+    background-color: #e2e8f0;
+}
+
+.cia-category-pill.active {
+    background-color: #0f172a;
+    border-color: #0f172a;
+    color: #ffffff;
+}
+
+.cia-category-pill.pastor.active {
+    background-color: #b45309;
+    border-color: #b45309;
+    color: #ffffff;
+}
+
+.cia-category-pill.adult.active {
+    background-color: #7e22ce;
+    border-color: #7e22ce;
+    color: #ffffff;
+}
+
+.cia-category-pill.youth.active {
+    background-color: #0284c7;
+    border-color: #0284c7;
+    color: #ffffff;
+}
+
+.cia-category-pill.other.active {
+    background-color: #166534;
+    border-color: #166534;
+    color: #ffffff;
+}
+
+/* Chip Role Tag */
+.cia-chip-role-tag {
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+.cia-chip-role-tag.pastor { background: #fef3c7; color: #92400e; }
+.cia-chip-role-tag.adult { background: #f3e8ff; color: #7e22ce; }
+.cia-chip-role-tag.youth { background: #e0f2fe; color: #0369a1; }
+.cia-chip-role-tag.other { background: #dcfce7; color: #166534; }
+.cia-chip-role-tag.member { background: #f1f5f9; color: #64748b; }
+
+.cia-leader-filter-chip.active .cia-chip-role-tag {
+    background: rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+}
+
+/* Leader Role Tag in table cell */
+.cia-leader-role-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 4px;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+.cia-leader-role-tag.pastor { background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+.cia-leader-role-tag.adult { background-color: #f3e8ff; color: #7e22ce; border: 1px solid #e9d5ff; }
+.cia-leader-role-tag.youth { background-color: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+.cia-leader-role-tag.other { background-color: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+.cia-leader-role-tag.member { background-color: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
+
+/* Delegation Policy Notice */
+.cia-delegation-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    background-color: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-left: 4px solid #0284c7;
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    font-size: 12px;
+    color: #0369a1;
+    line-height: 1.4;
+}
+
 .cia-leaders-chip-row {
     display: flex;
     align-items: center;

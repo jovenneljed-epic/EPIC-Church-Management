@@ -54,6 +54,30 @@ interface ChurchInActionPageProps {
     canManage?: boolean;
 }
 
+// ------------------------------------------------------------
+// LEADER ROLE DESIGNATION HELPER
+// Separates ordained pastors and leaders from general members
+// ------------------------------------------------------------
+function getLeaderRoleTag(ministry: string = ""): { tag: "pastor" | "adult" | "youth" | "other" | "member"; label: string; icon: string } {
+    const min = (ministry || "").toUpperCase().trim();
+    if (min.includes("PASTOR")) {
+        return { tag: "pastor", label: "Assistant Pastor", icon: "👑" };
+    }
+    if (min.includes("ADULT") && min.includes("LEADER")) {
+        return { tag: "adult", label: "Adult Leader", icon: "🌟" };
+    }
+    if (min.includes("YOUTH") && min.includes("LEADER")) {
+        return { tag: "youth", label: "Youth Leader", icon: "🔥" };
+    }
+    if (min.includes("FUTURE") && min.includes("LEADER")) {
+        return { tag: "youth", label: "Youth Leader", icon: "🔥" };
+    }
+    if (min.includes("LEADER") || min.includes("MINISTER") || min.includes("COORDINATOR")) {
+        return { tag: "other", label: "Church Leader", icon: "⚡" };
+    }
+    return { tag: "member", label: "Member", icon: "👤" };
+}
+
 const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
     onBack,
     canManage = true,
@@ -67,6 +91,7 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
     const [searchTerm, setSearchTerm] = useState<string>("");
     const [statusFilter, setStatusFilter] = useState<string>("ALL");
     const [leaderFilter, setLeaderFilter] = useState<string>("ALL");
+    const [leaderCategoryTab, setLeaderCategoryTab] = useState<"ALL" | "PASTOR" | "ADULT" | "YOUTH" | "OTHER">("ALL");
 
     // Real Database Collections
     const [realVisitors, setRealVisitors] = useState<any[]>([]);
@@ -271,6 +296,68 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
     }, [delegations]);
 
     // ============================================================
+    // QUALIFIED DELEGABLE LEADERS ONLY
+    // Separates ordained pastors and leaders from general members
+    // ============================================================
+
+    const realLeaders = useMemo(() => {
+        return realMembers.filter((m) => {
+            const minUpper = (m.ministry || "").toUpperCase().trim();
+            const roleUpper = (m.role || "").toUpperCase().trim();
+            const posUpper = (m.position || "").toUpperCase().trim();
+            const combined = `${minUpper} ${roleUpper} ${posUpper}`;
+            return (
+                combined.includes("PASTOR") ||
+                combined.includes("LEADER") ||
+                combined.includes("MINISTER") ||
+                combined.includes("COORDINATOR") ||
+                combined.includes("DIRECTOR")
+            );
+        });
+    }, [realMembers]);
+
+    const assistantPastors = useMemo(() => {
+        return realLeaders.filter((m) => {
+            const minUpper = (m.ministry || "").toUpperCase().trim();
+            return minUpper.includes("PASTOR");
+        });
+    }, [realLeaders]);
+
+    const adultLeaders = useMemo(() => {
+        return realLeaders.filter((m) => {
+            const minUpper = (m.ministry || "").toUpperCase().trim();
+            return !minUpper.includes("PASTOR") && (minUpper.includes("ADULT") || minUpper === "ADULT LEADER");
+        });
+    }, [realLeaders]);
+
+    const youthLeaders = useMemo(() => {
+        return realLeaders.filter((m) => {
+            const minUpper = (m.ministry || "").toUpperCase().trim();
+            return !minUpper.includes("PASTOR") && (minUpper.includes("YOUTH") || minUpper.includes("FUTURE"));
+        });
+    }, [realLeaders]);
+
+    const otherLeaders = useMemo(() => {
+        return realLeaders.filter((m) => {
+            const minUpper = (m.ministry || "").toUpperCase().trim();
+            return (
+                !minUpper.includes("PASTOR") &&
+                !minUpper.includes("ADULT") &&
+                !minUpper.includes("YOUTH") &&
+                !minUpper.includes("FUTURE")
+            );
+        });
+    }, [realLeaders]);
+
+    const displayedLeaders = useMemo(() => {
+        if (leaderCategoryTab === "PASTOR") return assistantPastors;
+        if (leaderCategoryTab === "ADULT") return adultLeaders;
+        if (leaderCategoryTab === "YOUTH") return youthLeaders;
+        if (leaderCategoryTab === "OTHER") return otherLeaders;
+        return realLeaders;
+    }, [leaderCategoryTab, realLeaders, assistantPastors, adultLeaders, youthLeaders, otherLeaders]);
+
+    // ============================================================
     // DELEGATION ACTIONS
     // ============================================================
 
@@ -287,8 +374,8 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                 delegationNotes: existing.delegationNotes || "",
             });
         } else {
-            // Default to first member if available
-            const defaultLeader = realMembers[0];
+            // Default to first qualified leader (Assistant Pastor / Adult / Youth Leader)
+            const defaultLeader = realLeaders[0] || realMembers[0];
             setDelegationForm({
                 assignedLeaderId: defaultLeader ? defaultLeader.memberId : "",
                 assignedLeaderName: defaultLeader ? defaultLeader.fullName : "",
@@ -307,7 +394,8 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
             return;
         }
 
-        const leader = realMembers.find((m) => m.memberId === Number(delegationForm.assignedLeaderId));
+        const leader = realLeaders.find((m) => m.memberId === Number(delegationForm.assignedLeaderId))
+            || realMembers.find((m) => m.memberId === Number(delegationForm.assignedLeaderId));
         const leaderName = leader ? leader.fullName : delegationForm.assignedLeaderName || "Church Leader";
 
         churchInActionService.saveDelegation({
@@ -840,36 +928,85 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                     <div className="cia-leaders-summary-panel">
                         <div className="cia-lsp-header">
                             <div>
-                                <h4>Available Leaders & Workers ({realMembers.length} Members in Database)</h4>
-                                <p>Select a leader to view their assigned newcomer caseload, or assign leaders to newcomers below.</p>
+                                <h4>Delegated Pastoral Leaders & Workers ({realLeaders.length} Authorized Leaders)</h4>
+                                <p>
+                                    Only ordained <strong>Assistant Pastors</strong>, <strong>Adult Leaders</strong>, and <strong>Youth Leaders</strong> appear in delegated personnel. General members are excluded from delegation.
+                                </p>
                             </div>
-                            <div className="cia-lsp-badge">
+                            <div className="cia-lsp-badge cia-lsp-badge-gold">
                                 <ShieldCheck size={16} />
-                                <span>Real Database Members</span>
+                                <span>Authorized Delegated Personnel</span>
                             </div>
                         </div>
 
+                        {/* CATEGORY SELECTOR PILLS */}
+                        <div className="cia-leader-category-nav">
+                            <button
+                                type="button"
+                                className={`cia-category-pill ${leaderCategoryTab === "ALL" ? "active" : ""}`}
+                                onClick={() => setLeaderCategoryTab("ALL")}
+                            >
+                                All Leaders ({realLeaders.length})
+                            </button>
+                            <button
+                                type="button"
+                                className={`cia-category-pill pastor ${leaderCategoryTab === "PASTOR" ? "active" : ""}`}
+                                onClick={() => setLeaderCategoryTab("PASTOR")}
+                            >
+                                👑 Assistant Pastors ({assistantPastors.length})
+                            </button>
+                            <button
+                                type="button"
+                                className={`cia-category-pill adult ${leaderCategoryTab === "ADULT" ? "active" : ""}`}
+                                onClick={() => setLeaderCategoryTab("ADULT")}
+                            >
+                                🌟 Adult Leaders ({adultLeaders.length})
+                            </button>
+                            <button
+                                type="button"
+                                className={`cia-category-pill youth ${leaderCategoryTab === "YOUTH" ? "active" : ""}`}
+                                onClick={() => setLeaderCategoryTab("YOUTH")}
+                            >
+                                🔥 Youth Leaders ({youthLeaders.length})
+                            </button>
+                            {otherLeaders.length > 0 && (
+                                <button
+                                    type="button"
+                                    className={`cia-category-pill other ${leaderCategoryTab === "OTHER" ? "active" : ""}`}
+                                    onClick={() => setLeaderCategoryTab("OTHER")}
+                                >
+                                    ⚡ Other Leaders ({otherLeaders.length})
+                                </button>
+                            )}
+                        </div>
+
+                        {/* LEADER CHIPS */}
                         <div className="cia-leaders-chip-row">
                             <button
                                 type="button"
                                 className={`cia-leader-filter-chip ${leaderFilter === "ALL" ? "active" : ""}`}
                                 onClick={() => setLeaderFilter("ALL")}
                             >
-                                <span>All Leaders</span>
-                                <span className="chip-cnt">{realVisitors.length}</span>
+                                <span>All ({realVisitors.length} Newcomers)</span>
                             </button>
 
-                            {realMembers.slice(0, 10).map((m) => {
+                            {displayedLeaders.map((m) => {
                                 const assignedCount = leaderWorkloadMap[m.memberId] || 0;
+                                const roleTag = getLeaderRoleTag(m.ministry);
                                 return (
                                     <button
                                         key={m.memberId}
                                         type="button"
                                         className={`cia-leader-filter-chip ${leaderFilter === String(m.memberId) ? "active" : ""}`}
                                         onClick={() => setLeaderFilter(String(m.memberId))}
-                                        title={`${m.fullName} (${m.ministry || "Member"})`}
+                                        title={`${m.fullName} • ${roleTag.label}`}
                                     >
-                                        <span className="leader-name">{m.fullName}</span>
+                                        <span className="leader-name">
+                                            {roleTag.icon} {m.fullName}
+                                        </span>
+                                        <span className={`cia-chip-role-tag ${roleTag.tag}`}>
+                                            {roleTag.label}
+                                        </span>
                                         <span className={`chip-cnt ${assignedCount > 0 ? "active" : ""}`}>
                                             {assignedCount}
                                         </span>
@@ -948,6 +1085,15 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                                                         <div className="leader-pill">
                                                             <UserCheck size={13} />
                                                             <strong>{delegation.assignedLeaderName}</strong>
+                                                            {(() => {
+                                                                const leader = realLeaders.find((l) => l.memberId === delegation.assignedLeaderId);
+                                                                const roleTag = getLeaderRoleTag(leader?.ministry);
+                                                                return (
+                                                                    <span className={`cia-leader-role-tag ${roleTag.tag}`}>
+                                                                        {roleTag.icon} {roleTag.label}
+                                                                    </span>
+                                                                );
+                                                            })()}
                                                         </div>
                                                         <small>Priority: <strong>{delegation.priority}</strong></small>
                                                     </div>
@@ -1574,13 +1720,20 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                                 </div>
 
                                 <div className="cia-form-group full">
-                                    <label>Select Leader / Worker (From Real Church Members) *</label>
+                                    <label>Select Delegated Leader (Assistant Pastors & Leaders Only) *</label>
+                                    <div className="cia-delegation-notice">
+                                        <span>🛡️</span>
+                                        <div>
+                                            <strong>Delegation Policy:</strong> Only Assistant Pastors, Adult Leaders, and Youth Leaders are authorized to receive delegated souls. General church members are excluded.
+                                        </div>
+                                    </div>
                                     <select
                                         required
                                         value={delegationForm.assignedLeaderId}
                                         onChange={(e) => {
                                             const leaderId = e.target.value;
-                                            const member = realMembers.find((m) => m.memberId === Number(leaderId));
+                                            const member = realLeaders.find((m) => m.memberId === Number(leaderId))
+                                                || realMembers.find((m) => m.memberId === Number(leaderId));
                                             setDelegationForm({
                                                 ...delegationForm,
                                                 assignedLeaderId: leaderId ? Number(leaderId) : "",
@@ -1588,18 +1741,62 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                                             });
                                         }}
                                     >
-                                        <option value="">-- Choose Church Leader / Discipler --</option>
-                                        {realMembers.map((m) => {
-                                            const count = leaderWorkloadMap[m.memberId] || 0;
-                                            return (
-                                                <option key={m.memberId} value={m.memberId}>
-                                                    {m.fullName} ({m.memberCode || `ID #${m.memberId}`}) — {m.ministry || "Member"} [{count} active assigned]
-                                                </option>
-                                            );
-                                        })}
+                                        <option value="">-- Choose Delegated Leader (Pastors & Leaders Only) --</option>
+                                        
+                                        {assistantPastors.length > 0 && (
+                                            <optgroup label="👑 ASSISTANT PASTORS">
+                                                {assistantPastors.map((m) => {
+                                                    const count = leaderWorkloadMap[m.memberId] || 0;
+                                                    return (
+                                                        <option key={m.memberId} value={m.memberId}>
+                                                            {m.fullName} ({m.memberCode || `ID #${m.memberId}`}) — Assistant Pastor [{count} active assigned]
+                                                        </option>
+                                                    );
+                                                })}
+                                            </optgroup>
+                                        )}
+
+                                        {adultLeaders.length > 0 && (
+                                            <optgroup label="🌟 ADULT LEADERS">
+                                                {adultLeaders.map((m) => {
+                                                    const count = leaderWorkloadMap[m.memberId] || 0;
+                                                    return (
+                                                        <option key={m.memberId} value={m.memberId}>
+                                                            {m.fullName} ({m.memberCode || `ID #${m.memberId}`}) — Adult Leader [{count} active assigned]
+                                                        </option>
+                                                    );
+                                                })}
+                                            </optgroup>
+                                        )}
+
+                                        {youthLeaders.length > 0 && (
+                                            <optgroup label="🔥 YOUTH LEADERS">
+                                                {youthLeaders.map((m) => {
+                                                    const count = leaderWorkloadMap[m.memberId] || 0;
+                                                    return (
+                                                        <option key={m.memberId} value={m.memberId}>
+                                                            {m.fullName} ({m.memberCode || `ID #${m.memberId}`}) — Youth Leader [{count} active assigned]
+                                                        </option>
+                                                    );
+                                                })}
+                                            </optgroup>
+                                        )}
+
+                                        {otherLeaders.length > 0 && (
+                                            <optgroup label="⚡ OTHER CHURCH LEADERS">
+                                                {otherLeaders.map((m) => {
+                                                    const count = leaderWorkloadMap[m.memberId] || 0;
+                                                    return (
+                                                        <option key={m.memberId} value={m.memberId}>
+                                                            {m.fullName} ({m.memberCode || `ID #${m.memberId}`}) — {m.ministry} [{count} active assigned]
+                                                        </option>
+                                                    );
+                                                })}
+                                            </optgroup>
+                                        )}
                                     </select>
                                     <small className="form-hint">
-                                        💡 Choose a leader who can build relationship and disciple this newcomer.
+                                        💡 Choose an ordained pastor or department leader who will disciple this newcomer.
                                     </small>
                                 </div>
 
@@ -1898,12 +2095,26 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                                             value={discipleshipForm.disciplerName || ""}
                                             onChange={(e) => setDiscipleshipForm({ ...discipleshipForm, disciplerName: e.target.value })}
                                         >
-                                            <option value="">-- Select Member / Leader --</option>
-                                            {realMembers.map((m) => (
-                                                <option key={m.memberId} value={m.fullName}>
-                                                    {m.fullName} ({m.memberCode || `#${m.memberId}`})
-                                                </option>
-                                            ))}
+                                            <option value="">-- Select Discipler / Mentor --</option>
+                                            <optgroup label="👑 Ordained Pastors & Department Leaders">
+                                                {realLeaders.map((m) => {
+                                                    const roleTag = getLeaderRoleTag(m.ministry);
+                                                    return (
+                                                        <option key={m.memberId} value={m.fullName}>
+                                                            {roleTag.icon} {m.fullName} — {roleTag.label} ({m.memberCode})
+                                                        </option>
+                                                    );
+                                                })}
+                                            </optgroup>
+                                            <optgroup label="👥 General Congregation Members">
+                                                {realMembers
+                                                    .filter((m) => !realLeaders.some((l) => l.memberId === m.memberId))
+                                                    .map((m) => (
+                                                        <option key={m.memberId} value={m.fullName}>
+                                                            {m.fullName} ({m.memberCode || `#${m.memberId}`})
+                                                        </option>
+                                                    ))}
+                                            </optgroup>
                                         </select>
                                     </div>
                                     <div className="cia-form-group">

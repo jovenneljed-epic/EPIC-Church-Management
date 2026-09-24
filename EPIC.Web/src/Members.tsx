@@ -439,6 +439,20 @@ const Members: React.FC = () => {
     const [ministryFilter, setMinistryFilter] =
         useState<string>("ALL");
 
+    const [roleCategoryFilter, setRoleCategoryFilter] =
+        useState<"ALL" | "LEADERS" | "MEMBERS">("ALL");
+
+    const isChurchLeader = (member: Member): boolean => {
+        const minUpper = (member.ministry || "").toUpperCase().trim();
+        return (
+            minUpper.includes("PASTOR") ||
+            minUpper.includes("LEADER") ||
+            minUpper.includes("MINISTER") ||
+            minUpper.includes("COORDINATOR") ||
+            minUpper.includes("DIRECTOR")
+        );
+    };
+
     const [showModal, setShowModal] =
         useState<boolean>(false);
 
@@ -638,6 +652,14 @@ const Members: React.FC = () => {
                 "FEMALE"
         ).length;
 
+    const leaderCount = useMemo(() => {
+        return members.filter(isChurchLeader).length;
+    }, [members]);
+
+    const regularMemberCount = useMemo(() => {
+        return members.filter(m => !isChurchLeader(m)).length;
+    }, [members]);
+
     /* =====================================================
        MINISTRY LIST
     ===================================================== */
@@ -733,10 +755,16 @@ const Members: React.FC = () => {
                         ) ===
                         ministryFilter;
 
+                    const matchesRoleCategory =
+                        roleCategoryFilter === "ALL" ||
+                        (roleCategoryFilter === "LEADERS" && isChurchLeader(member)) ||
+                        (roleCategoryFilter === "MEMBERS" && !isChurchLeader(member));
+
                     return (
                         matchesSearch &&
                         matchesStatus &&
-                        matchesMinistry
+                        matchesMinistry &&
+                        matchesRoleCategory
                     );
                 }
             );
@@ -745,7 +773,8 @@ const Members: React.FC = () => {
             members,
             search,
             statusFilter,
-            ministryFilter
+            ministryFilter,
+            roleCategoryFilter
         ]);
 
     /* =====================================================
@@ -1648,6 +1677,40 @@ const Members: React.FC = () => {
                 <div className="members-filter-group">
 
                     <label>
+                        ROSTER TYPE
+                    </label>
+
+                    <select
+                        value={
+                            roleCategoryFilter
+                        }
+                        onChange={
+                            event =>
+                                setRoleCategoryFilter(
+                                    event.target.value as "ALL" | "LEADERS" | "MEMBERS"
+                                )
+                        }
+                    >
+
+                        <option value="ALL">
+                            All Congregation ({members.length})
+                        </option>
+
+                        <option value="LEADERS">
+                            👑 Church Leaders ({leaderCount})
+                        </option>
+
+                        <option value="MEMBERS">
+                            👥 Regular Members ({regularMemberCount})
+                        </option>
+
+                    </select>
+
+                </div>
+
+                <div className="members-filter-group">
+
+                    <label>
                         STATUS
                     </label>
 
@@ -1980,14 +2043,64 @@ const Members: React.FC = () => {
 
                                             <td>
 
-                                                <span className="ministry-badge">
-
-                                                    {
-                                                        member.ministry ||
-                                                        "General"
+                                                {(() => {
+                                                    const min = (member.ministry || "").toUpperCase().trim();
+                                                    if (min.includes("ASSISTANT PASTOR") || min.includes("PASTOR")) {
+                                                        return (
+                                                            <span
+                                                                className="ministry-badge leader-pastor-badge"
+                                                                title="Ordained Assistant Pastor (Delegable Leader)"
+                                                            >
+                                                                👑 Assistant Pastor
+                                                            </span>
+                                                        );
                                                     }
-
-                                                </span>
+                                                    if (min.includes("ADULT LEADER") || (min.includes("ADULT") && min.includes("LEADER"))) {
+                                                        return (
+                                                            <span
+                                                                className="ministry-badge leader-adult-badge"
+                                                                title="Adult Ministry Leader (Delegable Leader)"
+                                                            >
+                                                                🌟 Adult Leader
+                                                            </span>
+                                                        );
+                                                    }
+                                                    if (min.includes("YOUTH") && min.includes("LEADER")) {
+                                                        return (
+                                                            <span
+                                                                className="ministry-badge leader-youth-badge"
+                                                                title="Youth Ministry Leader (Delegable Leader)"
+                                                            >
+                                                                🔥 Youth Leader
+                                                            </span>
+                                                        );
+                                                    }
+                                                    if (min.includes("FUTURE") && min.includes("LEADER")) {
+                                                        return (
+                                                            <span
+                                                                className="ministry-badge leader-youth-badge"
+                                                                title="Youth Ministry Leader (Delegable Leader)"
+                                                            >
+                                                                🔥 Youth Leader
+                                                            </span>
+                                                        );
+                                                    }
+                                                    if (min.includes("LEADER")) {
+                                                        return (
+                                                            <span
+                                                                className="ministry-badge leader-other-badge"
+                                                                title="Church Leader (Delegable Leader)"
+                                                            >
+                                                                ⚡ {member.ministry}
+                                                            </span>
+                                                        );
+                                                    }
+                                                    return (
+                                                        <span className="ministry-badge">
+                                                            {member.ministry || "General Member"}
+                                                        </span>
+                                                    );
+                                                })()}
 
                                             </td>
 
@@ -2622,11 +2735,12 @@ const Members: React.FC = () => {
                                         <div className="form-field">
 
                                             <label>
-                                                MINISTRY
+                                                MINISTRY / ROLE
                                             </label>
 
                                             <input
                                                 type="text"
+                                                list="members-ministry-datalist"
                                                 disabled={
                                                     formDisabled
                                                 }
@@ -2640,8 +2754,20 @@ const Members: React.FC = () => {
                                                             event.target.value
                                                         )
                                                 }
-                                                placeholder="e.g. EPIC V3"
+                                                placeholder="e.g. ASSISTANT PASTOR, ADULT LEADER"
                                             />
+
+                                            <datalist id="members-ministry-datalist">
+                                                <option value="ASSISTANT PASTOR">👑 Assistant Pastor (Delegable Leader)</option>
+                                                <option value="ADULT LEADER">🌟 Adult Leader (Delegable Leader)</option>
+                                                <option value="YOUTH DEPARTMENT LEADER">🔥 Youth Department Leader (Delegable Leader)</option>
+                                                <option value="YOUTH FUTURE LEADER">🔥 Youth Future Leader (Delegable Leader)</option>
+                                                <option value="ADULT DEPARTMENT">Adult Department (Regular Member)</option>
+                                                <option value="YOUTH DEPARTMENT">Youth Department (Regular Member)</option>
+                                                <option value="CHILDREN DEPARTMENT">Children Department</option>
+                                                <option value="WORSHIP TEAM DEPARTMENT">Worship Team Department</option>
+                                                <option value="ADMINISTRATION">Administration</option>
+                                            </datalist>
 
                                         </div>
 

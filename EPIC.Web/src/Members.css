@@ -607,7 +607,7 @@
 
 .ministry-badge {
     display: inline-block;
-    max-width: 120px;
+    max-width: 140px;
     padding: 5px 8px;
     overflow: hidden;
     border-radius: 6px;
@@ -617,6 +617,34 @@
     text-overflow: ellipsis;
     font-size: 10px;
     font-weight: 700;
+}
+
+.ministry-badge.leader-pastor-badge {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fde68a;
+    font-weight: 800;
+}
+
+.ministry-badge.leader-adult-badge {
+    background: #f3e8ff;
+    color: #7e22ce;
+    border: 1px solid #e9d5ff;
+    font-weight: 800;
+}
+
+.ministry-badge.leader-youth-badge {
+    background: #e0f2fe;
+    color: #0369a1;
+    border: 1px solid #bae6fd;
+    font-weight: 800;
+}
+
+.ministry-badge.leader-other-badge {
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+    font-weight: 800;
 }
 
 .member-status-badge {
