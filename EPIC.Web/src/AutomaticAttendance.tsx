@@ -15,7 +15,9 @@ import {
     CheckCircle2,
     XCircle,
     RotateCcw,
-    Filter
+    Filter,
+    Bell,
+    Edit3
 } from "lucide-react";
 
 const statuses = ["EARLY", "PRESENT", "LATE", "ABSENT", "EXCUSED"] as const;
@@ -148,6 +150,18 @@ export default function AutomaticAttendance() {
     const [message, setMessage] = useState("");
     const [refresh, setRefresh] = useState(0);
 
+    // Automatic reminder modal state & refs
+    const [showReminderAlert, setShowReminderAlert] = useState(false);
+    const [alertServiceInfo, setAlertServiceInfo] = useState<{
+        serviceName: string;
+        serviceDate: string;
+        pendingCount: number;
+        churchServiceId: number;
+    } | null>(null);
+    const dismissedAlerts = useRef<Set<number>>(new Set());
+    const editorRef = useRef<HTMLElement | null>(null);
+    const tableCardRef = useRef<HTMLDivElement | null>(null);
+
     // Custom dropdown states
     const [isServiceDropdownOpen, setIsServiceDropdownOpen] = useState(false);
     const [serviceSearchQuery, setServiceSearchQuery] = useState("");
@@ -171,7 +185,19 @@ export default function AutomaticAttendance() {
         void request<Service[] | { services: Service[] }>("/ChurchServices", { signal: controller.signal })
             .then(data => {
                 if (!controller.signal.aborted) {
-                    setServices((Array.isArray(data) ? data : data.services || []).sort((a, b) => b.serviceDate.localeCompare(a.serviceDate)));
+                    const list = (Array.isArray(data) ? data : data.services || []).sort((a, b) => b.serviceDate.localeCompare(a.serviceDate));
+                    setServices(list);
+
+                    // Auto-select today's or most recent past service if none selected yet
+                    if (!serviceId && list.length > 0) {
+                        const today = new Date().toISOString().slice(0, 10);
+                        const todayService = list.find(s => s.serviceDate?.slice(0, 10) === today && s.status !== "CANCELLED");
+                        const pastService = list.find(s => s.serviceDate?.slice(0, 10) <= today && s.status !== "CANCELLED");
+                        const defaultService = todayService || pastService || list[0];
+                        if (defaultService) {
+                            setServiceId(String(defaultService.churchServiceId));
+                        }
+                    }
                 }
             })
             .catch(err => {
@@ -240,6 +266,55 @@ export default function AutomaticAttendance() {
         const matchesStatus = statusFilter === "ALL" || row.status === statusFilter;
         return matchesSearch && matchesStatus;
     });
+
+    const isEventDatePassedOrToday = useMemo(() => {
+        if (!roster?.service) return false;
+        const serviceDay = roster.service.serviceDate?.slice(0, 10);
+        const today = new Date().toISOString().slice(0, 10);
+        const rawStatus = (roster.service.status || "").toUpperCase();
+        return (serviceDay && serviceDay <= today) || ["IN_PROGRESS", "LIVE", "COMPLETED"].includes(rawStatus);
+    }, [roster]);
+
+    // Automatic reminder evaluation: trigger modal if scheduled date arrived/passed & has unrecorded members
+    useEffect(() => {
+        if (!roster?.service || !roster.canUpdate) return;
+        const s = roster.service;
+        const serviceDay = s.serviceDate?.slice(0, 10);
+        const today = new Date().toISOString().slice(0, 10);
+        const rawStatus = (s.status || "").toUpperCase();
+        const dateReached = (serviceDay && serviceDay <= today) || ["IN_PROGRESS", "LIVE", "COMPLETED"].includes(rawStatus);
+
+        const unrecorded = roster.attendance.filter(r => r.status === "PENDING").length;
+
+        if (dateReached && unrecorded > 0 && !dismissedAlerts.current.has(s.churchServiceId)) {
+            setAlertServiceInfo({
+                serviceName: s.serviceName,
+                serviceDate: s.serviceDate,
+                pendingCount: unrecorded,
+                churchServiceId: s.churchServiceId,
+            });
+            setShowReminderAlert(true);
+        }
+    }, [roster]);
+
+    const handleCompleteAttendanceNow = () => {
+        if (alertServiceInfo) {
+            dismissedAlerts.current.add(alertServiceInfo.churchServiceId);
+        }
+        setShowReminderAlert(false);
+        setStatusFilter("PENDING");
+        setMessage(`Showing ${alertServiceInfo?.pendingCount ?? ""} unrecorded member(s). Click "Update" beside any member to record their attendance.`);
+        setTimeout(() => {
+            tableCardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 150);
+    };
+
+    const handleDismissReminder = () => {
+        if (alertServiceInfo) {
+            dismissedAlerts.current.add(alertServiceInfo.churchServiceId);
+        }
+        setShowReminderAlert(false);
+    };
 
     const update = async () => {
         if (!editing || saving) return;
@@ -517,33 +592,53 @@ export default function AutomaticAttendance() {
 
             {/* EDIT / CORRECTION SECTION WITH 1-CLICK STATUS BUTTONS */}
             {editing && (
-                <section className="attendance-control-card" aria-label="Attendance correction" style={{ background: "#f8fafc", border: "1px solid #cbd5e1" }}>
-                    <div className="control-group">
-                        <strong style={{ fontSize: 15, color: "#0f172a" }}>Update Attendance for {editing.fullName}</strong>
-                        <p style={{ margin: "2px 0 8px", fontSize: 12, color: "#64748b" }}>
-                            Current recorded status: <span className={`attendance-badge status-${editing.status.toLowerCase()}`}>{getStatusIcon(editing.status)} {label(editing.status)}</span>
-                        </p>
-
-                        <div className="quick-correction-container">
-                            <span style={{ fontSize: 11, fontWeight: 750, color: "#475569" }}>SELECT NEW STATUS:</span>
-                            <div className="quick-correction-buttons">
-                                {statuses.map(s => (
-                                    <button
-                                        key={s}
-                                        type="button"
-                                        className={`quick-status-btn status-${s.toLowerCase()} ${correction === s ? "selected" : ""}`}
-                                        onClick={() => setCorrection(s)}
-                                        disabled={saving}
-                                    >
-                                        {getStatusIcon(s)}
-                                        <span>{label(s)}</span>
-                                    </button>
-                                ))}
+                <section
+                    ref={editorRef}
+                    className="attendance-control-card attendance-editor-card"
+                    aria-label="Attendance correction"
+                >
+                    <div className="editor-card-header">
+                        <div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <strong style={{ fontSize: 15, color: "#0f172a" }}>Update Attendance for {editing.fullName}</strong>
+                                <span className="member-code" style={{ fontSize: 11 }}>{editing.memberCode}</span>
                             </div>
+                            <p style={{ margin: "4px 0 0", fontSize: 12, color: "#64748b", display: "flex", alignItems: "center", gap: 6 }}>
+                                Current recorded status:
+                                <span className={`attendance-badge status-${editing.status.toLowerCase()}`}>
+                                    {getStatusIcon(editing.status)} {label(editing.status)}
+                                </span>
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            className="editor-close-btn"
+                            onClick={() => setEditing(null)}
+                            title="Close editor"
+                        >
+                            ✕
+                        </button>
+                    </div>
+
+                    <div className="quick-correction-container">
+                        <span style={{ fontSize: 11, fontWeight: 750, color: "#475569" }}>SELECT NEW STATUS:</span>
+                        <div className="quick-correction-buttons">
+                            {statuses.map(s => (
+                                <button
+                                    key={s}
+                                    type="button"
+                                    className={`quick-status-btn status-${s.toLowerCase()} ${correction === s ? "selected" : ""}`}
+                                    onClick={() => setCorrection(s)}
+                                    disabled={saving}
+                                >
+                                    {getStatusIcon(s)}
+                                    <span>{label(s)}</span>
+                                </button>
+                            ))}
                         </div>
                     </div>
 
-                    <div style={{ display: "flex", alignItems: "flex-end", gap: 10 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 14 }}>
                         <button
                             className="save-attendance-btn"
                             disabled={saving || correction === editing.status}
@@ -563,7 +658,7 @@ export default function AutomaticAttendance() {
             )}
 
             {/* COLOR-FRIENDLY MEMBER ATTENDANCE TABLE CARD */}
-            <div className="attendance-table-card">
+            <div className="attendance-table-card" ref={tableCardRef}>
                 <div className="table-card-header">
                     <div>
                         <h3>Member Attendance Records</h3>
@@ -580,6 +675,55 @@ export default function AutomaticAttendance() {
                         </button>
                     )}
                 </div>
+
+                {/* PERSISTENT PRIORITY REMINDER BANNER FOR INCOMPLETE ATTENDANCE */}
+                {roster && isEventDatePassedOrToday && pendingCount > 0 && (
+                    <div className="attendance-priority-banner" role="alert">
+                        <div className="priority-banner-left">
+                            <div className="priority-banner-icon-pulse">
+                                <AlertTriangle size={18} />
+                            </div>
+                            <div className="priority-banner-text">
+                                <div className="priority-banner-title">
+                                    Attendance Priority: {pendingCount} Member{pendingCount > 1 ? "s" : ""} Not Yet Recorded
+                                </div>
+                                <div className="priority-banner-sub">
+                                    The scheduled date for <strong>{roster.service.serviceName}</strong> ({formatServiceDate(roster.service.serviceDate)}) has arrived or concluded. Please complete attendance checking.
+                                </div>
+                            </div>
+                        </div>
+                        <div className="priority-banner-actions">
+                            {statusFilter !== "PENDING" ? (
+                                <button
+                                    type="button"
+                                    className="priority-banner-btn"
+                                    onClick={() => setStatusFilter("PENDING")}
+                                >
+                                    <Filter size={12} />
+                                    Filter Unrecorded ({pendingCount})
+                                </button>
+                            ) : (
+                                <button
+                                    type="button"
+                                    className="priority-banner-btn secondary"
+                                    onClick={() => setStatusFilter("ALL")}
+                                >
+                                    Show All Members
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* CELEBRATORY COMPLETE BANNER WHEN ALL ATTENDANCE IS RECORDED */}
+                {roster && isEventDatePassedOrToday && pendingCount === 0 && rows.length > 0 && (
+                    <div className="attendance-complete-banner">
+                        <CheckCircle2 size={18} color="#059669" />
+                        <div>
+                            <strong>Attendance Checking Complete!</strong> All {rows.length} member{rows.length > 1 ? "s" : ""} for this event are fully recorded.
+                        </div>
+                    </div>
+                )}
 
                 {/* STATUS FILTER PILL TABS BAR */}
                 {roster && (
@@ -652,18 +796,20 @@ export default function AutomaticAttendance() {
                         <table className="attendance-table">
                             <thead>
                                 <tr>
-                                    <th>#</th>
+                                    <th style={{ width: 45, textAlign: "center" }}>#</th>
                                     <th>MEMBER</th>
-                                    <th>CODE</th>
-                                    <th>MINISTRY</th>
+                                    <th style={{ width: 110 }}>CODE</th>
+                                    <th style={{ width: 130 }}>MINISTRY</th>
                                     <th>ATTENDANCE STATUS</th>
-                                    <th>ACTION</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {filtered.map((row, index) => (
-                                    <tr key={row.memberId} className={`member-row status-${row.status.toLowerCase()}`}>
-                                        <td>{index + 1}</td>
+                                    <tr
+                                        key={row.memberId}
+                                        className={`member-row status-${row.status.toLowerCase()} ${editing?.memberId === row.memberId ? "row-is-editing" : ""}`}
+                                    >
+                                        <td style={{ textAlign: "center", fontWeight: 700, color: "#94a3b8" }}>{index + 1}</td>
                                         <td>
                                             <div className="member-name-cell">
                                                 <div className="member-avatar">
@@ -678,31 +824,40 @@ export default function AutomaticAttendance() {
                                                 {row.ministry || "General"}
                                             </span>
                                         </td>
-                                        <td>
-                                            <span className={`attendance-badge status-${row.status.toLowerCase()}`}>
-                                                {getStatusIcon(row.status)}
-                                                <span>{label(row.status)}</span>
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <button
-                                                className="attendance-refresh-btn"
-                                                style={{ padding: "5px 12px", fontSize: 11 }}
-                                                disabled={!roster?.canUpdate || saving}
-                                                onClick={() => {
-                                                    setEditing(row);
-                                                    setCorrection(row.status === "PENDING" ? "EXCUSED" : row.status);
-                                                    setMessage("");
-                                                }}
-                                            >
-                                                Update
-                                            </button>
+                                        <td className="status-action-cell">
+                                            <div className="status-action-inline">
+                                                <span className={`attendance-badge status-${row.status.toLowerCase()}`}>
+                                                    {getStatusIcon(row.status)}
+                                                    <span>{label(row.status)}</span>
+                                                </span>
+                                                {roster?.canUpdate && (
+                                                    <button
+                                                        type="button"
+                                                        className={`attendance-inline-update-btn ${editing?.memberId === row.memberId ? "active" : ""}`}
+                                                        disabled={saving}
+                                                        onClick={() => {
+                                                            if (editing?.memberId === row.memberId) {
+                                                                setEditing(null);
+                                                            } else {
+                                                                setEditing(row);
+                                                                setCorrection(row.status === "PENDING" ? "PRESENT" : row.status);
+                                                                setMessage("");
+                                                                editorRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                                                            }
+                                                        }}
+                                                        title={editing?.memberId === row.memberId ? "Cancel editing" : `Update attendance status for ${row.fullName}`}
+                                                    >
+                                                        <Edit3 size={11} />
+                                                        <span>{editing?.memberId === row.memberId ? "Editing" : "Update"}</span>
+                                                    </button>
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
                                 {!filtered.length && (
                                     <tr>
-                                        <td colSpan={6} className="empty-attendance">
+                                        <td colSpan={5} className="empty-attendance">
                                             No matching members found{statusFilter !== "ALL" ? ` with status "${statusFilter}"` : ""}.
                                         </td>
                                     </tr>
@@ -712,6 +867,75 @@ export default function AutomaticAttendance() {
                     </div>
                 )}
             </div>
+
+            {/* AUTOMATIC ATTENDANCE PRIORITY REMINDER MODAL */}
+            {showReminderAlert && alertServiceInfo && (
+                <div className="attendance-alert-overlay" role="dialog" aria-modal="true" aria-labelledby="alert-dialog-title">
+                    <div className="attendance-alert-modal">
+                        <button
+                            type="button"
+                            className="alert-modal-close"
+                            onClick={handleDismissReminder}
+                            title="Dismiss reminder"
+                        >
+                            <X size={18} />
+                        </button>
+
+                        <div className="alert-modal-header">
+                            <div className="alert-modal-icon-badge">
+                                <Bell size={24} className="bell-ring-icon" />
+                            </div>
+                            <div>
+                                <span className="alert-priority-tag">ATTENDANCE PRIORITY ALERT</span>
+                                <h2 id="alert-dialog-title">Complete Attendance Checking</h2>
+                            </div>
+                        </div>
+
+                        <div className="alert-modal-body">
+                            <div className="alert-event-card">
+                                <div className="alert-event-top">
+                                    <span className="alert-event-date">
+                                        <Calendar size={13} />
+                                        {formatServiceDate(alertServiceInfo.serviceDate)}
+                                    </span>
+                                    <span className="alert-event-badge">Schedule Arrived / Passed</span>
+                                </div>
+                                <div className="alert-event-title">{alertServiceInfo.serviceName}</div>
+                            </div>
+
+                            <div className="alert-message-box">
+                                <div className="alert-pending-highlight">
+                                    <Hourglass size={18} />
+                                    <span>
+                                        <strong>{alertServiceInfo.pendingCount}</strong> member{alertServiceInfo.pendingCount > 1 ? "s have" : " has"} unrecorded attendance!
+                                    </span>
+                                </div>
+                                <p>
+                                    The scheduled date of this event has arrived or concluded. Attendance checking is a vital church priority to track spiritual lifecycle and ensure every member is accounted for.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="alert-modal-actions">
+                            <button
+                                type="button"
+                                className="alert-primary-action-btn"
+                                onClick={handleCompleteAttendanceNow}
+                            >
+                                <CheckCircle2 size={16} />
+                                Complete Attendance Now ({alertServiceInfo.pendingCount} Unrecorded)
+                            </button>
+                            <button
+                                type="button"
+                                className="alert-secondary-action-btn"
+                                onClick={handleDismissReminder}
+                            >
+                                Remind Later
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
