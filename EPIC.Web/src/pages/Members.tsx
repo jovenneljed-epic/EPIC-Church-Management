@@ -2090,6 +2090,7 @@ function MemberForm({
                                 <optgroup label="👑 Pastoral & Ordained Leaders (Delegable Leaders)">
                                     <option value="ASSISTANT PASTOR">👑 Assistant Pastor (Delegable Leader)</option>
                                     <option value="ADULT LEADER">🌟 Adult Leader (Delegable Leader)</option>
+                                    <option value="YOUNG ADULT LEADER">💫 Young Adult Leader (Delegable Leader)</option>
                                     <option value="YOUTH DEPARTMENT LEADER">🔥 Youth Department Leader (Delegable Leader)</option>
                                     <option value="YOUTH FUTURE LEADER">🔥 Youth Future Leader (Delegable Leader)</option>
                                     <option value="CHURCH LEADER">⚡ Church Leader / Coordinator (Delegable Leader)</option>
@@ -2097,6 +2098,7 @@ function MemberForm({
 
                                 <optgroup label="👥 Ministry Departments (Members & Workers)">
                                     <option value="ADULT DEPARTMENT">🌟 Adult Department (Regular Member)</option>
+                                    <option value="YOUNG ADULT DEPARTMENT">💫 Young Adult Department (Regular Member)</option>
                                     <option value="YOUTH DEPARTMENT">🔥 Youth Department (Regular Member)</option>
                                     <option value="CHILDREN DEPARTMENT">👶 Children Department</option>
                                     <option value="WORSHIP TEAM DEPARTMENT">🎵 Worship Team Department</option>
@@ -2107,8 +2109,8 @@ function MemberForm({
                                 </optgroup>
 
                                 {form.ministry && ![
-                                    "ASSISTANT PASTOR", "ADULT LEADER", "YOUTH DEPARTMENT LEADER", "YOUTH FUTURE LEADER", "CHURCH LEADER",
-                                    "ADULT DEPARTMENT", "YOUTH DEPARTMENT", "CHILDREN DEPARTMENT", "WORSHIP TEAM DEPARTMENT",
+                                    "ASSISTANT PASTOR", "ADULT LEADER", "YOUNG ADULT LEADER", "YOUTH DEPARTMENT LEADER", "YOUTH FUTURE LEADER", "CHURCH LEADER",
+                                    "ADULT DEPARTMENT", "YOUNG ADULT DEPARTMENT", "YOUTH DEPARTMENT", "CHILDREN DEPARTMENT", "WORSHIP TEAM DEPARTMENT",
                                     "USHERING & HOSPITALITY", "MEDIA & PRODUCTION", "EVANGELISM & OUTREACH", "ADMINISTRATION"
                                 ].includes(form.ministry.trim().toUpperCase()) && (
                                     <optgroup label="📌 Current Assigned Ministry">

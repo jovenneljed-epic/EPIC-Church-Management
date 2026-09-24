@@ -2138,6 +2138,7 @@
 
 .cia-dept-card.pastoral.active { border-color: #eab308; background-color: #fefce8; }
 .cia-dept-card.adult.active { border-color: #0284c7; background-color: #f0f9ff; }
+.cia-dept-card.young-adult.active { border-color: #06b6d4; background-color: #ecfeff; }
 .cia-dept-card.youth.active { border-color: #f97316; background-color: #fff7ed; }
 .cia-dept-card.children.active { border-color: #10b981; background-color: #f0fdf4; }
 .cia-dept-card.worship.active { border-color: #8b5cf6; background-color: #faf5ff; }

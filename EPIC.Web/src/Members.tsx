@@ -66,21 +66,48 @@ interface MembersResponse {
    STANDARD MINISTRY ROLES
 ========================================================= */
 
-const ALL_STANDARD_MINISTRY_ROLES = new Set<string>([
-    "ASSISTANT PASTOR",
-    "ADULT LEADER",
-    "YOUTH DEPARTMENT LEADER",
-    "YOUTH FUTURE LEADER",
-    "CHURCH LEADER",
-    "ADULT DEPARTMENT",
-    "YOUTH DEPARTMENT",
-    "CHILDREN DEPARTMENT",
-    "WORSHIP TEAM DEPARTMENT",
-    "USHERING & HOSPITALITY",
-    "MEDIA & PRODUCTION",
-    "EVANGELISM & OUTREACH",
-    "ADMINISTRATION",
-]);
+export interface MinistryRoleOption {
+    value: string;
+    label: string;
+    category: "LEADERS" | "DEPARTMENTS";
+}
+
+export const STANDARD_MINISTRY_ROLES: MinistryRoleOption[] = [
+    // Pastoral & Ordained Leaders (Delegable Leaders)
+    { value: "ASSISTANT PASTOR", label: "👑 Assistant Pastor (Delegable Leader)", category: "LEADERS" },
+    { value: "ADULT LEADER", label: "🌟 Adult Leader (Delegable Leader)", category: "LEADERS" },
+    { value: "YOUNG ADULT LEADER", label: "💫 Young Adult Leader (Delegable Leader)", category: "LEADERS" },
+    { value: "YOUTH DEPARTMENT LEADER", label: "🔥 Youth Department Leader (Delegable Leader)", category: "LEADERS" },
+    { value: "YOUTH FUTURE LEADER", label: "🔥 Youth Future Leader (Delegable Leader)", category: "LEADERS" },
+    { value: "CHURCH LEADER", label: "⚡ Church Leader / Coordinator (Delegable Leader)", category: "LEADERS" },
+
+    // Ministry Departments (Members & Workers)
+    { value: "ADULT DEPARTMENT", label: "🌟 Adult Department (Regular Member)", category: "DEPARTMENTS" },
+    { value: "YOUNG ADULT DEPARTMENT", label: "💫 Young Adult Department (Regular Member)", category: "DEPARTMENTS" },
+    { value: "YOUTH DEPARTMENT", label: "🔥 Youth Department (Regular Member)", category: "DEPARTMENTS" },
+    { value: "CHILDREN DEPARTMENT", label: "👶 Children Department", category: "DEPARTMENTS" },
+    { value: "WORSHIP TEAM DEPARTMENT", label: "🎵 Worship Team Department", category: "DEPARTMENTS" },
+    { value: "USHERING & HOSPITALITY", label: "🤝 Ushering & Hospitality", category: "DEPARTMENTS" },
+    { value: "MEDIA & PRODUCTION", label: "🎥 Media & Production", category: "DEPARTMENTS" },
+    { value: "EVANGELISM & OUTREACH", label: "🌍 Evangelism & Outreach", category: "DEPARTMENTS" },
+    { value: "ADMINISTRATION", label: "📋 Administration", category: "DEPARTMENTS" },
+];
+
+export const ALL_STANDARD_MINISTRY_ROLES = new Set<string>(
+    STANDARD_MINISTRY_ROLES.map(r => r.value)
+);
+
+export function normalizeMinistry(ministry?: string | null): string {
+    if (!ministry) return "";
+    const trimmed = ministry.trim().toUpperCase();
+    if (trimmed === "YOUNG ADULTS DEPARTMENT" || trimmed === "YOUNG ADULTS" || trimmed === "YOUNG ADULT") {
+        return "YOUNG ADULT DEPARTMENT";
+    }
+    if (trimmed === "ADULTS DEPARTMENT" || trimmed === "ADULTS" || trimmed === "ADULT") {
+        return "ADULT DEPARTMENT";
+    }
+    return trimmed;
+}
 
 /* =========================================================
    EMPTY FORM
@@ -484,9 +511,6 @@ const Members: React.FC = () => {
             createEmptyForm()
         );
 
-    const [isCustomMinistry, setIsCustomMinistry] =
-        useState<boolean>(false);
-
     const [message, setMessage] =
         useState<string>("");
 
@@ -684,33 +708,6 @@ const Members: React.FC = () => {
     }, [members]);
 
     /* =====================================================
-       MINISTRY LIST
-    ===================================================== */
-
-    const ministries =
-        useMemo(() => {
-
-            const values =
-                members
-                    .map(
-                        member =>
-                            member.ministry
-                                ?.trim()
-                    )
-                    .filter(
-                        (
-                            ministry
-                        ): ministry is string =>
-                            Boolean(ministry)
-                    );
-
-            return Array.from(
-                new Set(values)
-            ).sort();
-
-        }, [members]);
-
-    /* =====================================================
        FILTERED MEMBERS
     ===================================================== */
 
@@ -772,11 +769,8 @@ const Members: React.FC = () => {
 
                     const matchesMinistry =
                         ministryFilter === "ALL" ||
-                        (
-                            member.ministry ||
-                            ""
-                        ) ===
-                        ministryFilter;
+                        normalizeMinistry(member.ministry) === ministryFilter ||
+                        (member.ministry || "").trim().toUpperCase() === ministryFilter;
 
                     const matchesRoleCategory =
                         roleCategoryFilter === "ALL" ||
@@ -833,7 +827,6 @@ const Members: React.FC = () => {
         }
 
         setEditingMember(null);
-        setIsCustomMinistry(false);
 
         setForm({
             ...createEmptyForm(),
@@ -857,7 +850,6 @@ const Members: React.FC = () => {
         setEditingMember(
             member
         );
-        setIsCustomMinistry(false);
 
         setForm({
 
@@ -948,7 +940,6 @@ const Members: React.FC = () => {
 
         setShowModal(false);
         setEditingMember(null);
-        setIsCustomMinistry(false);
         setForm(
             createEmptyForm()
         );
@@ -1790,22 +1781,21 @@ const Members: React.FC = () => {
                             All Ministries
                         </option>
 
-                        {ministries.map(
-                            ministry => (
-
-                                <option
-                                    key={
-                                        ministry
-                                    }
-                                    value={
-                                        ministry
-                                    }
-                                >
-                                    {ministry}
+                        <optgroup label="👑 Pastoral & Ordained Leaders (Delegable Leaders)">
+                            {STANDARD_MINISTRY_ROLES.filter(r => r.category === "LEADERS").map(r => (
+                                <option key={r.value} value={r.value}>
+                                    {r.label}
                                 </option>
+                            ))}
+                        </optgroup>
 
-                            )
-                        )}
+                        <optgroup label="👥 Ministry Departments (Members & Workers)">
+                            {STANDARD_MINISTRY_ROLES.filter(r => r.category === "DEPARTMENTS").map(r => (
+                                <option key={r.value} value={r.value}>
+                                    {r.label}
+                                </option>
+                            ))}
+                        </optgroup>
 
                     </select>
 
@@ -2769,22 +2759,15 @@ const Members: React.FC = () => {
                                                     formDisabled
                                                 }
                                                 value={
-                                                    isCustomMinistry
-                                                        ? "__CUSTOM__"
-                                                        : ALL_STANDARD_MINISTRY_ROLES.has((form.ministry || "").trim().toUpperCase())
-                                                            ? (form.ministry || "").trim().toUpperCase()
+                                                    ALL_STANDARD_MINISTRY_ROLES.has((form.ministry || "").trim().toUpperCase())
+                                                        ? (form.ministry || "").trim().toUpperCase()
+                                                        : normalizeMinistry(form.ministry) && ALL_STANDARD_MINISTRY_ROLES.has(normalizeMinistry(form.ministry))
+                                                            ? normalizeMinistry(form.ministry)
                                                             : (form.ministry || "")
                                                 }
                                                 onChange={
                                                     event => {
-                                                        const val = event.target.value;
-                                                        if (val === "__CUSTOM__") {
-                                                            setIsCustomMinistry(true);
-                                                            handleInputChange("ministry", "");
-                                                        } else {
-                                                            setIsCustomMinistry(false);
-                                                            handleInputChange("ministry", val);
-                                                        }
+                                                        handleInputChange("ministry", event.target.value);
                                                     }
                                                 }
                                             >
@@ -2793,62 +2776,31 @@ const Members: React.FC = () => {
                                                 </option>
 
                                                 <optgroup label="👑 Pastoral & Ordained Leaders (Delegable Leaders)">
-                                                    <option value="ASSISTANT PASTOR">👑 Assistant Pastor (Delegable Leader)</option>
-                                                    <option value="ADULT LEADER">🌟 Adult Leader (Delegable Leader)</option>
-                                                    <option value="YOUTH DEPARTMENT LEADER">🔥 Youth Department Leader (Delegable Leader)</option>
-                                                    <option value="YOUTH FUTURE LEADER">🔥 Youth Future Leader (Delegable Leader)</option>
-                                                    <option value="CHURCH LEADER">⚡ Church Leader / Coordinator (Delegable Leader)</option>
+                                                    {STANDARD_MINISTRY_ROLES.filter(r => r.category === "LEADERS").map(r => (
+                                                        <option key={r.value} value={r.value}>
+                                                            {r.label}
+                                                        </option>
+                                                    ))}
                                                 </optgroup>
 
                                                 <optgroup label="👥 Ministry Departments (Members & Workers)">
-                                                    <option value="ADULT DEPARTMENT">🌟 Adult Department (Regular Member)</option>
-                                                    <option value="YOUTH DEPARTMENT">🔥 Youth Department (Regular Member)</option>
-                                                    <option value="CHILDREN DEPARTMENT">👶 Children Department</option>
-                                                    <option value="WORSHIP TEAM DEPARTMENT">🎵 Worship Team Department</option>
-                                                    <option value="USHERING & HOSPITALITY">🤝 Ushering & Hospitality</option>
-                                                    <option value="MEDIA & PRODUCTION">🎥 Media & Production</option>
-                                                    <option value="EVANGELISM & OUTREACH">🌍 Evangelism & Outreach</option>
-                                                    <option value="ADMINISTRATION">📋 Administration</option>
+                                                    {STANDARD_MINISTRY_ROLES.filter(r => r.category === "DEPARTMENTS").map(r => (
+                                                        <option key={r.value} value={r.value}>
+                                                            {r.label}
+                                                        </option>
+                                                    ))}
                                                 </optgroup>
 
                                                 {form.ministry &&
                                                     !ALL_STANDARD_MINISTRY_ROLES.has(form.ministry.trim().toUpperCase()) &&
-                                                    !isCustomMinistry && (
-                                                        <optgroup label="📌 Current Assigned Ministry">
+                                                    !ALL_STANDARD_MINISTRY_ROLES.has(normalizeMinistry(form.ministry)) && (
+                                                        <optgroup label="📌 Current Assigned Ministry (Legacy)">
                                                             <option value={form.ministry}>
                                                                 {form.ministry} (Current Assigned)
                                                             </option>
                                                         </optgroup>
                                                     )}
-
-                                                <option value="__CUSTOM__">
-                                                    ➕ Enter Other / Custom Role...
-                                                </option>
                                             </select>
-
-                                            {isCustomMinistry && (
-                                                <input
-                                                    type="text"
-                                                    disabled={
-                                                        formDisabled
-                                                    }
-                                                    value={
-                                                        form.ministry
-                                                    }
-                                                    onChange={
-                                                        event =>
-                                                            handleInputChange(
-                                                                "ministry",
-                                                                event.target.value
-                                                            )
-                                                    }
-                                                    placeholder="Type custom ministry role name..."
-                                                    style={{
-                                                        marginTop: "6px"
-                                                    }}
-                                                    autoFocus
-                                                />
-                                            )}
 
                                         </div>
 

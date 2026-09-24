@@ -92,7 +92,7 @@ function getLeaderRoleTag(ministry: string = ""): { tag: "pastor" | "adult" | "y
 // Categorizes congregation into official church departments
 // ------------------------------------------------------------
 function getMemberDepartment(ministry: string = ""): {
-    deptKey: "pastoral" | "adult" | "youth" | "children" | "worship" | "general";
+    deptKey: "pastoral" | "adult" | "young_adult" | "youth" | "children" | "worship" | "general";
     name: string;
     icon: string;
     badgeClass: string;
@@ -100,6 +100,9 @@ function getMemberDepartment(ministry: string = ""): {
     const min = (ministry || "").toUpperCase().trim();
     if (min.includes("PASTOR")) {
         return { deptKey: "pastoral", name: "Pastoral Staff", icon: "👑", badgeClass: "pastor" };
+    }
+    if (min.includes("YOUNG ADULT") || min.includes("YOUNG ADULTS")) {
+        return { deptKey: "young_adult", name: "Young Adult Department", icon: "💫", badgeClass: "young-adult" };
     }
     if (min.includes("ADULT")) {
         return { deptKey: "adult", name: "Adult Department", icon: "🌟", badgeClass: "adult" };
@@ -435,6 +438,7 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
     const departmentCounts = useMemo(() => {
         let pastoral = 0;
         let adult = 0;
+        let young_adult = 0;
         let youth = 0;
         let children = 0;
         let worship = 0;
@@ -443,6 +447,7 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
         realMembers.forEach((m) => {
             const dept = getMemberDepartment(m.ministry);
             if (dept.deptKey === "pastoral") pastoral++;
+            else if (dept.deptKey === "young_adult") young_adult++;
             else if (dept.deptKey === "adult") adult++;
             else if (dept.deptKey === "youth") youth++;
             else if (dept.deptKey === "children") children++;
@@ -450,7 +455,7 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
             else general++;
         });
 
-        return { pastoral, adult, youth, children, worship, general };
+        return { pastoral, adult, young_adult, youth, children, worship, general };
     }, [realMembers]);
 
     // Flock belonging to selected leader or selected category
@@ -1758,6 +1763,18 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                         </div>
 
                         <div
+                            className={`cia-dept-card young-adult ${memberDeptFilter === "YOUNG_ADULT" ? "active" : ""}`}
+                            onClick={() => setMemberDeptFilter(memberDeptFilter === "YOUNG_ADULT" ? "ALL" : "YOUNG_ADULT")}
+                        >
+                            <div className="cia-dept-card-icon">💫</div>
+                            <div className="cia-dept-card-info">
+                                <span className="cia-dept-name">Young Adult Department</span>
+                                <strong className="cia-dept-count">{departmentCounts.young_adult} Members</strong>
+                                <small>Young Adults & Professionals</small>
+                            </div>
+                        </div>
+
+                        <div
                             className={`cia-dept-card youth ${memberDeptFilter === "YOUTH" ? "active" : ""}`}
                             onClick={() => setMemberDeptFilter(memberDeptFilter === "YOUTH" ? "ALL" : "YOUTH")}
                         >
@@ -1830,6 +1847,7 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                                 <option value="ALL">All Departments ({realMembers.length})</option>
                                 <option value="PASTORAL">👑 Pastoral Staff ({departmentCounts.pastoral})</option>
                                 <option value="ADULT">🌟 Adult Department ({departmentCounts.adult})</option>
+                                <option value="YOUNG_ADULT">💫 Young Adult Department ({departmentCounts.young_adult})</option>
                                 <option value="YOUTH">🔥 Youth Department ({departmentCounts.youth})</option>
                                 <option value="CHILDREN">👶 Children's Ministry ({departmentCounts.children})</option>
                                 <option value="WORSHIP">🎵 Worship & Music ({departmentCounts.worship})</option>
