@@ -1,0 +1,941 @@
+/* =========================================================
+   EPIC SMILE - FACIAL RECOGNITION ATTENDANCE SCANNER
+   Inspired by Philippine DepEd SMILE Attendance Kiosk
+========================================================= */
+
+:root {
+    --smile-primary: #0284c7;
+    --smile-primary-glow: rgba(2, 132, 199, 0.45);
+    --smile-accent: #10b981;
+    --smile-accent-glow: rgba(16, 185, 129, 0.5);
+    --smile-gold: #f59e0b;
+    --smile-gold-glow: rgba(245, 158, 11, 0.45);
+    --smile-bg-dark: #090d16;
+    --smile-surface: #111827;
+    --smile-card: #1f2937;
+    --smile-text: #f9fafb;
+    --smile-text-muted: #9ca3af;
+    --smile-border: #374151;
+}
+
+.smile-kiosk-page {
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100vh - 70px);
+    background: radial-gradient(circle at 50% 20%, #0f172a 0%, #060911 100%);
+    color: var(--smile-text);
+    position: relative;
+    overflow-x: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+}
+
+.smile-kiosk-page.fullscreen-mode {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 99999;
+    min-height: 100vh;
+}
+
+/* =========================================================
+   TOP HEADER / CONTROL BAR
+========================================================= */
+
+.smile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 24px;
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    z-index: 20;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.smile-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.smile-brand-icon {
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, #0ea5e9, #10b981);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    box-shadow: 0 0 16px var(--smile-primary-glow);
+    animation: smileIconPulse 3s infinite ease-in-out;
+}
+
+@keyframes smileIconPulse {
+    0%, 100% { transform: scale(1); filter: brightness(1); }
+    50% { transform: scale(1.05); filter: brightness(1.2); }
+}
+
+.smile-brand-text h1 {
+    font-size: 1.15rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    margin: 0;
+    background: linear-gradient(135deg, #38bdf8, #34d399);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.smile-brand-tag {
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 20px;
+    background: rgba(14, 165, 233, 0.2);
+    color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    text-transform: uppercase;
+}
+
+.smile-brand-text p {
+    font-size: 0.75rem;
+    color: var(--smile-text-muted);
+    margin: 2px 0 0;
+}
+
+.smile-service-selector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(30, 41, 59, 0.8);
+    padding: 6px 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.smile-service-selector select {
+    background: transparent;
+    color: #f1f5f9;
+    border: none;
+    font-size: 0.85rem;
+    font-weight: 600;
+    outline: none;
+    cursor: pointer;
+    max-width: 240px;
+}
+
+.smile-service-selector select option {
+    background: #0f172a;
+    color: #fff;
+}
+
+.smile-clock-badge {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    background: rgba(15, 23, 42, 0.6);
+    padding: 4px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.smile-clock-time {
+    font-size: 1.05rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: #38bdf8;
+    letter-spacing: 0.05em;
+}
+
+.smile-clock-date {
+    font-size: 0.7rem;
+    color: #94a3b8;
+}
+
+.smile-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.smile-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.smile-btn-secondary {
+    background: rgba(51, 65, 85, 0.7);
+    color: #f1f5f9;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.smile-btn-secondary:hover {
+    background: rgba(71, 85, 105, 0.9);
+    transform: translateY(-1px);
+}
+
+.smile-btn-primary {
+    background: linear-gradient(135deg, #0284c7, #0d9488);
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(2, 132, 199, 0.4);
+}
+
+.smile-btn-primary:hover {
+    background: linear-gradient(135deg, #0369a1, #0f766e);
+    box-shadow: 0 6px 18px rgba(2, 132, 199, 0.6);
+    transform: translateY(-1px);
+}
+
+.smile-btn-icon {
+    padding: 8px;
+    border-radius: 8px;
+    background: rgba(51, 65, 85, 0.7);
+    color: #f1f5f9;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.smile-btn-icon:hover {
+    background: rgba(71, 85, 105, 0.9);
+    transform: scale(1.05);
+}
+
+.smile-btn-icon.active {
+    background: rgba(14, 165, 233, 0.25);
+    color: #38bdf8;
+    border-color: rgba(56, 189, 248, 0.5);
+}
+
+/* =========================================================
+   MAIN SCANNER BODY
+========================================================= */
+
+.smile-body {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+    padding: 16px;
+    gap: 16px;
+}
+
+@media (max-width: 1024px) {
+    .smile-body {
+        flex-direction: column;
+        overflow-y: auto;
+    }
+}
+
+/* =========================================================
+   CAMERA VIEWPORT & SCANNER STAGE
+========================================================= */
+
+.smile-viewport-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    min-height: 480px;
+    background: #000;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+}
+
+.smile-video-element {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    position: absolute;
+    top: 0;
+    left: 0;
+    transition: transform 0.3s ease;
+}
+
+.smile-video-element.mirrored {
+    transform: scaleX(-1);
+}
+
+/* Dark cinematic vignette */
+.smile-viewport-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.7);
+    background: radial-gradient(circle at center, transparent 35%, rgba(0, 0, 0, 0.65) 90%);
+}
+
+/* =========================================================
+   DEPED-STYLE BIOMETRIC OVAL RETICLE GUIDE
+========================================================= */
+
+.smile-reticle-wrap {
+    position: absolute;
+    width: 320px;
+    height: 400px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@media (max-width: 640px) {
+    .smile-reticle-wrap {
+        width: 260px;
+        height: 330px;
+    }
+}
+
+/* The glowing biometric oval */
+.smile-reticle-oval {
+    width: 100%;
+    height: 100%;
+    border-radius: 50% / 46%;
+    border: 3px dashed rgba(56, 189, 248, 0.7);
+    box-shadow: 0 0 24px rgba(14, 165, 233, 0.3), inset 0 0 24px rgba(14, 165, 233, 0.2);
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.smile-reticle-oval.aligned {
+    border-style: solid;
+    border-color: rgba(52, 211, 153, 0.8);
+    box-shadow: 0 0 35px rgba(16, 185, 129, 0.5), inset 0 0 30px rgba(16, 185, 129, 0.3);
+}
+
+.smile-reticle-oval.smiling {
+    border-color: #10b981;
+    border-width: 4px;
+    box-shadow: 0 0 50px rgba(16, 185, 129, 0.8), inset 0 0 40px rgba(16, 185, 129, 0.4);
+    animation: smileReticlePulse 1.2s infinite ease-in-out;
+}
+
+@keyframes smileReticlePulse {
+    0%, 100% { transform: scale(1); filter: brightness(1); }
+    50% { transform: scale(1.02); filter: brightness(1.3); }
+}
+
+/* Biometric corner markers */
+.smile-corner {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    border: 3px solid #38bdf8;
+    pointer-events: none;
+}
+
+.smile-corner.tl { top: -8px; left: -8px; border-right: none; border-bottom: none; border-top-left-radius: 8px; }
+.smile-corner.tr { top: -8px; right: -8px; border-left: none; border-bottom: none; border-top-right-radius: 8px; }
+.smile-corner.bl { bottom: -8px; left: -8px; border-right: none; border-top: none; border-bottom-left-radius: 8px; }
+.smile-corner.br { bottom: -8px; right: -8px; border-left: none; border-top: none; border-bottom-right-radius: 8px; }
+
+/* Animated Sweeping Laser Scan Line */
+.smile-laser-line {
+    position: absolute;
+    left: 10%;
+    right: 10%;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, #38bdf8, #34d399, #38bdf8, transparent);
+    box-shadow: 0 0 16px #38bdf8, 0 0 24px #34d399;
+    border-radius: 50%;
+    animation: laserScanSweep 2.4s infinite ease-in-out;
+}
+
+.smile-reticle-oval.smiling .smile-laser-line {
+    background: linear-gradient(90deg, transparent, #10b981, #6ee7b7, #10b981, transparent);
+    box-shadow: 0 0 20px #10b981, 0 0 30px #34d399;
+    animation-duration: 1.6s;
+}
+
+@keyframes laserScanSweep {
+    0% { top: 12%; opacity: 0.3; }
+    50% { top: 88%; opacity: 1; }
+    100% { top: 12%; opacity: 0.3; }
+}
+
+/* =========================================================
+   LIVE SMILE METER & STATUS HUD
+========================================================= */
+
+.smile-hud-bottom {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 520px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    z-index: 10;
+}
+
+.smile-instruction-pill {
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 8px 20px;
+    border-radius: 30px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #f8fafc;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+    letter-spacing: 0.02em;
+    text-align: center;
+}
+
+.smile-instruction-pill.highlight {
+    background: rgba(6, 78, 59, 0.9);
+    border-color: rgba(52, 211, 153, 0.6);
+    color: #a7f3d0;
+    box-shadow: 0 0 24px rgba(16, 185, 129, 0.5);
+    animation: pillBounce 0.4s ease;
+}
+
+@keyframes pillBounce {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.04); }
+}
+
+.smile-gauge-bar-wrap {
+    width: 100%;
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(8px);
+    border-radius: 20px;
+    padding: 10px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.smile-gauge-labels {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.smile-gauge-score {
+    color: #38bdf8;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.85rem;
+}
+
+.smile-gauge-track {
+    width: 100%;
+    height: 12px;
+    background: rgba(30, 41, 59, 0.9);
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.smile-gauge-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #38bdf8 0%, #f59e0b 60%, #10b981 100%);
+    border-radius: 8px;
+    transition: width 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.6);
+}
+
+.smile-gauge-threshold-line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 60%;
+    width: 2px;
+    background: #fff;
+    opacity: 0.7;
+    z-index: 2;
+}
+
+/* =========================================================
+   INSTANT CELEBRATION / ATTENDANCE CONFIRMATION CARD
+========================================================= */
+
+.smile-confirmation-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(3, 7, 18, 0.85);
+    backdrop-filter: blur(16px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 30;
+    animation: fadeInOverlay 0.25s ease-out;
+}
+
+@keyframes fadeInOverlay {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.smile-confirmation-card {
+    background: linear-gradient(145deg, #1e293b, #0f172a);
+    border: 2px solid rgba(52, 211, 153, 0.6);
+    border-radius: 24px;
+    padding: 36px 32px;
+    width: 90%;
+    max-width: 440px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    box-shadow: 0 0 60px rgba(16, 185, 129, 0.4), 0 20px 40px rgba(0, 0, 0, 0.8);
+    position: relative;
+    animation: cardZoomIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes cardZoomIn {
+    0% { transform: scale(0.85) translateY(20px); opacity: 0; }
+    100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.smile-confirm-check-badge {
+    width: 76px;
+    height: 76px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #10b981, #059669);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    box-shadow: 0 0 35px rgba(16, 185, 129, 0.7);
+    margin-bottom: 18px;
+    animation: checkBounce 0.5s ease;
+}
+
+@keyframes checkBounce {
+    0% { transform: scale(0.4); }
+    50% { transform: scale(1.15); }
+    100% { transform: scale(1); }
+}
+
+.smile-member-photo-frame {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    border: 4px solid #10b981;
+    overflow: hidden;
+    margin-bottom: 14px;
+    background: #334155;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.smile-member-photo-frame img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.smile-member-photo-frame .smile-avatar-initials {
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: #94a3b8;
+}
+
+.smile-confirm-name {
+    font-size: 1.45rem;
+    font-weight: 800;
+    color: #fff;
+    margin: 0 0 4px;
+}
+
+.smile-confirm-code {
+    font-size: 0.8rem;
+    color: #94a3b8;
+    margin-bottom: 12px;
+}
+
+.smile-confirm-badges {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.smile-status-badge {
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 20px;
+    text-transform: uppercase;
+}
+
+.smile-status-badge.EARLY {
+    background: rgba(14, 165, 233, 0.25);
+    color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.5);
+}
+
+.smile-status-badge.PRESENT {
+    background: rgba(16, 185, 129, 0.25);
+    color: #34d399;
+    border: 1px solid rgba(52, 211, 153, 0.5);
+}
+
+.smile-status-badge.LATE {
+    background: rgba(245, 158, 11, 0.25);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.5);
+}
+
+.smile-ministry-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 20px;
+    background: rgba(71, 85, 105, 0.5);
+    color: #cbd5e1;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.smile-confirm-msg {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #34d399;
+    margin: 0 0 6px;
+}
+
+.smile-confirm-time {
+    font-size: 0.85rem;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* =========================================================
+   LIVE ACTIVITY SIDEBAR
+========================================================= */
+
+.smile-sidebar {
+    width: 360px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    background: rgba(15, 23, 42, 0.7);
+    backdrop-filter: blur(12px);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 16px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+
+@media (max-width: 1024px) {
+    .smile-sidebar {
+        width: 100%;
+    }
+}
+
+.smile-stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.smile-stat-box {
+    background: rgba(30, 41, 59, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.smile-stat-num {
+    font-size: 1.35rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    color: #fff;
+}
+
+.smile-stat-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-top: 2px;
+}
+
+.smile-feed-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: rgba(30, 41, 59, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+    overflow: hidden;
+    min-height: 260px;
+}
+
+.smile-feed-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    background: rgba(15, 23, 42, 0.6);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.smile-feed-header h3 {
+    font-size: 0.85rem;
+    font-weight: 700;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #e2e8f0;
+}
+
+.smile-live-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #10b981;
+    text-transform: uppercase;
+}
+
+.smile-pulse-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 10px #10b981;
+    animation: livePulse 1.5s infinite;
+}
+
+@keyframes livePulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(1.3); }
+}
+
+.smile-feed-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 380px;
+}
+
+.smile-feed-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: rgba(15, 23, 42, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    transition: all 0.2s;
+    animation: slideInItem 0.25s ease-out;
+}
+
+@keyframes slideInItem {
+    from { transform: translateX(15px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+.smile-feed-item:hover {
+    background: rgba(30, 41, 59, 0.7);
+}
+
+.smile-feed-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #334155;
+    overflow: hidden;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #cbd5e1;
+}
+
+.smile-feed-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.smile-feed-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.smile-feed-name {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #f1f5f9;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.smile-feed-sub {
+    font-size: 0.7rem;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+}
+
+.smile-feed-empty {
+    padding: 30px 16px;
+    text-align: center;
+    color: #64748b;
+    font-size: 0.8rem;
+}
+
+/* =========================================================
+   MODALS (ENROLLMENT, SETTINGS, MANUAL SEARCH)
+========================================================= */
+
+.smile-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 99999;
+    padding: 16px;
+    animation: fadeInOverlay 0.2s ease;
+}
+
+.smile-modal {
+    background: #0f172a;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 18px;
+    width: 100%;
+    max-width: 600px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+}
+
+.smile-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.smile-modal-header h2 {
+    font-size: 1.05rem;
+    font-weight: 800;
+    margin: 0;
+    color: #f8fafc;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.smile-modal-body {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.smile-search-input {
+    width: 100%;
+    padding: 10px 14px;
+    background: #1e293b;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    color: #fff;
+    font-size: 0.88rem;
+    outline: none;
+    margin-bottom: 14px;
+}
+
+.smile-search-input:focus {
+    border-color: #38bdf8;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+}
+
+.smile-member-enroll-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: rgba(30, 41, 59, 0.5);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.smile-member-enroll-row:hover {
+    background: rgba(30, 41, 59, 0.85);
+}
+
+.smile-enroll-badge {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 12px;
+}
+
+.smile-enroll-badge.enrolled {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+    border: 1px solid rgba(52, 211, 153, 0.4);
+}
+
+.smile-enroll-badge.pending {
+    background: rgba(148, 163, 184, 0.2);
+    color: #94a3b8;
+    border: 1px solid rgba(148, 163, 184, 0.3);
+}

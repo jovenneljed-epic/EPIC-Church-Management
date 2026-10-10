@@ -353,14 +353,37 @@ export default function AutomaticAttendance() {
                     <h1>Attendance Management</h1>
                     <p>Automatic records with admin corrections.</p>
                 </div>
-                <button
-                    className="attendance-refresh-btn"
-                    disabled={!serviceId || loading || saving}
-                    onClick={() => { setError(""); setRefresh(n => n + 1); }}
-                >
-                    <RotateCcw size={14} style={{ display: "inline-block", marginRight: 6, verticalAlign: "-2px" }} />
-                    Refresh
-                </button>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                    <a
+                        href="/attendance/smile-scanner"
+                        className="attendance-kiosk-launch-btn"
+                        style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 7,
+                            background: "linear-gradient(135deg, #0284c7, #059669)",
+                            color: "#fff",
+                            padding: "8px 16px",
+                            borderRadius: "8px",
+                            fontWeight: 700,
+                            fontSize: "0.82rem",
+                            textDecoration: "none",
+                            boxShadow: "0 2px 10px rgba(2, 132, 199, 0.35)",
+                            cursor: "pointer"
+                        }}
+                    >
+                        <span style={{ fontSize: "1.1rem" }}>😊</span>
+                        <span>Launch SMILE Face Scanner</span>
+                    </a>
+                    <button
+                        className="attendance-refresh-btn"
+                        disabled={!serviceId || loading || saving}
+                        onClick={() => { setError(""); setRefresh(n => n + 1); }}
+                    >
+                        <RotateCcw size={14} style={{ display: "inline-block", marginRight: 6, verticalAlign: "-2px" }} />
+                        Refresh
+                    </button>
+                </div>
             </div>
 
             {error && <div className="attendance-error" role="alert">{error}</div>}

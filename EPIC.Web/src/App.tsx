@@ -52,6 +52,7 @@ import ClientPayment from "./pages/ClientPayment";
 import Dashboard from "./Dashboard";
 import Members from "./Members";
 import Attendance from "./Attendance";
+import EpicSmileScanner from "./EpicSmileScanner";
 
 import ChurchServicesPage from "./pages/ChurchServicesPage";
 import EventManagementPage from "./pages/EventManagementPage";
@@ -125,6 +126,7 @@ type Page =
   | "lesson"
   | "members"
   | "attendance"
+  | "smile-scanner"
   | "member-attendance-report"
   | "services"
   | "events"
@@ -213,6 +215,7 @@ const PAGE_ROUTES: Record<Page, string> = {
 
     members: "/members",
     attendance: "/attendance",
+    "smile-scanner": "/attendance/smile-scanner",
     "member-attendance-report": "/member-attendance-report",
 
     services: "/services",
@@ -307,6 +310,9 @@ const PAGE_TITLES: Record<Page, string> = {
     attendance:
         "Attendance Management",
 
+    "smile-scanner":
+        "SMILE Face Scanner",
+
     ministries:
         "Ministries Management",
 
@@ -387,6 +393,9 @@ const PAGE_SUBTITLES: Record<Page, string> = {
 
     attendance:
         "Monitor and record church attendance",
+
+    "smile-scanner":
+        "DepEd SMILE-inspired biometric facial recognition attendance scanner",
 
     ministries:
         "Manage ministries and ministry assignments",
@@ -1146,6 +1155,13 @@ const NAVIGATION_SECTIONS:
                 page: "attendance",
                 label: "Attendance",
                 icon: "✓",
+                permission:
+                    "Attendance",
+            },
+            {
+                page: "smile-scanner",
+                label: "SMILE Face Scanner",
+                icon: "😊",
                 permission:
                     "Attendance",
             },
@@ -3220,6 +3236,14 @@ case "attendance":
     return renderProtectedPage(
         "Attendance",
         <Attendance />
+    );
+
+
+case "smile-scanner":
+
+    return renderProtectedPage(
+        "SMILE Face Scanner",
+        <EpicSmileScanner />
     );
 
 
