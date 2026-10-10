@@ -48,6 +48,14 @@ interface Roster {
     attendance: Row[];
 }
 
+function getTodayLocalDate(): string {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+}
+
 type ServiceCategory = "TODAY" | "UPCOMING" | "COMPLETED" | "CANCELLED";
 
 function getServiceCategory(service: Service): ServiceCategory {
@@ -56,7 +64,7 @@ function getServiceCategory(service: Service): ServiceCategory {
     if (rawStatus === "COMPLETED") return "COMPLETED";
 
     const serviceDay = service.serviceDate?.slice(0, 10);
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getTodayLocalDate();
     if (serviceDay === today || rawStatus === "IN_PROGRESS" || rawStatus === "LIVE") {
         return "TODAY";
     }
@@ -165,7 +173,7 @@ export default function AutomaticAttendance() {
     // Custom dropdown states
     const [isServiceDropdownOpen, setIsServiceDropdownOpen] = useState(false);
     const [serviceSearchQuery, setServiceSearchQuery] = useState("");
-    const [serviceCategoryFilter, setServiceCategoryFilter] = useState<"ALL" | "UPCOMING" | "COMPLETED" | "CANCELLED">("ALL");
+    const [serviceCategoryFilter, setServiceCategoryFilter] = useState<"TODAY" | "ALL" | "UPCOMING" | "COMPLETED" | "CANCELLED">("TODAY");
     const dropdownRef = useRef<HTMLDivElement | null>(null);
     const updateController = useRef<AbortController | null>(null);
 
@@ -190,7 +198,7 @@ export default function AutomaticAttendance() {
 
                     // Auto-select today's or most recent past service if none selected yet
                     if (!serviceId && list.length > 0) {
-                        const today = new Date().toISOString().slice(0, 10);
+                        const today = getTodayLocalDate();
                         const todayService = list.find(s => s.serviceDate?.slice(0, 10) === today && s.status !== "CANCELLED");
                         const pastService = list.find(s => s.serviceDate?.slice(0, 10) <= today && s.status !== "CANCELLED");
                         const defaultService = todayService || pastService || list[0];
@@ -231,14 +239,26 @@ export default function AutomaticAttendance() {
     }, [services, serviceId]);
 
     // Filtered services for dropdown
-    const upcomingCount = useMemo(() => services.filter(s => ["UPCOMING", "TODAY"].includes(getServiceCategory(s))).length, [services]);
+    const todayCount = useMemo(() => services.filter(s => getServiceCategory(s) === "TODAY").length, [services]);
+    const upcomingCount = useMemo(() => services.filter(s => getServiceCategory(s) === "UPCOMING").length, [services]);
     const completedCount = useMemo(() => services.filter(s => getServiceCategory(s) === "COMPLETED").length, [services]);
     const cancelledCount = useMemo(() => services.filter(s => getServiceCategory(s) === "CANCELLED").length, [services]);
+
+    // Fallback if no services scheduled today
+    useEffect(() => {
+        if (services.length > 0) {
+            const hasToday = services.some(s => getServiceCategory(s) === "TODAY");
+            if (!hasToday && serviceCategoryFilter === "TODAY") {
+                setServiceCategoryFilter("ALL");
+            }
+        }
+    }, [services]);
 
     const filteredServices = useMemo(() => {
         return services.filter(s => {
             const cat = getServiceCategory(s);
-            if (serviceCategoryFilter === "UPCOMING" && cat !== "UPCOMING" && cat !== "TODAY") return false;
+            if (serviceCategoryFilter === "TODAY" && cat !== "TODAY") return false;
+            if (serviceCategoryFilter === "UPCOMING" && cat !== "UPCOMING") return false;
             if (serviceCategoryFilter === "COMPLETED" && cat !== "COMPLETED") return false;
             if (serviceCategoryFilter === "CANCELLED" && cat !== "CANCELLED") return false;
 
@@ -270,7 +290,7 @@ export default function AutomaticAttendance() {
     const isEventDatePassedOrToday = useMemo(() => {
         if (!roster?.service) return false;
         const serviceDay = roster.service.serviceDate?.slice(0, 10);
-        const today = new Date().toISOString().slice(0, 10);
+        const today = getTodayLocalDate();
         const rawStatus = (roster.service.status || "").toUpperCase();
         return (serviceDay && serviceDay <= today) || ["IN_PROGRESS", "LIVE", "COMPLETED"].includes(rawStatus);
     }, [roster]);
@@ -280,7 +300,7 @@ export default function AutomaticAttendance() {
         if (!roster?.service || !roster.canUpdate) return;
         const s = roster.service;
         const serviceDay = s.serviceDate?.slice(0, 10);
-        const today = new Date().toISOString().slice(0, 10);
+        const today = getTodayLocalDate();
         const rawStatus = (s.status || "").toUpperCase();
         const dateReached = (serviceDay && serviceDay <= today) || ["IN_PROGRESS", "LIVE", "COMPLETED"].includes(rawStatus);
 
@@ -467,10 +487,10 @@ export default function AutomaticAttendance() {
                                 <div className="service-dropdown-filter-tabs">
                                     <button
                                         type="button"
-                                        className={`service-filter-tab ${serviceCategoryFilter === "ALL" ? "active" : ""}`}
-                                        onClick={() => setServiceCategoryFilter("ALL")}
+                                        className={`service-filter-tab tab-today ${serviceCategoryFilter === "TODAY" ? "active" : ""}`}
+                                        onClick={() => setServiceCategoryFilter("TODAY")}
                                     >
-                                        All ({services.length})
+                                        ⚡ Today ({todayCount})
                                     </button>
                                     <button
                                         type="button"
@@ -478,6 +498,13 @@ export default function AutomaticAttendance() {
                                         onClick={() => setServiceCategoryFilter("UPCOMING")}
                                     >
                                         📅 Upcoming ({upcomingCount})
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`service-filter-tab ${serviceCategoryFilter === "ALL" ? "active" : ""}`}
+                                        onClick={() => setServiceCategoryFilter("ALL")}
+                                    >
+                                        All ({services.length})
                                     </button>
                                     <button
                                         type="button"

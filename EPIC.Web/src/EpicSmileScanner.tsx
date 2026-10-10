@@ -86,12 +86,21 @@ async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T
     return body as T;
 }
 
+function getTodayLocalDate(): string {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+}
+
 export default function EpicSmileScanner() {
     // ---------------------------------------------------------
     // SERVICES & ATTENDANCE DATA
     // ---------------------------------------------------------
     const [services, setServices] = useState<Service[]>([]);
     const [serviceId, setServiceId] = useState<string>("");
+    const [showAllServices, setShowAllServices] = useState<boolean>(false);
     const [membersRoster, setMembersRoster] = useState<MemberRow[]>([]);
     const [scannedRecords, setScannedRecords] = useState<ScannedRecord[]>([]);
     const [enrolledProfiles, setEnrolledProfiles] = useState<EnrolledFaceProfile[]>([]);
@@ -174,6 +183,13 @@ export default function EpicSmileScanner() {
         return () => clearInterval(timer);
     }, []);
 
+    // Today's local date (YYYY-MM-DD) avoiding UTC timezone shift
+    const todayLocalDate = useMemo(() => getTodayLocalDate(), []);
+
+    const todayServices = useMemo(() => {
+        return services.filter(s => s.serviceDate?.slice(0, 10) === todayLocalDate && s.status !== "CANCELLED");
+    }, [services, todayLocalDate]);
+
     // ---------------------------------------------------------
     // LOAD SERVICES
     // ---------------------------------------------------------
@@ -184,8 +200,8 @@ export default function EpicSmileScanner() {
                 if (!mounted) return;
                 const list = (Array.isArray(data) ? data : data.services || []).sort((a, b) => b.serviceDate.localeCompare(a.serviceDate));
                 setServices(list);
-                if (list.length > 0 && !serviceId) {
-                    const today = new Date().toISOString().slice(0, 10);
+                if (list.length > 0) {
+                    const today = getTodayLocalDate();
                     const todayService = list.find(s => s.serviceDate?.slice(0, 10) === today && s.status !== "CANCELLED");
                     const pastService = list.find(s => s.serviceDate?.slice(0, 10) <= today && s.status !== "CANCELLED");
                     const def = todayService || pastService || list[0];
@@ -731,14 +747,84 @@ export default function EpicSmileScanner() {
                     <Clock size={16} color="#38bdf8" />
                     <select
                         value={serviceId}
-                        onChange={e => setServiceId(e.target.value)}
+                        onChange={e => {
+                            if (e.target.value === "__VIEW_ALL__") {
+                                setShowAllServices(true);
+                            } else if (e.target.value === "__VIEW_TODAY__") {
+                                setShowAllServices(false);
+                                if (todayServices.length > 0) {
+                                    setServiceId(String(todayServices[0].churchServiceId));
+                                }
+                            } else {
+                                setServiceId(e.target.value);
+                            }
+                        }}
+                        title={!showAllServices ? `Viewing today's schedule (${todayLocalDate})` : "Viewing all church schedules"}
                     >
-                        {services.map(s => (
-                            <option key={s.churchServiceId} value={s.churchServiceId}>
-                                {s.serviceName} ({s.serviceDate.slice(0, 10)})
-                            </option>
-                        ))}
+                        {todayServices.length === 0 && !showAllServices && (
+                            <option disabled value="">⚠️ No Service Scheduled Today ({todayLocalDate})</option>
+                        )}
+
+                        {!showAllServices && todayServices.length > 0 && (
+                            <>
+                                <optgroup label={`📅 Scheduled Today (${todayLocalDate})`}>
+                                    {todayServices.map(s => (
+                                        <option key={s.churchServiceId} value={s.churchServiceId}>
+                                            {s.serviceName} ({s.startTime ? `${s.startTime}` : "Today"})
+                                        </option>
+                                    ))}
+                                </optgroup>
+                                {services.length > todayServices.length && (
+                                    <option value="__VIEW_ALL__">🌐 View other dates ({services.length})...</option>
+                                )}
+                            </>
+                        )}
+
+                        {(showAllServices || todayServices.length === 0) && (
+                            <>
+                                {todayServices.length > 0 && (
+                                    <optgroup label={`⭐ Scheduled Today (${todayLocalDate})`}>
+                                        {todayServices.map(s => (
+                                            <option key={s.churchServiceId} value={s.churchServiceId}>
+                                                {s.serviceName} ({s.serviceDate.slice(0, 10)})
+                                            </option>
+                                        ))}
+                                    </optgroup>
+                                )}
+                                <optgroup label={todayServices.length > 0 ? "Other Schedules" : "All Church Schedules"}>
+                                    {services
+                                        .filter(s => !todayServices.some(t => t.churchServiceId === s.churchServiceId))
+                                        .map(s => (
+                                            <option key={s.churchServiceId} value={s.churchServiceId}>
+                                                {s.serviceName} ({s.serviceDate.slice(0, 10)})
+                                            </option>
+                                        ))}
+                                </optgroup>
+                                {todayServices.length > 0 && (
+                                    <option value="__VIEW_TODAY__">↩ Back to Today Only</option>
+                                )}
+                            </>
+                        )}
                     </select>
+
+                    {todayServices.length > 0 && (
+                        <button
+                            type="button"
+                            className={`smile-today-pill-btn ${!showAllServices ? "active" : ""}`}
+                            onClick={() => {
+                                setShowAllServices(prev => {
+                                    const next = !prev;
+                                    if (!next && todayServices.length > 0) {
+                                        setServiceId(String(todayServices[0].churchServiceId));
+                                    }
+                                    return next;
+                                });
+                            }}
+                            title={showAllServices ? "Switch back to Today's schedule only" : "View all church schedules"}
+                        >
+                            {!showAllServices ? `● Today (${todayServices.length})` : "All Dates"}
+                        </button>
+                    )}
                 </div>
 
                 {/* Live Digital Clock */}

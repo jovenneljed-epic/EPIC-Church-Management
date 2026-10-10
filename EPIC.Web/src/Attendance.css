@@ -1294,6 +1294,12 @@
     border-color: #1e293b;
 }
 
+.service-filter-tab.tab-today.active {
+    background: #0d9488;
+    color: #ffffff;
+    border-color: #0d9488;
+}
+
 .service-filter-tab.tab-upcoming.active {
     background: #2563eb;
     color: #ffffff;
