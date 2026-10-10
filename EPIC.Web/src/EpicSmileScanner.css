@@ -111,6 +111,12 @@
     margin: 2px 0 0;
 }
 
+.smile-brand-text p .kezjed-brand {
+    color: #38bdf8;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
 .smile-service-selector {
     display: flex;
     align-items: center;

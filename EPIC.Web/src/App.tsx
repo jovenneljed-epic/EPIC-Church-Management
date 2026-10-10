@@ -395,7 +395,7 @@ const PAGE_SUBTITLES: Record<Page, string> = {
         "Monitor and record church attendance",
 
     "smile-scanner":
-        "DepEd SMILE-inspired biometric facial recognition attendance scanner",
+        "EPIC SMILE powered by KEZJED SOLUTIONS - Biometric facial recognition attendance scanner",
 
     ministries:
         "Manage ministries and ministry assignments",

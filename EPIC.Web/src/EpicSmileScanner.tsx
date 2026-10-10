@@ -738,7 +738,7 @@ export default function EpicSmileScanner() {
                             EPIC SMILE
                             <span className="smile-brand-tag">FACE KIOSK</span>
                         </h1>
-                        <p>DepEd SMILE-Inspired Biometric Attendance System</p>
+                        <p>EPIC SMILE powered by <span className="kezjed-brand">KEZJED SOLUTIONS</span></p>
                     </div>
                 </div>
 
