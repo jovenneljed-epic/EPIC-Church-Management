@@ -1306,6 +1306,51 @@ namespace EPIC.Api.Controllers
         }
 
         // =========================================================
+        // REMOVE / CLEAN CONVERTED VISITORS FROM VISITOR LIST
+        // POST: /api/Visitors/clean-converted
+        // Permission: Visitors / edit
+        // =========================================================
+
+        [HttpPost("clean-converted")]
+        [Permission("Visitors", "edit")]
+        public async Task<IActionResult> CleanConvertedVisitors()
+        {
+            var convertedVisitors = await _context.Visitors
+                .Include(v => v.VisitorAttendances)
+                .Where(v => v.IsConvertedToMember || v.ConvertedMemberId.HasValue || v.FollowUpStatus == "CONVERTED")
+                .ToListAsync();
+
+            if (!convertedVisitors.Any())
+            {
+                return Ok(new
+                {
+                    message = "Zero converted visitors found. Your visitor pipeline is already clean and organized!",
+                    removedCount = 0
+                });
+            }
+
+            int count = convertedVisitors.Count;
+
+            foreach (var v in convertedVisitors)
+            {
+                if (v.VisitorAttendances.Any())
+                {
+                    _context.VisitorAttendances.RemoveRange(v.VisitorAttendances);
+                }
+
+                _context.Visitors.Remove(v);
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                message = $"Successfully removed {count} converted visitor record(s) from the Visitor pipeline. Their official Church Member profiles in the Members directory remain completely safe and intact!",
+                removedCount = count
+            });
+        }
+
+        // =========================================================
         // DELETE / DEACTIVATE VISITOR
         // DELETE: /api/Visitors/{id}
         // Permission: Visitors / delete
@@ -1318,6 +1363,7 @@ namespace EPIC.Api.Controllers
         {
             var visitor =
                 await _context.Visitors
+                    .Include(v => v.VisitorAttendances)
                     .FirstOrDefaultAsync(
                         v => v.VisitorId == id);
 
@@ -1330,34 +1376,11 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            // -----------------------------------------------------
-            // Converted visitors are never physically deleted.
-            // -----------------------------------------------------
+            bool wasConverted = visitor.IsConvertedToMember || visitor.ConvertedMemberId.HasValue;
 
-            if (visitor.IsConvertedToMember)
+            if (visitor.VisitorAttendances.Any())
             {
-                visitor.Status =
-                    "INACTIVE";
-
-                visitor.UpdatedDate =
-                    DateTime.Now;
-
-                await _context.SaveChangesAsync();
-
-                return Ok(new
-                {
-                    message =
-                        "CONVERTED VISITOR WAS DEACTIVATED INSTEAD OF DELETED.",
-
-                    visitorId =
-                        visitor.VisitorId,
-
-                    status =
-                        visitor.Status,
-
-                    followUpStatus =
-                        visitor.FollowUpStatus
-                });
+                _context.VisitorAttendances.RemoveRange(visitor.VisitorAttendances);
             }
 
             _context.Visitors.Remove(visitor);
@@ -1366,8 +1389,9 @@ namespace EPIC.Api.Controllers
 
             return Ok(new
             {
-                message =
-                    "VISITOR DELETED SUCCESSFULLY.",
+                message = wasConverted
+                    ? $"Converted visitor \"{visitor.FirstName} {visitor.LastName}\" was removed from the Visitor list. Their official member profile remains intact."
+                    : "VISITOR DELETED SUCCESSFULLY.",
 
                 visitorId =
                     id
@@ -1398,6 +1422,8 @@ namespace EPIC.Api.Controllers
 
             var active =
                 visitors.Count(v =>
+                    !v.IsConvertedToMember &&
+                    !v.ConvertedMemberId.HasValue &&
                     string.Equals(
                         v.Status,
                         "ACTIVE",

@@ -508,6 +508,9 @@ export default function Visitors() {
     const [visitFilter, setVisitFilter] =
         useState("ALL");
 
+    const [pipelineFilter, setPipelineFilter] =
+        useState<"ACTIVE" | "CONVERTED" | "ALL">("ACTIVE");
+
     const [viewMode, setViewMode] =
         useState<ViewMode>("table");
 
@@ -558,6 +561,12 @@ export default function Visitors() {
         useState(false);
 
     const [isDeduplicating, setIsDeduplicating] =
+        useState(false);
+
+    const [isCleaningConverted, setIsCleaningConverted] =
+        useState(false);
+
+    const [showCleanConvertedModal, setShowCleanConvertedModal] =
         useState(false);
 
     // ========================================================
@@ -746,6 +755,21 @@ export default function Visitors() {
                             ?.toLowerCase() ||
                         "";
 
+                    const isConverted = Boolean(
+                        visitor.isConvertedToMember ||
+                        visitor.convertedMemberId != null ||
+                        visitor.followUpStatus?.toUpperCase() === "CONVERTED"
+                    );
+
+                    const matchesPipeline =
+                        pipelineFilter === "ALL" ||
+                        (pipelineFilter === "ACTIVE" && !isConverted) ||
+                        (pipelineFilter === "CONVERTED" && isConverted);
+
+                    if (!matchesPipeline) {
+                        return false;
+                    }
+
                     const matchesSearch =
                         !query ||
                         name.includes(query) ||
@@ -783,6 +807,7 @@ export default function Visitors() {
             search,
             filter,
             visitFilter,
+            pipelineFilter,
         ]);
 
     // ========================================================
@@ -1102,7 +1127,7 @@ export default function Visitors() {
     const handleDeleteVisitor = async (visitor: Visitor) => {
         const fullName = getFullName(visitor);
         const confirmMsg = visitor.isConvertedToMember
-            ? `Visitor "${fullName}" (${visitor.visitorCode}) has already been converted to an official member.\n\nDeleting will deactivate the visitor record. Do you want to proceed?`
+            ? `Visitor "${fullName}" (${visitor.visitorCode}) has already been converted to an official church member.\n\nDo you want to permanently remove this record from the Visitors list?\n\n(Note: Their official member profile, credentials, and records in the Members directory will remain completely safe and intact.)`
             : `Are you sure you want to permanently delete visitor "${fullName}" (${visitor.visitorCode})?\n\nThis action cannot be undone.`;
 
         if (!window.confirm(confirmMsg)) {
@@ -1371,6 +1396,42 @@ export default function Visitors() {
     };
 
     // ========================================================
+    // RUN CLEAN CONVERTED VISITORS
+    // ========================================================
+
+    const runCleanConverted = async () => {
+        try {
+            setIsCleaningConverted(true);
+            setError("");
+            setSuccess("");
+
+            const res = await apiFetch<{
+                message: string;
+                removedCount: number;
+            }>("/Visitors/clean-converted", {
+                method: "POST"
+            });
+
+            setShowCleanConvertedModal(false);
+            setSuccess(`🎉 ${res.message}`);
+
+            await Promise.all([
+                loadVisitors(),
+                loadDashboard(),
+            ]);
+        } catch (err) {
+            console.error("Clean converted error:", err);
+            setError(
+                err instanceof Error
+                    ? err.message
+                    : "Failed to remove converted visitors."
+            );
+        } finally {
+            setIsCleaningConverted(false);
+        }
+    };
+
+    // ========================================================
     // OPEN HISTORY
     // ========================================================
 
@@ -1501,7 +1562,7 @@ export default function Visitors() {
 
     const closeModals = () => {
 
-        if (saving) {
+        if (saving || isCleaningConverted) {
             return;
         }
 
@@ -1509,6 +1570,7 @@ export default function Visitors() {
         setShowEditModal(false);
         setShowVisitModal(false);
         setShowHistoryModal(false);
+        setShowCleanConvertedModal(false);
         setEditingVisitor(null);
     };
 
@@ -1534,6 +1596,18 @@ export default function Visitors() {
         };
 
     // ========================================================
+    // PIPELINE & CONVERTED COUNTS
+    // ========================================================
+
+    const convertedCount = visitors.filter(
+        v => v.isConvertedToMember || v.convertedMemberId != null || v.followUpStatus?.toUpperCase() === "CONVERTED"
+    ).length;
+
+    const activePipelineCount = visitors.filter(
+        v => !v.isConvertedToMember && !v.convertedMemberId && v.followUpStatus?.toUpperCase() !== "CONVERTED"
+    ).length;
+
+    // ========================================================
     // LOCAL STATS FALLBACK
     // ========================================================
 
@@ -1544,12 +1618,7 @@ export default function Visitors() {
                 visitors.length,
 
             activeVisitors:
-                visitors.filter(
-                    visitor =>
-                        visitor.status
-                            ?.toUpperCase() ===
-                        "ACTIVE"
-                ).length,
+                activePipelineCount,
 
             newVisitors:
                 visitors.filter(
@@ -1584,10 +1653,7 @@ export default function Visitors() {
                 ).length,
 
             convertedMembers:
-                visitors.filter(
-                    visitor =>
-                        visitor.isConvertedToMember
-                ).length,
+                convertedCount,
 
             firstTimeVisitors:
                 visitors.filter(
@@ -1672,6 +1738,21 @@ export default function Visitors() {
                         >
                             <span>{isDeduplicating ? "⏳" : "🧹"}</span>
                             <span>{isDeduplicating ? "Cleaning..." : "Clean Duplicates"}</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            className="btn btn-clean-converted"
+                            onClick={() => setShowCleanConvertedModal(true)}
+                            disabled={isCleaningConverted || loading || convertedCount === 0}
+                            title="Remove visitors who are already converted as official members from the visitors list to organize it"
+                        >
+                            <span>{isCleaningConverted ? "⏳" : "🎓"}</span>
+                            <span>
+                                {isCleaningConverted
+                                    ? "Removing..."
+                                    : `Remove Converted (${convertedCount})`}
+                            </span>
                         </button>
 
                         <button
@@ -2078,6 +2159,68 @@ export default function Visitors() {
 
                 <section className="visitor-content">
 
+                    {/* ==================================================
+                        PIPELINE SEGMENT TABS (ACTIVE vs CONVERTED)
+                    ================================================== */}
+
+                    <div className="pipeline-segment-container">
+
+                        <div className="pipeline-segment-tabs">
+
+                            <button
+                                type="button"
+                                className={`pipeline-tab-btn ${pipelineFilter === "ACTIVE" ? "active" : ""}`}
+                                onClick={() => {
+                                    setPipelineFilter("ACTIVE");
+                                    if (filter === "CONVERTED") {
+                                        setFilter("ALL");
+                                    }
+                                }}
+                            >
+                                <span className="tab-icon">🌟</span>
+                                <span className="tab-label">Active Visitors</span>
+                                <span className="tab-pill tab-pill-active">{activePipelineCount}</span>
+                            </button>
+
+                            <button
+                                type="button"
+                                className={`pipeline-tab-btn ${pipelineFilter === "CONVERTED" ? "active" : ""}`}
+                                onClick={() => {
+                                    setPipelineFilter("CONVERTED");
+                                }}
+                            >
+                                <span className="tab-icon">🎓</span>
+                                <span className="tab-label">Converted Members</span>
+                                <span className="tab-pill tab-pill-converted">{convertedCount}</span>
+                            </button>
+
+                            <button
+                                type="button"
+                                className={`pipeline-tab-btn ${pipelineFilter === "ALL" ? "active" : ""}`}
+                                onClick={() => {
+                                    setPipelineFilter("ALL");
+                                }}
+                            >
+                                <span className="tab-icon">📋</span>
+                                <span className="tab-label">All Records</span>
+                                <span className="tab-pill">{visitors.length}</span>
+                            </button>
+
+                        </div>
+
+                        {convertedCount > 0 && pipelineFilter === "ACTIVE" && (
+                            <button
+                                type="button"
+                                className="btn-quick-clean-hint"
+                                onClick={() => setShowCleanConvertedModal(true)}
+                                title="Clean converted members from visitor list"
+                            >
+                                🧹 Clean Converted ({convertedCount})
+                            </button>
+                        )}
+
+                    </div>
+
                     <div className="content-toolbar">
 
                         <div className="search-box">
@@ -2115,11 +2258,15 @@ export default function Visitors() {
                         <select
                             className="filter-select"
                             value={filter}
-                            onChange={e =>
-                                setFilter(
-                                    e.target.value
-                                )
-                            }
+                            onChange={e => {
+                                const val = e.target.value;
+                                setFilter(val);
+                                if (val === "CONVERTED") {
+                                    setPipelineFilter("CONVERTED");
+                                } else if (pipelineFilter === "CONVERTED") {
+                                    setPipelineFilter("ACTIVE");
+                                }
+                            }}
                         >
 
                             <option value="ALL">
@@ -2212,7 +2359,11 @@ export default function Visitors() {
                         <div>
 
                             <strong>
-                                Visitor Records
+                                {pipelineFilter === "ACTIVE"
+                                    ? "Active Visitor Pipeline"
+                                    : pipelineFilter === "CONVERTED"
+                                    ? "Converted Church Members (Archived from Visitors)"
+                                    : "All Visitor Records"}
                             </strong>
 
                             <span>
@@ -2228,6 +2379,12 @@ export default function Visitors() {
                                         : ""
                                 }
                             </span>
+
+                            {pipelineFilter === "ACTIVE" && convertedCount > 0 && (
+                                <span className="converted-hidden-pill">
+                                    ✓ {convertedCount} converted member{convertedCount !== 1 ? "s" : ""} hidden
+                                </span>
+                            )}
 
                         </div>
 
@@ -2507,60 +2664,86 @@ export default function Visitors() {
 
                                                     <div className="action-buttons">
 
-                                                        <button
-                                                            type="button"
-                                                            className="action-primary"
-                                                            onClick={() =>
-                                                                openVisitModal(
-                                                                    visitor
-                                                                )
-                                                            }
-                                                        >
-                                                            + Visit
-                                                        </button>
+                                                        {visitor.isConvertedToMember ? (
+                                                            <>
+                                                                <button
+                                                                    type="button"
+                                                                    className="action-secondary"
+                                                                    onClick={() =>
+                                                                        void openHistory(
+                                                                            visitor
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    History
+                                                                </button>
 
-                                                        <button
-                                                            type="button"
-                                                            className="action-secondary"
-                                                            onClick={() =>
-                                                                void openHistory(
-                                                                    visitor
-                                                                )
-                                                            }
-                                                        >
-                                                            History
-                                                        </button>
+                                                                <button
+                                                                    type="button"
+                                                                    className="action-delete action-remove-converted"
+                                                                    onClick={() =>
+                                                                        void handleDeleteVisitor(
+                                                                            visitor
+                                                                        )
+                                                                    }
+                                                                    title="Remove converted member from Visitors list"
+                                                                >
+                                                                    🗑 Remove from List
+                                                                </button>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <button
+                                                                    type="button"
+                                                                    className="action-primary"
+                                                                    onClick={() =>
+                                                                        openVisitModal(
+                                                                            visitor
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    + Visit
+                                                                </button>
 
-                                                        <button
-                                                            type="button"
-                                                            className="action-edit"
-                                                            onClick={() =>
-                                                                openEditModal(
-                                                                    visitor
-                                                                )
-                                                            }
-                                                            title={
-                                                                visitor.isConvertedToMember
-                                                                    ? "Converted to official member (record locked)"
-                                                                    : "Edit visitor details"
-                                                            }
-                                                            disabled={visitor.isConvertedToMember}
-                                                        >
-                                                            ✎ Edit
-                                                        </button>
+                                                                <button
+                                                                    type="button"
+                                                                    className="action-secondary"
+                                                                    onClick={() =>
+                                                                        void openHistory(
+                                                                            visitor
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    History
+                                                                </button>
 
-                                                        <button
-                                                            type="button"
-                                                            className="action-delete"
-                                                            onClick={() =>
-                                                                void handleDeleteVisitor(
-                                                                    visitor
-                                                                )
-                                                            }
-                                                            title="Delete visitor"
-                                                        >
-                                                            🗑 Delete
-                                                        </button>
+                                                                <button
+                                                                    type="button"
+                                                                    className="action-edit"
+                                                                    onClick={() =>
+                                                                        openEditModal(
+                                                                            visitor
+                                                                        )
+                                                                    }
+                                                                    title="Edit visitor details"
+                                                                >
+                                                                    ✎ Edit
+                                                                </button>
+
+                                                                <button
+                                                                    type="button"
+                                                                    className="action-delete"
+                                                                    onClick={() =>
+                                                                        void handleDeleteVisitor(
+                                                                            visitor
+                                                                        )
+                                                                    }
+                                                                    title="Delete visitor"
+                                                                >
+                                                                    🗑 Delete
+                                                                </button>
+                                                            </>
+                                                        )}
 
                                                     </div>
 
@@ -2739,60 +2922,86 @@ export default function Visitors() {
 
                                         <div className="card-actions">
 
-                                            <button
-                                                type="button"
-                                                className="btn btn-primary"
-                                                onClick={() =>
-                                                    openVisitModal(
-                                                        visitor
-                                                    )
-                                                }
-                                            >
-                                                + Record Visit
-                                            </button>
+                                            {visitor.isConvertedToMember ? (
+                                                <>
+                                                    <button
+                                                        type="button"
+                                                        className="btn btn-secondary"
+                                                        onClick={() =>
+                                                            void openHistory(
+                                                                visitor
+                                                            )
+                                                        }
+                                                    >
+                                                        View History
+                                                    </button>
 
-                                            <button
-                                                type="button"
-                                                className="btn btn-secondary"
-                                                onClick={() =>
-                                                    void openHistory(
-                                                        visitor
-                                                    )
-                                                }
-                                            >
-                                                View History
-                                            </button>
+                                                    <button
+                                                        type="button"
+                                                        className="btn btn-delete btn-remove-converted"
+                                                        onClick={() =>
+                                                            void handleDeleteVisitor(
+                                                                visitor
+                                                            )
+                                                        }
+                                                        title="Remove converted member from Visitors list"
+                                                    >
+                                                        🗑 Remove from List
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <button
+                                                        type="button"
+                                                        className="btn btn-primary"
+                                                        onClick={() =>
+                                                            openVisitModal(
+                                                                visitor
+                                                            )
+                                                        }
+                                                    >
+                                                        + Record Visit
+                                                    </button>
 
-                                            <button
-                                                type="button"
-                                                className="btn btn-edit"
-                                                onClick={() =>
-                                                    openEditModal(
-                                                        visitor
-                                                    )
-                                                }
-                                                disabled={visitor.isConvertedToMember}
-                                                title={
-                                                    visitor.isConvertedToMember
-                                                        ? "Converted to official member (record locked)"
-                                                        : "Edit visitor details"
-                                                }
-                                            >
-                                                ✎ Edit
-                                            </button>
+                                                    <button
+                                                        type="button"
+                                                        className="btn btn-secondary"
+                                                        onClick={() =>
+                                                            void openHistory(
+                                                                visitor
+                                                            )
+                                                        }
+                                                    >
+                                                        View History
+                                                    </button>
 
-                                            <button
-                                                type="button"
-                                                className="btn btn-delete"
-                                                onClick={() =>
-                                                    void handleDeleteVisitor(
-                                                        visitor
-                                                    )
-                                                }
-                                                title="Delete visitor"
-                                            >
-                                                🗑 Delete
-                                            </button>
+                                                    <button
+                                                        type="button"
+                                                        className="btn btn-edit"
+                                                        onClick={() =>
+                                                            openEditModal(
+                                                                visitor
+                                                            )
+                                                        }
+                                                        title="Edit visitor details"
+                                                    >
+                                                        ✎ Edit
+                                                    </button>
+
+                                                    <button
+                                                        type="button"
+                                                        className="btn btn-delete"
+                                                        onClick={() =>
+                                                            void handleDeleteVisitor(
+                                                                visitor
+                                                            )
+                                                        }
+                                                        title="Delete visitor"
+                                                    >
+                                                        🗑 Delete
+                                                    </button>
+                                                </>
+                                            )}
 
                                         </div>
 
@@ -3973,6 +4182,88 @@ export default function Visitors() {
                                 onClick={() => setAutoConvertedVisitor(null)}
                             >
                                 Awesome! View & Continue
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ==================================================
+                CLEAN / REMOVE CONVERTED VISITORS MODAL
+            ================================================== */}
+            {showCleanConvertedModal && (
+                <div
+                    className="modal-backdrop"
+                    onMouseDown={e => {
+                        if (e.target === e.currentTarget && !isCleaningConverted) {
+                            setShowCleanConvertedModal(false);
+                        }
+                    }}
+                >
+                    <div className="modal modal-medium clean-converted-modal">
+                        <div className="modal-header">
+                            <div>
+                                <span className="modal-badge-warn">ORGANIZATION CLEANUP</span>
+                                <h2>Remove Converted Members from Visitors List</h2>
+                                <p>Keep your active visitor pipeline clean and organized</p>
+                            </div>
+
+                            <button
+                                type="button"
+                                className="modal-close"
+                                onClick={() => setShowCleanConvertedModal(false)}
+                                disabled={isCleaningConverted}
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        <div className="clean-modal-body">
+                            <div className="clean-info-box">
+                                <div className="clean-info-icon">🎓</div>
+                                <div>
+                                    <strong>{convertedCount} Converted Visitor{convertedCount !== 1 ? "s" : ""} Identified</strong>
+                                    <p>
+                                        These individuals have successfully graduated from being visitors to official <strong>Church Members</strong>.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="clean-safety-card">
+                                <h4>🛡️ Safe Cleanup Guarantee:</h4>
+                                <ul>
+                                    <li>
+                                        <strong>Visitors List Organized:</strong> The {convertedCount} converted record{convertedCount !== 1 ? "s" : ""} will be removed from this Visitors view, leaving only genuine active visitors who require follow-up.
+                                    </li>
+                                    <li>
+                                        <strong>Official Member Records Are 100% Safe:</strong> Their full member profiles, member IDs, photos, and ministry roles in the <strong>Members Directory</strong> remain completely intact.
+                                    </li>
+                                    <li>
+                                        <strong>Attendance History Preserved:</strong> All their past attendance logs have already been transferred to the official Church Attendance records.
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div className="modal-footer">
+                            <button
+                                type="button"
+                                className="btn btn-secondary"
+                                onClick={() => setShowCleanConvertedModal(false)}
+                                disabled={isCleaningConverted}
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                type="button"
+                                className="btn btn-danger-action"
+                                onClick={runCleanConverted}
+                                disabled={isCleaningConverted}
+                            >
+                                {isCleaningConverted
+                                    ? "⏳ Removing Records..."
+                                    : `🧹 Remove ${convertedCount} Converted Record${convertedCount !== 1 ? "s" : ""}`}
                             </button>
                         </div>
                     </div>
