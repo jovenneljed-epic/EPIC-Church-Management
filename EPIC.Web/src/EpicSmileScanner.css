@@ -939,3 +939,278 @@
     color: #94a3b8;
     border: 1px solid rgba(148, 163, 184, 0.3);
 }
+
+/* =========================================================
+   LIVE MEMBER FACE ENROLLMENT STUDIO MODAL
+========================================================= */
+
+.smile-studio-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 6, 23, 0.88);
+    backdrop-filter: blur(14px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100000;
+    padding: 16px;
+    animation: fadeInOverlay 0.2s ease-out;
+}
+
+.smile-studio-modal {
+    background: linear-gradient(160deg, #0f172a 0%, #090e17 100%);
+    border: 2px solid rgba(14, 165, 233, 0.4);
+    border-radius: 24px;
+    width: 100%;
+    max-width: 740px;
+    max-height: 92vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 0 50px rgba(14, 165, 233, 0.25), 0 25px 50px rgba(0, 0, 0, 0.85);
+    position: relative;
+    animation: cardZoomIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.smile-studio-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    background: rgba(15, 23, 42, 0.8);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.smile-studio-member-info {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.smile-studio-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #334155;
+    border: 2px solid #38bdf8;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.smile-studio-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.smile-studio-name {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #fff;
+    margin: 0;
+    letter-spacing: 0.02em;
+}
+
+.smile-studio-sub {
+    font-size: 0.78rem;
+    color: #94a3b8;
+    margin-top: 2px;
+}
+
+.smile-studio-viewport {
+    position: relative;
+    width: 100%;
+    height: 420px;
+    background: #000;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@media (max-width: 640px) {
+    .smile-studio-viewport {
+        height: 340px;
+    }
+}
+
+.smile-studio-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform: scaleX(-1); /* Mirror view for natural reflection */
+}
+
+/* Studio Reticle Guide */
+.smile-studio-reticle {
+    position: absolute;
+    width: 260px;
+    height: 330px;
+    border-radius: 50% / 46%;
+    border: 3px dashed rgba(56, 189, 248, 0.7);
+    box-shadow: 0 0 24px rgba(14, 165, 233, 0.3), inset 0 0 24px rgba(14, 165, 233, 0.2);
+    pointer-events: none;
+    transition: all 0.25s ease;
+}
+
+.smile-studio-reticle.smiling {
+    border-style: solid;
+    border-color: #10b981;
+    border-width: 4px;
+    box-shadow: 0 0 40px rgba(16, 185, 129, 0.7), inset 0 0 30px rgba(16, 185, 129, 0.35);
+}
+
+/* Countdown Overlay */
+.smile-studio-countdown {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(4px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    pointer-events: none;
+}
+
+.smile-countdown-number {
+    font-size: 6.5rem;
+    font-weight: 900;
+    color: #fff;
+    text-shadow: 0 0 40px #38bdf8, 0 0 70px #10b981;
+    animation: countdownScale 1s infinite cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes countdownScale {
+    0% { transform: scale(0.6); opacity: 0; }
+    50% { transform: scale(1.15); opacity: 1; }
+    100% { transform: scale(1); opacity: 0.9; }
+}
+
+.smile-countdown-hint {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #38bdf8;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-top: 10px;
+}
+
+/* Snapshot Shutter Flash */
+.smile-shutter-flash {
+    position: absolute;
+    inset: 0;
+    background: #fff;
+    opacity: 0.85;
+    z-index: 60;
+    pointer-events: none;
+    animation: flashFade 0.4s ease-out forwards;
+}
+
+@keyframes flashFade {
+    0% { opacity: 0.85; }
+    100% { opacity: 0; }
+}
+
+/* Review Mode Preview */
+.smile-snapshot-preview {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    position: absolute;
+    inset: 0;
+    transform: scaleX(-1);
+}
+
+.smile-snapshot-badge {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    background: rgba(6, 78, 59, 0.9);
+    border: 1px solid rgba(52, 211, 153, 0.6);
+    color: #34d399;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    z-index: 10;
+}
+
+/* Studio HUD Bottom */
+.smile-studio-hud {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 480px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    z-index: 20;
+}
+
+/* Studio Footer & Action Bar */
+.smile-studio-footer {
+    padding: 18px 24px;
+    background: rgba(15, 23, 42, 0.95);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.smile-studio-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 22px;
+    border-radius: 12px;
+    font-size: 0.92rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.smile-studio-action-btn.primary {
+    background: linear-gradient(135deg, #0284c7, #10b981);
+    color: #fff;
+    box-shadow: 0 4px 18px rgba(16, 185, 129, 0.4);
+}
+
+.smile-studio-action-btn.primary:hover:not(:disabled) {
+    background: linear-gradient(135deg, #0369a1, #059669);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 24px rgba(16, 185, 129, 0.6);
+}
+
+.smile-studio-action-btn.secondary {
+    background: rgba(51, 65, 85, 0.8);
+    color: #f1f5f9;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.smile-studio-action-btn.secondary:hover {
+    background: rgba(71, 85, 105, 0.9);
+    transform: translateY(-1px);
+}
+

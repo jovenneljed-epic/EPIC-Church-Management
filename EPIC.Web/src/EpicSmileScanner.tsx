@@ -141,6 +141,18 @@ export default function EpicSmileScanner() {
     const [autoEnrolling, setAutoEnrolling] = useState<boolean>(false);
     const [enrollMessage, setEnrollMessage] = useState<string>("");
 
+    // ---------------------------------------------------------
+    // LIVE MEMBER FACE ENROLLMENT STUDIO STATE
+    // ---------------------------------------------------------
+    const [activeEnrollMember, setActiveEnrollMember] = useState<MemberRow | null>(null);
+    const [studioCapturedSnapshot, setStudioCapturedSnapshot] = useState<string | null>(null);
+    const [studioDescriptor, setStudioDescriptor] = useState<number[] | null>(null);
+    const [studioSmileScore, setStudioSmileScore] = useState<number>(0);
+    const [studioCountdown, setStudioCountdown] = useState<number | null>(null);
+    const [studioShutterFlash, setStudioShutterFlash] = useState<boolean>(false);
+    const studioVideoRef = useRef<HTMLVideoElement | null>(null);
+    const studioCanvasRef = useRef<HTMLCanvasElement | null>(null);
+
     // Clock
     const [currentTime, setCurrentTime] = useState<string>("");
     const [currentDate, setCurrentDate] = useState<string>("");
@@ -531,15 +543,69 @@ export default function EpicSmileScanner() {
     };
 
     // ---------------------------------------------------------
-    // ENROLL SINGLE MEMBER FROM LIVE CAMERA
+    // FACE ENROLLMENT STUDIO: BIND STREAM & REAL-TIME DETECTION
     // ---------------------------------------------------------
-    const handleEnrollFromCamera = async (member: MemberRow) => {
-        if (!videoRef.current || !canvasRef.current) return;
-        const canvas = canvasRef.current;
-        const vw = canvas.width || 640;
-        const vh = canvas.height || 480;
+    useEffect(() => {
+        if (activeEnrollMember && studioVideoRef.current && streamRef.current) {
+            studioVideoRef.current.srcObject = streamRef.current;
+            void studioVideoRef.current.play().catch(() => {});
+        }
+    }, [activeEnrollMember]);
 
-        const box = detectionResult?.box || {
+    useEffect(() => {
+        if (!activeEnrollMember || studioCapturedSnapshot) return;
+
+        let animId: number;
+        let lastTime = 0;
+
+        const studioLoop = async (time: number) => {
+            if (time - lastTime > 60) {
+                lastTime = time;
+                if (studioVideoRef.current && studioCanvasRef.current) {
+                    const v = studioVideoRef.current;
+                    const c = studioCanvasRef.current;
+                    const vw = v.videoWidth || 640;
+                    const vh = v.videoHeight || 480;
+                    const guide = {
+                        x: vw * 0.25,
+                        y: vh * 0.15,
+                        width: vw * 0.5,
+                        height: vh * 0.7
+                    };
+                    try {
+                        const res = await detectFaceAndSmile(v, c, guide);
+                        setStudioSmileScore(res.smileScore);
+                    } catch {
+                        // Ignore
+                    }
+                }
+            }
+            animId = requestAnimationFrame(studioLoop);
+        };
+
+        animId = requestAnimationFrame(studioLoop);
+        return () => cancelAnimationFrame(animId);
+    }, [activeEnrollMember, studioCapturedSnapshot]);
+
+    const handleTakeStudioSnapshot = () => {
+        if (!studioVideoRef.current || !studioCanvasRef.current || !activeEnrollMember) return;
+        const video = studioVideoRef.current;
+        const canvas = studioCanvasRef.current;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+
+        canvas.width = video.videoWidth || 640;
+        canvas.height = video.videoHeight || 480;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // Flash effect
+        setStudioShutterFlash(true);
+        setTimeout(() => setStudioShutterFlash(false), 350);
+
+        // Extract biometric descriptor
+        const vw = canvas.width;
+        const vh = canvas.height;
+        const box = {
             x: vw * 0.25,
             y: vh * 0.15,
             width: vw * 0.5,
@@ -548,18 +614,44 @@ export default function EpicSmileScanner() {
             centerY: vh / 2
         };
 
-        const descriptor = extractFaceDescriptor(canvas, box);
+        const desc = extractFaceDescriptor(canvas, box);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
+
+        setStudioDescriptor(desc);
+        setStudioCapturedSnapshot(dataUrl);
+
+        if (soundEnabled) playAlreadyRecordedChime();
+    };
+
+    const handleStartCountdown = () => {
+        if (studioCountdown !== null) return;
+        setStudioCountdown(3);
+        setTimeout(() => {
+            setStudioCountdown(2);
+            setTimeout(() => {
+                setStudioCountdown(1);
+                setTimeout(() => {
+                    setStudioCountdown(null);
+                    handleTakeStudioSnapshot();
+                }, 1000);
+            }, 1000);
+        }, 1000);
+    };
+
+    const handleSaveStudioEnrollment = async () => {
+        if (!activeEnrollMember || !studioDescriptor) return;
+
         const newProfile: EnrolledFaceProfile = {
-            memberId: member.memberId,
-            memberCode: member.memberCode,
-            fullName: member.fullName,
-            ministry: member.ministry || "Member",
-            photoPath: member.photoPath,
-            descriptor,
+            memberId: activeEnrollMember.memberId,
+            memberCode: activeEnrollMember.memberCode,
+            fullName: activeEnrollMember.fullName,
+            ministry: activeEnrollMember.ministry || "Member",
+            photoPath: activeEnrollMember.photoPath || studioCapturedSnapshot || "",
+            descriptor: studioDescriptor,
             enrolledAt: new Date().toISOString()
         };
 
-        const updated = [...enrolledProfiles.filter(p => p.memberId !== member.memberId), newProfile];
+        const updated = [...enrolledProfiles.filter(p => p.memberId !== activeEnrollMember.memberId), newProfile];
         setEnrolledProfiles(updated);
         localStorage.setItem("epic_smile_profiles", JSON.stringify(updated));
 
@@ -572,7 +664,14 @@ export default function EpicSmileScanner() {
         }).catch(() => {});
 
         if (soundEnabled) playSuccessChime();
-        setEnrollMessage(`Enrolled face profile for ${member.fullName}!`);
+        if (voiceGreetingEnabled) {
+            speakGreeting(activeEnrollMember.fullName, "PRESENT");
+        }
+
+        setEnrollMessage(`Face biometrics enrolled with best smile for ${activeEnrollMember.fullName}!`);
+        setActiveEnrollMember(null);
+        setStudioCapturedSnapshot(null);
+        setStudioDescriptor(null);
     };
 
     // ---------------------------------------------------------
@@ -1020,7 +1119,12 @@ export default function EpicSmileScanner() {
                                                     type="button"
                                                     className="smile-btn smile-btn-secondary"
                                                     style={{ padding: "5px 10px", fontSize: "0.75rem" }}
-                                                    onClick={() => handleEnrollFromCamera(member)}
+                                                    onClick={() => {
+                                                        setActiveEnrollMember(member);
+                                                        setStudioCapturedSnapshot(null);
+                                                        setStudioDescriptor(null);
+                                                        setStudioCountdown(null);
+                                                    }}
                                                 >
                                                     <Camera size={13} />
                                                     <span>{isEnrolled ? "Re-Capture" : "Capture Face"}</span>
@@ -1205,6 +1309,174 @@ export default function EpicSmileScanner() {
                             >
                                 Save & Close
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* =========================================================
+               LIVE MEMBER FACE ENROLLMENT STUDIO MODAL
+               Shows the member their own live camera stream with biometric
+               oval guide and real-time smile meter so they put their best smile!
+            ========================================================= */}
+            {activeEnrollMember && (
+                <div className="smile-studio-overlay" onClick={() => setActiveEnrollMember(null)}>
+                    <div className="smile-studio-modal" onClick={e => e.stopPropagation()}>
+                        {/* Studio Header */}
+                        <div className="smile-studio-header">
+                            <div className="smile-studio-member-info">
+                                <div className="smile-studio-avatar">
+                                    {activeEnrollMember.photoPath ? (
+                                        <img
+                                            src={activeEnrollMember.photoPath.startsWith("http")
+                                                ? activeEnrollMember.photoPath
+                                                : `${API_BASE_URL.replace("/api", "")}${activeEnrollMember.photoPath.startsWith("/") ? "" : "/"}${activeEnrollMember.photoPath}`}
+                                            alt={activeEnrollMember.fullName}
+                                        />
+                                    ) : (
+                                        activeEnrollMember.fullName[0]
+                                    )}
+                                </div>
+                                <div>
+                                    <h2 className="smile-studio-name">{activeEnrollMember.fullName}</h2>
+                                    <div className="smile-studio-sub">
+                                        {activeEnrollMember.memberCode} • {activeEnrollMember.ministry || "General"}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button
+                                type="button"
+                                className="smile-btn-icon"
+                                onClick={() => setActiveEnrollMember(null)}
+                                title="Close Studio"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        {/* Studio Camera Viewport */}
+                        <div className="smile-studio-viewport">
+                            <canvas ref={studioCanvasRef} style={{ display: "none" }} />
+
+                            {studioCapturedSnapshot ? (
+                                <>
+                                    <img
+                                        src={studioCapturedSnapshot}
+                                        alt="Captured Best Smile"
+                                        className="smile-snapshot-preview"
+                                    />
+                                    <div className="smile-snapshot-badge">
+                                        <CheckCircle2 size={16} />
+                                        <span>Smile Captured • {Math.round(studioSmileScore * 100)}% Smile Score</span>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <video
+                                        ref={studioVideoRef}
+                                        autoPlay
+                                        playsInline
+                                        muted
+                                        className="smile-studio-video"
+                                    />
+
+                                    {/* Shutter flash effect */}
+                                    {studioShutterFlash && <div className="smile-shutter-flash" />}
+
+                                    {/* 3-2-1 Countdown */}
+                                    {studioCountdown !== null && (
+                                        <div className="smile-studio-countdown">
+                                            <div className="smile-countdown-number">{studioCountdown}</div>
+                                            <div className="smile-countdown-hint">Put on your best smile! 😊</div>
+                                        </div>
+                                    )}
+
+                                    {/* DepEd-style Biometric Oval Reticle */}
+                                    <div className={`smile-studio-reticle ${studioSmileScore >= 0.55 ? "smiling" : ""}`} />
+
+                                    {/* Live Smile Meter HUD inside Studio */}
+                                    <div className="smile-studio-hud">
+                                        <div className="smile-instruction-pill" style={{ fontSize: "0.85rem", padding: "6px 16px" }}>
+                                            <Smile size={16} color={studioSmileScore >= 0.55 ? "#34d399" : "#38bdf8"} />
+                                            <span>
+                                                {studioSmileScore < 0.35
+                                                    ? "Align face in oval guide & smile! 😊"
+                                                    : studioSmileScore < 0.65
+                                                    ? "Nice! Give a bigger joyful smile... 🙂"
+                                                    : "PERFECT SMILE! Ready to capture! 😁"}
+                                            </span>
+                                        </div>
+
+                                        <div className="smile-gauge-bar-wrap" style={{ padding: "8px 14px" }}>
+                                            <div className="smile-gauge-labels">
+                                                <span style={{ fontSize: "0.72rem", color: "#94a3b8" }}>
+                                                    {studioSmileScore < 0.35 ? "😐 Neutral" : studioSmileScore < 0.65 ? "🙂 Smiling" : "😁 BEST SMILE!"}
+                                                </span>
+                                                <span className="smile-gauge-score" style={{ fontSize: "0.78rem" }}>
+                                                    {Math.round(studioSmileScore * 100)}% SMILE
+                                                </span>
+                                            </div>
+                                            <div className="smile-gauge-track" style={{ height: "10px" }}>
+                                                <div
+                                                    className="smile-gauge-fill"
+                                                    style={{ width: `${Math.min(100, Math.round(studioSmileScore * 100))}%` }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+
+                        {/* Studio Footer Controls */}
+                        <div className="smile-studio-footer">
+                            {studioCapturedSnapshot ? (
+                                <>
+                                    <button
+                                        type="button"
+                                        className="smile-studio-action-btn secondary"
+                                        onClick={() => {
+                                            setStudioCapturedSnapshot(null);
+                                            setStudioDescriptor(null);
+                                        }}
+                                    >
+                                        <RefreshCw size={16} />
+                                        <span>Retake Photo</span>
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        className="smile-studio-action-btn primary"
+                                        onClick={handleSaveStudioEnrollment}
+                                    >
+                                        <CheckCircle2 size={18} />
+                                        <span>Save Best Smile Biometrics</span>
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <button
+                                        type="button"
+                                        className="smile-studio-action-btn secondary"
+                                        onClick={handleStartCountdown}
+                                        disabled={studioCountdown !== null}
+                                    >
+                                        <Clock size={16} />
+                                        <span>3-Sec Smile Countdown</span>
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        className="smile-studio-action-btn primary"
+                                        onClick={handleTakeStudioSnapshot}
+                                        disabled={studioCountdown !== null}
+                                    >
+                                        <Camera size={18} />
+                                        <span>📸 Capture Best Smile</span>
+                                    </button>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
