@@ -751,6 +751,91 @@ namespace EPIC.Api.Controllers
                 await _context.SaveChangesAsync();
             }
 
+            // --------------------------------------------------------
+            // SUBSCRIPTION LOCKOUT CHECK (PERMANENT EXEMPTION FOR CUSTOMER 1)
+            // --------------------------------------------------------
+            bool isLocked = false;
+            string? lockReason = null;
+            int? subscriptionId = null;
+            string? subscriptionStatus = null;
+            DateTime? nextBillingDate = null;
+            decimal? subscriptionAmount = null;
+            string? planName = null;
+
+            if (customer.CustomerId == 1)
+            {
+                // Permanent lifetime access for your church
+                isLocked = false;
+            }
+            else
+            {
+                var subscription = await _context.Subscriptions
+                    .Include(s => s.SubscriptionPlan)
+                    .OrderByDescending(s => s.CreatedDate)
+                    .FirstOrDefaultAsync(s => s.CustomerId == customer.CustomerId);
+
+                if (subscription == null)
+                {
+                    isLocked = true;
+                    lockReason = "No active subscription plan found for this church.";
+                }
+                else
+                {
+                    subscriptionId = subscription.SubscriptionId;
+                    subscriptionStatus = subscription.Status;
+                    nextBillingDate = subscription.NextBillingDate;
+                    subscriptionAmount = subscription.Amount;
+                    planName = subscription.SubscriptionPlan?.PlanName ?? "Monthly Subscription";
+
+                    var now = DateTime.Now;
+
+                    // Automatically check if trial expired
+                    if (string.Equals(subscription.Status, "TRIAL", StringComparison.OrdinalIgnoreCase)
+                        && subscription.TrialEndsAt.HasValue
+                        && subscription.TrialEndsAt.Value <= now)
+                    {
+                        subscription.Status = "EXPIRED";
+                        subscription.EndDate = now;
+                        subscription.UpdatedDate = now;
+                        subscriptionStatus = "EXPIRED";
+                        await _context.SaveChangesAsync();
+                    }
+                    // Automatically check if active subscription is past due date
+                    else if (string.Equals(subscription.Status, "ACTIVE", StringComparison.OrdinalIgnoreCase)
+                        && subscription.NextBillingDate.HasValue
+                        && subscription.NextBillingDate.Value <= now)
+                    {
+                        subscription.Status = "PAST_DUE";
+                        subscription.UpdatedDate = now;
+                        subscriptionStatus = "PAST_DUE";
+                        await _context.SaveChangesAsync();
+                    }
+
+                    var statusUpper = (subscriptionStatus ?? "").Trim().ToUpperInvariant();
+
+                    if (statusUpper == "EXPIRED")
+                    {
+                        isLocked = true;
+                        lockReason = "Your church subscription has expired. Please renew your monthly subscription to unlock your workspace.";
+                    }
+                    else if (statusUpper == "PAST_DUE")
+                    {
+                        isLocked = true;
+                        lockReason = $"Your monthly subscription payment is past due since {subscription.NextBillingDate:MMMM dd, yyyy}. Please submit payment to unlock your workspace.";
+                    }
+                    else if (statusUpper == "SUSPENDED")
+                    {
+                        isLocked = true;
+                        lockReason = "Your church workspace has been suspended by the administrator.";
+                    }
+                    else if (statusUpper == "CANCELLED")
+                    {
+                        isLocked = true;
+                        lockReason = "Your church workspace subscription has been cancelled.";
+                    }
+                }
+            }
+
             return Ok(new
             {
                 customerId = customer.CustomerId,
@@ -760,7 +845,15 @@ namespace EPIC.Api.Controllers
                 phone = customer.Phone,
                 isSetupCompleted = customer.IsSetupCompleted,
                 hasServices = hasServices,
-                hasMembers = hasMembers
+                hasMembers = hasMembers,
+
+                isLocked = isLocked,
+                lockReason = lockReason,
+                subscriptionId = subscriptionId,
+                subscriptionStatus = subscriptionStatus,
+                nextBillingDate = nextBillingDate,
+                amount = subscriptionAmount,
+                planName = planName
             });
         }
 

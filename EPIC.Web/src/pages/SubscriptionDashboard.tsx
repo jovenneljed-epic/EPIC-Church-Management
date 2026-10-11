@@ -173,6 +173,13 @@ const SubscriptionDashboard: React.FC = () => {
         false
     );
 
+    const [
+        renewingId,
+        setRenewingId
+    ] = useState<number | null>(
+        null
+    );
+
     // =====================================================
     // AUTH CONFIG
     // =====================================================
@@ -376,6 +383,37 @@ const SubscriptionDashboard: React.FC = () => {
                 getAuthConfig
             ]
         );
+
+    // =====================================================
+    // RENEW SUBSCRIPTION (+1 MONTH)
+    // =====================================================
+
+    const handleRenewSubscription = async (
+        subscriptionId: number,
+        churchName: string
+    ) => {
+        const confirmed = window.confirm(
+            `Renew subscription for "${churchName}"?\n\nThis will extend their billing due date by +1 month and instantly activate/unlock their church workspace.`
+        );
+
+        if (!confirmed) return;
+
+        try {
+            setRenewingId(subscriptionId);
+            await axios.post(
+                `${API_BASE_URL}/Subscriptions/${subscriptionId}/renew`,
+                {},
+                getAuthConfig()
+            );
+            alert(`✅ Successfully renewed monthly subscription for ${churchName}!`);
+            await loadDashboard(true);
+        } catch (err: unknown) {
+            const errorMsg = getErrorMessage(err, "Failed to renew subscription.");
+            alert(`❌ Error renewing subscription: ${errorMsg}`);
+        } finally {
+            setRenewingId(null);
+        }
+    };
 
     // =====================================================
     // INITIAL LOAD
@@ -1174,16 +1212,29 @@ const SubscriptionDashboard: React.FC = () => {
 
                                         </div>
 
-                                        <div className="trial-days">
+                                        <div className="trial-days-container">
+                                            <div className="trial-days">
+                                                <strong>
+                                                    {trial.daysRemaining}
+                                                </strong>
+                                                <span>
+                                                    days left
+                                                </span>
+                                            </div>
 
-                                            <strong>
-                                                {trial.daysRemaining}
-                                            </strong>
-
-                                            <span>
-                                                days left
-                                            </span>
-
+                                            <button
+                                                type="button"
+                                                className="renew-action-btn"
+                                                disabled={renewingId === trial.subscriptionId}
+                                                onClick={() =>
+                                                    handleRenewSubscription(
+                                                        trial.subscriptionId,
+                                                        trial.churchName
+                                                    )
+                                                }
+                                            >
+                                                {renewingId === trial.subscriptionId ? "..." : "⚡ Renew"}
+                                            </button>
                                         </div>
 
                                     </div>
@@ -1253,6 +1304,10 @@ const SubscriptionDashboard: React.FC = () => {
                                 Status
                             </span>
 
+                            <span>
+                                Action
+                            </span>
+
                         </div>
 
                         {pastDue.map(
@@ -1298,6 +1353,24 @@ const SubscriptionDashboard: React.FC = () => {
                                     <span className="status-past-due">
                                         Past Due
                                     </span>
+
+                                    <div>
+                                        <button
+                                            type="button"
+                                            className="renew-action-btn"
+                                            disabled={renewingId === subscription.subscriptionId}
+                                            onClick={() =>
+                                                handleRenewSubscription(
+                                                    subscription.subscriptionId,
+                                                    subscription.churchName
+                                                )
+                                            }
+                                        >
+                                            {renewingId === subscription.subscriptionId
+                                                ? "Renewing..."
+                                                : "⚡ Renew (+1 Mo)"}
+                                        </button>
+                                    </div>
 
                                 </div>
 

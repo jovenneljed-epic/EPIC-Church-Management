@@ -701,21 +701,6 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            var currentStatus =
-                subscription.Status
-                    .Trim()
-                    .ToUpperInvariant();
-
-            if (!RenewableStatuses.Contains(
-                currentStatus))
-            {
-                return BadRequest(new
-                {
-                    message =
-                        $"A subscription with status '{subscription.Status}' cannot be renewed."
-                });
-            }
-
             var plan =
                 await _context.SubscriptionPlans
                     .FirstOrDefaultAsync(p =>
@@ -725,11 +710,18 @@ namespace EPIC.Api.Controllers
 
             if (plan == null)
             {
-                return BadRequest(new
+                // Fallback to first active plan if previous plan is null
+                plan = await _context.SubscriptionPlans
+                    .FirstOrDefaultAsync(p => p.IsActive);
+
+                if (plan == null)
                 {
-                    message =
-                        "The subscription does not have a valid active subscription plan."
-                });
+                    return BadRequest(new
+                    {
+                        message =
+                            "The subscription does not have a valid active subscription plan."
+                    });
+                }
             }
 
             var now =
@@ -742,6 +734,11 @@ namespace EPIC.Api.Controllers
                     ? plan.AnnualPrice
                     : plan.MonthlyPrice;
 
+            var baseDate =
+                (subscription.NextBillingDate.HasValue && subscription.NextBillingDate.Value > now)
+                    ? subscription.NextBillingDate.Value
+                    : now;
+
             subscription.Status =
                 "ACTIVE";
 
@@ -752,7 +749,7 @@ namespace EPIC.Api.Controllers
                 "PHP";
 
             subscription.StartDate =
-                now;
+                subscription.StartDate == default ? now : subscription.StartDate;
 
             subscription.EndDate =
                 null;
@@ -762,7 +759,7 @@ namespace EPIC.Api.Controllers
 
             subscription.NextBillingDate =
                 CalculateNextBillingDate(
-                    now,
+                    baseDate,
                     subscription.BillingCycle);
 
             subscription.UpdatedDate =

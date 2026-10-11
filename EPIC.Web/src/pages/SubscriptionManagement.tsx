@@ -173,7 +173,11 @@ const ACTIVE_STATUSES: readonly SubscriptionStatus[] = [
 
 const RENEWABLE_STATUSES: readonly SubscriptionStatus[] = [
     "CANCELLED",
-    "EXPIRED"
+    "EXPIRED",
+    "PAST_DUE",
+    "SUSPENDED",
+    "TRIAL",
+    "ACTIVE"
 ];
 
 // =========================================================

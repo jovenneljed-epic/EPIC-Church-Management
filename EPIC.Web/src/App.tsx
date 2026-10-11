@@ -11,6 +11,7 @@ import "./App.css";
 import axios from "axios";
 import { API_BASE_URL } from "./config";
 import { ChurchSetupWizardModal } from "./components/ChurchSetupWizardModal";
+import { SubscriptionLockModal } from "./components/SubscriptionLockModal";
 
 // =========================================================
 // PUBLIC
@@ -1427,6 +1428,32 @@ const App: React.FC = () => {
     });
 
     // =====================================================
+    // SUBSCRIPTION LOCKOUT
+    // =====================================================
+
+    const [
+        isSubscriptionLocked,
+        setIsSubscriptionLocked,
+    ] = useState(false);
+
+    const [
+        subscriptionLockInfo,
+        setSubscriptionLockInfo,
+    ] = useState<{
+        churchName: string;
+        customerId: number | null;
+        lockReason: string;
+        planName?: string;
+        amount?: number | null;
+        nextBillingDate?: string | null;
+        subscriptionId?: number | null;
+    }>({
+        churchName: "",
+        customerId: null,
+        lockReason: "",
+    });
+
+    // =====================================================
     // ROUTING
     // =====================================================
 
@@ -1998,6 +2025,22 @@ const navigatePublic =
             });
 
             if (res.data) {
+                // Safeguard: CustomerId 1 is permanently exempt from lockouts
+                if (res.data.isLocked === true && res.data.customerId !== 1) {
+                    setIsSubscriptionLocked(true);
+                    setSubscriptionLockInfo({
+                        churchName: res.data.churchName || "Your Church",
+                        customerId: res.data.customerId,
+                        lockReason: res.data.lockReason || "Monthly subscription renewal is required.",
+                        planName: res.data.planName,
+                        amount: res.data.amount,
+                        nextBillingDate: res.data.nextBillingDate,
+                        subscriptionId: res.data.subscriptionId,
+                    });
+                } else {
+                    setIsSubscriptionLocked(false);
+                }
+
                 if (res.data.isSetupCompleted === false && res.data.customerId) {
                     setSetupChurchInfo({
                         churchName: res.data.churchName || "",
@@ -2013,6 +2056,12 @@ const navigatePublic =
             // Silently ignore if offline or unauthenticated
         }
     }, []);
+
+    const handleSubscriptionLockGoToPayment = useCallback(() => {
+        const subId = subscriptionLockInfo.subscriptionId;
+        const target = subId ? `/client-payment?subscriptionId=${subId}` : "/client-payment";
+        navigateToUrl(target);
+    }, [subscriptionLockInfo.subscriptionId, navigateToUrl]);
 
     const handleSetupWizardComplete = useCallback((completedChurchName: string) => {
         setShowSetupWizard(false);
@@ -4187,6 +4236,21 @@ if(
                     initialPastorName={setupChurchInfo.pastorName}
                     customerId={setupChurchInfo.customerId}
                     onComplete={handleSetupWizardComplete}
+                />
+            )}
+
+            {isAuthenticated && isSubscriptionLocked && activePage !== "client-payment" && (
+                <SubscriptionLockModal
+                    isOpen={isSubscriptionLocked}
+                    churchName={subscriptionLockInfo.churchName}
+                    customerId={subscriptionLockInfo.customerId}
+                    lockReason={subscriptionLockInfo.lockReason}
+                    planName={subscriptionLockInfo.planName}
+                    amount={subscriptionLockInfo.amount}
+                    nextBillingDate={subscriptionLockInfo.nextBillingDate}
+                    subscriptionId={subscriptionLockInfo.subscriptionId}
+                    onSignOut={handleLogout}
+                    onGoToPayment={handleSubscriptionLockGoToPayment}
                 />
             )}
         </div>
