@@ -39,7 +39,8 @@ import {
     Sparkles,
     Settings,
     Smile,
-    RefreshCw
+    RefreshCw,
+    Trash2
 } from "lucide-react";
 
 interface Service {
@@ -72,6 +73,7 @@ interface ScannedRecord {
     status: string;
     time: string;
     alreadyRecorded: boolean;
+    sortTime?: number;
 }
 
 async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -151,6 +153,8 @@ export default function EpicSmileScanner() {
     const [showEnrollModal, setShowEnrollModal] = useState<boolean>(false);
     const [showManualSearch, setShowManualSearch] = useState<boolean>(false);
     const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
+    const [showResetConfirmModal, setShowResetConfirmModal] = useState<boolean>(false);
+    const [isResettingAttendees, setIsResettingAttendees] = useState<boolean>(false);
     const [enrollSearch, setEnrollSearch] = useState<string>("");
     const [manualSearch, setManualSearch] = useState<string>("");
     const [autoEnrolling, setAutoEnrolling] = useState<boolean>(false);
@@ -230,18 +234,49 @@ export default function EpicSmileScanner() {
                 // Populate already scanned feed for today
                 const recorded = data.attendance
                     .filter(m => ["PRESENT", "EARLY", "LATE"].includes(m.status))
-                    .map(m => ({
-                        id: `hist-${m.memberId}-${m.recordedDate || Date.now()}`,
-                        memberId: m.memberId,
-                        fullName: m.fullName,
-                        memberCode: m.memberCode,
-                        ministry: m.ministry || "Member",
-                        photoPath: m.photoPath,
-                        status: m.status,
-                        time: m.recordedDate ? new Date(m.recordedDate).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }) : "Recorded",
-                        alreadyRecorded: true
-                    }));
-                setScannedRecords(recorded);
+                    .map(m => {
+                        let formattedTime = "Recorded";
+                        let sortTime = 0;
+                        if (m.recordedDate) {
+                            try {
+                                const d = new Date(m.recordedDate);
+                                if (!isNaN(d.getTime())) {
+                                    formattedTime = d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+                                    sortTime = d.getTime();
+                                }
+                            } catch {}
+                        }
+                        return {
+                            id: `hist-${m.memberId}-${m.recordedDate || Date.now()}`,
+                            memberId: m.memberId,
+                            fullName: m.fullName,
+                            memberCode: m.memberCode,
+                            ministry: m.ministry || "Member",
+                            photoPath: m.photoPath,
+                            status: m.status,
+                            time: formattedTime,
+                            alreadyRecorded: true,
+                            sortTime
+                        };
+                    });
+
+                // Preserve live session scan times if present in scannedRecords
+                setScannedRecords(prev => {
+                    const sessionMap = new Map<number, ScannedRecord>();
+                    prev.forEach(r => sessionMap.set(r.memberId, r));
+
+                    const merged = recorded.map(r => {
+                        const live = sessionMap.get(r.memberId);
+                        if (live && live.time) {
+                            return { ...r, time: live.time, sortTime: live.sortTime || r.sortTime };
+                        }
+                        return r;
+                    });
+
+                    // Sort newest first by sortTime descending
+                    merged.sort((a, b) => (b.sortTime || 0) - (a.sortTime || 0));
+                    return merged;
+                });
             }
         } catch {
             // Silently handle
@@ -250,7 +285,7 @@ export default function EpicSmileScanner() {
 
     useEffect(() => {
         void loadRoster();
-        const poll = setInterval(loadRoster, 15000);
+        const poll = setInterval(loadRoster, 5000);
         return () => clearInterval(poll);
     }, [loadRoster]);
 
@@ -404,7 +439,8 @@ export default function EpicSmileScanner() {
                 body: JSON.stringify({
                     memberId: member.memberId,
                     scanMode: "SMILE_SCANNER",
-                    confidence: confidenceScore
+                    confidence: confidenceScore,
+                    clientTime: new Date().toISOString()
                 })
             });
 
@@ -418,7 +454,8 @@ export default function EpicSmileScanner() {
                 photoPath: result.photoPath || member.photoPath,
                 status: result.status || "PRESENT",
                 time: timeStr,
-                alreadyRecorded: result.alreadyRecorded
+                alreadyRecorded: result.alreadyRecorded,
+                sortTime: now
             };
 
             // Play audio chimes & speech greeting
@@ -738,6 +775,29 @@ export default function EpicSmileScanner() {
         setActiveEnrollMember(null);
         setStudioCapturedSnapshot(null);
         setStudioDescriptor(null);
+    };
+
+    // ---------------------------------------------------------
+    // RESET / CLEAR TODAY'S ATTENDEES FOR ACTIVE SERVICE
+    // ---------------------------------------------------------
+    const handleResetTodayAttendees = async () => {
+        if (!serviceId || isResettingAttendees) return;
+        setIsResettingAttendees(true);
+        try {
+            await apiRequest(`/Attendance/church-service/${serviceId}/reset-attendees`, {
+                method: "POST"
+            });
+            // Instantly clear local attendance state
+            setScannedRecords([]);
+            setMembersRoster(prev => prev.map(m => ({ ...m, status: "PENDING", recordedDate: null, recordedBy: undefined })));
+            setShowResetConfirmModal(false);
+            setStatusPrompt("Today's attendees cleared! Scanner is reset and ready 😊");
+            void loadRoster();
+        } catch (err) {
+            alert(err instanceof Error ? err.message : "Failed to reset attendees.");
+        } finally {
+            setIsResettingAttendees(false);
+        }
     };
 
     // ---------------------------------------------------------
@@ -1114,9 +1174,22 @@ export default function EpicSmileScanner() {
                                 <Users size={16} />
                                 <span>Today's Attendees</span>
                             </h3>
-                            <div className="smile-live-indicator">
-                                <span className="smile-pulse-dot" />
-                                <span>LIVE</span>
+                            <div className="smile-feed-header-actions">
+                                {totalPresent > 0 && (
+                                    <button
+                                        type="button"
+                                        className="smile-clear-btn"
+                                        onClick={() => setShowResetConfirmModal(true)}
+                                        title="Clear all today's attendees"
+                                    >
+                                        <Trash2 size={13} />
+                                        <span>Clear ({totalPresent})</span>
+                                    </button>
+                                )}
+                                <div className="smile-live-indicator">
+                                    <span className="smile-pulse-dot" />
+                                    <span>LIVE</span>
+                                </div>
                             </div>
                         </div>
 
@@ -1613,6 +1686,74 @@ export default function EpicSmileScanner() {
                                     </button>
                                 </>
                             )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* =========================================================
+               MODAL: CLEAR TODAY'S ATTENDEES CONFIRMATION
+            ========================================================= */}
+            {showResetConfirmModal && (
+                <div className="smile-modal-overlay" onClick={() => setShowResetConfirmModal(false)}>
+                    <div className="smile-modal" style={{ maxWidth: "440px" }} onClick={e => e.stopPropagation()}>
+                        <div className="smile-modal-header" style={{ borderColor: "rgba(239, 68, 68, 0.3)" }}>
+                            <h2 style={{ color: "#ef4444" }}>
+                                <Trash2 size={20} />
+                                <span>Reset Today's Attendees?</span>
+                            </h2>
+                            <button type="button" className="smile-btn-icon" onClick={() => setShowResetConfirmModal(false)}>
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div className="smile-modal-body">
+                            <p style={{ color: "#e2e8f0", fontSize: "0.92rem", lineHeight: "1.5", marginTop: 0 }}>
+                                Are you sure you want to remove all <strong>{totalPresent}</strong> checked-in attendees for this service?
+                            </p>
+                            <div style={{
+                                background: "rgba(239, 68, 68, 0.1)",
+                                border: "1px solid rgba(239, 68, 68, 0.25)",
+                                borderRadius: "8px",
+                                padding: "12px",
+                                fontSize: "0.82rem",
+                                color: "#fca5a5",
+                                marginBottom: "20px"
+                            }}>
+                                💡 <strong>Note:</strong> Enrolled facial biometrics and member accounts will <em>not</em> be deleted. Only today's attendance records for this service will be wiped, returning all members to <strong>Pending</strong>.
+                            </div>
+                            <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+                                <button
+                                    type="button"
+                                    className="smile-btn smile-btn-secondary"
+                                    onClick={() => setShowResetConfirmModal(false)}
+                                    disabled={isResettingAttendees}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    className="smile-btn"
+                                    style={{
+                                        background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
+                                        color: "#fff",
+                                        boxShadow: "0 4px 12px rgba(239, 68, 68, 0.3)"
+                                    }}
+                                    onClick={handleResetTodayAttendees}
+                                    disabled={isResettingAttendees}
+                                >
+                                    {isResettingAttendees ? (
+                                        <>
+                                            <RefreshCw size={14} className="spin" />
+                                            <span>Clearing...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Trash2 size={14} />
+                                            <span>Yes, Clear Attendees</span>
+                                        </>
+                                    )}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

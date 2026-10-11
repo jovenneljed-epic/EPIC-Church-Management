@@ -111,13 +111,14 @@ namespace EPIC.Api.Controllers
 
                 if (service.CustomerId != qr.Member.CustomerId)
                     return BadRequest(new { success = false, message = "Member and service belong to different churches." });
+                var phNow = AttendanceStatusService.GetPhilippineTime();
                 if (existing != null)
                 {
                     var changed = existing.Status is not ("PRESENT" or "EARLY" or "LATE");
                     if (changed) {
-                        existing.Status = attendanceStatusService.GetStatus(service, DateTime.Now);
-                        existing.AttendanceDate = DateTime.Now;
-                        existing.RecordedDate = DateTime.Now;
+                        existing.Status = attendanceStatusService.GetStatus(service, phNow);
+                        existing.AttendanceDate = phNow;
+                        existing.RecordedDate = phNow;
                         existing.RecordedBy = "QR SCANNER";
                     }
                     await LogAttendanceScan(qr.MemberId, request, changed ? "SUCCESS" : "ALREADY_RECORDED");
@@ -138,18 +139,18 @@ namespace EPIC.Api.Controllers
                 var status =
                     attendanceStatusService.GetStatus(
                         service,
-                        DateTime.Now);
+                        phNow);
 
 
                 attendance = new Attendance
                 {
                     MemberId = qr.MemberId,
                     ChurchServiceId = service.ChurchServiceId,
-                    AttendanceDate = DateTime.Now,
+                    AttendanceDate = phNow,
                     Status = status,
                     Service = service.ServiceName,
                     RecordedBy = "QR SCANNER",
-                    RecordedDate = DateTime.Now
+                    RecordedDate = phNow
                 };
 
 
@@ -200,13 +201,14 @@ namespace EPIC.Api.Controllers
                         x.MemberId == qr.MemberId);
 
 
+                var phNowEvent = AttendanceStatusService.GetPhilippineTime();
                 if (existingEventAttendance != null)
                 {
                     var changed = existingEventAttendance.Status is not ("PRESENT" or "EARLY" or "LATE");
                     if (changed) {
                         existingEventAttendance.Status = GetEventAttendanceStatus(eventData);
-                        existingEventAttendance.AttendanceDate = DateTime.Now;
-                        existingEventAttendance.RecordedDate = DateTime.Now;
+                        existingEventAttendance.AttendanceDate = phNowEvent;
+                        existingEventAttendance.RecordedDate = phNowEvent;
                         existingEventAttendance.RecordedBy = "QR SCANNER";
                     }
                     await LogAttendanceScan(qr.MemberId, request, changed ? "SUCCESS" : "ALREADY_RECORDED");
@@ -232,11 +234,11 @@ namespace EPIC.Api.Controllers
 
                     Status = GetEventAttendanceStatus(eventData),
 
-                    AttendanceDate = DateTime.Now,
+                    AttendanceDate = phNowEvent,
 
                     RecordedBy = "QR SCANNER",
 
-                    RecordedDate = DateTime.Now
+                    RecordedDate = phNowEvent
                 };
 
 

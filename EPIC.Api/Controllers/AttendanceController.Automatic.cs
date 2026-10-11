@@ -18,6 +18,7 @@ public partial class AttendanceController
         if (access.Error != null) return access.Error;
         var service = await GetCustomerChurchServiceAsync(serviceId, access.CustomerId!.Value);
         if (service == null) return NotFound();
+        var phNow = AttendanceStatusService.GetPhilippineTime();
         var nextDay = service.ServiceDate.Date.AddDays(1);
         var members = await CustomerMembers(access.CustomerId.Value).AsNoTracking()
             .Where(m => (m.Status == "ACTIVE" && (m.DateJoined ?? m.CreatedDate) < nextDay) ||
@@ -26,13 +27,14 @@ public partial class AttendanceController
             .Select(m => new { m.MemberId, m.MemberCode, m.FirstName, m.MiddleName, m.LastName, m.Ministry, m.PhotoPath }).ToListAsync();
         var records = await CustomerAttendance(access.CustomerId.Value).AsNoTracking()
             .Where(a => a.ChurchServiceId == serviceId).ToDictionaryAsync(a => a.MemberId);
-        return Ok(new { service, ended = AutomaticAttendanceRules.HasEnded(service, DateTime.Now),
-            canUpdate = await HasPermissionAsync("edit") && service.Status != "CANCELLED" && service.ServiceDate.Date <= DateTime.Today,
+        return Ok(new { service, ended = AutomaticAttendanceRules.HasEnded(service, phNow),
+            canUpdate = await HasPermissionAsync("edit") && service.Status != "CANCELLED" && service.ServiceDate.Date <= phNow.Date,
             attendance = members.Select(m => {
                 records.TryGetValue(m.MemberId, out var record);
                 return new { m.MemberId, m.MemberCode, m.Ministry, m.PhotoPath, fullName = string.Join(" ", new[] {m.FirstName, m.MiddleName, m.LastName}.Where(s => !string.IsNullOrWhiteSpace(s))),
                     status = record?.Status ?? "PENDING", attendanceId = record?.AttendanceId,
-                    recordedDate = record?.RecordedDate, recordedBy = record?.RecordedBy };
+                    recordedDate = record?.RecordedDate != null ? record.RecordedDate.ToString("yyyy-MM-ddTHH:mm:ss") : null,
+                    recordedBy = record?.RecordedBy };
             }) });
     }
 
@@ -47,7 +49,8 @@ public partial class AttendanceController
         if (access.Error != null) return access.Error;
         var service = await GetCustomerChurchServiceAsync(serviceId, access.CustomerId!.Value);
         if (service == null) return NotFound();
-        if (service.Status.Equals("CANCELLED", StringComparison.OrdinalIgnoreCase) || service.ServiceDate.Date > DateTime.Today)
+        var phNow = AttendanceStatusService.GetPhilippineTime();
+        if (service.Status.Equals("CANCELLED", StringComparison.OrdinalIgnoreCase) || service.ServiceDate.Date > phNow.Date)
             return BadRequest(new { message = "Cancelled or future services cannot be updated." });
         var status = request.Status?.Trim().ToUpperInvariant();
         if (status == null || !AllowedStatuses.Contains(status)) return BadRequest(new { message = "Select a valid attendance status." });
@@ -64,13 +67,13 @@ public partial class AttendanceController
         }
         record.Status = status;
         record.RecordedBy = GetCurrentUserName();
-        record.RecordedDate = DateTime.Now;
+        record.RecordedDate = phNow;
         await _context.SaveChangesAsync();
         await transaction.CommitAsync();
         return Ok(new { message = "Attendance updated." });
     }
 
-    public record FaceScanRequest(int MemberId, string? ScanMode, double? Confidence);
+    public record FaceScanRequest(int MemberId, string? ScanMode, double? Confidence, string? ClientTime = null);
 
     // =========================================================
     // EPIC SMILE FACE RECOGNITION SCANNER
@@ -103,8 +106,15 @@ public partial class AttendanceController
         if (!string.Equals(member.Status, "ACTIVE", StringComparison.OrdinalIgnoreCase))
             return BadRequest(new { success = false, message = $"Member '{member.FirstName} {member.LastName}' is inactive." });
 
+        // Synchronize real-time clock to Philippine Standard Time (UTC+8)
+        var now = AttendanceStatusService.GetPhilippineTime();
+        if (!string.IsNullOrWhiteSpace(request.ClientTime) && DateTimeOffset.TryParse(request.ClientTime, out var clientDto))
+        {
+            now = AttendanceStatusService.GetPhilippineTime(clientDto.UtcDateTime);
+        }
+
         var statusService = HttpContext.RequestServices.GetRequiredService<AttendanceStatusService>();
-        var calculatedStatus = statusService.GetStatus(service, DateTime.Now);
+        var calculatedStatus = statusService.GetStatus(service, now);
 
         await using var transaction = await _context.Database.BeginTransactionAsync();
         await AutomaticAttendanceRules.Lock(_context, serviceId, request.MemberId);
@@ -113,7 +123,6 @@ public partial class AttendanceController
             .FirstOrDefaultAsync(a => a.MemberId == request.MemberId && a.ChurchServiceId == serviceId);
 
         var alreadyRecorded = false;
-        var now = DateTime.Now;
 
         if (existing != null)
         {
@@ -163,8 +172,45 @@ public partial class AttendanceController
             photoPath = member.PhotoPath ?? "",
             status = finalStatus,
             serviceName = service.ServiceName,
-            recordedDate = finalRecordedDate,
+            recordedDate = finalRecordedDate.ToString("yyyy-MM-ddTHH:mm:ss"),
             confidence = request.Confidence
+        });
+    }
+
+    // =========================================================
+    // RESET / CLEAR ALL ATTENDEES FOR ACTIVE SERVICE
+    // POST /api/Attendance/church-service/{serviceId}/reset-attendees
+    // DELETE /api/Attendance/church-service/{serviceId}/attendees
+    // =========================================================
+    [HttpPost("church-service/{serviceId:int}/reset-attendees")]
+    [HttpDelete("church-service/{serviceId:int}/attendees")]
+    public async Task<IActionResult> ResetServiceAttendees(int serviceId)
+    {
+        var permission = await RequirePermissionAsync("edit");
+        if (permission != null) return permission;
+        var access = await RequireChurchAccessAsync();
+        if (access.Error != null) return access.Error;
+
+        var service = await GetCustomerChurchServiceAsync(serviceId, access.CustomerId!.Value);
+        if (service == null)
+            return NotFound(new { success = false, message = "Church service not found." });
+
+        var attendances = await _context.Attendances
+            .Where(a => a.ChurchServiceId == serviceId)
+            .ToListAsync();
+
+        var count = attendances.Count;
+        if (count > 0)
+        {
+            _context.Attendances.RemoveRange(attendances);
+            await _context.SaveChangesAsync();
+        }
+
+        return Ok(new
+        {
+            success = true,
+            deletedCount = count,
+            message = $"Successfully removed {count} attendee(s) from '{service.ServiceName}'. Attendance has been reset to 0."
         });
     }
 
