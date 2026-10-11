@@ -200,7 +200,7 @@ public partial class AttendanceController
     }
 
     [HttpPost("face-biometrics")]
-    public async Task<IActionResult> SaveFaceBiometrics([FromBody] object data)
+    public async Task<IActionResult> SaveFaceBiometrics([FromBody] System.Text.Json.JsonElement data)
     {
         var permission = await RequirePermissionAsync("edit");
         if (permission != null) return permission;
@@ -212,9 +212,64 @@ public partial class AttendanceController
         Directory.CreateDirectory(bioFolder);
         var filePath = Path.Combine(bioFolder, $"customer_{access.CustomerId!.Value}_faces.json");
 
-        var json = System.Text.Json.JsonSerializer.Serialize(data, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+        // Merge with existing file if present
+        var existingDict = new Dictionary<string, System.Text.Json.JsonElement>();
+        if (System.IO.File.Exists(filePath))
+        {
+            try
+            {
+                var existingJson = await System.IO.File.ReadAllTextAsync(filePath);
+                using var doc = System.Text.Json.JsonDocument.Parse(existingJson);
+                if (doc.RootElement.TryGetProperty("profiles", out var existingProfiles) && existingProfiles.ValueKind == System.Text.Json.JsonValueKind.Object)
+                {
+                    foreach (var prop in existingProfiles.EnumerateObject())
+                    {
+                        existingDict[prop.Name] = prop.Value.Clone();
+                    }
+                }
+            }
+            catch
+            {
+                // Start with empty dictionary if corrupt
+            }
+        }
+
+        // Add or update with new incoming profiles
+        if (data.ValueKind == System.Text.Json.JsonValueKind.Object)
+        {
+            if (data.TryGetProperty("profiles", out var incomingProfiles))
+            {
+                if (incomingProfiles.ValueKind == System.Text.Json.JsonValueKind.Object)
+                {
+                    foreach (var prop in incomingProfiles.EnumerateObject())
+                    {
+                        existingDict[prop.Name] = prop.Value.Clone();
+                    }
+                }
+                else if (incomingProfiles.ValueKind == System.Text.Json.JsonValueKind.Array)
+                {
+                    foreach (var item in incomingProfiles.EnumerateArray())
+                    {
+                        if (item.TryGetProperty("memberId", out var idProp))
+                        {
+                            existingDict[idProp.ToString()] = item.Clone();
+                        }
+                    }
+                }
+            }
+            else
+            {
+                foreach (var prop in data.EnumerateObject())
+                {
+                    existingDict[prop.Name] = prop.Value.Clone();
+                }
+            }
+        }
+
+        var resultObj = new { profiles = existingDict };
+        var json = System.Text.Json.JsonSerializer.Serialize(resultObj, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
         await System.IO.File.WriteAllTextAsync(filePath, json);
 
-        return Ok(new { success = true, message = "Biometric profiles synchronized." });
+        return Ok(new { success = true, count = existingDict.Count, message = "Biometric profiles synchronized." });
     }
 }

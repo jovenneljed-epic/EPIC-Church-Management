@@ -18,6 +18,12 @@ import type {
     FaceDetectionResult
 } from "./utils/EpicFaceBiometrics";
 import {
+    getStoredBiometricsSync,
+    loadAllStoredBiometrics,
+    saveStoredBiometrics,
+    mergeFaceProfiles
+} from "./utils/biometricsStorage";
+import {
     Camera,
     Maximize,
     Minimize,
@@ -103,7 +109,7 @@ export default function EpicSmileScanner() {
     const [showAllServices, setShowAllServices] = useState<boolean>(false);
     const [membersRoster, setMembersRoster] = useState<MemberRow[]>([]);
     const [scannedRecords, setScannedRecords] = useState<ScannedRecord[]>([]);
-    const [enrolledProfiles, setEnrolledProfiles] = useState<EnrolledFaceProfile[]>([]);
+    const [enrolledProfiles, setEnrolledProfiles] = useState<EnrolledFaceProfile[]>(getStoredBiometricsSync);
 
     // ---------------------------------------------------------
     // CAMERA & STREAM
@@ -252,22 +258,51 @@ export default function EpicSmileScanner() {
     // LOAD ENROLLED BIOMETRIC PROFILES
     // ---------------------------------------------------------
     const loadBiometrics = useCallback(async () => {
+        // 1. Recover from local storage & IndexedDB
+        const local = await loadAllStoredBiometrics();
+        if (local.length > 0) {
+            setEnrolledProfiles(prev => (prev.length >= local.length ? prev : local));
+        }
+
+        // 2. Fetch and merge with server
         try {
-            const res = await apiRequest<{ profiles: Record<string, EnrolledFaceProfile> }>("/Attendance/face-biometrics");
+            const res = await apiRequest<{ profiles: Record<string, EnrolledFaceProfile> | EnrolledFaceProfile[] }>("/Attendance/face-biometrics");
+            let serverList: EnrolledFaceProfile[] = [];
             if (res?.profiles) {
-                const list = Object.values(res.profiles);
-                setEnrolledProfiles(list);
-                localStorage.setItem("epic_smile_profiles", JSON.stringify(list));
+                serverList = Array.isArray(res.profiles) ? res.profiles : Object.values(res.profiles);
             }
-        } catch {
-            // Fallback to local storage
-            const local = localStorage.getItem("epic_smile_profiles");
-            if (local) {
-                try {
-                    setEnrolledProfiles(JSON.parse(local));
-                } catch {
-                    // Ignore
+
+            if (serverList.length > 0) {
+                const currentLocal = getStoredBiometricsSync();
+                const merged = mergeFaceProfiles(currentLocal.length > 0 ? currentLocal : local, serverList);
+                setEnrolledProfiles(merged);
+                await saveStoredBiometrics(merged);
+
+                // If local had profiles not yet on server, push merged set to server
+                if (merged.length > serverList.length) {
+                    const payload: Record<string, EnrolledFaceProfile> = {};
+                    merged.forEach(p => { payload[String(p.memberId)] = p; });
+                    void apiRequest("/Attendance/face-biometrics", {
+                        method: "POST",
+                        body: JSON.stringify({ profiles: payload })
+                    }).catch(() => {});
                 }
+            } else if (local.length > 0) {
+                // Server returned empty, BUT local has enrolled faces!
+                // CRITICAL: NEVER WIPE LOCAL STORAGE!
+                // Push local enrolled profiles to server so server also has them!
+                setEnrolledProfiles(local);
+                const payload: Record<string, EnrolledFaceProfile> = {};
+                local.forEach(p => { payload[String(p.memberId)] = p; });
+                void apiRequest("/Attendance/face-biometrics", {
+                    method: "POST",
+                    body: JSON.stringify({ profiles: payload })
+                }).catch(() => {});
+            }
+        } catch (err) {
+            console.warn("[Biometrics] Server sync unavailable; keeping local profiles:", err);
+            if (local.length > 0) {
+                setEnrolledProfiles(local);
             }
         }
     }, []);
@@ -536,20 +571,18 @@ export default function EpicSmileScanner() {
 
         // Save to backend and local storage
         if (successCount > 0) {
+            const merged = mergeFaceProfiles(enrolledProfiles, Object.values(newProfiles));
+            setEnrolledProfiles(merged);
+            await saveStoredBiometrics(merged);
+
             try {
                 await apiRequest("/Attendance/face-biometrics", {
                     method: "POST",
                     body: JSON.stringify({ profiles: newProfiles })
                 });
-                const merged = [...enrolledProfiles.filter(p => !newProfiles[String(p.memberId)]), ...Object.values(newProfiles)];
-                setEnrolledProfiles(merged);
-                localStorage.setItem("epic_smile_profiles", JSON.stringify(merged));
                 setEnrollMessage(`Successfully enrolled ${successCount} members from their profile photos!`);
             } catch {
-                const merged = [...enrolledProfiles.filter(p => !newProfiles[String(p.memberId)]), ...Object.values(newProfiles)];
-                setEnrolledProfiles(merged);
-                localStorage.setItem("epic_smile_profiles", JSON.stringify(merged));
-                setEnrollMessage(`Enrolled ${successCount} members locally!`);
+                setEnrollMessage(`Enrolled ${successCount} members permanently in kiosk storage!`);
             }
         } else {
             setEnrollMessage("Could not extract facial profiles from member photos. You can enroll members with the live camera below.");
@@ -631,7 +664,18 @@ export default function EpicSmileScanner() {
         };
 
         const desc = extractFaceDescriptor(canvas, box);
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
+
+        // Generate a compressed 140x140 facial snapshot thumbnail (< 5KB) to prevent huge memory & localStorage quota waste
+        const thumbCanvas = document.createElement("canvas");
+        thumbCanvas.width = 140;
+        thumbCanvas.height = 140;
+        const tctx = thumbCanvas.getContext("2d");
+        if (tctx) {
+            const sx = Math.max(0, box.centerX - box.width / 2);
+            const sy = Math.max(0, box.centerY - box.height / 2);
+            tctx.drawImage(canvas, sx, sy, box.width, box.height, 0, 0, 140, 140);
+        }
+        const dataUrl = thumbCanvas.toDataURL("image/jpeg", 0.7);
 
         setStudioDescriptor(desc);
         setStudioCapturedSnapshot(dataUrl);
@@ -667,17 +711,23 @@ export default function EpicSmileScanner() {
             enrolledAt: new Date().toISOString()
         };
 
-        const updated = [...enrolledProfiles.filter(p => p.memberId !== activeEnrollMember.memberId), newProfile];
+        // Merge: updates this member's biometrics while keeping ALL other enrolled members intact!
+        const updated = mergeFaceProfiles(enrolledProfiles, [newProfile]);
         setEnrolledProfiles(updated);
-        localStorage.setItem("epic_smile_profiles", JSON.stringify(updated));
+        await saveStoredBiometrics(updated);
 
-        // Sync to server
-        const payload: Record<string, EnrolledFaceProfile> = {};
-        updated.forEach(p => { payload[String(p.memberId)] = p; });
-        void apiRequest("/Attendance/face-biometrics", {
-            method: "POST",
-            body: JSON.stringify({ profiles: payload })
-        }).catch(() => {});
+        // Sync to server in background
+        const payload: Record<string, EnrolledFaceProfile> = {
+            [String(newProfile.memberId)]: newProfile
+        };
+        try {
+            await apiRequest("/Attendance/face-biometrics", {
+                method: "POST",
+                body: JSON.stringify({ profiles: payload })
+            });
+        } catch (e) {
+            console.warn("[Biometrics] Background server sync warning (local storage is preserved):", e);
+        }
 
         if (soundEnabled) playSuccessChime();
         if (voiceGreetingEnabled) {
