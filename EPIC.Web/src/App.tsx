@@ -8,6 +8,10 @@ import React, {
 
 import "./App.css";
 
+import axios from "axios";
+import { API_BASE_URL } from "./config";
+import { ChurchSetupWizardModal } from "./components/ChurchSetupWizardModal";
+
 // =========================================================
 // PUBLIC
 // =========================================================
@@ -1401,6 +1405,28 @@ const App: React.FC = () => {
         );
 
     // =====================================================
+    // FIRST-TIME CHURCH SETUP WIZARD
+    // =====================================================
+
+    const [
+        showSetupWizard,
+        setShowSetupWizard,
+    ] = useState(false);
+
+    const [
+        setupChurchInfo,
+        setSetupChurchInfo,
+    ] = useState<{
+        churchName: string;
+        pastorName?: string;
+        customerId: number | null;
+    }>({
+        churchName: "",
+        pastorName: "",
+        customerId: null,
+    });
+
+    // =====================================================
     // ROUTING
     // =====================================================
 
@@ -1950,6 +1976,57 @@ const navigatePublic =
             );
         };
     }, []);
+
+    // =====================================================
+    // CHURCH SETUP STATUS CHECK
+    // =====================================================
+
+    const checkChurchSetupStatus = useCallback(async () => {
+        const token =
+            localStorage.getItem("token") ||
+            localStorage.getItem("accessToken") ||
+            sessionStorage.getItem("token") ||
+            sessionStorage.getItem("accessToken");
+
+        if (!token) return;
+
+        try {
+            const res = await axios.get(`${API_BASE_URL}/Customers/setup-status`, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+
+            if (res.data) {
+                if (res.data.isSetupCompleted === false && res.data.customerId) {
+                    setSetupChurchInfo({
+                        churchName: res.data.churchName || "",
+                        pastorName: res.data.contactPerson || "",
+                        customerId: res.data.customerId,
+                    });
+                    setShowSetupWizard(true);
+                } else {
+                    setShowSetupWizard(false);
+                }
+            }
+        } catch {
+            // Silently ignore if offline or unauthenticated
+        }
+    }, []);
+
+    const handleSetupWizardComplete = useCallback((completedChurchName: string) => {
+        setShowSetupWizard(false);
+        if (completedChurchName) {
+            localStorage.setItem("currentChurchName", completedChurchName);
+        }
+        window.location.reload();
+    }, []);
+
+    useEffect(() => {
+        if (isAuthenticated) {
+            checkChurchSetupStatus();
+        }
+    }, [isAuthenticated, checkChurchSetupStatus]);
 
     // =====================================================
     // CLIENT AUTH EVENTS
@@ -4102,6 +4179,16 @@ if(
                     </span>
                 </footer>
             </main>
+
+            {showSetupWizard && (
+                <ChurchSetupWizardModal
+                    isOpen={showSetupWizard}
+                    initialChurchName={setupChurchInfo.churchName}
+                    initialPastorName={setupChurchInfo.pastorName}
+                    customerId={setupChurchInfo.customerId}
+                    onComplete={handleSetupWizardComplete}
+                />
+            )}
         </div>
     );
 };

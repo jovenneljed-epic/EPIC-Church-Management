@@ -34,6 +34,22 @@ namespace EPIC.Api.Data
         // SEED
         // =========================================================
 
+        // =========================================================
+        // DEFAULT SYSTEM ROLES
+        // =========================================================
+
+        private static readonly (string Name, string Description)[] DefaultRoles =
+        {
+            ("CLIENT_ADMIN", "Full access to the customer's EPIC CMS."),
+            ("CLIENT_STAFF", "Administrative and operational access."),
+            ("CLIENT_LEADER", "Leadership access to ministry, events and attendance."),
+            ("CLIENT_MEMBER", "Limited personal member access.")
+        };
+
+        // =========================================================
+        // SEED ALL CUSTOMERS
+        // =========================================================
+
         public static async Task SeedAsync(
             ApplicationDbContext context)
         {
@@ -52,108 +68,75 @@ namespace EPIC.Api.Data
                 return;
             }
 
-            // =====================================================
-            // DEFAULT SYSTEM ROLES
-            // =====================================================
-
-            var defaultRoles =
-                new[]
-                {
-                    new
-                    {
-                        Name = "CLIENT_ADMIN",
-
-                        Description =
-                            "Full access to the customer's EPIC CMS."
-                    },
-
-                    new
-                    {
-                        Name = "CLIENT_STAFF",
-
-                        Description =
-                            "Administrative and operational access."
-                    },
-
-                    new
-                    {
-                        Name = "CLIENT_LEADER",
-
-                        Description =
-                            "Leadership access to ministry, events and attendance."
-                    },
-
-                    new
-                    {
-                        Name = "CLIENT_MEMBER",
-
-                        Description =
-                            "Limited personal member access."
-                    }
-                };
-
-            // =====================================================
-            // PROCESS EACH CUSTOMER
-            // =====================================================
-
             foreach (var customerId in customers)
             {
-                foreach (var defaultRole in defaultRoles)
+                await SeedForCustomerAsync(context, customerId);
+            }
+        }
+
+        // =========================================================
+        // SEED SPECIFIC CUSTOMER
+        // =========================================================
+
+        public static async Task SeedForCustomerAsync(
+            ApplicationDbContext context,
+            int customerId)
+        {
+            foreach (var defaultRole in DefaultRoles)
+            {
+                // =================================================
+                // FIND ROLE
+                // =================================================
+
+                var role =
+                    await context.ClientRoles
+                        .FirstOrDefaultAsync(r =>
+                            r.CustomerId == customerId &&
+                            r.RoleName == defaultRole.Name);
+
+                // =================================================
+                // CREATE ROLE IF MISSING
+                // =================================================
+
+                if (role == null)
                 {
-                    // =================================================
-                    // FIND ROLE
-                    // =================================================
+                    role =
+                        new ClientRole
+                        {
+                            CustomerId =
+                                customerId,
 
-                    var role =
-                        await context.ClientRoles
-                            .FirstOrDefaultAsync(r =>
-                                r.CustomerId == customerId &&
-                                r.RoleName == defaultRole.Name);
+                            RoleName =
+                                defaultRole.Name,
 
-                    // =================================================
-                    // CREATE ROLE IF MISSING
-                    // =================================================
+                            Description =
+                                defaultRole.Description,
 
-                    if (role == null)
-                    {
-                        role =
-                            new ClientRole
-                            {
-                                CustomerId =
-                                    customerId,
+                            IsSystemRole =
+                                true,
 
-                                RoleName =
-                                    defaultRole.Name,
+                            IsActive =
+                                true,
 
-                                Description =
-                                    defaultRole.Description,
+                            CreatedDate =
+                                DateTime.UtcNow,
 
-                                IsSystemRole =
-                                    true,
+                            UpdatedDate =
+                                null
+                        };
 
-                                IsActive =
-                                    true,
+                    context.ClientRoles.Add(role);
 
-                                CreatedDate =
-                                    DateTime.UtcNow,
-
-                                UpdatedDate =
-                                    null
-                            };
-
-                        context.ClientRoles.Add(role);
-
-                        await context.SaveChangesAsync();
-                    }
-
-                    // =================================================
-                    // SEED PERMISSIONS
-                    // =================================================
-
-                    await SeedPermissionsAsync(
-                        context,
-                        role);
+                    await context.SaveChangesAsync();
                 }
+
+                // =================================================
+                // SEED PERMISSIONS
+                // =================================================
+
+                await SeedPermissionsAsync(
+                    context,
+                    role);
             }
         }
 

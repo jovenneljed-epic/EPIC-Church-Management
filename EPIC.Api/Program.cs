@@ -835,6 +835,39 @@ static async Task SeedDatabaseAsync(
             services.GetRequiredService<
                 ApplicationDbContext>();
 
+        // --------------------------------------------------------
+        // SCHEMA UPDATES & TENANT ISOLATION SETUP PROTECTION
+        // --------------------------------------------------------
+
+        try
+        {
+            var schemaSql = @"
+                IF NOT EXISTS (
+                    SELECT 1 FROM sys.columns 
+                    WHERE Name = N'IsSetupCompleted' 
+                    AND Object_ID = Object_ID(N'Customers')
+                )
+                BEGIN
+                    ALTER TABLE Customers ADD IsSetupCompleted BIT NOT NULL CONSTRAINT DF_Customers_IsSetupCompleted DEFAULT 0;
+                END;
+
+                -- Ensure existing church accounts with existing records are marked completed
+                UPDATE Customers 
+                SET IsSetupCompleted = 1 
+                WHERE IsSetupCompleted = 0 
+                  AND (
+                    CustomerId = 1 
+                    OR EXISTS (SELECT 1 FROM ChurchServices WHERE ChurchServices.CustomerId = Customers.CustomerId)
+                    OR EXISTS (SELECT 1 FROM Members WHERE Members.CustomerId = Customers.CustomerId)
+                  );
+            ";
+            await context.Database.ExecuteSqlRawAsync(schemaSql);
+        }
+        catch
+        {
+            // Fallback for in-memory or alternative db provider
+        }
+
 
         // --------------------------------------------------------
         // CLIENT ROLES

@@ -1,4 +1,5 @@
-﻿using EPIC.Api.Data;
+using System.Security.Claims;
+using EPIC.Api.Data;
 using EPIC.Api.Models;
 using EPIC.Core.Interfaces;
 
@@ -58,6 +59,7 @@ namespace EPIC.Api.Controllers
                     x.Email,
                     x.Phone,
                     x.Status,
+                    x.IsSetupCompleted,
                     x.DemoRequestId,
                     x.CreatedDate,
                     x.UpdatedDate,
@@ -95,6 +97,7 @@ namespace EPIC.Api.Controllers
                     x.Email,
                     x.Phone,
                     x.Status,
+                    x.IsSetupCompleted,
                     x.DemoRequestId,
                     x.CreatedDate,
                     x.UpdatedDate,
@@ -661,11 +664,397 @@ namespace EPIC.Api.Controllers
                 _ => status
             };
         }
+
+        // =========================================================
+        // HELPER - CURRENT CUSTOMER ID RESOLUTION
+        // =========================================================
+
+        private async Task<int?> GetCurrentCustomerIdAsync()
+        {
+            var tokenCustId = User.FindFirst("CustomerId")?.Value 
+                ?? User.FindFirst("customerId")?.Value;
+
+            if (!string.IsNullOrWhiteSpace(tokenCustId) && int.TryParse(tokenCustId, out var parsed) && parsed > 0)
+            {
+                return parsed;
+            }
+
+            var userIdClaim = User.FindFirst("userId")?.Value 
+                ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (!string.IsNullOrWhiteSpace(userIdClaim) && int.TryParse(userIdClaim, out var userId))
+            {
+                var userCustId = await _context.Users
+                    .AsNoTracking()
+                    .Where(u => u.UserId == userId)
+                    .Select(u => u.CustomerId)
+                    .FirstOrDefaultAsync();
+
+                if (userCustId.HasValue && userCustId.Value > 0)
+                {
+                    return userCustId.Value;
+                }
+            }
+
+            return null;
+        }
+
+        private bool IsAdminUser()
+        {
+            var role = User.FindFirst(ClaimTypes.Role)?.Value 
+                ?? User.FindFirst("role")?.Value;
+
+            return string.Equals(role, "ADMIN", StringComparison.OrdinalIgnoreCase);
+        }
+
+        // =========================================================
+        // GET SETUP STATUS
+        // GET: /api/Customers/setup-status
+        // =========================================================
+
+        [HttpGet("setup-status")]
+        public async Task<IActionResult> GetSetupStatus()
+        {
+            var customerId = await GetCurrentCustomerIdAsync();
+
+            if (!customerId.HasValue || customerId.Value <= 0)
+            {
+                // Platform admin without a customer scope
+                return Ok(new
+                {
+                    customerId = (int?)null,
+                    churchName = "EPIC Platform",
+                    isSetupCompleted = true,
+                    isPlatformAdmin = true
+                });
+            }
+
+            var customer = await _context.Customers
+                .FirstOrDefaultAsync(c => c.CustomerId == customerId.Value);
+
+            if (customer == null)
+            {
+                return NotFound(new { message = "Customer not found." });
+            }
+
+            var hasServices = await _context.ChurchServices
+                .AnyAsync(s => s.CustomerId == customerId.Value);
+
+            var hasMembers = await _context.Members
+                .AnyAsync(m => m.CustomerId == customerId.Value);
+
+            // Safety guard: If customer already has existing services or members, or is customer 1,
+            // they are permanently considered setup completed!
+            if (!customer.IsSetupCompleted && (hasServices || hasMembers || customer.CustomerId == 1))
+            {
+                customer.IsSetupCompleted = true;
+                await _context.SaveChangesAsync();
+            }
+
+            return Ok(new
+            {
+                customerId = customer.CustomerId,
+                churchName = customer.ChurchName,
+                contactPerson = customer.ContactPerson,
+                email = customer.Email,
+                phone = customer.Phone,
+                isSetupCompleted = customer.IsSetupCompleted,
+                hasServices = hasServices,
+                hasMembers = hasMembers
+            });
+        }
+
+        // =========================================================
+        // COMPLETE FIRST-TIME CHURCH SETUP
+        // POST: /api/Customers/complete-setup
+        // =========================================================
+
+        [HttpPost("complete-setup")]
+        public async Task<IActionResult> CompleteSetup(
+            [FromBody] CompleteChurchSetupRequest request)
+        {
+            if (request == null)
+            {
+                return BadRequest(new { message = "Setup data is required." });
+            }
+
+            var customerId = await GetCurrentCustomerIdAsync();
+
+            if (!customerId.HasValue || customerId.Value <= 0)
+            {
+                return BadRequest(new { message = "No valid church tenant associated with your account." });
+            }
+
+            var customer = await _context.Customers
+                .FirstOrDefaultAsync(c => c.CustomerId == customerId.Value);
+
+            if (customer == null)
+            {
+                return NotFound(new { message = "Church tenant not found." });
+            }
+
+            // 1. Update Customer Profile
+            if (!string.IsNullOrWhiteSpace(request.ChurchName))
+            {
+                customer.ChurchName = request.ChurchName.Trim();
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.PastorName))
+            {
+                customer.ContactPerson = request.PastorName.Trim();
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.Phone))
+            {
+                customer.Phone = request.Phone.Trim();
+            }
+
+            customer.IsSetupCompleted = true;
+            customer.UpdatedDate = DateTime.Now;
+
+            // 2. Initialize First Church Service if none exists
+            var existingService = await _context.ChurchServices
+                .AnyAsync(s => s.CustomerId == customer.CustomerId);
+
+            if (!existingService)
+            {
+                var now = DateTime.Now;
+                var daysUntilSunday = ((int)DayOfWeek.Sunday - (int)now.DayOfWeek + 7) % 7;
+                if (daysUntilSunday == 0 && now.Hour >= 12)
+                {
+                    daysUntilSunday = 7;
+                }
+                var nextSunday = now.Date.AddDays(daysUntilSunday);
+
+                var churchService = new ChurchService
+                {
+                    CustomerId = customer.CustomerId,
+                    ServiceName = string.IsNullOrWhiteSpace(request.ServiceName)
+                        ? "Sunday Celebration Service"
+                        : request.ServiceName.Trim(),
+                    ServiceType = string.IsNullOrWhiteSpace(request.ServiceType)
+                        ? "Sunday Worship"
+                        : request.ServiceType.Trim(),
+                    ServiceDate = nextSunday,
+                    StartTime = string.IsNullOrWhiteSpace(request.StartTime)
+                        ? "08:00 AM"
+                        : request.StartTime.Trim(),
+                    EndTime = string.IsNullOrWhiteSpace(request.EndTime)
+                        ? "10:00 AM"
+                        : request.EndTime.Trim(),
+                    Location = string.IsNullOrWhiteSpace(request.Location)
+                        ? "Main Sanctuary"
+                        : request.Location.Trim(),
+                    ServiceLeader = customer.ContactPerson,
+                    Speaker = customer.ContactPerson,
+                    Description = "Weekly fellowship and worship celebration.",
+                    Status = "SCHEDULED",
+                    CreatedDate = DateTime.Now
+                };
+
+                _context.ChurchServices.Add(churchService);
+            }
+
+            // 3. Initialize Default Ministries if selected
+            if (request.Ministries != null && request.Ministries.Any())
+            {
+                foreach (var ministryName in request.Ministries)
+                {
+                    var trimmed = ministryName.Trim();
+                    if (string.IsNullOrWhiteSpace(trimmed)) continue;
+
+                    var minExists = await _context.Ministries
+                        .AnyAsync(m => m.CustomerId == customer.CustomerId && m.Name.ToLower() == trimmed.ToLower());
+
+                    if (!minExists)
+                    {
+                        _context.Ministries.Add(new Ministry
+                        {
+                            CustomerId = customer.CustomerId,
+                            Name = trimmed,
+                            MinistryHead = customer.ContactPerson,
+                            Description = $"Active ministry team for {trimmed}.",
+                            MeetingDay = "Sunday",
+                            MeetingTime = "After Service",
+                            CreatedDate = DateTime.Now
+                        });
+                    }
+                }
+            }
+
+            // 4. Seed default ClientRoles and Permissions for this customer
+            await ClientRoleSeeder.SeedForCustomerAsync(_context, customer.CustomerId);
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                success = true,
+                message = "Church workspace successfully initialized!",
+                customerId = customer.CustomerId,
+                churchName = customer.ChurchName,
+                isSetupCompleted = true
+            });
+        }
+
+        // =========================================================
+        // PROVISION NEW CHURCH TENANT
+        // POST: /api/Customers/provision
+        // Accessible by ADMIN
+        // =========================================================
+
+        [HttpPost("provision")]
+        public async Task<IActionResult> ProvisionCustomer(
+            [FromBody] ProvisionChurchRequest request)
+        {
+            if (!IsAdminUser() && !await HasPermissionAsync("create"))
+            {
+                return Forbid();
+            }
+
+            if (request == null)
+            {
+                return BadRequest(new { message = "Provision data is required." });
+            }
+
+            if (string.IsNullOrWhiteSpace(request.ChurchName))
+            {
+                return BadRequest(new { message = "Church Name is required." });
+            }
+
+            if (string.IsNullOrWhiteSpace(request.PastorName))
+            {
+                return BadRequest(new { message = "Pastor / Leader Name is required." });
+            }
+
+            if (string.IsNullOrWhiteSpace(request.Email))
+            {
+                return BadRequest(new { message = "Admin Email is required." });
+            }
+
+            if (string.IsNullOrWhiteSpace(request.Password) || request.Password.Length < 6)
+            {
+                return BadRequest(new { message = "Password must be at least 6 characters." });
+            }
+
+            var emailNormalized = request.Email.Trim().ToLowerInvariant();
+
+            if (await _context.Users.AnyAsync(u => u.Username.ToLower() == emailNormalized))
+            {
+                return BadRequest(new { message = "An account with this email/username already exists." });
+            }
+
+            if (await _context.Customers.AnyAsync(c => c.Email.ToLower() == emailNormalized))
+            {
+                return BadRequest(new { message = "A church with this email already exists." });
+            }
+
+            // 1. Create Customer with IsSetupCompleted = false
+            var customer = new Customer
+            {
+                ChurchName = request.ChurchName.Trim(),
+                ContactPerson = request.PastorName.Trim(),
+                Email = emailNormalized,
+                Phone = string.IsNullOrWhiteSpace(request.Phone) ? null : request.Phone.Trim(),
+                Status = "Active",
+                IsSetupCompleted = false,
+                CreatedDate = DateTime.Now
+            };
+
+            _context.Customers.Add(customer);
+            await _context.SaveChangesAsync();
+
+            // 2. Create Admin User for this new Customer
+            var adminRole = await _context.Roles
+                .FirstOrDefaultAsync(r => r.RoleName == "ADMIN")
+                ?? await _context.Roles.FirstAsync();
+
+            var user = new User
+            {
+                Username = emailNormalized,
+                FullName = request.PastorName.Trim(),
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password.Trim()),
+                RoleId = adminRole.RoleId,
+                CustomerId = customer.CustomerId,
+                ApprovalStatus = "APPROVED",
+                CreatedDate = DateTime.Now
+            };
+
+            _context.Users.Add(user);
+
+            // 3. Create Starter Subscription (30-day Free Trial)
+            var planId = request.SubscriptionPlanId;
+            if (!planId.HasValue || planId.Value <= 0)
+            {
+                var defaultPlan = await _context.SubscriptionPlans
+                    .OrderBy(p => p.SortOrder)
+                    .FirstOrDefaultAsync();
+                planId = defaultPlan?.SubscriptionPlanId ?? 1;
+            }
+
+            var subscription = new Subscription
+            {
+                CustomerId = customer.CustomerId,
+                SubscriptionPlanId = planId.Value,
+                ChurchName = customer.ChurchName,
+                ContactName = customer.ContactPerson,
+                ContactEmail = customer.Email,
+                ContactPhone = customer.Phone ?? "",
+                BillingCycle = "Monthly",
+                Amount = 0,
+                Currency = "PHP",
+                Status = "Trial",
+                StartDate = DateTime.Now,
+                TrialEndsAt = DateTime.Now.AddDays(30),
+                NextBillingDate = DateTime.Now.AddDays(30),
+                CreatedDate = DateTime.Now
+            };
+
+            _context.Subscriptions.Add(subscription);
+
+            // 4. Seed default ClientRoles
+            await ClientRoleSeeder.SeedForCustomerAsync(_context, customer.CustomerId);
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                success = true,
+                message = "New church tenant provisioned successfully!",
+                customerId = customer.CustomerId,
+                churchName = customer.ChurchName,
+                adminEmail = customer.Email,
+                isSetupCompleted = false
+            });
+        }
     }
 
     // =============================================================
-    // CUSTOMER UPDATE DTO
+    // DTOs
     // =============================================================
+
+    public class CompleteChurchSetupRequest
+    {
+        public string? ChurchName { get; set; }
+        public string? PastorName { get; set; }
+        public string? Phone { get; set; }
+        public string? ServiceName { get; set; }
+        public string? ServiceType { get; set; }
+        public string? StartTime { get; set; }
+        public string? EndTime { get; set; }
+        public string? Location { get; set; }
+        public List<string>? Ministries { get; set; }
+    }
+
+    public class ProvisionChurchRequest
+    {
+        public string ChurchName { get; set; } = string.Empty;
+        public string PastorName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string? Phone { get; set; }
+        public string Password { get; set; } = string.Empty;
+        public int? SubscriptionPlanId { get; set; }
+    }
 
     public class CustomerUpdateDto
     {

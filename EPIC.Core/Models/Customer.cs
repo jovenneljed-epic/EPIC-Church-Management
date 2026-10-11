@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.ComponentModel.DataAnnotations;
 
 namespace EPIC.Core.Models
@@ -43,6 +43,13 @@ namespace EPIC.Core.Models
         [Required]
         [MaxLength(50)]
         public string Status { get; set; } = "Active";
+
+        // =========================================================
+        // SETUP WIZARD STATUS
+        // =========================================================
+
+        [Required]
+        public bool IsSetupCompleted { get; set; } = false;
 
         // =========================================================
         // SOURCE DEMO REQUEST

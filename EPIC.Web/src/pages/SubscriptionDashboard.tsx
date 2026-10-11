@@ -10,6 +10,8 @@ import axios, {
 
 import { API_BASE_URL } from "../config";
 
+import { ProvisionChurchModal } from "../components/ProvisionChurchModal";
+
 import "./SubscriptionDashboard.css";
 
 // =========================================================
@@ -162,6 +164,13 @@ const SubscriptionDashboard: React.FC = () => {
         setError
     ] = useState<string>(
         ""
+    );
+
+    const [
+        showProvisionModal,
+        setShowProvisionModal
+    ] = useState<boolean>(
+        false
     );
 
     // =====================================================
@@ -652,17 +661,36 @@ const SubscriptionDashboard: React.FC = () => {
 
                 </div>
 
-                <button
-                    type="button"
-                    className="refresh-button"
-                    onClick={handleRefresh}
-                    disabled={refreshing}
-                >
-                    {refreshing
-                        ? "Refreshing..."
-                        : "↻ Refresh"}
-                </button>
+                <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
+                    <button
+                        type="button"
+                        onClick={() => setShowProvisionModal(true)}
+                        style={{
+                            background: "linear-gradient(135deg, #f59e0b, #d97706)",
+                            color: "#0f172a",
+                            border: "none",
+                            padding: "0.6rem 1.25rem",
+                            borderRadius: "10px",
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            fontSize: "0.875rem",
+                            boxShadow: "0 4px 15px rgba(245, 158, 11, 0.35)",
+                        }}
+                    >
+                        ✨ Provision New Church
+                    </button>
 
+                    <button
+                        type="button"
+                        className="refresh-button"
+                        onClick={handleRefresh}
+                        disabled={refreshing}
+                    >
+                        {refreshing
+                            ? "Refreshing..."
+                            : "↻ Refresh"}
+                    </button>
+                </div>
             </div>
 
             {/* =============================================
@@ -1295,6 +1323,12 @@ const SubscriptionDashboard: React.FC = () => {
                 )}
 
             </div>
+
+            <ProvisionChurchModal
+                isOpen={showProvisionModal}
+                onClose={() => setShowProvisionModal(false)}
+                onSuccess={() => loadDashboard(true)}
+            />
 
         </div>
 
