@@ -1007,144 +1007,164 @@ export default function EpicSmileScanner() {
                MAIN SCANNER BODY
             ========================================================= */}
             <div className="smile-body">
-                {/* CAMERA & SCANNER STAGE */}
-                <div className="smile-viewport-container">
-                    {/* Hidden Canvas for High-Speed Computer Vision Processing */}
-                    <canvas ref={canvasRef} style={{ display: "none" }} />
+                {/* MAIN SCANNER COLUMN */}
+                <div className="smile-scanner-column">
+                    <div className="smile-viewport-container">
+                        {/* Hidden Canvas for High-Speed Computer Vision Processing */}
+                        <canvas ref={canvasRef} style={{ display: "none" }} />
 
-                    {/* Live Webcam Stream */}
-                    <video
-                        ref={videoRef}
-                        autoPlay
-                        playsInline
-                        muted
-                        className={`smile-video-element ${mirrored ? "mirrored" : ""}`}
-                    />
+                        {/* Live Webcam Stream */}
+                        <video
+                            ref={videoRef}
+                            autoPlay
+                            playsInline
+                            muted
+                            className={`smile-video-element ${mirrored ? "mirrored" : ""}`}
+                        />
 
-                    {/* Cinematic Vignette */}
-                    <div className="smile-viewport-overlay" />
+                        {/* Cinematic Vignette */}
+                        <div className="smile-viewport-overlay" />
 
-                    {/* Camera Error Message */}
-                    {cameraError && (
-                        <div style={{
-                            position: "absolute",
-                            top: "30%",
-                            padding: "20px 30px",
-                            background: "rgba(185, 28, 28, 0.9)",
-                            borderRadius: "12px",
-                            color: "#fff",
-                            textAlign: "center",
-                            maxWidth: "400px",
-                            zIndex: 25
-                        }}>
-                            <p style={{ fontWeight: 700, margin: "0 0 10px" }}>Camera Unavailable</p>
-                            <p style={{ fontSize: "0.85rem", margin: 0 }}>{cameraError}</p>
+                        {/* Futuristic Tech Accents */}
+                        <div className="smile-tech-badge tl">
+                            <span className="smile-tech-pulse" />
+                            <span>BIO-OPTICAL SCANNER</span>
                         </div>
-                    )}
-
-                    {/* -------------------------------------------------
-                       DEPED-STYLE BIOMETRIC OVAL TARGET RETICLE
-                    ------------------------------------------------- */}
-                    <div className="smile-reticle-wrap">
-                        <div className={`smile-reticle-oval ${
-                            detectionResult?.isSmiling ? "smiling" : detectionResult?.inOvalGuide ? "aligned" : ""
-                        }`}>
-                            {/* Sweeping Animated Laser Scanner */}
-                            <div className="smile-laser-line" />
-
-                            {/* Corner Biometric Target Brackets */}
-                            <div className="smile-corner tl" />
-                            <div className="smile-corner tr" />
-                            <div className="smile-corner bl" />
-                            <div className="smile-corner br" />
+                        <div className="smile-tech-badge tr">
+                            <span>AI BIOMETRIC FEED</span>
                         </div>
+
+                        {/* Camera Error Message */}
+                        {cameraError && (
+                            <div style={{
+                                position: "absolute",
+                                top: "30%",
+                                padding: "20px 30px",
+                                background: "rgba(185, 28, 28, 0.9)",
+                                borderRadius: "12px",
+                                color: "#fff",
+                                textAlign: "center",
+                                maxWidth: "400px",
+                                zIndex: 25
+                            }}>
+                                <p style={{ fontWeight: 700, margin: "0 0 10px" }}>Camera Unavailable</p>
+                                <p style={{ fontSize: "0.85rem", margin: 0 }}>{cameraError}</p>
+                            </div>
+                        )}
+
+                        {/* -------------------------------------------------
+                           FUTURISTIC BIOMETRIC OVAL TARGET RETICLE
+                        ------------------------------------------------- */}
+                        <div className="smile-reticle-wrap">
+                            <div className={`smile-reticle-oval ${
+                                detectionResult?.isSmiling ? "smiling" : detectionResult?.inOvalGuide ? "aligned" : ""
+                            }`}>
+                                {/* Sweeping Animated Laser Scanner */}
+                                <div className="smile-laser-line" />
+
+                                {/* Corner Biometric Target Brackets */}
+                                <div className="smile-corner tl" />
+                                <div className="smile-corner tr" />
+                                <div className="smile-corner bl" />
+                                <div className="smile-corner br" />
+                            </div>
+                        </div>
+
+                        {/* -------------------------------------------------
+                           SUBTLE FUTURISTIC PROMPT (TRANSLUCENT & NON-INTRUSIVE)
+                        ------------------------------------------------- */}
+                        <div className={`smile-futuristic-status ${smileScore >= smileThreshold ? "active" : ""}`}>
+                            <span className="smile-status-icon">
+                                <Smile size={13} color={smileScore >= smileThreshold ? "#34d399" : "#38bdf8"} />
+                            </span>
+                            <span className="smile-status-text">{statusPrompt}</span>
+                        </div>
+
+                        {/* -------------------------------------------------
+                           INSTANT ATTENDANCE CELEBRATION / CONFIRMATION CARD
+                        ------------------------------------------------- */}
+                        {confirmedRecord && (
+                            <div className="smile-confirmation-overlay">
+                                <div className="smile-confirmation-card">
+                                    <div className="smile-confirm-check-badge">
+                                        <CheckCircle2 size={46} strokeWidth={2.5} />
+                                    </div>
+
+                                    <div className="smile-member-photo-frame">
+                                        {confirmedRecord.photoPath ? (
+                                            <img
+                                                src={confirmedRecord.photoPath.startsWith("http")
+                                                    ? confirmedRecord.photoPath
+                                                    : `${API_BASE_URL.replace("/api", "")}${confirmedRecord.photoPath.startsWith("/") ? "" : "/"}${confirmedRecord.photoPath}`}
+                                                alt={confirmedRecord.fullName}
+                                            />
+                                        ) : (
+                                            <div className="smile-avatar-initials">
+                                                {confirmedRecord.fullName[0]}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <h2 className="smile-confirm-name">{confirmedRecord.fullName}</h2>
+                                    <div className="smile-confirm-code">{confirmedRecord.memberCode}</div>
+
+                                    <div className="smile-confirm-badges">
+                                        <span className={`smile-status-badge ${confirmedRecord.status}`}>
+                                            {confirmedRecord.status}
+                                        </span>
+                                        {confirmedRecord.ministry && (
+                                            <span className="smile-ministry-badge">
+                                                {confirmedRecord.ministry}
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    <p className="smile-confirm-msg">
+                                        {confirmedRecord.alreadyRecorded
+                                            ? "Attendance Already Logged Today!"
+                                            : "Attendance Successfully Recorded!"}
+                                    </p>
+                                    <div className="smile-confirm-time">
+                                        <Clock size={14} />
+                                        <span>Time: {confirmedRecord.time}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
-                    {/* -------------------------------------------------
-                       HUD: SMILE METER & REAL-TIME PROMPTS
-                    ------------------------------------------------- */}
-                    <div className="smile-hud-bottom">
-                        {/* Live Instruction Pill */}
-                        <div className={`smile-instruction-pill ${smileScore >= smileThreshold ? "highlight" : ""}`}>
-                            <Smile size={18} color={smileScore >= smileThreshold ? "#34d399" : "#38bdf8"} />
-                            <span>{statusPrompt}</span>
+                    {/* =========================================================
+                       FUTURISTIC DOCKED HUD CONTROL / SMILE INDEX BAR
+                       (Placed OUTSIDE / BELOW the camera so it NEVER covers the scanner!)
+                    ========================================================= */}
+                    <div className="smile-telemetry-bar">
+                        <div className="smile-telemetry-left">
+                            <span className="smile-telemetry-badge">
+                                {smileScore < 0.3 ? "😐 Neutral" : smileScore < 0.6 ? "🙂 Smiling" : "😁 Big Smile!"}
+                            </span>
                         </div>
 
-                        {/* DepEd-style Smile Index Gauge Bar */}
-                        <div className="smile-gauge-bar-wrap">
-                            <div className="smile-gauge-labels">
-                                <span style={{ color: "#94a3b8" }}>
-                                    {smileScore < 0.3 ? "😐 Neutral" : smileScore < 0.6 ? "🙂 Smiling" : "😁 BIG SMILE!"}
-                                </span>
-                                <span className="smile-gauge-score">
-                                    {Math.round(smileScore * 100)}% SMILE INDEX
-                                </span>
-                            </div>
-                            <div className="smile-gauge-track">
+                        <div className="smile-telemetry-center">
+                            <div className="smile-telemetry-track">
                                 <div
-                                    className="smile-gauge-fill"
+                                    className="smile-telemetry-fill"
                                     style={{ width: `${Math.min(100, Math.round(smileScore * 100))}%` }}
                                 />
                                 <div
-                                    className="smile-gauge-threshold-line"
+                                    className="smile-telemetry-target"
                                     style={{ left: `${Math.round(smileThreshold * 100)}%` }}
-                                    title="Smile Threshold (Trigger)"
+                                    title="Smile Trigger Threshold"
                                 />
                             </div>
                         </div>
-                    </div>
 
-                    {/* -------------------------------------------------
-                       INSTANT ATTENDANCE CELEBRATION / CONFIRMATION CARD
-                    ------------------------------------------------- */}
-                    {confirmedRecord && (
-                        <div className="smile-confirmation-overlay">
-                            <div className="smile-confirmation-card">
-                                <div className="smile-confirm-check-badge">
-                                    <CheckCircle2 size={46} strokeWidth={2.5} />
-                                </div>
-
-                                <div className="smile-member-photo-frame">
-                                    {confirmedRecord.photoPath ? (
-                                        <img
-                                            src={confirmedRecord.photoPath.startsWith("http")
-                                                ? confirmedRecord.photoPath
-                                                : `${API_BASE_URL.replace("/api", "")}${confirmedRecord.photoPath.startsWith("/") ? "" : "/"}${confirmedRecord.photoPath}`}
-                                            alt={confirmedRecord.fullName}
-                                        />
-                                    ) : (
-                                        <div className="smile-avatar-initials">
-                                            {confirmedRecord.fullName[0]}
-                                        </div>
-                                    )}
-                                </div>
-
-                                <h2 className="smile-confirm-name">{confirmedRecord.fullName}</h2>
-                                <div className="smile-confirm-code">{confirmedRecord.memberCode}</div>
-
-                                <div className="smile-confirm-badges">
-                                    <span className={`smile-status-badge ${confirmedRecord.status}`}>
-                                        {confirmedRecord.status}
-                                    </span>
-                                    {confirmedRecord.ministry && (
-                                        <span className="smile-ministry-badge">
-                                            {confirmedRecord.ministry}
-                                        </span>
-                                    )}
-                                </div>
-
-                                <p className="smile-confirm-msg">
-                                    {confirmedRecord.alreadyRecorded
-                                        ? "Attendance Already Logged Today!"
-                                        : "Attendance Successfully Recorded!"}
-                                </p>
-                                <div className="smile-confirm-time">
-                                    <Clock size={14} />
-                                    <span>Time: {confirmedRecord.time}</span>
-                                </div>
-                            </div>
+                        <div className="smile-telemetry-right">
+                            <span className="smile-telemetry-score">
+                                {Math.round(smileScore * 100)}%
+                            </span>
+                            <span className="smile-telemetry-label">SMILE INDEX</span>
                         </div>
-                    )}
+                    </div>
                 </div>
 
                 {/* =========================================================

@@ -355,27 +355,75 @@
     }
 }
 
-/* The glowing biometric oval */
+/* Scanner main column */
+.smile-scanner-column {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 0;
+}
+
+/* Futuristic HUD corner badges */
+.smile-tech-badge {
+    position: absolute;
+    top: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 4px;
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(56, 189, 248, 0.2);
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: #38bdf8;
+    text-transform: uppercase;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.smile-tech-badge.tl {
+    left: 14px;
+}
+
+.smile-tech-badge.tr {
+    right: 14px;
+}
+
+.smile-tech-pulse {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #34d399;
+    box-shadow: 0 0 8px #34d399;
+    animation: livePulse 1.5s infinite;
+}
+
+/* The fine glowing biometric oval */
 .smile-reticle-oval {
     width: 100%;
     height: 100%;
     border-radius: 50% / 46%;
-    border: 3px dashed rgba(56, 189, 248, 0.7);
-    box-shadow: 0 0 24px rgba(14, 165, 233, 0.3), inset 0 0 24px rgba(14, 165, 233, 0.2);
+    border: 1.5px dashed rgba(56, 189, 248, 0.45);
+    box-shadow: 0 0 20px rgba(14, 165, 233, 0.2), inset 0 0 20px rgba(14, 165, 233, 0.1);
     position: relative;
     transition: all 0.3s ease;
 }
 
 .smile-reticle-oval.aligned {
     border-style: solid;
-    border-color: rgba(52, 211, 153, 0.8);
-    box-shadow: 0 0 35px rgba(16, 185, 129, 0.5), inset 0 0 30px rgba(16, 185, 129, 0.3);
+    border-color: rgba(52, 211, 153, 0.7);
+    box-shadow: 0 0 25px rgba(16, 185, 129, 0.35), inset 0 0 25px rgba(16, 185, 129, 0.2);
 }
 
 .smile-reticle-oval.smiling {
     border-color: #10b981;
-    border-width: 4px;
-    box-shadow: 0 0 50px rgba(16, 185, 129, 0.8), inset 0 0 40px rgba(16, 185, 129, 0.4);
+    border-width: 2.5px;
+    box-shadow: 0 0 35px rgba(16, 185, 129, 0.6), inset 0 0 30px rgba(16, 185, 129, 0.3);
     animation: smileReticlePulse 1.2s infinite ease-in-out;
 }
 
@@ -387,32 +435,33 @@
 /* Biometric corner markers */
 .smile-corner {
     position: absolute;
-    width: 24px;
-    height: 24px;
-    border: 3px solid #38bdf8;
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(56, 189, 248, 0.7);
     pointer-events: none;
+    box-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
 }
 
-.smile-corner.tl { top: -8px; left: -8px; border-right: none; border-bottom: none; border-top-left-radius: 8px; }
-.smile-corner.tr { top: -8px; right: -8px; border-left: none; border-bottom: none; border-top-right-radius: 8px; }
-.smile-corner.bl { bottom: -8px; left: -8px; border-right: none; border-top: none; border-bottom-left-radius: 8px; }
-.smile-corner.br { bottom: -8px; right: -8px; border-left: none; border-top: none; border-bottom-right-radius: 8px; }
+.smile-corner.tl { top: -6px; left: -6px; border-right: none; border-bottom: none; border-top-left-radius: 6px; }
+.smile-corner.tr { top: -6px; right: -6px; border-left: none; border-bottom: none; border-top-right-radius: 6px; }
+.smile-corner.bl { bottom: -6px; left: -6px; border-right: none; border-top: none; border-bottom-left-radius: 6px; }
+.smile-corner.br { bottom: -6px; right: -6px; border-left: none; border-top: none; border-bottom-right-radius: 6px; }
 
 /* Animated Sweeping Laser Scan Line */
 .smile-laser-line {
     position: absolute;
     left: 10%;
     right: 10%;
-    height: 3px;
+    height: 2px;
     background: linear-gradient(90deg, transparent, #38bdf8, #34d399, #38bdf8, transparent);
-    box-shadow: 0 0 16px #38bdf8, 0 0 24px #34d399;
+    box-shadow: 0 0 12px #38bdf8, 0 0 16px #34d399;
     border-radius: 50%;
     animation: laserScanSweep 2.4s infinite ease-in-out;
 }
 
 .smile-reticle-oval.smiling .smile-laser-line {
     background: linear-gradient(90deg, transparent, #10b981, #6ee7b7, #10b981, transparent);
-    box-shadow: 0 0 20px #10b981, 0 0 30px #34d399;
+    box-shadow: 0 0 16px #10b981, 0 0 24px #34d399;
     animation-duration: 1.6s;
 }
 
@@ -423,107 +472,145 @@
 }
 
 /* =========================================================
-   LIVE SMILE METER & STATUS HUD
+   SUBTLE, MINIMAL FUTURISTIC STATUS PROMPT
+   (Non-intrusive, low opacity, does not cover user's face)
 ========================================================= */
 
-.smile-hud-bottom {
+.smile-futuristic-status {
     position: absolute;
-    bottom: 24px;
+    bottom: 14px;
     left: 50%;
     transform: translateX(-50%);
-    width: 90%;
-    max-width: 520px;
-    display: flex;
-    flex-direction: column;
+    display: inline-flex;
     align-items: center;
-    gap: 10px;
-    z-index: 10;
-}
-
-.smile-instruction-pill {
-    background: rgba(15, 23, 42, 0.88);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    padding: 8px 20px;
-    border-radius: 30px;
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: #f8fafc;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
-    letter-spacing: 0.02em;
-    text-align: center;
-}
-
-.smile-instruction-pill.highlight {
-    background: rgba(6, 78, 59, 0.9);
-    border-color: rgba(52, 211, 153, 0.6);
-    color: #a7f3d0;
-    box-shadow: 0 0 24px rgba(16, 185, 129, 0.5);
-    animation: pillBounce 0.4s ease;
-}
-
-@keyframes pillBounce {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.04); }
-}
-
-.smile-gauge-bar-wrap {
-    width: 100%;
-    background: rgba(15, 23, 42, 0.8);
-    backdrop-filter: blur(8px);
+    gap: 7px;
+    padding: 5px 14px;
     border-radius: 20px;
-    padding: 10px 16px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.smile-gauge-labels {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 0.75rem;
-    font-weight: 700;
-}
-
-.smile-gauge-score {
-    color: #38bdf8;
-    font-variant-numeric: tabular-nums;
-    font-size: 0.85rem;
-}
-
-.smile-gauge-track {
-    width: 100%;
-    height: 12px;
-    background: rgba(30, 41, 59, 0.9);
-    border-radius: 8px;
-    overflow: hidden;
-    position: relative;
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(8px);
     border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #94a3b8;
+    font-size: 0.74rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    opacity: 0.65;
+    transition: all 0.3s ease;
+    pointer-events: none;
+    z-index: 10;
+    max-width: 90%;
+    white-space: nowrap;
 }
 
-.smile-gauge-fill {
+.smile-futuristic-status.active {
+    opacity: 1;
+    background: rgba(6, 78, 59, 0.75);
+    border-color: rgba(52, 211, 153, 0.45);
+    color: #a7f3d0;
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.35);
+}
+
+.smile-status-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.85;
+}
+
+.smile-status-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* =========================================================
+   FUTURISTIC DOCKED HUD CONTROL / SMILE INDEX BAR
+   (Sits BELOW the camera so it NEVER covers the video)
+========================================================= */
+
+.smile-telemetry-bar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(56, 189, 248, 0.18);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 10px 18px;
+    position: relative;
+}
+
+.smile-telemetry-left {
+    display: flex;
+    align-items: center;
+    min-width: 100px;
+}
+
+.smile-telemetry-badge {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: #94a3b8;
+    text-transform: uppercase;
+}
+
+.smile-telemetry-center {
+    flex: 1;
+    display: flex;
+    align-items: center;
+}
+
+.smile-telemetry-track {
+    width: 100%;
+    height: 8px;
+    background: rgba(30, 41, 59, 0.85);
+    border-radius: 999px;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.smile-telemetry-fill {
     height: 100%;
-    background: linear-gradient(90deg, #38bdf8 0%, #f59e0b 60%, #10b981 100%);
-    border-radius: 8px;
-    transition: width 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 0 12px rgba(16, 185, 129, 0.6);
+    background: linear-gradient(90deg, #0ea5e9 0%, #06b6d4 50%, #10b981 100%);
+    border-radius: 999px;
+    transition: width 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 0 12px rgba(16, 185, 129, 0.7);
 }
 
-.smile-gauge-threshold-line {
+.smile-telemetry-target {
     position: absolute;
     top: 0;
     bottom: 0;
-    left: 60%;
     width: 2px;
-    background: #fff;
-    opacity: 0.7;
+    background: #38bdf8;
+    box-shadow: 0 0 6px #38bdf8;
     z-index: 2;
+}
+
+.smile-telemetry-right {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    min-width: 120px;
+    justify-content: flex-end;
+}
+
+.smile-telemetry-score {
+    font-size: 1.05rem;
+    font-weight: 800;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    color: #38bdf8;
+    font-variant-numeric: tabular-nums;
+}
+
+.smile-telemetry-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: #64748b;
+    text-transform: uppercase;
 }
 
 /* =========================================================
