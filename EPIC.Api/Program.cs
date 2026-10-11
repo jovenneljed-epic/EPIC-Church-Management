@@ -851,6 +851,33 @@ static async Task SeedDatabaseAsync(
                     ALTER TABLE Customers ADD IsSetupCompleted BIT NOT NULL CONSTRAINT DF_Customers_IsSetupCompleted DEFAULT 0;
                 END;
 
+                IF NOT EXISTS (
+                    SELECT 1 FROM sys.columns 
+                    WHERE Name = N'CustomAllowedModules' 
+                    AND Object_ID = Object_ID(N'Customers')
+                )
+                BEGIN
+                    ALTER TABLE Customers ADD CustomAllowedModules NVARCHAR(1000) NULL;
+                END;
+
+                IF NOT EXISTS (
+                    SELECT 1 FROM sys.columns 
+                    WHERE Name = N'MaxUsersOverride' 
+                    AND Object_ID = Object_ID(N'Customers')
+                )
+                BEGIN
+                    ALTER TABLE Customers ADD MaxUsersOverride INT NULL;
+                END;
+
+                IF NOT EXISTS (
+                    SELECT 1 FROM sys.columns 
+                    WHERE Name = N'MaxMembersOverride' 
+                    AND Object_ID = Object_ID(N'Customers')
+                )
+                BEGIN
+                    ALTER TABLE Customers ADD MaxMembersOverride INT NULL;
+                END;
+
                 -- Ensure existing church accounts with existing records are marked completed
                 UPDATE Customers 
                 SET IsSetupCompleted = 1 

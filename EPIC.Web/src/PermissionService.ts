@@ -289,6 +289,107 @@ class PermissionService {
     }
 
     // ============================================================
+    // CUSTOMER ID
+    // ============================================================
+
+    getCustomerId(): number | null {
+        const value = localStorage.getItem("customerId");
+        if (!value) return null;
+        const num = Number(value);
+        return Number.isInteger(num) && num > 0 ? num : null;
+    }
+
+    // ============================================================
+    // PLATFORM ADMINISTRATOR CHECK (LUKE 4:18 MINISTRIES / DEVELOPER)
+    // ============================================================
+
+    isPlatformAdmin(): boolean {
+        const custId = this.getCustomerId();
+        // Client church subscribers (CustomerId > 1) can NEVER be Platform Admins
+        if (custId !== null && custId > 1) {
+            return false;
+        }
+        return this.isAdministrator();
+    }
+
+    // ============================================================
+    // SUBSCRIBER PLAN MODULE CHECKS
+    // ============================================================
+
+    getAllowedModules(): string[] | null {
+        const stored = localStorage.getItem("epicAllowedModules");
+        if (!stored) return null;
+        try {
+            const parsed = JSON.parse(stored);
+            if (Array.isArray(parsed)) return parsed;
+        } catch {
+            return null;
+        }
+        return null;
+    }
+
+    isModuleAllowed(module: string): boolean {
+        // Platform admin has all modules allowed
+        if (this.isPlatformAdmin()) {
+            return true;
+        }
+
+        const normalized = this.normalizeModule(module);
+
+        // Platform-only modules can NEVER be accessed by client church subscribers
+        const platformOnly = [
+            "subscription dashboard",
+            "subscriptions",
+            "demo requests",
+            "website analytics",
+            "blog management"
+        ];
+        if (platformOnly.includes(normalized)) {
+            return false;
+        }
+
+        // Settings is always accessible to church admin for their local profile/staff
+        if (normalized === "settings" && this.isAdministrator()) {
+            return true;
+        }
+
+        const allowed = this.getAllowedModules();
+        if (!allowed) {
+            // Default core modules allowed
+            const defaultCore = [
+                "dashboard",
+                "church services",
+                "members",
+                "visitors",
+                "settings"
+            ];
+            return defaultCore.includes(normalized);
+        }
+
+        return allowed.some(m => {
+            const normM = this.normalizeModule(m);
+            if (normM === normalized) return true;
+            return this.areAliases(normalized, normM);
+        });
+    }
+
+    private areAliases(a: string, b: string): boolean {
+        if (a === b) return true;
+        const map: Record<string, string[]> = {
+            "events": ["event management", "event"],
+            "event management": ["events", "event"],
+            "church services": ["services", "church service"],
+            "services": ["church services", "church service"],
+            "epic learning": ["learning", "lms"],
+            "learning": ["epic learning", "lms"],
+            "church in action": ["churchinaction", "evangelism", "discipleship"],
+            "attendance": ["smile face scanner", "smile-scanner", "face scanner", "scanner", "member attendance report"],
+            "reports": ["member attendance report", "attendance report"]
+        };
+        return (map[a]?.includes(b) ?? false) || (map[b]?.includes(a) ?? false);
+    }
+
+    // ============================================================
     // ADMINISTRATOR CHECK
     // ============================================================
 
@@ -748,7 +849,23 @@ class PermissionService {
     ): boolean {
 
         // --------------------------------------------------------
-        // ADMIN = FULL UI ACCESS
+        // SUBSCRIBER PLAN MODULE GATING
+        // --------------------------------------------------------
+
+        if (!this.isModuleAllowed(module)) {
+            return false;
+        }
+
+        // --------------------------------------------------------
+        // PLATFORM SUPER-ADMIN = UNRESTRICTED BYPASS
+        // --------------------------------------------------------
+
+        if (this.isPlatformAdmin()) {
+            return true;
+        }
+
+        // --------------------------------------------------------
+        // TENANT ADMIN = FULL ACCESS TO ALLOWED MODULES
         // --------------------------------------------------------
 
         if (this.isAdministrator()) {

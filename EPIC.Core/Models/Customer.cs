@@ -52,6 +52,17 @@ namespace EPIC.Core.Models
         public bool IsSetupCompleted { get; set; } = false;
 
         // =========================================================
+        // PLAN PERMISSION OVERRIDES (MASTER ADMIN CONTROLLED)
+        // =========================================================
+
+        [MaxLength(1000)]
+        public string? CustomAllowedModules { get; set; }
+
+        public int? MaxUsersOverride { get; set; }
+
+        public int? MaxMembersOverride { get; set; }
+
+        // =========================================================
         // SOURCE DEMO REQUEST
         // =========================================================
 

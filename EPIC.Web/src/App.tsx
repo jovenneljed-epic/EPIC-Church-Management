@@ -2041,6 +2041,14 @@ const navigatePublic =
                     setIsSubscriptionLocked(false);
                 }
 
+                if (Array.isArray(res.data.allowedModules)) {
+                    localStorage.setItem("epicAllowedModules", JSON.stringify(res.data.allowedModules));
+                    window.dispatchEvent(new Event("epic:permissions-changed"));
+                }
+                if (res.data.customerId) {
+                    localStorage.setItem("customerId", String(res.data.customerId));
+                }
+
                 if (res.data.isSetupCompleted === false && res.data.customerId) {
                     setSetupChurchInfo({
                         churchName: res.data.churchName || "",
@@ -4003,7 +4011,26 @@ if(
                 </div>
 
                 <nav className="epic-navigation">
-                    {NAVIGATION_SECTIONS.map(
+                    {NAVIGATION_SECTIONS
+                        .map((section) => {
+                            const isPlatform = PermissionService.isPlatformAdmin();
+                            // Hide platform business/sales for church subscribers
+                            if (!isPlatform && section.title === "BUSINESS / SALES") {
+                                return null;
+                            }
+                            const visibleItems = section.items.filter((item) => {
+                                if (!isPlatform && (item.permission === "Website Analytics" || item.permission === "Blog Management")) {
+                                    return false;
+                                }
+                                return PermissionService.canView(item.permission);
+                            });
+                            if (visibleItems.length === 0) {
+                                return null;
+                            }
+                            return { ...section, items: visibleItems };
+                        })
+                        .filter((section): section is NavigationSection => section !== null)
+                        .map(
                         (
                             section,
                             sectionIndex

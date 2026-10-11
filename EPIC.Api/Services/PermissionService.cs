@@ -1,4 +1,4 @@
-﻿using EPIC.Core.Interfaces;
+using EPIC.Core.Interfaces;
 using EPIC.Api.Data;
 using EPIC.Api.Models;
 
@@ -272,21 +272,34 @@ namespace EPIC.Api.Services
             }
 
             // =====================================================
-            // ADMIN BYPASS
-            //
-            // IMPORTANT:
-            //
-            // Admin status is determined from the DATABASE ROLE.
-            //
-            // We do not rely solely on the JWT role claim.
+            // =====================================================
+            // ADMIN BYPASS VS TENANT PERMISSION
             // =====================================================
 
-            if (IsAdminRole(account.RoleName))
+            if (account.CustomerId.HasValue && account.CustomerId.Value > 1)
             {
-                Console.WriteLine(
-                    "[EPIC AUTH] ALLOWED: ADMIN BYPASS.");
+                if (!await IsModuleAllowedForCustomerAsync(account.CustomerId.Value, normalizedModule))
+                {
+                    Console.WriteLine(
+                        $"[EPIC AUTH] DENIED: Module '{normalizedModule}' is not in customer {account.CustomerId.Value} plan.");
 
-                return true;
+                    return false;
+                }
+
+                if (IsAdminRole(account.RoleName))
+                {
+                    return true;
+                }
+            }
+            else
+            {
+                if (IsAdminRole(account.RoleName))
+                {
+                    Console.WriteLine(
+                        "[EPIC AUTH] ALLOWED: PLATFORM ADMIN BYPASS.");
+
+                    return true;
+                }
             }
 
             // =====================================================
@@ -349,11 +362,26 @@ namespace EPIC.Api.Services
                 return false;
             }
 
-            // ADMIN FULL ACCESS
+            // ADMIN FULL ACCESS VS TENANT RESTRICTION
 
-            if (IsAdminRole(account.RoleName))
+            if (account.CustomerId.HasValue && account.CustomerId.Value > 1)
             {
-                return true;
+                if (!await IsModuleAllowedForCustomerAsync(account.CustomerId.Value, normalizedModule))
+                {
+                    return false;
+                }
+
+                if (IsAdminRole(account.RoleName))
+                {
+                    return true;
+                }
+            }
+            else
+            {
+                if (IsAdminRole(account.RoleName))
+                {
+                    return true;
+                }
             }
 
             return await HasRolePermissionAsync(
@@ -363,7 +391,7 @@ namespace EPIC.Api.Services
         }
 
         // =========================================================
-        // ADMIN CHECK
+        // ADMIN CHECK (PLATFORM DEVELOPER ONLY)
         // =========================================================
 
         public async Task<bool> IsAdminAsync(
@@ -375,7 +403,6 @@ namespace EPIC.Api.Services
             }
 
             // CLIENT ACCOUNTS ARE NEVER ADMIN
-
             if (IsClient(user))
             {
                 return false;
@@ -408,8 +435,7 @@ namespace EPIC.Api.Services
                 return false;
             }
 
-            return IsAdminRole(
-                account.RoleName);
+            return IsAdminRole(account.RoleName) && (!account.CustomerId.HasValue || account.CustomerId.Value <= 1);
         }
 
         // =========================================================
@@ -554,6 +580,19 @@ namespace EPIC.Api.Services
                 $"[EPIC CLIENT AUTH] " +
                 $"ClientMemberId={clientMemberId.Value}");
 
+            // Verify subscriber plan allows this module
+            var clientMemberTenant = await _context.ClientMembers.AsNoTracking()
+                .Where(m => m.ClientMemberId == clientMemberId.Value)
+                .Select(m => new { m.CustomerId })
+                .FirstOrDefaultAsync();
+
+            if (clientMemberTenant != null && !await IsModuleAllowedForCustomerAsync(clientMemberTenant.CustomerId, module))
+            {
+                Console.WriteLine(
+                    $"[EPIC CLIENT AUTH] DENIED: Module '{module}' not permitted for customer {clientMemberTenant.CustomerId}.");
+                return false;
+            }
+
             // =====================================================
             // LOOKUP PERMISSION
             // =====================================================
@@ -673,6 +712,106 @@ namespace EPIC.Api.Services
         }
 
         // =========================================================
+        // TENANT PLAN & PERMISSION MODULE CHECK
+        // =========================================================
+
+        private async Task<bool> IsModuleAllowedForCustomerAsync(
+            int? customerId,
+            string module)
+        {
+            if (!customerId.HasValue || customerId.Value <= 1)
+            {
+                return true;
+            }
+
+            // Platform-only modules can NEVER be accessed by client church subscribers
+            var platformOnlyModules = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "Subscription Dashboard",
+                "Subscriptions",
+                "Demo Requests",
+                "Website Analytics",
+                "Blog Management"
+            };
+
+            if (platformOnlyModules.Contains(module))
+            {
+                return false;
+            }
+
+            var customer = await _context.Customers
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.CustomerId == customerId.Value);
+
+            if (customer == null)
+            {
+                return false;
+            }
+
+            // Check if Master Developer has set custom allowed modules override
+            if (!string.IsNullOrWhiteSpace(customer.CustomAllowedModules))
+            {
+                var customList = customer.CustomAllowedModules
+                    .Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+                return customList.Contains(module);
+            }
+
+            // Fallback to active Subscription Plan features
+            var subscription = await _context.Subscriptions
+                .Include(s => s.SubscriptionPlan)
+                .OrderByDescending(s => s.CreatedDate)
+                .FirstOrDefaultAsync(s => s.CustomerId == customerId.Value);
+
+            var plan = subscription?.SubscriptionPlan;
+
+            // Base modules always enabled for every church tenant
+            var baseModules = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "Dashboard",
+                "Church Services",
+                "Members",
+                "Visitors",
+                "Settings",
+                "ChurchProfile"
+            };
+
+            if (baseModules.Contains(module))
+            {
+                return true;
+            }
+
+            if (plan == null)
+            {
+                return false;
+            }
+
+            if (plan.IncludesAttendance && (module.Equals("Attendance", StringComparison.OrdinalIgnoreCase) || module.Equals("SMILE Face Scanner", StringComparison.OrdinalIgnoreCase)))
+                return true;
+
+            if (plan.IncludesGiving && module.Equals("Giving", StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            if (plan.IncludesFinance && (module.Equals("Income", StringComparison.OrdinalIgnoreCase) || module.Equals("Expenses", StringComparison.OrdinalIgnoreCase)))
+                return true;
+
+            if (plan.IncludesMinistries && (module.Equals("Ministries", StringComparison.OrdinalIgnoreCase) || module.Equals("Church in Action", StringComparison.OrdinalIgnoreCase)))
+                return true;
+
+            if (plan.IncludesEvents && (module.Equals("Events", StringComparison.OrdinalIgnoreCase) || module.Equals("Event Management", StringComparison.OrdinalIgnoreCase)))
+                return true;
+
+            if (plan.IncludesEPICLearning && (module.Equals("EPIC Learning", StringComparison.OrdinalIgnoreCase) || module.Equals("Learning", StringComparison.OrdinalIgnoreCase)))
+                return true;
+
+            if (plan.IncludesReports && (module.Equals("Reports", StringComparison.OrdinalIgnoreCase) || module.Equals("Member Attendance Report", StringComparison.OrdinalIgnoreCase)))
+                return true;
+
+            return false;
+        }
+
+        // =========================================================
         // GET USER ACCOUNT
         // =========================================================
 
@@ -706,7 +845,10 @@ namespace EPIC.Api.Services
                         u.IsActive,
 
                     ApprovalStatus =
-                        u.ApprovalStatus
+                        u.ApprovalStatus,
+
+                    CustomerId =
+                        u.CustomerId
                 })
                 .FirstOrDefaultAsync();
         }
@@ -992,6 +1134,8 @@ namespace EPIC.Api.Services
             public bool IsActive { get; set; }
 
             public string? ApprovalStatus { get; set; }
+
+            public int? CustomerId { get; set; }
         }
     }
 }

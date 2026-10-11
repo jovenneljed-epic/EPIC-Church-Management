@@ -1,34 +1,14 @@
 import { API_BASE_URL } from "../config";
 import React, { useEffect, useMemo, useState } from "react";
-import { EPIC_PERMISSION_MODULES } from "../PermissionService";
+import PermissionService, { EPIC_PERMISSION_MODULES } from "../PermissionService";
+import { ChurchPermissionsModal } from "../components/ChurchPermissionsModal";
 
 /*
 ============================================================
  EPIC CHURCH MANAGEMENT SYSTEM
- SYSTEM SETTINGS
-============================================================
-
- Connected API endpoints:
-
- USERS
- GET    /api/Users
- POST   /api/Users
- PUT    /api/Users/{id}
- PUT    /api/Users/{id}/password
- PUT    /api/Users/{id}/status
-
- ROLES
- GET    /api/Roles
- POST   /api/Roles
- PUT    /api/Roles/{id}
- DELETE /api/Roles/{id}
-
- PERMISSIONS
- GET    /api/Roles/{id}/permissions
- PUT    /api/Roles/{id}/permissions
+ SYSTEM SETTINGS & PLATFORM CONTROL CENTER
 ============================================================
 */
-
 
 // ============================================================
 // TYPES
@@ -42,6 +22,53 @@ interface User {
     role: string | null;
     isActive: boolean;
     createdDate: string;
+    customerId?: number | null;
+    churchName?: string | null;
+    accountType?: string | null;
+    email?: string | null;
+}
+
+interface ChurchSubscriber {
+    customerId: number;
+    churchName: string;
+    contactPerson: string;
+    email: string;
+    phone?: string;
+    status: string;
+    isSetupCompleted: boolean;
+    createdDate: string;
+    customAllowedModules?: string | null;
+    maxUsersOverride?: number | null;
+    maxMembersOverride?: number | null;
+    subscriptionId?: number | null;
+    planId?: number | null;
+    planName?: string;
+    subscriptionStatus?: string;
+    nextBillingDate?: string | null;
+    amount?: number | null;
+    userCount: number;
+    maxUsers: number;
+    memberCount: number;
+    maxMembers: number;
+}
+
+interface ChurchSetupStatus {
+    customerId: number;
+    churchName: string;
+    contactPerson: string;
+    email: string;
+    phone?: string;
+    isSetupCompleted: boolean;
+    isPlatformAdmin: boolean;
+    allowedModules?: string[];
+    maxUsers?: number;
+    userCount?: number;
+    maxMembers?: number;
+    memberCount?: number;
+    planName?: string;
+    nextBillingDate?: string;
+    amount?: number;
+    subscriptionStatus?: string;
 }
 
 interface Role {
@@ -69,12 +96,15 @@ interface UserForm {
     password: string;
     fullName: string;
     roleId: number;
+    customerId?: number;
+    email?: string;
 }
 
 interface EditUserForm {
     fullName: string;
     roleId: number;
     isActive: boolean;
+    email?: string;
 }
 
 interface RoleForm {
@@ -84,10 +114,13 @@ interface RoleForm {
 }
 
 type SettingsTab =
-    | "overview"
+    | "subscribers"
     | "users"
     | "roles"
-    | "permissions";
+    | "permissions"
+    | "overview"
+    | "profile"
+    | "plan";
 
 
 // ============================================================
@@ -182,12 +215,25 @@ async function apiRequest<T>(
 
 const Settings: React.FC = () => {
 
-    // ========================================================
-    // STATE
-    // ========================================================
+    const isPlatform = PermissionService.isPlatformAdmin();
 
     const [activeTab, setActiveTab] =
-        useState<SettingsTab>("overview");
+        useState<SettingsTab>(() => isPlatform ? "subscribers" : "profile");
+
+    const [subscribers, setSubscribers] = useState<ChurchSubscriber[]>([]);
+    const [loadingSubscribers, setLoadingSubscribers] = useState(false);
+    const [selectedChurchFilter, setSelectedChurchFilter] = useState<string>("ALL");
+    const [permModalCustomerId, setPermModalCustomerId] = useState<number | null>(null);
+
+    // Client Church Workspace (for tenant admin)
+    const [churchStatus, setChurchStatus] = useState<ChurchSetupStatus | null>(null);
+    const [churchProfileForm, setChurchProfileForm] = useState({
+        churchName: "",
+        contactPerson: "",
+        phone: "",
+        email: ""
+    });
+    const [savingProfile, setSavingProfile] = useState(false);
 
     const [users, setUsers] =
         useState<User[]>([]);
@@ -360,15 +406,108 @@ const Settings: React.FC = () => {
 
 
     // ========================================================
+    // LOAD SUBSCRIBERS (DEVELOPER MASTER CONSOLE)
+    // ========================================================
+
+    const loadSubscribers = async () => {
+        if (!isPlatform) return;
+        try {
+            setLoadingSubscribers(true);
+            const data = await apiRequest<ChurchSubscriber[]>("/Customers/subscribers");
+            setSubscribers(data);
+        } catch (err: any) {
+            console.error("Failed to load subscribers", err);
+        } finally {
+            setLoadingSubscribers(false);
+        }
+    };
+
+    // ========================================================
+    // LOAD CHURCH WORKSPACE STATUS (CLIENT CHURCH ADMIN)
+    // ========================================================
+
+    const loadChurchStatus = async () => {
+        try {
+            const data = await apiRequest<ChurchSetupStatus>("/Customers/setup-status");
+            setChurchStatus(data);
+            setChurchProfileForm({
+                churchName: data.churchName || "",
+                contactPerson: data.contactPerson || "",
+                phone: data.phone || "",
+                email: data.email || ""
+            });
+        } catch (err: any) {
+            console.error("Failed to load church status", err);
+        }
+    };
+
+    // ========================================================
+    // DEVELOPER ACTIONS FOR SUBSCRIBERS
+    // ========================================================
+
+    const handleQuickRenew = async (customerId: number, churchName: string) => {
+        if (!window.confirm(`Renew subscription for 30 days for "${churchName}"?`)) return;
+        try {
+            setProcessing(true);
+            await apiRequest(`/Customers/${customerId}/renew`, {
+                method: "POST",
+                body: JSON.stringify({ days: 30, notes: "Admin quick renewal from Platform Control Center" })
+            });
+            setMessage(`Subscription renewed successfully for ${churchName}.`);
+            await loadSubscribers();
+        } catch (err: any) {
+            setError(err.message || "Failed to renew subscription.");
+        } finally {
+            setProcessing(false);
+        }
+    };
+
+    const handleToggleLock = async (customerId: number, churchName: string, currentStatus?: string) => {
+        const action = currentStatus === "SUSPENDED" ? "unlock" : "lock & suspend";
+        if (!window.confirm(`Are you sure you want to ${action} workspace access for "${churchName}"?`)) return;
+        try {
+            setProcessing(true);
+            const res = await apiRequest<any>(`/Customers/${customerId}/toggle-lock`, { method: "PUT" });
+            setMessage(res.message || `Workspace status updated for ${churchName}.`);
+            await loadSubscribers();
+        } catch (err: any) {
+            setError(err.message || "Failed to toggle workspace lock.");
+        } finally {
+            setProcessing(false);
+        }
+    };
+
+    const handleSaveChurchProfile = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!churchStatus?.customerId) return;
+        try {
+            setSavingProfile(true);
+            await apiRequest(`/Customers/${churchStatus.customerId}`, {
+                method: "PUT",
+                body: JSON.stringify(churchProfileForm)
+            });
+            setMessage("Church profile updated successfully.");
+            await loadChurchStatus();
+        } catch (err: any) {
+            setError(err.message || "Failed to update church profile.");
+        } finally {
+            setSavingProfile(false);
+        }
+    };
+
+    // ========================================================
     // INITIAL LOAD
     // ========================================================
 
     useEffect(() => {
-
         loadUsers();
         loadRoles();
-
-    }, []);
+        if (isPlatform) {
+            loadSubscribers();
+        } else {
+            loadChurchStatus();
+        }
+    }, [isPlatform]);
 
 
     // ========================================================
@@ -453,6 +592,12 @@ const Settings: React.FC = () => {
 
                         roleId:
                             userForm.roleId,
+
+                        customerId:
+                            userForm.customerId || null,
+
+                        email:
+                            userForm.email ? userForm.email.trim() : null,
                     }),
                 }
             );
@@ -468,6 +613,8 @@ const Settings: React.FC = () => {
                 password: "",
                 fullName: "",
                 roleId: 0,
+                customerId: undefined,
+                email: "",
             });
 
             await loadUsers();
@@ -1225,25 +1372,28 @@ const Settings: React.FC = () => {
                     .trim()
                     .toLowerCase();
 
-            if (!search) {
-                return users;
-            }
+            return users.filter(user => {
+                // Workspace filtering for platform super-admin
+                if (isPlatform && selectedChurchFilter !== "ALL") {
+                    if (selectedChurchFilter === "PLATFORM") {
+                        if (user.customerId && user.customerId > 1) return false;
+                    } else {
+                        if (user.customerId !== Number(selectedChurchFilter)) return false;
+                    }
+                }
 
-            return users.filter(user =>
-                user.fullName
-                    .toLowerCase()
-                    .includes(search) ||
+                if (!search) return true;
 
-                user.username
-                    .toLowerCase()
-                    .includes(search) ||
+                return (
+                    user.fullName.toLowerCase().includes(search) ||
+                    user.username.toLowerCase().includes(search) ||
+                    (user.role || "").toLowerCase().includes(search) ||
+                    (user.churchName || "").toLowerCase().includes(search) ||
+                    (user.email || "").toLowerCase().includes(search)
+                );
+            });
 
-                (user.role || "")
-                    .toLowerCase()
-                    .includes(search)
-            );
-
-        }, [users, searchUser]);
+        }, [users, searchUser, isPlatform, selectedChurchFilter]);
 
 
     // ========================================================
@@ -1287,16 +1437,6 @@ const Settings: React.FC = () => {
     const activeRoles =
         roles.filter(
             role => role.isActive
-        ).length;
-
-    const totalPermissions =
-        permissions.filter(
-            p =>
-                p.canView ||
-                p.canCreate ||
-                p.canEdit ||
-                p.canDelete ||
-                p.canExport
         ).length;
 
 
@@ -1359,25 +1499,33 @@ const Settings: React.FC = () => {
                 <div>
 
                     <div className="settings-eyebrow">
-                        EPIC ADMINISTRATION CONSOLE
+                        {isPlatform ? "SYSTEM DEVELOPER & MASTER ADMINISTRATOR" : "CHURCH WORKSPACE SETTINGS"}
                     </div>
 
                     <h1>
-                        System Settings
+                        {isPlatform ? "EPIC Platform Control Center" : `${churchStatus?.churchName || "Church"} Workspace Settings`}
                     </h1>
 
                     <p>
-                        Configure users, roles, access
-                        permissions and system controls.
+                        {isPlatform
+                            ? "Full developer control over subscriber churches, custom permissions, plan overrides, and organized user accounts."
+                            : "Manage your church profile, local staff accounts, and active subscription plan features."}
                     </p>
 
                 </div>
 
-                <div className="settings-header-status">
+                <div className="settings-header-status" style={{
+                    borderColor: isPlatform ? "rgba(59, 130, 246, 0.35)" : "rgba(76, 221, 173, 0.25)",
+                    color: isPlatform ? "#93c5fd" : "#62e5b6",
+                    background: isPlatform ? "rgba(59, 130, 246, 0.08)" : "rgba(76, 221, 173, 0.06)"
+                }}>
 
-                    <span className="status-dot" />
+                    <span className="status-dot" style={{
+                        background: isPlatform ? "#60a5fa" : "#52e6b0",
+                        boxShadow: isPlatform ? "0 0 12px rgba(96, 165, 250, .8)" : "0 0 12px rgba(82, 230, 176, .8)"
+                    }} />
 
-                    SYSTEM ONLINE
+                    {isPlatform ? "SUPER ADMIN MODE (FULL ACCESS)" : "SECURE TENANT WORKSPACE"}
 
                 </div>
 
@@ -1436,96 +1584,99 @@ const Settings: React.FC = () => {
 
             <div className="settings-stats">
 
-                <div className="settings-stat-card">
+                {isPlatform ? (
+                    <>
+                        <div className="settings-stat-card">
+                            <div className="stat-icon" style={{ color: "#38bdf8", background: "rgba(56, 189, 248, 0.1)" }}>
+                                ⛪
+                            </div>
+                            <div>
+                                <span>SUBSCRIBERS</span>
+                                <strong>{subscribers.length}</strong>
+                                <small>{subscribers.filter(s => s.subscriptionStatus === "ACTIVE").length} active churches</small>
+                            </div>
+                        </div>
 
-                    <div className="stat-icon">
-                        ◉
-                    </div>
+                        <div className="settings-stat-card">
+                            <div className="stat-icon">
+                                ◉
+                            </div>
+                            <div>
+                                <span>ACCOUNTS</span>
+                                <strong>{users.length}</strong>
+                                <small>{activeUsers} active</small>
+                            </div>
+                        </div>
 
-                    <div>
-                        <span>
-                            USERS
-                        </span>
+                        <div className="settings-stat-card">
+                            <div className="stat-icon">
+                                ◆
+                            </div>
+                            <div>
+                                <span>ROLES</span>
+                                <strong>{roles.length}</strong>
+                                <small>{activeRoles} active</small>
+                            </div>
+                        </div>
 
-                        <strong>
-                            {users.length}
-                        </strong>
+                        <div className="settings-stat-card">
+                            <div className="stat-icon" style={{ color: "#34d399", background: "rgba(52, 211, 153, 0.1)" }}>
+                                🛡️
+                            </div>
+                            <div>
+                                <span>SECURITY</span>
+                                <strong>HARDENED</strong>
+                                <small>Tenant isolated & gated</small>
+                            </div>
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        <div className="settings-stat-card">
+                            <div className="stat-icon" style={{ color: "#38bdf8", background: "rgba(56, 189, 248, 0.1)" }}>
+                                ♙
+                            </div>
+                            <div>
+                                <span>STAFF SEATS</span>
+                                <strong>{users.length} / {churchStatus?.maxUsers ?? 5}</strong>
+                                <small>{Math.max(0, (churchStatus?.maxUsers ?? 5) - users.length)} seats available</small>
+                            </div>
+                        </div>
 
-                        <small>
-                            {activeUsers} active
-                        </small>
-                    </div>
+                        <div className="settings-stat-card">
+                            <div className="stat-icon">
+                                👥
+                            </div>
+                            <div>
+                                <span>DIRECTORY</span>
+                                <strong>{churchStatus?.memberCount ?? 0} / {churchStatus?.maxMembers ?? 500}</strong>
+                                <small>Members capacity</small>
+                            </div>
+                        </div>
 
-                </div>
+                        <div className="settings-stat-card">
+                            <div className="stat-icon" style={{ color: "#fbbf24", background: "rgba(251, 191, 36, 0.1)" }}>
+                                🛡️
+                            </div>
+                            <div>
+                                <span>SUBSCRIPTION</span>
+                                <strong>{churchStatus?.planName ?? "Standard"}</strong>
+                                <small>Status: {churchStatus?.subscriptionStatus ?? "ACTIVE"}</small>
+                            </div>
+                        </div>
 
-
-                <div className="settings-stat-card">
-
-                    <div className="stat-icon">
-                        ◆
-                    </div>
-
-                    <div>
-                        <span>
-                            ROLES
-                        </span>
-
-                        <strong>
-                            {roles.length}
-                        </strong>
-
-                        <small>
-                            {activeRoles} active
-                        </small>
-                    </div>
-
-                </div>
-
-
-                <div className="settings-stat-card">
-
-                    <div className="stat-icon">
-                        ◈
-                    </div>
-
-                    <div>
-                        <span>
-                            PERMISSIONS
-                        </span>
-
-                        <strong>
-                            {totalPermissions}
-                        </strong>
-
-                        <small>
-                            configured modules
-                        </small>
-                    </div>
-
-                </div>
-
-
-                <div className="settings-stat-card">
-
-                    <div className="stat-icon">
-                        ✓
-                    </div>
-
-                    <div>
-                        <span>
-                            SECURITY
-                        </span>
-
-                        <strong>
-                            JWT
-                        </strong>
-
-                        <small>
-                            Authentication active
-                        </small>
-                    </div>
-
-                </div>
+                        <div className="settings-stat-card">
+                            <div className="stat-icon" style={{ color: "#34d399", background: "rgba(52, 211, 153, 0.1)" }}>
+                                ✓
+                            </div>
+                            <div>
+                                <span>WORKSPACE</span>
+                                <strong>ACTIVE</strong>
+                                <small>Tenant ID #{churchStatus?.customerId}</small>
+                            </div>
+                        </div>
+                    </>
+                )}
 
             </div>
 
@@ -1536,63 +1687,421 @@ const Settings: React.FC = () => {
 
             <div className="settings-tabs">
 
-                <button
-                    className={
-                        activeTab === "overview"
-                            ? "active"
-                            : ""
-                    }
-                    onClick={() =>
-                        setActiveTab("overview")
-                    }
-                >
-                    <span>⌂</span>
-                    Overview
-                </button>
+                {isPlatform ? (
+                    <>
+                        <button
+                            className={activeTab === "subscribers" ? "active" : ""}
+                            onClick={() => setActiveTab("subscribers")}
+                        >
+                            <span>⛪</span>
+                            Church Subscribers ({subscribers.length})
+                        </button>
 
-                <button
-                    className={
-                        activeTab === "users"
-                            ? "active"
-                            : ""
-                    }
-                    onClick={() =>
-                        setActiveTab("users")
-                    }
-                >
-                    <span>♙</span>
-                    Users
-                </button>
+                        <button
+                            className={activeTab === "users" ? "active" : ""}
+                            onClick={() => setActiveTab("users")}
+                        >
+                            <span>♙</span>
+                            Organized Users ({users.length})
+                        </button>
 
-                <button
-                    className={
-                        activeTab === "roles"
-                            ? "active"
-                            : ""
-                    }
-                    onClick={() =>
-                        setActiveTab("roles")
-                    }
-                >
-                    <span>◆</span>
-                    Roles
-                </button>
+                        <button
+                            className={activeTab === "roles" ? "active" : ""}
+                            onClick={() => setActiveTab("roles")}
+                        >
+                            <span>◆</span>
+                            Roles
+                        </button>
 
-                <button
-                    className={
-                        activeTab === "permissions"
-                            ? "active"
-                            : ""
-                    }
-                    onClick={() =>
-                        setActiveTab("permissions")
-                    }
-                >
-                    <span>⌁</span>
-                    Permissions
-                </button>
+                        <button
+                            className={activeTab === "permissions" ? "active" : ""}
+                            onClick={() => setActiveTab("permissions")}
+                        >
+                            <span>⌁</span>
+                            Permissions
+                        </button>
+
+                        <button
+                            className={activeTab === "overview" ? "active" : ""}
+                            onClick={() => setActiveTab("overview")}
+                        >
+                            <span>⌂</span>
+                            Overview
+                        </button>
+                    </>
+                ) : (
+                    <>
+                        <button
+                            className={activeTab === "profile" ? "active" : ""}
+                            onClick={() => setActiveTab("profile")}
+                        >
+                            <span>⛪</span>
+                            Church Profile
+                        </button>
+
+                        <button
+                            className={activeTab === "users" ? "active" : ""}
+                            onClick={() => setActiveTab("users")}
+                        >
+                            <span>♙</span>
+                            Church Staff ({users.length}/{churchStatus?.maxUsers ?? 5})
+                        </button>
+
+                        <button
+                            className={activeTab === "plan" ? "active" : ""}
+                            onClick={() => setActiveTab("plan")}
+                        >
+                            <span>🛡️</span>
+                            Subscription & Features
+                        </button>
+                    </>
+                )}
 
             </div>
+
+
+            {/* ==================================================
+                CHURCH SUBSCRIBERS (DEVELOPER MASTER CONSOLE)
+            ================================================== */}
+
+            {isPlatform && activeTab === "subscribers" && (
+                <div className="settings-panel">
+                    <div className="panel-toolbar">
+                        <div className="panel-title">
+                            <h2>Church Subscribers & Permissions Control</h2>
+                            <p>
+                                Developer authorization center — manage church plans, custom allowed modules, seat quotas, and workspace locking.
+                            </p>
+                        </div>
+
+                        <div className="toolbar-actions">
+                            <button
+                                type="button"
+                                className="secondary-button"
+                                onClick={loadSubscribers}
+                                disabled={loadingSubscribers}
+                            >
+                                {loadingSubscribers ? "Loading..." : "↺ Refresh"}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="table-container">
+                        <table className="epic-table">
+                            <thead>
+                                <tr>
+                                    <th>CHURCH WORKSPACE</th>
+                                    <th>CONTACT & EMAIL</th>
+                                    <th>PLAN & STATUS</th>
+                                    <th>STAFF SEATS</th>
+                                    <th>MEMBERS</th>
+                                    <th>NEXT RENEWAL</th>
+                                    <th>PERMISSIONS</th>
+                                    <th style={{ textAlign: "right" }}>ACTIONS</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {subscribers.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={8} className="table-empty">
+                                            {loadingSubscribers ? "Loading subscribers..." : "No church subscribers found."}
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    subscribers.map((sub) => {
+                                        const hasCustomOverrides = !!(sub.customAllowedModules || sub.maxUsersOverride || sub.maxMembersOverride);
+                                        const isSuspended = sub.subscriptionStatus === "SUSPENDED";
+                                        const isPastDue = sub.subscriptionStatus === "PAST_DUE";
+
+                                        return (
+                                            <tr key={sub.customerId}>
+                                                <td>
+                                                    <div className="user-cell">
+                                                        <div className="user-avatar" style={{ background: "rgba(59, 130, 246, 0.2)", color: "#60a5fa" }}>
+                                                            ⛪
+                                                        </div>
+                                                        <div>
+                                                            <strong>{sub.churchName}</strong>
+                                                            <small>Tenant #{sub.customerId} • Created {new Date(sub.createdDate).toLocaleDateString()}</small>
+                                                        </div>
+                                                    </div>
+                                                </td>
+
+                                                <td>
+                                                    <div style={{ fontSize: "12px" }}>
+                                                        <div style={{ fontWeight: 600 }}>{sub.contactPerson}</div>
+                                                        <small style={{ color: "#94a3b8" }}>{sub.email}</small>
+                                                    </div>
+                                                </td>
+
+                                                <td>
+                                                    <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                                                        <span className="role-chip" style={{ fontSize: "11px", fontWeight: 700 }}>
+                                                            {sub.planName || "Monthly Plan"}
+                                                        </span>
+                                                        <span className={`status-chip ${isSuspended ? "inactive" : isPastDue ? "inactive" : "active"}`} style={{ fontSize: "10px" }}>
+                                                            <span />
+                                                            {sub.subscriptionStatus || "ACTIVE"}
+                                                        </span>
+                                                    </div>
+                                                </td>
+
+                                                <td>
+                                                    <div style={{ fontSize: "12px" }}>
+                                                        <strong>{sub.userCount} / {sub.maxUsers}</strong>
+                                                        <small style={{ display: "block", color: "#64748b" }}>seats</small>
+                                                    </div>
+                                                </td>
+
+                                                <td>
+                                                    <div style={{ fontSize: "12px" }}>
+                                                        <strong>{sub.memberCount} / {sub.maxMembers}</strong>
+                                                        <small style={{ display: "block", color: "#64748b" }}>members</small>
+                                                    </div>
+                                                </td>
+
+                                                <td>
+                                                    <span style={{ fontSize: "12px", color: sub.nextBillingDate ? "#e2e8f0" : "#64748b" }}>
+                                                        {sub.nextBillingDate ? new Date(sub.nextBillingDate).toLocaleDateString() : "—"}
+                                                    </span>
+                                                </td>
+
+                                                <td>
+                                                    {hasCustomOverrides ? (
+                                                        <span className="status-chip active" style={{ fontSize: "10px", background: "rgba(245, 158, 11, 0.15)", color: "#fbbf24", borderColor: "rgba(245, 158, 11, 0.3)" }}>
+                                                            ⚡ Custom
+                                                        </span>
+                                                    ) : (
+                                                        <span className="status-chip inactive" style={{ fontSize: "10px", color: "#94a3b8" }}>
+                                                            ✓ Plan Default
+                                                        </span>
+                                                    )}
+                                                </td>
+
+                                                <td style={{ textAlign: "right" }}>
+                                                    <div className="action-buttons" style={{ justifyContent: "flex-end" }}>
+                                                        <button
+                                                            type="button"
+                                                            title="Configure Plan Permissions & Seat Overrides"
+                                                            style={{ background: "rgba(59, 130, 246, 0.18)", borderColor: "rgba(59, 130, 246, 0.4)", color: "#93c5fd" }}
+                                                            onClick={() => setPermModalCustomerId(sub.customerId)}
+                                                        >
+                                                            🔑 Permissions
+                                                        </button>
+
+                                                        <button
+                                                            type="button"
+                                                            title="Quick Renew for 30 Days"
+                                                            style={{ background: "rgba(16, 185, 129, 0.15)", borderColor: "rgba(16, 185, 129, 0.35)", color: "#6ee7b7" }}
+                                                            onClick={() => handleQuickRenew(sub.customerId, sub.churchName)}
+                                                        >
+                                                            ⚡ Renew
+                                                        </button>
+
+                                                        <button
+                                                            type="button"
+                                                            title={isSuspended ? "Unlock workspace access" : "Lock & suspend workspace"}
+                                                            style={{
+                                                                background: isSuspended ? "rgba(16, 185, 129, 0.15)" : "rgba(239, 68, 68, 0.15)",
+                                                                borderColor: isSuspended ? "rgba(16, 185, 129, 0.3)" : "rgba(239, 68, 68, 0.3)",
+                                                                color: isSuspended ? "#6ee7b7" : "#fca5a5"
+                                                            }}
+                                                            onClick={() => handleToggleLock(sub.customerId, sub.churchName, sub.subscriptionStatus)}
+                                                        >
+                                                            {isSuspended ? "🔓" : "🔒"}
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+
+            {/* ==================================================
+                CHURCH PROFILE (TENANT WORKSPACE)
+            ================================================== */}
+
+            {!isPlatform && activeTab === "profile" && (
+                <div className="settings-panel">
+                    <div className="panel-toolbar">
+                        <div className="panel-title">
+                            <h2>Church Sanctuary Profile</h2>
+                            <p>Configure your sanctuary identity, leadership, and public contact information.</p>
+                        </div>
+                    </div>
+
+                    <div style={{ padding: "24px" }}>
+                        <form onSubmit={handleSaveChurchProfile} style={{ maxWidth: "600px", display: "flex", flexDirection: "column", gap: "16px" }}>
+                            <FormField label="Church / Sanctuary Name" required>
+                                <input
+                                    className="epic-input"
+                                    type="text"
+                                    value={churchProfileForm.churchName}
+                                    onChange={(e) => setChurchProfileForm({ ...churchProfileForm, churchName: e.target.value })}
+                                    required
+                                />
+                            </FormField>
+
+                            <FormField label="Senior Pastor / Leader Name" required>
+                                <input
+                                    className="epic-input"
+                                    type="text"
+                                    value={churchProfileForm.contactPerson}
+                                    onChange={(e) => setChurchProfileForm({ ...churchProfileForm, contactPerson: e.target.value })}
+                                    required
+                                />
+                            </FormField>
+
+                            <FormField label="Official Contact Phone">
+                                <input
+                                    className="epic-input"
+                                    type="text"
+                                    value={churchProfileForm.phone}
+                                    onChange={(e) => setChurchProfileForm({ ...churchProfileForm, phone: e.target.value })}
+                                />
+                            </FormField>
+
+                            <FormField label="Official Contact Email" required>
+                                <input
+                                    className="epic-input"
+                                    type="email"
+                                    value={churchProfileForm.email}
+                                    onChange={(e) => setChurchProfileForm({ ...churchProfileForm, email: e.target.value })}
+                                    required
+                                />
+                            </FormField>
+
+                            <div style={{ marginTop: "12px" }}>
+                                <button type="submit" className="primary-button" disabled={savingProfile}>
+                                    {savingProfile ? "Saving Profile..." : "💾 Save Church Profile"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+
+            {/* ==================================================
+                CHURCH SUBSCRIPTION & FEATURES (TENANT WORKSPACE)
+            ================================================== */}
+
+            {!isPlatform && activeTab === "plan" && (
+                <div className="settings-panel">
+                    <div className="panel-toolbar">
+                        <div className="panel-title">
+                            <h2>Subscription Plan & Included Features</h2>
+                            <p>Your church's current tier, seat quotas, and authorized platform modules.</p>
+                        </div>
+                    </div>
+
+                    <div style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "24px" }}>
+                        <div style={{
+                            padding: "20px",
+                            background: "linear-gradient(145deg, rgba(30, 58, 138, 0.25) 0%, rgba(15, 23, 42, 0.6) 100%)",
+                            border: "1px solid rgba(59, 130, 246, 0.3)",
+                            borderRadius: "14px",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            flexWrap: "wrap",
+                            gap: "16px"
+                        }}>
+                            <div>
+                                <span style={{ fontSize: "11px", fontWeight: 800, color: "#60a5fa", letterSpacing: "1.5px" }}>ACTIVE PLAN</span>
+                                <h3 style={{ margin: "4px 0", fontSize: "22px", color: "#f8fafc" }}>{churchStatus?.planName || "Monthly Plan"}</h3>
+                                <p style={{ margin: 0, fontSize: "13px", color: "#94a3b8" }}>
+                                    Status: <strong style={{ color: "#34d399" }}>{churchStatus?.subscriptionStatus || "ACTIVE"}</strong>
+                                    {churchStatus?.nextBillingDate && ` • Renews on ${new Date(churchStatus.nextBillingDate).toLocaleDateString()}`}
+                                </p>
+                            </div>
+
+                            <div style={{ display: "flex", gap: "16px", textAlign: "right" }}>
+                                <div>
+                                    <span style={{ fontSize: "11px", color: "#64748b", display: "block" }}>STAFF SEATS</span>
+                                    <strong style={{ fontSize: "18px", color: "#e2e8f0" }}>{users.length} / {churchStatus?.maxUsers ?? 5}</strong>
+                                </div>
+                                <div>
+                                    <span style={{ fontSize: "11px", color: "#64748b", display: "block" }}>MEMBERS DIRECTORY</span>
+                                    <strong style={{ fontSize: "18px", color: "#e2e8f0" }}>{churchStatus?.memberCount ?? 0} / {churchStatus?.maxMembers ?? 500}</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h4 style={{ margin: "0 0 12px", fontSize: "14px", fontWeight: 700, color: "#cbd5e1" }}>
+                                Platform Modules Included in Your Plan
+                            </h4>
+
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: "10px" }}>
+                                {[
+                                    { name: "Dashboard", allowed: true, desc: "Church stats & overview" },
+                                    { name: "Church Services", allowed: true, desc: "Schedules & liturgies" },
+                                    { name: "Members Directory", allowed: true, desc: "Profiles & family records" },
+                                    { name: "Visitors Follow-up", allowed: true, desc: "First-time visitor tracking" },
+                                    { name: "Attendance & SMILE Scanner", allowed: PermissionService.canView("Attendance"), desc: "Face scanning & QR check-ins" },
+                                    { name: "Giving & Tithes", allowed: PermissionService.canView("Giving"), desc: "Online offerings & tracking" },
+                                    { name: "Income & Expenses", allowed: PermissionService.canView("Income"), desc: "Financial ledger & accounting" },
+                                    { name: "Ministries & Departments", allowed: PermissionService.canView("Ministries"), desc: "Worship, media, youth, etc." },
+                                    { name: "Events Management", allowed: PermissionService.canView("Events"), desc: "Calendar & registration" },
+                                    { name: "EPIC Learning LMS", allowed: PermissionService.canView("EPIC Learning"), desc: "Courses & discipleship" },
+                                    { name: "Reports & Documents", allowed: PermissionService.canView("Reports"), desc: "Custom PDF & analytics" },
+                                ].map((item) => (
+                                    <div key={item.name} style={{
+                                        padding: "12px 14px",
+                                        background: item.allowed ? "rgba(16, 185, 129, 0.08)" : "rgba(255, 255, 255, 0.02)",
+                                        border: `1px solid ${item.allowed ? "rgba(16, 185, 129, 0.25)" : "rgba(255, 255, 255, 0.06)"}`,
+                                        borderRadius: "10px",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "space-between"
+                                    }}>
+                                        <div>
+                                            <div style={{ fontSize: "13px", fontWeight: 700, color: item.allowed ? "#e2e8f0" : "#64748b" }}>
+                                                {item.name}
+                                            </div>
+                                            <small style={{ color: "#64748b" }}>{item.desc}</small>
+                                        </div>
+                                        <span style={{ fontSize: "16px", color: item.allowed ? "#34d399" : "#475569" }}>
+                                            {item.allowed ? "✓" : "🔒"}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div style={{
+                            padding: "16px 20px",
+                            background: "rgba(245, 158, 11, 0.08)",
+                            border: "1px solid rgba(245, 158, 11, 0.25)",
+                            borderRadius: "12px",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            flexWrap: "wrap",
+                            gap: "12px"
+                        }}>
+                            <div>
+                                <strong style={{ color: "#fbbf24", fontSize: "14px", display: "block" }}>Need More Staff Seats or Advanced Features?</strong>
+                                <small style={{ color: "#cbd5e1" }}>Contact Luke 4:18 Ministries Platform Developer to instantly expand your seat limits or unlock additional modules.</small>
+                            </div>
+                            <a
+                                href="mailto:support@epicchurchmanagement.com?subject=Subscription%20Upgrade%20Request"
+                                className="primary-button"
+                                style={{ textDecoration: "none", display: "inline-block" }}
+                            >
+                                Contact Administrator
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            )}
 
 
             {/* ==================================================
@@ -1776,7 +2285,55 @@ const Settings: React.FC = () => {
                         </div>
 
 
-                        <div className="toolbar-actions">
+                        <div className="toolbar-actions" style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+
+                            {/* WORKSPACE FILTER (PLATFORM SUPER-ADMIN) */}
+                            {isPlatform && (
+                                <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                    <span style={{ fontSize: "11px", fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>Workspace:</span>
+                                    <select
+                                        value={selectedChurchFilter}
+                                        onChange={(e) => setSelectedChurchFilter(e.target.value)}
+                                        style={{
+                                            background: "rgba(15, 23, 42, 0.7)",
+                                            border: "1px solid rgba(255, 255, 255, 0.14)",
+                                            color: "#f8fafc",
+                                            borderRadius: "8px",
+                                            padding: "6px 10px",
+                                            fontSize: "12px",
+                                            outline: "none"
+                                        }}
+                                    >
+                                        <option value="ALL">All Workspaces (Global View)</option>
+                                        <option value="PLATFORM">Developer / Super-Admins</option>
+                                        {subscribers.map((sub) => (
+                                            <option key={sub.customerId} value={sub.customerId.toString()}>
+                                                {sub.churchName} ({sub.planName || "Plan"})
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
+                            {/* SEATS QUOTA BADGE (CLIENT CHURCH) */}
+                            {!isPlatform && (
+                                <div style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "8px",
+                                    padding: "6px 12px",
+                                    background: "rgba(59, 130, 246, 0.1)",
+                                    border: "1px solid rgba(59, 130, 246, 0.25)",
+                                    borderRadius: "8px",
+                                    fontSize: "12px",
+                                    color: "#93c5fd"
+                                }}>
+                                    <span>Staff Seats Quota:</span>
+                                    <strong style={{ color: users.length >= (churchStatus?.maxUsers ?? 5) ? "#f87171" : "#34d399" }}>
+                                        {users.length} / {churchStatus?.maxUsers ?? 5} Seats
+                                    </strong>
+                                </div>
+                            )}
 
                             {/* SEARCH */}
 
@@ -1813,6 +2370,8 @@ const Settings: React.FC = () => {
                                         password: "",
                                         fullName: "",
                                         roleId: 0,
+                                        customerId: undefined,
+                                        email: "",
                                     });
 
                                     setShowCreateUser(true);
@@ -1847,6 +2406,12 @@ const Settings: React.FC = () => {
                                         USERNAME
                                     </th>
 
+                                    {isPlatform && (
+                                        <th>
+                                            CHURCH WORKSPACE
+                                        </th>
+                                    )}
+
                                     <th>
                                         ROLE
                                     </th>
@@ -1879,7 +2444,7 @@ const Settings: React.FC = () => {
                                     <tr>
 
                                         <td
-                                            colSpan={6}
+                                            colSpan={isPlatform ? 7 : 6}
                                             className="table-loading"
                                         >
                                             Loading users...
@@ -1896,7 +2461,7 @@ const Settings: React.FC = () => {
                                     <tr>
 
                                         <td
-                                            colSpan={6}
+                                            colSpan={isPlatform ? 7 : 6}
                                             className="table-empty"
                                         >
                                             No users found.
@@ -1963,6 +2528,44 @@ const Settings: React.FC = () => {
                                                 </code>
 
                                             </td>
+
+
+                                            {/* ==================================================
+                                    CHURCH WORKSPACE (PLATFORM VIEW)
+                                ================================================== */}
+
+                                            {isPlatform && (
+                                                <td>
+                                                    {user.customerId && user.customerId > 1 ? (
+                                                        <span style={{
+                                                            display: "inline-block",
+                                                            padding: "3px 8px",
+                                                            borderRadius: "6px",
+                                                            fontSize: "12px",
+                                                            background: "rgba(139, 92, 246, 0.12)",
+                                                            color: "#c4b5fd",
+                                                            border: "1px solid rgba(139, 92, 246, 0.25)",
+                                                            fontWeight: 600
+                                                        }}>
+                                                            {user.churchName || `Church #${user.customerId}`}
+                                                        </span>
+                                                    ) : (
+                                                        <span style={{
+                                                            display: "inline-block",
+                                                            padding: "3px 8px",
+                                                            borderRadius: "6px",
+                                                            fontSize: "11px",
+                                                            letterSpacing: "0.5px",
+                                                            background: "rgba(234, 179, 8, 0.12)",
+                                                            color: "#fde047",
+                                                            border: "1px solid rgba(234, 179, 8, 0.3)",
+                                                            fontWeight: 700
+                                                        }}>
+                                                            ★ PLATFORM ADMIN
+                                                        </span>
+                                                    )}
+                                                </td>
+                                            )}
 
 
                                             {/* ==================================================
@@ -2699,6 +3302,48 @@ const Settings: React.FC = () => {
                         }
                     >
 
+                        {/* WORKSPACE SELECTION */}
+                        {isPlatform && (
+                            <FormField label="Assign Church Workspace">
+                                <select
+                                    className="epic-input"
+                                    value={userForm.customerId || 0}
+                                    onChange={e => {
+                                        const val = Number(e.target.value);
+                                        setUserForm({
+                                            ...userForm,
+                                            customerId: val > 0 ? val : undefined,
+                                        });
+                                    }}
+                                >
+                                    <option value={0}>Platform Super-Admin (Developer)</option>
+                                    {subscribers.map(sub => (
+                                        <option key={sub.customerId} value={sub.customerId}>
+                                            {sub.churchName} ({sub.planName || "Church Plan"})
+                                        </option>
+                                    ))}
+                                </select>
+                            </FormField>
+                        )}
+
+                        {!isPlatform && (
+                            <div style={{
+                                padding: "10px 14px",
+                                background: "rgba(59, 130, 246, 0.08)",
+                                border: "1px solid rgba(59, 130, 246, 0.2)",
+                                borderRadius: "8px",
+                                marginBottom: "16px",
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center"
+                            }}>
+                                <span style={{ fontSize: "12px", color: "#93c5fd" }}>Church Workspace:</span>
+                                <strong style={{ fontSize: "13px", color: "#f8fafc" }}>
+                                    {churchStatus?.churchName || "Your Church Workspace"}
+                                </strong>
+                            </div>
+                        )}
+
                         <FormField
                             label="Full Name"
                             required
@@ -2741,6 +3386,29 @@ const Settings: React.FC = () => {
                                 }
                                 placeholder="staff"
                                 autoComplete="off"
+                            />
+
+                        </FormField>
+
+
+                        <FormField
+                            label="Email Address"
+                        >
+
+                            <input
+                                type="email"
+                                className="epic-input"
+                                value={
+                                    userForm.email || ""
+                                }
+                                onChange={e =>
+                                    setUserForm({
+                                        ...userForm,
+                                        email:
+                                            e.target.value,
+                                    })
+                                }
+                                placeholder="staff@example.com"
                             />
 
                         </FormField>
@@ -3318,6 +3986,18 @@ const Settings: React.FC = () => {
 
                 </Modal>
 
+            )}
+
+            {/* ==================================================
+                SUBSCRIBER PERMISSIONS OVERRIDE MODAL
+            ================================================== */}
+            {permModalCustomerId !== null && (
+                <ChurchPermissionsModal
+                    customerId={permModalCustomerId}
+                    isOpen={true}
+                    onClose={() => setPermModalCustomerId(null)}
+                    onUpdated={loadSubscribers}
+                />
             )}
 
         </div>

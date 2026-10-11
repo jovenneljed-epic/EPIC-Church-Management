@@ -761,6 +761,7 @@ namespace EPIC.Api.Controllers
             DateTime? nextBillingDate = null;
             decimal? subscriptionAmount = null;
             string? planName = null;
+            Subscription? subscription = null;
 
             if (customer.CustomerId == 1)
             {
@@ -769,7 +770,7 @@ namespace EPIC.Api.Controllers
             }
             else
             {
-                var subscription = await _context.Subscriptions
+                subscription = await _context.Subscriptions
                     .Include(s => s.SubscriptionPlan)
                     .OrderByDescending(s => s.CreatedDate)
                     .FirstOrDefaultAsync(s => s.CustomerId == customer.CustomerId);
@@ -836,6 +837,101 @@ namespace EPIC.Api.Controllers
                 }
             }
 
+            // --------------------------------------------------------
+            // PERMISSIONS & LIMITS CALCULATION
+            // --------------------------------------------------------
+            bool isPlatformAdmin = (customer.CustomerId == 1);
+            List<string> allowedModules = new();
+
+            if (customer.CustomerId == 1)
+            {
+                allowedModules = new List<string>
+                {
+                    "Dashboard",
+                    "Church Services",
+                    "Event Management",
+                    "Reports",
+                    "Member Attendance Report",
+                    "Members",
+                    "Attendance",
+                    "SMILE Face Scanner",
+                    "Ministries",
+                    "Visitors",
+                    "Church in Action",
+                    "Giving",
+                    "Income",
+                    "Expenses",
+                    "EPIC Learning",
+                    "Subscription Dashboard",
+                    "Subscriptions",
+                    "Demo Requests",
+                    "Website Analytics",
+                    "Settings",
+                    "Blog Management"
+                };
+            }
+            else
+            {
+                if (!string.IsNullOrWhiteSpace(customer.CustomAllowedModules))
+                {
+                    allowedModules = customer.CustomAllowedModules
+                        .Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                        .ToList();
+                }
+                else
+                {
+                    allowedModules.Add("Dashboard");
+                    allowedModules.Add("Church Services");
+                    allowedModules.Add("Members");
+                    allowedModules.Add("Visitors");
+                    allowedModules.Add("Settings");
+
+                    if (subscription?.SubscriptionPlan != null)
+                    {
+                        var plan = subscription.SubscriptionPlan;
+                        if (plan.IncludesAttendance)
+                        {
+                            allowedModules.Add("Attendance");
+                            allowedModules.Add("SMILE Face Scanner");
+                        }
+                        if (plan.IncludesGiving)
+                        {
+                            allowedModules.Add("Giving");
+                        }
+                        if (plan.IncludesFinance)
+                        {
+                            allowedModules.Add("Income");
+                            allowedModules.Add("Expenses");
+                        }
+                        if (plan.IncludesMinistries)
+                        {
+                            allowedModules.Add("Ministries");
+                            allowedModules.Add("Church in Action");
+                        }
+                        if (plan.IncludesEvents)
+                        {
+                            allowedModules.Add("Event Management");
+                        }
+                        if (plan.IncludesEPICLearning)
+                        {
+                            allowedModules.Add("EPIC Learning");
+                        }
+                        if (plan.IncludesReports)
+                        {
+                            allowedModules.Add("Reports");
+                            allowedModules.Add("Member Attendance Report");
+                        }
+                    }
+                }
+            }
+
+            var maxUsers = customer.MaxUsersOverride ?? (subscription?.SubscriptionPlan?.MaxUsers ?? 5);
+            var userCount = await _context.Users.CountAsync(u => u.CustomerId == customer.CustomerId)
+                + await _context.ClientMembers.CountAsync(u => u.CustomerId == customer.CustomerId);
+
+            var maxMembers = customer.MaxMembersOverride ?? (subscription?.SubscriptionPlan?.MaxMembers ?? 500);
+            var memberCount = await _context.Members.CountAsync(m => m.CustomerId == customer.CustomerId);
+
             return Ok(new
             {
                 customerId = customer.CustomerId,
@@ -846,6 +942,13 @@ namespace EPIC.Api.Controllers
                 isSetupCompleted = customer.IsSetupCompleted,
                 hasServices = hasServices,
                 hasMembers = hasMembers,
+
+                isPlatformAdmin = isPlatformAdmin,
+                allowedModules = allowedModules,
+                maxUsers = maxUsers,
+                userCount = userCount,
+                maxMembers = maxMembers,
+                memberCount = memberCount,
 
                 isLocked = isLocked,
                 lockReason = lockReason,
@@ -1120,11 +1223,308 @@ namespace EPIC.Api.Controllers
                 isSetupCompleted = false
             });
         }
+
+        // =========================================================
+        // GET ALL SUBSCRIBERS FOR DEVELOPER MANAGEMENT
+        // GET: /api/Customers/subscribers
+        // MASTER ADMIN ONLY
+        // =========================================================
+
+        [HttpGet("subscribers")]
+        public async Task<IActionResult> GetSubscribers()
+        {
+            var callerCustomerId = await GetCurrentCustomerIdAsync();
+            if (callerCustomerId.HasValue && callerCustomerId.Value > 1)
+            {
+                return Forbid();
+            }
+
+            var customers = await _context.Customers
+                .AsNoTracking()
+                .Where(c => c.CustomerId > 1)
+                .OrderBy(c => c.ChurchName)
+                .ToListAsync();
+
+            var result = new List<object>();
+
+            foreach (var c in customers)
+            {
+                var sub = await _context.Subscriptions
+                    .Include(s => s.SubscriptionPlan)
+                    .OrderByDescending(s => s.CreatedDate)
+                    .FirstOrDefaultAsync(s => s.CustomerId == c.CustomerId);
+
+                var userCount = await _context.Users.CountAsync(u => u.CustomerId == c.CustomerId)
+                    + await _context.ClientMembers.CountAsync(u => u.CustomerId == c.CustomerId);
+                var memberCount = await _context.Members.CountAsync(m => m.CustomerId == c.CustomerId);
+
+                var maxUsers = c.MaxUsersOverride ?? (sub?.SubscriptionPlan?.MaxUsers ?? 5);
+                var maxMembers = c.MaxMembersOverride ?? (sub?.SubscriptionPlan?.MaxMembers ?? 500);
+
+                var isLocked = false;
+                var now = DateTime.Now;
+                var status = sub?.Status ?? "EXPIRED";
+                if (status == "EXPIRED" || status == "PAST_DUE" || status == "SUSPENDED" || status == "CANCELLED")
+                {
+                    isLocked = true;
+                }
+                else if (sub?.NextBillingDate.HasValue == true && sub.NextBillingDate.Value <= now)
+                {
+                    isLocked = true;
+                }
+
+                result.Add(new
+                {
+                    customerId = c.CustomerId,
+                    churchName = c.ChurchName,
+                    contactPerson = c.ContactPerson,
+                    email = c.Email,
+                    phone = c.Phone,
+                    status = c.Status,
+                    isSetupCompleted = c.IsSetupCompleted,
+                    createdDate = c.CreatedDate,
+
+                    subscriptionId = sub?.SubscriptionId,
+                    planName = sub?.SubscriptionPlan?.PlanName ?? "Monthly Subscription",
+                    billingCycle = sub?.BillingCycle ?? "Monthly",
+                    amount = sub?.Amount ?? (sub?.SubscriptionPlan?.MonthlyPrice ?? 0),
+                    nextBillingDate = sub?.NextBillingDate,
+                    subscriptionStatus = sub?.Status ?? "NONE",
+                    isLocked = isLocked,
+
+                    maxUsers = maxUsers,
+                    userCount = userCount,
+                    maxMembers = maxMembers,
+                    memberCount = memberCount,
+
+                    customAllowedModules = c.CustomAllowedModules
+                });
+            }
+
+            return Ok(result);
+        }
+
+        // =========================================================
+        // GET SUBSCRIBER PERMISSIONS (MASTER ADMIN)
+        // GET: /api/Customers/{id}/subscriber-permissions
+        // =========================================================
+
+        [HttpGet("{id:int}/subscriber-permissions")]
+        public async Task<IActionResult> GetSubscriberPermissions(int id)
+        {
+            var callerCustomerId = await GetCurrentCustomerIdAsync();
+            if (callerCustomerId.HasValue && callerCustomerId.Value > 1)
+            {
+                return Forbid();
+            }
+
+            var customer = await _context.Customers.FindAsync(id);
+            if (customer == null)
+            {
+                return NotFound(new { message = "Church subscriber not found." });
+            }
+
+            var subscription = await _context.Subscriptions
+                .Include(s => s.SubscriptionPlan)
+                .OrderByDescending(s => s.CreatedDate)
+                .FirstOrDefaultAsync(s => s.CustomerId == id);
+
+            var plan = subscription?.SubscriptionPlan;
+
+            var allAvailableModules = new List<string>
+            {
+                "Dashboard",
+                "Church Services",
+                "Members",
+                "Attendance",
+                "SMILE Face Scanner",
+                "Visitors",
+                "Giving",
+                "Income",
+                "Expenses",
+                "Ministries",
+                "Church in Action",
+                "Event Management",
+                "EPIC Learning",
+                "Reports",
+                "Member Attendance Report",
+                "Settings"
+            };
+
+            var planDefaultModules = new List<string>
+            {
+                "Dashboard",
+                "Church Services",
+                "Members",
+                "Visitors",
+                "Settings"
+            };
+
+            if (plan != null)
+            {
+                if (plan.IncludesAttendance)
+                {
+                    planDefaultModules.Add("Attendance");
+                    planDefaultModules.Add("SMILE Face Scanner");
+                }
+                if (plan.IncludesGiving) planDefaultModules.Add("Giving");
+                if (plan.IncludesFinance)
+                {
+                    planDefaultModules.Add("Income");
+                    planDefaultModules.Add("Expenses");
+                }
+                if (plan.IncludesMinistries)
+                {
+                    planDefaultModules.Add("Ministries");
+                    planDefaultModules.Add("Church in Action");
+                }
+                if (plan.IncludesEvents) planDefaultModules.Add("Event Management");
+                if (plan.IncludesEPICLearning) planDefaultModules.Add("EPIC Learning");
+                if (plan.IncludesReports)
+                {
+                    planDefaultModules.Add("Reports");
+                    planDefaultModules.Add("Member Attendance Report");
+                }
+            }
+
+            var activeModules = !string.IsNullOrWhiteSpace(customer.CustomAllowedModules)
+                ? customer.CustomAllowedModules.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList()
+                : planDefaultModules;
+
+            var userCount = await _context.Users.CountAsync(u => u.CustomerId == id)
+                + await _context.ClientMembers.CountAsync(u => u.CustomerId == id);
+            var memberCount = await _context.Members.CountAsync(m => m.CustomerId == id);
+
+            return Ok(new
+            {
+                customerId = customer.CustomerId,
+                churchName = customer.ChurchName,
+                contactPerson = customer.ContactPerson,
+                email = customer.Email,
+                planName = plan?.PlanName ?? "Custom Plan",
+                hasCustomOverride = !string.IsNullOrWhiteSpace(customer.CustomAllowedModules),
+                customAllowedModules = customer.CustomAllowedModules,
+                allAvailableModules = allAvailableModules,
+                planDefaultModules = planDefaultModules,
+                activeModules = activeModules,
+                maxUsers = customer.MaxUsersOverride ?? (plan?.MaxUsers ?? 5),
+                maxUsersOverride = customer.MaxUsersOverride,
+                userCount = userCount,
+                maxMembers = customer.MaxMembersOverride ?? (plan?.MaxMembers ?? 500),
+                maxMembersOverride = customer.MaxMembersOverride,
+                memberCount = memberCount
+            });
+        }
+
+        // =========================================================
+        // UPDATE SUBSCRIBER PERMISSIONS (MASTER ADMIN)
+        // PUT: /api/Customers/{id}/subscriber-permissions
+        // =========================================================
+
+        [HttpPut("{id:int}/subscriber-permissions")]
+        public async Task<IActionResult> UpdateSubscriberPermissions(
+            int id,
+            [FromBody] UpdateSubscriberPermissionsRequest request)
+        {
+            var callerCustomerId = await GetCurrentCustomerIdAsync();
+            if (callerCustomerId.HasValue && callerCustomerId.Value > 1)
+            {
+                return Forbid();
+            }
+
+            var customer = await _context.Customers.FindAsync(id);
+            if (customer == null)
+            {
+                return NotFound(new { message = "Church subscriber not found." });
+            }
+
+            if (request.ResetToPlanDefaults == true)
+            {
+                customer.CustomAllowedModules = null;
+            }
+            else if (request.AllowedModules != null)
+            {
+                customer.CustomAllowedModules = string.Join(",", request.AllowedModules);
+            }
+
+            if (request.MaxUsersOverride.HasValue)
+            {
+                customer.MaxUsersOverride = request.MaxUsersOverride.Value > 0 ? request.MaxUsersOverride.Value : null;
+            }
+
+            if (request.MaxMembersOverride.HasValue)
+            {
+                customer.MaxMembersOverride = request.MaxMembersOverride.Value > 0 ? request.MaxMembersOverride.Value : null;
+            }
+
+            customer.UpdatedDate = DateTime.Now;
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                success = true,
+                message = $"Permissions updated successfully for {customer.ChurchName}.",
+                customAllowedModules = customer.CustomAllowedModules,
+                maxUsersOverride = customer.MaxUsersOverride,
+                maxMembersOverride = customer.MaxMembersOverride
+            });
+        }
+
+        // =========================================================
+        // TOGGLE WORKSPACE LOCK (MASTER ADMIN)
+        // PUT: /api/Customers/{id}/toggle-lock
+        // =========================================================
+
+        [HttpPut("{id:int}/toggle-lock")]
+        public async Task<IActionResult> ToggleWorkspaceLock(int id)
+        {
+            var callerCustomerId = await GetCurrentCustomerIdAsync();
+            if (callerCustomerId.HasValue && callerCustomerId.Value > 1)
+            {
+                return Forbid();
+            }
+
+            var subscription = await _context.Subscriptions
+                .OrderByDescending(s => s.CreatedDate)
+                .FirstOrDefaultAsync(s => s.CustomerId == id);
+
+            if (subscription == null)
+            {
+                return NotFound(new { message = "No subscription found for this church." });
+            }
+
+            if (subscription.Status == "ACTIVE")
+            {
+                subscription.Status = "SUSPENDED";
+            }
+            else
+            {
+                subscription.Status = "ACTIVE";
+            }
+
+            subscription.UpdatedDate = DateTime.Now;
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                success = true,
+                message = $"Workspace status updated to {subscription.Status}.",
+                status = subscription.Status
+            });
+        }
     }
 
     // =============================================================
     // DTOs
     // =============================================================
+
+    public class UpdateSubscriberPermissionsRequest
+    {
+        public List<string>? AllowedModules { get; set; }
+        public bool? ResetToPlanDefaults { get; set; }
+        public int? MaxUsersOverride { get; set; }
+        public int? MaxMembersOverride { get; set; }
+    }
 
     public class CompleteChurchSetupRequest
     {
