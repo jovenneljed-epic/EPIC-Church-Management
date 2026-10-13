@@ -1,4 +1,4 @@
-﻿using EPIC.Api.Data;
+using EPIC.Api.Data;
 using EPIC.Api.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -48,6 +48,10 @@ namespace EPIC.Api.Controllers
                     l.Content,
                     l.VideoUrl,
                     l.ResourceUrl,
+                    l.LessonType,
+                    l.GoogleClassroomUrl,
+                    l.GoogleSheetsUrl,
+                    l.QuizDataJson,
                     l.SortOrder,
                     l.EstimatedMinutes,
                     l.IsPublished,
@@ -174,6 +178,10 @@ namespace EPIC.Api.Controllers
             lesson.Content = updatedLesson.Content;
             lesson.VideoUrl = updatedLesson.VideoUrl;
             lesson.ResourceUrl = updatedLesson.ResourceUrl;
+            lesson.LessonType = updatedLesson.LessonType;
+            lesson.GoogleClassroomUrl = updatedLesson.GoogleClassroomUrl;
+            lesson.GoogleSheetsUrl = updatedLesson.GoogleSheetsUrl;
+            lesson.QuizDataJson = updatedLesson.QuizDataJson;
             lesson.SortOrder = updatedLesson.SortOrder;
             lesson.EstimatedMinutes = updatedLesson.EstimatedMinutes;
             lesson.IsPublished = updatedLesson.IsPublished;

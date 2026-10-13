@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using EPIC.Api.Data;
 using EPIC.Api.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -56,18 +56,33 @@ namespace EPIC.Api.Controllers
 
             var courseId = lesson.CourseModule.CourseId;
 
+            var isAdminOrSpecialist = IsUserAdminOrSpecialist();
+
             var enrollment = await GetEnrollmentAsync(
                 courseId,
                 userId.Value);
 
             if (enrollment == null)
-                return Forbid();
-            var unlocked =
-    await IsLessonUnlockedAsync(
-        lessonId,
-        lesson.CourseModule.CourseId,
-        enrollment.CourseEnrollmentId
-    );
+            {
+                if (!isAdminOrSpecialist)
+                    return Forbid();
+
+                // Admin / Curriculum Specialist preview bypass: virtual enrollment
+                enrollment = new CourseEnrollment
+                {
+                    CourseEnrollmentId = 0,
+                    CourseId = courseId,
+                    UserId = userId.Value,
+                    ProgressPercentage = 100,
+                    IsCompleted = false
+                };
+            }
+
+            var unlocked = isAdminOrSpecialist || await IsLessonUnlockedAsync(
+                lessonId,
+                lesson.CourseModule.CourseId,
+                enrollment.CourseEnrollmentId
+            );
 
             if (!unlocked)
             {
@@ -158,6 +173,14 @@ namespace EPIC.Api.Controllers
                 videoUrl = lesson.VideoUrl,
 
                 resourceUrl = lesson.ResourceUrl,
+
+                lessonType = lesson.LessonType,
+
+                googleClassroomUrl = lesson.GoogleClassroomUrl,
+
+                googleSheetsUrl = lesson.GoogleSheetsUrl,
+
+                quizDataJson = lesson.QuizDataJson,
 
                 estimatedMinutes =
                     lesson.EstimatedMinutes,
@@ -374,12 +397,27 @@ namespace EPIC.Api.Controllers
                 });
             }
 
+            var isAdminOrSpecialist = IsUserAdminOrSpecialist();
+
             var enrollment = await GetEnrollmentAsync(
                 courseId,
                 userId.Value);
 
             if (enrollment == null)
-                return Forbid();
+            {
+                if (!isAdminOrSpecialist)
+                    return Forbid();
+
+                // Admin / Curriculum Specialist preview bypass: virtual enrollment
+                enrollment = new CourseEnrollment
+                {
+                    CourseEnrollmentId = 0,
+                    CourseId = courseId,
+                    UserId = userId.Value,
+                    ProgressPercentage = 100,
+                    IsCompleted = false
+                };
+            }
 
             // =====================================================
             // GET LESSONS
@@ -432,8 +470,9 @@ namespace EPIC.Api.Controllers
                 // First lesson is unlocked.
                 // Every subsequent lesson requires
                 // the immediately previous lesson to be completed.
+                // Admin and Curriculum Specialist have all lessons unlocked for review.
                 var lessonIsLocked =
-                    !previousLessonCompleted;
+                    !isAdminOrSpecialist && !previousLessonCompleted;
 
                 lessonDtos.Add(
                     new LessonStructureDto
@@ -452,6 +491,18 @@ namespace EPIC.Api.Controllers
 
                         ResourceUrl =
                             lesson.ResourceUrl,
+
+                        LessonType =
+                            lesson.LessonType,
+
+                        GoogleClassroomUrl =
+                            lesson.GoogleClassroomUrl,
+
+                        GoogleSheetsUrl =
+                            lesson.GoogleSheetsUrl,
+
+                        QuizDataJson =
+                            lesson.QuizDataJson,
 
                         SortOrder =
                             lesson.SortOrder,
@@ -761,6 +812,29 @@ namespace EPIC.Api.Controllers
         }
 
         // =========================================================
+        // PRIVATE: CHECK IF ADMIN OR CURRICULUM SPECIALIST
+        // =========================================================
+
+        private bool IsUserAdminOrSpecialist()
+        {
+            var role = User.FindFirst(ClaimTypes.Role)?.Value
+                ?? User.FindFirst("role")?.Value
+                ?? User.FindFirst("Role")?.Value;
+
+            if (string.IsNullOrWhiteSpace(role))
+                return false;
+
+            var r = role.Trim().ToLower();
+            return r.Contains("admin") ||
+                   r.Contains("specialist") ||
+                   r.Contains("curriculum") ||
+                   r.Contains("pastor") ||
+                   r.Contains("teacher") ||
+                   r.Contains("instructor") ||
+                   r.Contains("leader");
+        }
+
+        // =========================================================
         // PRIVATE: CURRENT USER
         // =========================================================
 
@@ -1048,6 +1122,14 @@ namespace EPIC.Api.Controllers
             public DateTime? CompletedDate { get; set; }
 
             public bool IsLocked { get; set; }
+
+            public string? LessonType { get; set; }
+
+            public string? GoogleClassroomUrl { get; set; }
+
+            public string? GoogleSheetsUrl { get; set; }
+
+            public string? QuizDataJson { get; set; }
         }
 
         // =========================================================

@@ -1,4 +1,4 @@
-﻿/* =========================================================
+/* =========================================================
    EPIC LEARNING — LESSON PAGE
    Modern / Elegant / Futuristic LMS Design
    ========================================================= */
@@ -989,4 +989,586 @@
         min-width: 0;
     }
 
+}
+
+/* =========================================================
+   CURRICULUM SPECIALIST & STUDIO ENHANCEMENTS
+   ========================================================= */
+
+.lesson-header-edit-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 16px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4);
+    transition: all 0.2s ease;
+}
+
+.lesson-header-edit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(245, 158, 11, 0.55);
+}
+
+.lesson-header-type {
+    background: rgba(168, 85, 247, 0.2) !important;
+    border: 1px solid rgba(192, 132, 252, 0.4);
+    color: #f3e8ff !important;
+}
+
+/* =========================================================
+   GOOGLE CLASSROOM CARD
+   ========================================================= */
+
+.lesson-classroom-card {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 28px 32px;
+    margin-bottom: 24px;
+    background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%);
+    border: 1px solid #bbf7d0;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(22, 101, 52, 0.06);
+}
+
+.lesson-classroom-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    color: #ffffff;
+    flex-shrink: 0;
+    box-shadow: 0 6px 18px rgba(16, 185, 129, 0.3);
+}
+
+.lesson-classroom-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.lesson-classroom-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 6px;
+    background: #dcfce7;
+    color: #166534;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+}
+
+.lesson-classroom-info h3 {
+    margin: 0 0 6px;
+    font-size: 19px;
+    font-weight: 800;
+    color: #064e3b;
+}
+
+.lesson-classroom-info p {
+    margin: 0 0 8px;
+    font-size: 14px;
+    color: #374151;
+    line-height: 1.5;
+}
+
+.lesson-classroom-url-preview {
+    display: block;
+    font-size: 12px;
+    color: #059669;
+    font-family: monospace;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.lesson-classroom-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 12px;
+    background: #059669;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 14px rgba(5, 150, 105, 0.25);
+}
+
+.lesson-classroom-button:hover {
+    background: #047857;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 22px rgba(5, 150, 105, 0.4);
+}
+
+/* =========================================================
+   GOOGLE SHEETS CARD
+   ========================================================= */
+
+.lesson-sheets-card {
+    margin-bottom: 24px;
+    background: #ffffff;
+    border: 1px solid #d1fae5;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(16, 185, 129, 0.07);
+    overflow: hidden;
+}
+
+.lesson-sheets-header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 24px 28px;
+    background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.lesson-sheets-icon {
+    width: 54px;
+    height: 54px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    color: white;
+    flex-shrink: 0;
+}
+
+.lesson-sheets-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.lesson-sheets-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: #dcfce7;
+    color: #065f46;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
+}
+
+.lesson-sheets-info h3 {
+    margin: 0 0 4px;
+    font-size: 18px;
+    font-weight: 800;
+    color: #064e3b;
+}
+
+.lesson-sheets-info p {
+    margin: 0;
+    font-size: 13px;
+    color: #4b5563;
+}
+
+.lesson-sheets-button {
+    display: inline-flex;
+    align-items: center;
+    padding: 10px 20px;
+    border-radius: 10px;
+    background: #047857;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+}
+
+.lesson-sheets-button:hover {
+    background: #065f46;
+    transform: translateY(-2px);
+}
+
+.lesson-sheets-iframe-wrapper {
+    position: relative;
+    width: 100%;
+    height: 480px;
+    background: #f8fafc;
+}
+
+.lesson-sheets-iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+/* =========================================================
+   SUMMATIVE ASSESSMENT / QUIZ ENGINE
+   ========================================================= */
+
+.lesson-quiz-section {
+    margin-bottom: 32px;
+    background: #ffffff;
+    border: 1px solid #e0e7ff;
+    border-radius: 22px;
+    box-shadow: 0 12px 36px rgba(79, 70, 229, 0.08);
+    overflow: hidden;
+}
+
+.lesson-quiz-header {
+    display: flex;
+    gap: 22px;
+    padding: 32px;
+    background: linear-gradient(135deg, #312e81 0%, #1e1b4b 100%);
+    color: white;
+}
+
+.lesson-quiz-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    flex-shrink: 0;
+    backdrop-filter: blur(8px);
+}
+
+.lesson-quiz-intro {
+    flex: 1;
+}
+
+.lesson-quiz-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: rgba(238, 242, 255, 0.2);
+    color: #c7d2fe;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    margin-bottom: 8px;
+}
+
+.lesson-quiz-intro h2 {
+    margin: 0 0 8px;
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: #ffffff;
+}
+
+.lesson-quiz-intro p {
+    margin: 0 0 16px;
+    font-size: 14px;
+    color: #e0e7ff;
+    line-height: 1.5;
+}
+
+.lesson-quiz-meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    font-size: 13px;
+    color: #cbd5e1;
+}
+
+.lesson-quiz-meta-row span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.lesson-quiz-passed-badge {
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: #10b981 !important;
+    color: #ffffff !important;
+    font-weight: 700;
+}
+
+/* Banner */
+.lesson-quiz-banner {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 24px 32px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.lesson-quiz-banner.passed {
+    background: #ecfdf5;
+    border-color: #a7f3d0;
+}
+
+.lesson-quiz-banner.failed {
+    background: #fffbeb;
+    border-color: #fde68a;
+}
+
+.quiz-banner-icon {
+    font-size: 36px;
+    flex-shrink: 0;
+}
+
+.quiz-banner-content {
+    flex: 1;
+}
+
+.quiz-banner-content h3 {
+    margin: 0 0 4px;
+    font-size: 18px;
+    font-weight: 800;
+}
+
+.lesson-quiz-banner.passed h3 {
+    color: #065f46;
+}
+
+.lesson-quiz-banner.failed h3 {
+    color: #92400e;
+}
+
+.quiz-banner-content p {
+    margin: 0;
+    font-size: 14px;
+    color: #374151;
+}
+
+.lesson-quiz-retake-btn {
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: none;
+    background: #f59e0b;
+    color: white;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.lesson-quiz-retake-btn:hover {
+    background: #d97706;
+}
+
+/* Questions */
+.lesson-quiz-questions {
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    background: #f8fafc;
+}
+
+.lesson-quiz-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03);
+    transition: all 0.2s ease;
+}
+
+.lesson-quiz-card.q-correct {
+    border-color: #86efac;
+    background: #f0fdf4;
+}
+
+.lesson-quiz-card.q-incorrect {
+    border-color: #fca5a5;
+    background: #fef2f2;
+}
+
+.lesson-quiz-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.q-number {
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #6366f1;
+}
+
+.q-points {
+    font-size: 12px;
+    font-weight: 700;
+    color: #64748b;
+    background: #f1f5f9;
+    padding: 2px 8px;
+    border-radius: 6px;
+}
+
+.lesson-quiz-prompt {
+    margin: 0 0 16px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #1e293b;
+    line-height: 1.5;
+}
+
+.lesson-quiz-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.lesson-quiz-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 18px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    background: #ffffff;
+    color: #334155;
+    font-size: 14px;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    width: 100%;
+}
+
+.lesson-quiz-option:hover:not(:disabled) {
+    border-color: #818cf8;
+    background: #f5f3ff;
+}
+
+.lesson-quiz-option.selected {
+    border-color: #6366f1;
+    background: #eef2ff;
+    font-weight: 600;
+    color: #312e81;
+}
+
+.lesson-quiz-option.correct {
+    border-color: #10b981 !important;
+    background: #ecfdf5 !important;
+    color: #065f46 !important;
+}
+
+.lesson-quiz-option.wrong {
+    border-color: #ef4444 !important;
+    background: #fef2f2 !important;
+    color: #991b1b !important;
+}
+
+.option-radio {
+    font-size: 14px;
+    color: #6366f1;
+}
+
+.option-text {
+    flex: 1;
+}
+
+.option-badge-correct {
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: #10b981;
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.option-badge-wrong {
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: #ef4444;
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.lesson-quiz-explanation {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    font-size: 13px;
+    color: #334155;
+    line-height: 1.5;
+}
+
+.lesson-quiz-footer {
+    padding: 24px 32px;
+    background: #ffffff;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.lesson-quiz-submit-btn {
+    padding: 14px 28px;
+    border-radius: 12px;
+    border: none;
+    background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
+    color: white;
+    font-size: 15px;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(79, 70, 229, 0.3);
+    transition: all 0.2s ease;
+}
+
+.lesson-quiz-submit-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(79, 70, 229, 0.45);
+}
+
+.lesson-quiz-submit-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+    .lesson-classroom-card {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 20px;
+    }
+    .lesson-classroom-button {
+        width: 100%;
+        text-align: center;
+        justify-content: center;
+    }
+    .lesson-sheets-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .lesson-sheets-button {
+        width: 100%;
+        text-align: center;
+        justify-content: center;
+    }
+    .lesson-sheets-iframe-wrapper {
+        height: 360px;
+    }
+    .lesson-quiz-header {
+        flex-direction: column;
+        padding: 20px;
+    }
+    .lesson-quiz-questions {
+        padding: 16px;
+    }
+    .lesson-quiz-submit-btn {
+        width: 100%;
+    }
 }

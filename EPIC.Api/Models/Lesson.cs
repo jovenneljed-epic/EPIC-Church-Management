@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace EPIC.Api.Models
 {
@@ -21,6 +21,17 @@ namespace EPIC.Api.Models
 
         [MaxLength(500)]
         public string? ResourceUrl { get; set; }
+
+        [MaxLength(50)]
+        public string? LessonType { get; set; }
+
+        [MaxLength(500)]
+        public string? GoogleClassroomUrl { get; set; }
+
+        [MaxLength(500)]
+        public string? GoogleSheetsUrl { get; set; }
+
+        public string? QuizDataJson { get; set; }
 
         public int SortOrder { get; set; }
 

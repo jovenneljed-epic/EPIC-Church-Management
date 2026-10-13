@@ -6,7 +6,9 @@ import React, {
 } from "react";
 
 import "./ViewCourse.css";
-import LessonViewer from "./LessonViewer";
+import LessonPage from "./LessonPage";
+import { LessonEditorModal } from "./LessonEditorModal";
+import PermissionService from "../../PermissionService";
 
 // =========================================================
 // API
@@ -107,6 +109,31 @@ const ViewCourse: React.FC<ViewCourseProps> = ({
 
     const [selectedLessonId, setSelectedLessonId] =
         useState<number | null>(null);
+
+    const [editorModalOpen, setEditorModalOpen] =
+        useState(false);
+
+    const [activeModuleId, setActiveModuleId] =
+        useState<number | undefined>(undefined);
+
+    const [activeLessonForEdit, setActiveLessonForEdit] =
+        useState<any | undefined>(undefined);
+
+    const [addModuleModalOpen, setAddModuleModalOpen] =
+        useState(false);
+
+    const [newModuleTitle, setNewModuleTitle] =
+        useState("");
+
+    const [newModuleDescription, setNewModuleDescription] =
+        useState("");
+
+    const [savingModule, setSavingModule] =
+        useState(false);
+
+    const isCurriculumSpecialist =
+        PermissionService.isAdministrator() ||
+        PermissionService.canCreate("EPIC Learning");
 
     // =====================================================
     // TOKEN
@@ -1580,269 +1607,41 @@ const ViewCourse: React.FC<ViewCourseProps> = ({
         );
 
     // =====================================================
-    // SELECTED INDEX
+    // CREATE MODULE (CURRICULUM SPECIALIST)
     // =====================================================
 
-    const selectedLessonIndex =
-        selectedLessonId !== null
-            ? getLessonIndex(
-                selectedLessonId
-            )
-            : -1;
+    const handleCreateModule = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newModuleTitle.trim()) return;
+        try {
+            setSavingModule(true);
+            const token = getToken();
+            const res = await fetch(`${API_BASE_URL}/Courses/${courseId}/modules`, {
+                method: "POST",
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    title: newModuleTitle.trim(),
+                    description: newModuleDescription.trim() || null,
+                    sortOrder: (course?.modules.length || 0) + 1
+                })
+            });
+            if (!res.ok) throw new Error("Failed to create module.");
+            setAddModuleModalOpen(false);
+            setNewModuleTitle("");
+            setNewModuleDescription("");
+            await loadCourse();
+        } catch (err) {
+            alert(err instanceof Error ? err.message : "Error creating module.");
+        } finally {
+            setSavingModule(false);
+        }
+    };
 
     // =====================================================
-    // CURRENT LESSON
-    // =====================================================
-
-    const currentLesson =
-        selectedLessonIndex >= 0
-            ? allLessons[
-                selectedLessonIndex
-            ]
-            : null;
-
-    // =====================================================
-    // PREVIOUS LESSON
-    // =====================================================
-
-    const previousLesson =
-        selectedLessonIndex > 0
-            ? allLessons[
-                selectedLessonIndex - 1
-            ]
-            : null;
-
-    // =====================================================
-    // NEXT LESSON
-    // =====================================================
-
-    const nextLesson =
-        selectedLessonIndex >= 0 &&
-            selectedLessonIndex <
-            allLessons.length - 1
-            ? allLessons[
-                selectedLessonIndex + 1
-            ]
-            : null;
-
-    // =====================================================
-    // PREVIOUS
-    // =====================================================
-
-    const handlePreviousLesson =
-        useCallback(
-            () => {
-
-                if (!previousLesson) {
-
-                    return;
-
-                }
-
-                console.log(
-                    "Previous lesson:",
-                    previousLesson.lessonId
-                );
-
-                setSelectedLessonId(
-                    previousLesson.lessonId
-                );
-
-            },
-            [
-                previousLesson
-            ]
-        );
-
-    // =====================================================
-    // NEXT
-    //
-    // IMPORTANT:
-    // DO NOT CHECK STALE ViewCourse PROGRESS HERE.
-    // LessonViewer already controls whether Next is enabled.
-    // =====================================================
-
-    const handleNextLesson =
-        useCallback(
-            () => {
-
-                if (!nextLesson) {
-
-                    console.log(
-                        "No next lesson."
-                    );
-
-                    return;
-
-                }
-
-                console.log(
-                    "================================="
-                );
-
-                console.log(
-                    "EPIC NEXT LESSON"
-                );
-
-                console.log(
-                    "Current:",
-                    currentLesson?.lessonId,
-                    currentLesson?.title
-                );
-
-                console.log(
-                    "Next:",
-                    nextLesson.lessonId,
-                    nextLesson.title
-                );
-
-                console.log(
-                    "================================="
-                );
-
-                setSelectedLessonId(
-                    nextLesson.lessonId
-                );
-
-            },
-            [
-                currentLesson,
-                nextLesson
-            ]
-        );
-
-    // =====================================================
-    // PROGRESS UPDATED
-    // =====================================================
-
-    const handleProgressUpdated =
-        useCallback(
-            (
-                completedLessonId: number
-            ) => {
-
-                console.log(
-                    "EPIC PROGRESS UPDATED:",
-                    completedLessonId
-                );
-
-                setCourse(
-                    previousCourse => {
-
-                        if (
-                            !previousCourse
-                        ) {
-
-                            return previousCourse;
-
-                        }
-
-                        const updatedModules =
-                            previousCourse.modules.map(
-                                module => ({
-
-                                    ...module,
-
-                                    lessons:
-                                        module.lessons.map(
-                                            lesson => {
-
-                                                if (
-                                                    lesson.lessonId !==
-                                                    completedLessonId
-                                                ) {
-
-                                                    return lesson;
-
-                                                }
-
-                                                return {
-
-                                                    ...lesson,
-
-                                                    progress: {
-
-                                                        progressPercentage:
-                                                            100,
-
-                                                        isCompleted:
-                                                            true,
-
-                                                        startedDate:
-                                                            lesson.progress
-                                                                ?.startedDate ??
-                                                            new Date().toISOString(),
-
-                                                        completedDate:
-                                                            new Date().toISOString()
-
-                                                    }
-
-                                                };
-
-                                            }
-                                        )
-
-                                })
-                            );
-
-                        const updatedLessons =
-                            updatedModules
-                                .flatMap(
-                                    module =>
-                                        module.lessons
-                                );
-
-                        const totalLessons =
-                            updatedLessons.length;
-
-                        const completedLessons =
-                            updatedLessons.filter(
-                                lesson =>
-                                    lesson.progress
-                                        ?.isCompleted === true
-                            ).length;
-
-                        const progressPercentage =
-                            totalLessons > 0
-                                ? Math.round(
-                                    (
-                                        completedLessons /
-                                        totalLessons
-                                    ) *
-                                    100
-                                )
-                                : 0;
-
-                        return {
-
-                            ...previousCourse,
-
-                            modules:
-                                updatedModules,
-
-                            totalLessons,
-
-                            completedLessons,
-
-                            progressPercentage,
-
-                            isCompleted:
-                                totalLessons > 0 &&
-                                completedLessons ===
-                                totalLessons
-
-                        };
-
-                    }
-                );
-
-            },
-            []
-        );
-
-    // =====================================================
-    // LESSON VIEWER
+    // LESSON PAGE
     // =====================================================
 
     if (
@@ -1851,48 +1650,24 @@ const ViewCourse: React.FC<ViewCourseProps> = ({
 
         return (
 
-            <LessonViewer
-
+            <LessonPage
                 lessonId={
                     selectedLessonId
                 }
-
                 courseId={
                     courseId
                 }
-
                 onBack={() => {
-
                     setSelectedLessonId(
                         null
                     );
-
+                    void loadCourse();
                 }}
-
-                hasPrevious={
-                    !!previousLesson
-                }
-
-                onPrevious={
-                    previousLesson
-                        ? handlePreviousLesson
-                        : undefined
-                }
-
-                hasNext={
-                    !!nextLesson
-                }
-
-                onNext={
-                    nextLesson
-                        ? handleNextLesson
-                        : undefined
-                }
-
-                onProgressUpdated={
-                    handleProgressUpdated
-                }
-
+                onLessonSelect={(targetLessonId) => {
+                    setSelectedLessonId(
+                        targetLessonId
+                    );
+                }}
             />
 
         );
@@ -2023,6 +1798,34 @@ const ViewCourse: React.FC<ViewCourseProps> = ({
 
                     )}
 
+                    {isCurriculumSpecialist && (
+                        <div className="view-course-specialist-bar">
+                            <span className="specialist-badge">
+                                🎓 Curriculum Specialist Mode
+                            </span>
+                            <div className="specialist-btn-group">
+                                <button
+                                    type="button"
+                                    className="specialist-add-module-btn"
+                                    onClick={() => {
+                                        setNewModuleTitle("");
+                                        setNewModuleDescription("");
+                                        setAddModuleModalOpen(true);
+                                    }}
+                                >
+                                    + Add Module
+                                </button>
+                                <button
+                                    type="button"
+                                    className="specialist-studio-btn"
+                                    onClick={onBack}
+                                >
+                                    🏢 Curriculum Studio
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
                 </div>
 
             </div>
@@ -2149,7 +1952,7 @@ const ViewCourse: React.FC<ViewCourseProps> = ({
 
                                     </div>
 
-                                    <div>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
 
                                         <h2>
                                             {module.title}
@@ -2166,6 +1969,22 @@ const ViewCourse: React.FC<ViewCourseProps> = ({
                                         )}
 
                                     </div>
+
+                                    {isCurriculumSpecialist && (
+                                        <button
+                                            type="button"
+                                            className="module-add-lesson-btn"
+                                            title="Add a new lesson from template into this module"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setActiveModuleId(module.courseModuleId);
+                                                setActiveLessonForEdit(undefined);
+                                                setEditorModalOpen(true);
+                                            }}
+                                        >
+                                            + Add Lesson from Template
+                                        </button>
+                                    )}
 
                                 </div>
 
@@ -2386,6 +2205,31 @@ const ViewCourse: React.FC<ViewCourseProps> = ({
                                                         ACTION
                                                     ================================================= */}
 
+                                                    {isCurriculumSpecialist && (
+                                                        <button
+                                                            type="button"
+                                                            className="lesson-quick-edit-button"
+                                                            title="Edit lesson in template studio"
+                                                            onClick={event => {
+                                                                event.stopPropagation();
+                                                                setActiveModuleId(module.courseModuleId);
+                                                                setActiveLessonForEdit({
+                                                                    lessonId: lesson.lessonId,
+                                                                    courseModuleId: module.courseModuleId,
+                                                                    title: lesson.title,
+                                                                    content: lesson.content,
+                                                                    videoUrl: lesson.videoUrl,
+                                                                    resourceUrl: lesson.resourceUrl,
+                                                                    estimatedMinutes: lesson.estimatedMinutes,
+                                                                    isFreePreview: lesson.isFreePreview
+                                                                });
+                                                                setEditorModalOpen(true);
+                                                            }}
+                                                        >
+                                                            ✏ Edit
+                                                        </button>
+                                                    )}
+
                                                     <button
                                                         type="button"
 
@@ -2449,6 +2293,94 @@ const ViewCourse: React.FC<ViewCourseProps> = ({
                 )}
 
             </div>
+
+            {/* =================================================
+                CURRICULUM SPECIALIST ADD MODULE MODAL
+            ================================================= */}
+
+            {addModuleModalOpen && (
+                <div
+                    className="course-studio-modal-backdrop"
+                    onClick={() => setAddModuleModalOpen(false)}
+                >
+                    <div
+                        className="course-studio-modal"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="course-studio-modal-header">
+                            <h3>Add Curriculum Module</h3>
+                            <button
+                                type="button"
+                                className="close-btn"
+                                onClick={() => setAddModuleModalOpen(false)}
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <form
+                            onSubmit={handleCreateModule}
+                            className="course-studio-form"
+                        >
+                            <div className="form-group">
+                                <label>Module Title *</label>
+                                <input
+                                    type="text"
+                                    required
+                                    placeholder="e.g. Module 2: Hermeneutics & Exegesis"
+                                    value={newModuleTitle}
+                                    onChange={e => setNewModuleTitle(e.target.value)}
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label>Module Description</label>
+                                <textarea
+                                    rows={3}
+                                    placeholder="Key learning objectives, theological grounding, or weekly focus..."
+                                    value={newModuleDescription}
+                                    onChange={e => setNewModuleDescription(e.target.value)}
+                                />
+                            </div>
+
+                            <div className="course-studio-modal-actions">
+                                <button
+                                    type="button"
+                                    className="btn-cancel"
+                                    onClick={() => setAddModuleModalOpen(false)}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="btn-save"
+                                    disabled={savingModule || !newModuleTitle.trim()}
+                                >
+                                    {savingModule ? "Creating..." : "Create Module"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* =================================================
+                LESSON EDITOR MODAL (FROM TEMPLATE OR SCRATCH)
+            ================================================= */}
+
+            {editorModalOpen && (
+                <LessonEditorModal
+                    isOpen={editorModalOpen}
+                    onClose={() => setEditorModalOpen(false)}
+                    courseId={courseId}
+                    moduleId={activeModuleId}
+                    initialLesson={activeLessonForEdit}
+                    onSaved={async () => {
+                        setEditorModalOpen(false);
+                        await loadCourse();
+                    }}
+                />
+            )}
 
         </div>
 

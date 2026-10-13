@@ -69,6 +69,10 @@ namespace EPIC.Api.Controllers
                     c.EstimatedMinutes,
                     c.IsPublished,
                     c.IsFeatured,
+                    c.InstructorName,
+                    c.GoogleClassroomUrl,
+                    c.GoogleSheetsUrl,
+                    c.CustomerId,
                     c.CreatedDate,
                     c.UpdatedDate,
 
@@ -106,6 +110,10 @@ public async Task<IActionResult> GetCourse(int id)
             c.EstimatedMinutes,
             c.IsPublished,
             c.IsFeatured,
+            c.InstructorName,
+            c.GoogleClassroomUrl,
+            c.GoogleSheetsUrl,
+            c.CustomerId,
             c.CreatedDate,
             c.UpdatedDate,
 
@@ -128,6 +136,10 @@ public async Task<IActionResult> GetCourse(int id)
                             l.Content,
                             l.VideoUrl,
                             l.ResourceUrl,
+                            l.LessonType,
+                            l.GoogleClassroomUrl,
+                            l.GoogleSheetsUrl,
+                            l.QuizDataJson,
                             l.SortOrder,
                             l.EstimatedMinutes,
                             l.IsPublished,
@@ -212,6 +224,10 @@ public async Task<IActionResult> GetCourse(int id)
             course.EstimatedMinutes = updatedCourse.EstimatedMinutes;
             course.IsPublished = updatedCourse.IsPublished;
             course.IsFeatured = updatedCourse.IsFeatured;
+            course.InstructorName = updatedCourse.InstructorName;
+            course.GoogleClassroomUrl = updatedCourse.GoogleClassroomUrl;
+            course.GoogleSheetsUrl = updatedCourse.GoogleSheetsUrl;
+            course.CustomerId = updatedCourse.CustomerId;
             course.UpdatedDate = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();

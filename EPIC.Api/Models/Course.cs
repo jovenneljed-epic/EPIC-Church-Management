@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace EPIC.Api.Models
 {
@@ -30,6 +30,17 @@ namespace EPIC.Api.Models
         public bool IsPublished { get; set; } = false;
 
         public bool IsFeatured { get; set; } = false;
+
+        [MaxLength(200)]
+        public string? InstructorName { get; set; }
+
+        [MaxLength(500)]
+        public string? GoogleClassroomUrl { get; set; }
+
+        [MaxLength(500)]
+        public string? GoogleSheetsUrl { get; set; }
+
+        public int? CustomerId { get; set; }
 
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
 

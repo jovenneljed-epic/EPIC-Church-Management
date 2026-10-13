@@ -21,6 +21,8 @@ import {
 
 import "./LearningPage.css";
 import ViewCourse from "./ViewCourse";
+import { CurriculumStudio } from "./CurriculumStudio";
+import PermissionService from "../../PermissionService";
 
 import { API_BASE_URL } from "../../config";
 
@@ -97,6 +99,13 @@ const LearningPage: React.FC<LearningPageProps> = ({
      */
     const [selectedCourseId, setSelectedCourseId] =
         useState<number | null>(null);
+
+    const isCurriculumSpecialist =
+        PermissionService.isAdministrator() ||
+        PermissionService.canCreate("EPIC Learning");
+
+    const [viewMode, setViewMode] =
+        useState<"studio" | "student">("studio");
 
     // =====================================================
     // CURRENT USER
@@ -627,7 +636,26 @@ const LearningPage: React.FC<LearningPageProps> = ({
     }
 
     // =====================================================
-    // MAIN LMS
+    // CURRICULUM SPECIALIST & ADMINISTRATOR STUDIO
+    // =====================================================
+
+    if (isCurriculumSpecialist && viewMode === "studio" && !selectedCourseId) {
+        return (
+            <CurriculumStudio
+                onSwitchToLearnerView={() => setViewMode("student")}
+                onViewCourse={(courseId) => {
+                    if (onViewCourse) {
+                        onViewCourse(courseId);
+                    } else {
+                        setSelectedCourseId(courseId);
+                    }
+                }}
+            />
+        );
+    }
+
+    // =====================================================
+    // MAIN LMS (LEARNER VIEW)
     // =====================================================
 
     return (
@@ -709,6 +737,18 @@ const LearningPage: React.FC<LearningPageProps> = ({
                             <Compass size={16} />
                             <span>Explore Courses</span>
                         </button>
+
+                        {isCurriculumSpecialist && (
+                            <button
+                                type="button"
+                                className="learning-primary-btn"
+                                style={{ background: "linear-gradient(135deg, #7c3aed, #2563eb)", marginLeft: "8px" }}
+                                onClick={() => setViewMode("studio")}
+                            >
+                                <Sparkles size={16} />
+                                <span>Curriculum Studio (Author Mode)</span>
+                            </button>
+                        )}
 
                     </div>
 

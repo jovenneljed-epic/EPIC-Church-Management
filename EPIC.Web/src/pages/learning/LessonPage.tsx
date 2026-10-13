@@ -1,6 +1,13 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import "./LessonPage.css";
 import { API_BASE_URL } from "../../config";
+import type { QuizData } from "./learningTemplates";
+import {
+    formatVideoEmbedUrl,
+    formatGoogleSheetsEmbedUrl,
+} from "./learningTemplates";
+import PermissionService from "../../PermissionService";
+import { LessonEditorModal } from "./LessonEditorModal";
 
 // =========================================================
 // TYPES
@@ -12,6 +19,10 @@ interface LessonData {
     content?: string | null;
     videoUrl?: string | null;
     resourceUrl?: string | null;
+    lessonType?: string | null;
+    googleClassroomUrl?: string | null;
+    googleSheetsUrl?: string | null;
+    quizDataJson?: string | null;
     estimatedMinutes: number;
     isFreePreview: boolean;
 
@@ -68,6 +79,25 @@ const LessonPage: React.FC<LessonPageProps> = ({
     const [navigationLoading, setNavigationLoading] =
         useState(true);
 
+    const [isEditorOpen, setIsEditorOpen] =
+        useState(false);
+
+    const [quizAnswers, setQuizAnswers] =
+        useState<Record<string, number | string>>({});
+
+    const [quizSubmitted, setQuizSubmitted] =
+        useState(false);
+
+    const [quizScore, setQuizScore] =
+        useState<number | null>(null);
+
+    const [quizPassed, setQuizPassed] =
+        useState<boolean | null>(null);
+
+    const isCurriculumSpecialist =
+        PermissionService.isAdministrator() ||
+        PermissionService.canCreate("EPIC Learning");
+
     // =========================================================
     // TOKEN
     // =========================================================
@@ -84,6 +114,11 @@ const LessonPage: React.FC<LessonPageProps> = ({
     // =========================================================
 
     useEffect(() => {
+        setQuizAnswers({});
+        setQuizSubmitted(false);
+        setQuizScore(null);
+        setQuizPassed(null);
+
         if (!lessonId) {
             setError("Invalid lesson.");
             setLoading(false);
@@ -190,6 +225,22 @@ const LessonPage: React.FC<LessonPageProps> = ({
 
                 resourceUrl:
                     data.resourceUrl ??
+                    null,
+
+                lessonType:
+                    data.lessonType ??
+                    null,
+
+                googleClassroomUrl:
+                    data.googleClassroomUrl ??
+                    null,
+
+                googleSheetsUrl:
+                    data.googleSheetsUrl ??
+                    null,
+
+                quizDataJson:
+                    data.quizDataJson ??
                     null,
 
                 estimatedMinutes:
@@ -704,6 +755,57 @@ const LessonPage: React.FC<LessonPageProps> = ({
     };
 
     // =========================================================
+    // QUIZ LOGIC
+    // =========================================================
+
+    const quizData: QuizData | null = useMemo(() => {
+        if (!lesson?.quizDataJson) return null;
+        try {
+            return JSON.parse(lesson.quizDataJson) as QuizData;
+        } catch {
+            return null;
+        }
+    }, [lesson?.quizDataJson]);
+
+    const handleSelectOption = (questionId: string, optionIndex: number) => {
+        if (quizSubmitted && quizPassed) return;
+        setQuizAnswers(prev => ({ ...prev, [questionId]: optionIndex }));
+    };
+
+    const handleSubmitQuiz = async () => {
+        if (!quizData || !quizData.questions || quizData.questions.length === 0) return;
+        let totalPoints = 0;
+        let earnedPoints = 0;
+
+        quizData.questions.forEach(q => {
+            const pts = q.points || 1;
+            totalPoints += pts;
+            const selected = quizAnswers[q.id];
+            if (selected !== undefined && Number(selected) === q.correctAnswer) {
+                earnedPoints += pts;
+            }
+        });
+
+        const percentage = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 100;
+        const passed = percentage >= (quizData.passingScorePercent || 70);
+
+        setQuizScore(percentage);
+        setQuizPassed(passed);
+        setQuizSubmitted(true);
+
+        if (passed && !lesson?.isCompleted) {
+            await completeLesson();
+        }
+    };
+
+    const handleRetakeQuiz = () => {
+        setQuizAnswers({});
+        setQuizSubmitted(false);
+        setQuizScore(null);
+        setQuizPassed(null);
+    };
+
+    // =========================================================
     // LOADING
     // =========================================================
 
@@ -816,6 +918,12 @@ const LessonPage: React.FC<LessonPageProps> = ({
                         ⏱ {lesson.estimatedMinutes} min
                     </span>
 
+                    {lesson.lessonType && (
+                        <span className="lesson-header-type">
+                            🏷 {lesson.lessonType}
+                        </span>
+                    )}
+
                     {lesson.isFreePreview && (
                         <span className="lesson-header-preview">
                             Preview Lesson
@@ -826,6 +934,17 @@ const LessonPage: React.FC<LessonPageProps> = ({
                         <span className="lesson-header-completed">
                             ✓ Completed
                         </span>
+                    )}
+
+                    {isCurriculumSpecialist && (
+                        <button
+                            type="button"
+                            className="lesson-header-edit-btn"
+                            onClick={() => setIsEditorOpen(true)}
+                            title="Edit this lesson in Curriculum Studio"
+                        >
+                            ✏ Edit Lesson
+                        </button>
                     )}
 
                 </div>
@@ -873,8 +992,9 @@ const LessonPage: React.FC<LessonPageProps> = ({
                     <div className="lesson-video-wrapper">
 
                         <iframe
-                            src={lesson.videoUrl}
+                            src={formatVideoEmbedUrl(lesson.videoUrl) || undefined}
                             title={lesson.title}
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                             allowFullScreen
                         />
 
@@ -947,6 +1067,322 @@ const LessonPage: React.FC<LessonPageProps> = ({
                     </a>
 
                 </div>
+            )}
+
+            {/* =================================================
+                GOOGLE CLASSROOM
+            ================================================= */}
+
+            {lesson.googleClassroomUrl && (
+                <div className="lesson-classroom-card">
+
+                    <div className="lesson-classroom-icon">
+                        🎓
+                    </div>
+
+                    <div className="lesson-classroom-info">
+
+                        <div className="lesson-classroom-badge">
+                            GOOGLE CLASSROOM
+                        </div>
+
+                        <h3>
+                            Classroom Activities & Assignments
+                        </h3>
+
+                        <p>
+                            This lesson connects to your Google Classroom stream for assignments, homework submissions, and cohort discussions.
+                        </p>
+
+                        <span className="lesson-classroom-url-preview">
+                            {lesson.googleClassroomUrl}
+                        </span>
+
+                    </div>
+
+                    <a
+                        href={lesson.googleClassroomUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="lesson-classroom-button"
+                    >
+                        Open in Google Classroom ↗
+                    </a>
+
+                </div>
+            )}
+
+            {/* =================================================
+                GOOGLE SHEETS
+            ================================================= */}
+
+            {lesson.googleSheetsUrl && (
+                <div className="lesson-sheets-card">
+
+                    <div className="lesson-sheets-header">
+
+                        <div className="lesson-sheets-icon">
+                            📊
+                        </div>
+
+                        <div className="lesson-sheets-info">
+
+                            <div className="lesson-sheets-badge">
+                                GOOGLE WORKBOOK / RUBRIC
+                            </div>
+
+                            <h3>
+                                Interactive Google Sheets Companion
+                            </h3>
+
+                            <p>
+                                Work directly in the embedded spreadsheet below or open it in a new window to view formulas and rubrics.
+                            </p>
+
+                        </div>
+
+                        <a
+                            href={lesson.googleSheetsUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="lesson-sheets-button"
+                        >
+                            Open in Full Sheet ↗
+                        </a>
+
+                    </div>
+
+                    <div className="lesson-sheets-iframe-wrapper">
+
+                        <iframe
+                            src={formatGoogleSheetsEmbedUrl(lesson.googleSheetsUrl) || undefined}
+                            title="Interactive Google Sheet"
+                            className="lesson-sheets-iframe"
+                            sandbox="allow-scripts allow-same-origin allow-popups"
+                        />
+
+                    </div>
+
+                </div>
+            )}
+
+            {/* =================================================
+                SUMMATIVE ASSESSMENT / QUIZ
+            ================================================= */}
+
+            {quizData && quizData.questions && quizData.questions.length > 0 && (
+                <section className="lesson-quiz-section">
+
+                    <div className="lesson-quiz-header">
+
+                        <div className="lesson-quiz-icon">
+                            📝
+                        </div>
+
+                        <div className="lesson-quiz-intro">
+
+                            <div className="lesson-quiz-badge">
+                                SUMMATIVE ASSESSMENT
+                            </div>
+
+                            <h2>
+                                {quizData.title || "Lesson Summative Test"}
+                            </h2>
+
+                            <p>
+                                {quizData.description ||
+                                    "Test your mastery of this lesson's key concepts. Passing automatically updates your course progress."}
+                            </p>
+
+                            <div className="lesson-quiz-meta-row">
+
+                                <span>
+                                    🎯 Passing Threshold: <strong>{quizData.passingScorePercent || 70}%</strong>
+                                </span>
+
+                                <span>
+                                    📋 Questions: <strong>{quizData.questions.length}</strong>
+                                </span>
+
+                                {lesson.isCompleted && (
+                                    <span className="lesson-quiz-passed-badge">
+                                        ✓ Requirements Met
+                                    </span>
+                                )}
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    {quizSubmitted && (
+                        <div
+                            className={`lesson-quiz-banner ${
+                                quizPassed ? "passed" : "failed"
+                            }`}
+                        >
+
+                            <div className="quiz-banner-icon">
+                                {quizPassed ? "🎉" : "⚠️"}
+                            </div>
+
+                            <div className="quiz-banner-content">
+
+                                <h3>
+                                    {quizPassed
+                                        ? "Assessment Passed!"
+                                        : "Passing Score Not Met"}
+                                </h3>
+
+                                <p>
+                                    Your Score: <strong>{quizScore}%</strong> (Passing requirement: {quizData.passingScorePercent || 70}%).
+                                    {quizPassed
+                                        ? " Congratulations! Your lesson completion has been recorded."
+                                        : " Review the questions and explanations below, then retake the assessment when ready."}
+                                </p>
+
+                            </div>
+
+                            {!quizPassed && (
+                                <button
+                                    type="button"
+                                    className="lesson-quiz-retake-btn"
+                                    onClick={handleRetakeQuiz}
+                                >
+                                    🔄 Retake Assessment
+                                </button>
+                            )}
+
+                        </div>
+                    )}
+
+                    <div className="lesson-quiz-questions">
+
+                        {quizData.questions.map((question, qIdx) => {
+                            const selected = quizAnswers[question.id];
+                            const isCorrect =
+                                selected !== undefined &&
+                                Number(selected) === question.correctAnswer;
+
+                            return (
+                                <div
+                                    key={question.id || qIdx}
+                                    className={`lesson-quiz-card ${
+                                        quizSubmitted
+                                            ? isCorrect
+                                                ? "q-correct"
+                                                : "q-incorrect"
+                                            : ""
+                                    }`}
+                                >
+
+                                    <div className="lesson-quiz-card-top">
+
+                                        <span className="q-number">
+                                            Question {qIdx + 1}
+                                        </span>
+
+                                        <span className="q-points">
+                                            {question.points || 1} pt{(question.points || 1) > 1 ? "s" : ""}
+                                        </span>
+
+                                    </div>
+
+                                    <h4 className="lesson-quiz-prompt">
+                                        {question.question}
+                                    </h4>
+
+                                    <div className="lesson-quiz-options">
+
+                                        {question.options.map((opt, optIdx) => {
+                                            const isSelected = selected === optIdx;
+                                            const isThisCorrect =
+                                                quizSubmitted &&
+                                                optIdx === question.correctAnswer;
+                                            const isThisWrong =
+                                                quizSubmitted &&
+                                                isSelected &&
+                                                !isCorrect;
+
+                                            return (
+                                                <button
+                                                    key={optIdx}
+                                                    type="button"
+                                                    className={`lesson-quiz-option ${
+                                                        isSelected ? "selected" : ""
+                                                    } ${isThisCorrect ? "correct" : ""} ${
+                                                        isThisWrong ? "wrong" : ""
+                                                    }`}
+                                                    onClick={() =>
+                                                        handleSelectOption(
+                                                            question.id,
+                                                            optIdx
+                                                        )
+                                                    }
+                                                    disabled={
+                                                        quizSubmitted &&
+                                                        !!quizPassed
+                                                    }
+                                                >
+
+                                                    <span className="option-radio">
+                                                        {isSelected ? "●" : "○"}
+                                                    </span>
+
+                                                    <span className="option-text">
+                                                        {opt}
+                                                    </span>
+
+                                                    {isThisCorrect && (
+                                                        <span className="option-badge-correct">
+                                                            ✓ Correct
+                                                        </span>
+                                                    )}
+
+                                                    {isThisWrong && (
+                                                        <span className="option-badge-wrong">
+                                                            ✗ Your Choice
+                                                        </span>
+                                                    )}
+
+                                                </button>
+                                            );
+                                        })}
+
+                                    </div>
+
+                                    {quizSubmitted && question.explanation && (
+                                        <div className="lesson-quiz-explanation">
+                                            <strong>💡 Curriculum Note:</strong>{" "}
+                                            {question.explanation}
+                                        </div>
+                                    )}
+
+                                </div>
+                            );
+                        })}
+
+                    </div>
+
+                    {!quizSubmitted && (
+                        <div className="lesson-quiz-footer">
+
+                            <button
+                                type="button"
+                                className="lesson-quiz-submit-btn"
+                                onClick={handleSubmitQuiz}
+                                disabled={
+                                    Object.keys(quizAnswers).length === 0
+                                }
+                            >
+                                Submit Summative Test ({Object.keys(quizAnswers).length}/{quizData.questions.length} answered) →
+                            </button>
+
+                        </div>
+                    )}
+
+                </section>
             )}
 
             {/* =================================================
@@ -1161,6 +1597,37 @@ const LessonPage: React.FC<LessonPageProps> = ({
                     </div>
 
                 )}
+
+            {/* =================================================
+                CURRICULUM SPECIALIST / ADMIN LESSON EDITOR MODAL
+            ================================================= */}
+
+            {isEditorOpen && lesson && (
+                <LessonEditorModal
+                    isOpen={isEditorOpen}
+                    onClose={() => setIsEditorOpen(false)}
+                    courseId={lesson.courseId ?? 0}
+                    moduleId={lesson.courseModuleId ?? 0}
+                    initialLesson={{
+                        lessonId: lesson.lessonId,
+                        title: lesson.title,
+                        courseModuleId: lesson.courseModuleId ?? 0,
+                        content: lesson.content,
+                        videoUrl: lesson.videoUrl,
+                        resourceUrl: lesson.resourceUrl,
+                        lessonType: lesson.lessonType,
+                        googleClassroomUrl: lesson.googleClassroomUrl,
+                        googleSheetsUrl: lesson.googleSheetsUrl,
+                        quizDataJson: lesson.quizDataJson,
+                        estimatedMinutes: lesson.estimatedMinutes,
+                        isFreePreview: lesson.isFreePreview
+                    }}
+                    onSaved={async () => {
+                        setIsEditorOpen(false);
+                        await loadLesson();
+                    }}
+                />
+            )}
 
         </div>
     );

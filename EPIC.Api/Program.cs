@@ -878,6 +878,80 @@ static async Task SeedDatabaseAsync(
                     ALTER TABLE Customers ADD MaxMembersOverride INT NULL;
                 END;
 
+                -- Courses table curriculum specialist enhancements
+                IF NOT EXISTS (
+                    SELECT 1 FROM sys.columns 
+                    WHERE Name = N'InstructorName' 
+                    AND Object_ID = Object_ID(N'Courses')
+                )
+                BEGIN
+                    ALTER TABLE Courses ADD InstructorName NVARCHAR(200) NULL;
+                END;
+
+                IF NOT EXISTS (
+                    SELECT 1 FROM sys.columns 
+                    WHERE Name = N'GoogleClassroomUrl' 
+                    AND Object_ID = Object_ID(N'Courses')
+                )
+                BEGIN
+                    ALTER TABLE Courses ADD GoogleClassroomUrl NVARCHAR(500) NULL;
+                END;
+
+                IF NOT EXISTS (
+                    SELECT 1 FROM sys.columns 
+                    WHERE Name = N'GoogleSheetsUrl' 
+                    AND Object_ID = Object_ID(N'Courses')
+                )
+                BEGIN
+                    ALTER TABLE Courses ADD GoogleSheetsUrl NVARCHAR(500) NULL;
+                END;
+
+                IF NOT EXISTS (
+                    SELECT 1 FROM sys.columns 
+                    WHERE Name = N'CustomerId' 
+                    AND Object_ID = Object_ID(N'Courses')
+                )
+                BEGIN
+                    ALTER TABLE Courses ADD CustomerId INT NULL;
+                END;
+
+                -- Lessons table curriculum specialist enhancements
+                IF NOT EXISTS (
+                    SELECT 1 FROM sys.columns 
+                    WHERE Name = N'LessonType' 
+                    AND Object_ID = Object_ID(N'Lessons')
+                )
+                BEGIN
+                    ALTER TABLE Lessons ADD LessonType NVARCHAR(50) NULL;
+                END;
+
+                IF NOT EXISTS (
+                    SELECT 1 FROM sys.columns 
+                    WHERE Name = N'GoogleClassroomUrl' 
+                    AND Object_ID = Object_ID(N'Lessons')
+                )
+                BEGIN
+                    ALTER TABLE Lessons ADD GoogleClassroomUrl NVARCHAR(500) NULL;
+                END;
+
+                IF NOT EXISTS (
+                    SELECT 1 FROM sys.columns 
+                    WHERE Name = N'GoogleSheetsUrl' 
+                    AND Object_ID = Object_ID(N'Lessons')
+                )
+                BEGIN
+                    ALTER TABLE Lessons ADD GoogleSheetsUrl NVARCHAR(500) NULL;
+                END;
+
+                IF NOT EXISTS (
+                    SELECT 1 FROM sys.columns 
+                    WHERE Name = N'QuizDataJson' 
+                    AND Object_ID = Object_ID(N'Lessons')
+                )
+                BEGIN
+                    ALTER TABLE Lessons ADD QuizDataJson NVARCHAR(MAX) NULL;
+                END;
+
                 -- Ensure existing church accounts with existing records are marked completed
                 UPDATE Customers 
                 SET IsSetupCompleted = 1 
