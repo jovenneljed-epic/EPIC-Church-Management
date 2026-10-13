@@ -278,66 +278,73 @@ export const LessonEditorModal: React.FC<LessonEditorModalProps> = ({
                             </p>
                         </div>
                     </div>
-                    <button className="lesson-editor-close-btn" onClick={onClose} title="Close">
-                        ×
-                    </button>
+                    <div className="lesson-editor-header-actions">
+                        <button
+                            type="button"
+                            className={`lesson-editor-template-toggle-btn ${activeTab === "templates" ? "active" : ""}`}
+                            onClick={() => setActiveTab(activeTab === "templates" ? "basics" : "templates")}
+                        >
+                            {activeTab === "templates" ? "← Back to Step 1" : "📋 Ready-Made Templates"}
+                        </button>
+                        <button className="lesson-editor-close-btn" onClick={onClose} title="Close">
+                            ×
+                        </button>
+                    </div>
                 </div>
 
-                {/* Tab Navigation with Clear Step Numbers & Meaningful Status Badges */}
-                <div className="lesson-editor-nav">
-                    <button
-                        type="button"
-                        className={`lesson-editor-tab-btn ${activeTab === "basics" ? "active" : ""}`}
-                        onClick={() => setActiveTab("basics")}
-                    >
-                        <span className="tab-step-badge">1</span>
-                        <span>⚙️</span> Lesson Info
-                    </button>
-                    <button
-                        type="button"
-                        className={`lesson-editor-tab-btn ${activeTab === "video" ? "active" : ""}`}
-                        onClick={() => setActiveTab("video")}
-                    >
-                        <span className="tab-step-badge">2</span>
-                        <span>🎬</span> Video Embed
-                        {videoUrl.trim() && <span className="lesson-tab-badge success">✓ Attached</span>}
-                    </button>
-                    <button
-                        type="button"
-                        className={`lesson-editor-tab-btn ${activeTab === "content" ? "active" : ""}`}
-                        onClick={() => setActiveTab("content")}
-                    >
-                        <span className="tab-step-badge">3</span>
-                        <span>📑</span> Lesson Body
-                        {content.trim() && <span className="lesson-tab-badge info">✓ Written</span>}
-                    </button>
-                    <button
-                        type="button"
-                        className={`lesson-editor-tab-btn ${activeTab === "classroom" ? "active" : ""}`}
-                        onClick={() => setActiveTab("classroom")}
-                    >
-                        <span className="tab-step-badge">4</span>
-                        <span>🏫</span> Classroom & Sheets
-                        {(googleClassroomUrl.trim() || googleSheetsUrl.trim()) && (
-                            <span className="lesson-tab-badge success">✓ Linked</span>
-                        )}
-                    </button>
-                    <button
-                        type="button"
-                        className={`lesson-editor-tab-btn ${activeTab === "assessment" ? "active" : ""}`}
-                        onClick={() => setActiveTab("assessment")}
-                    >
-                        <span className="tab-step-badge">5</span>
-                        <span>🏆</span> Summative Test
-                        <span className="lesson-tab-badge">{quizData.questions.length} Qs</span>
-                    </button>
-                    <button
-                        type="button"
-                        className={`lesson-editor-tab-btn template-tab-btn ${activeTab === "templates" ? "active" : ""}`}
-                        onClick={() => setActiveTab("templates")}
-                    >
-                        <span>📋</span> Ready-Made Templates
-                    </button>
+                {/* 5-Step Workflow Stepper — 100% Aligned & Zero Horizontal Scroll */}
+                <div className="lesson-editor-stepper">
+                    {steps.map((s) => {
+                        const isActive = activeTab === s.key;
+                        let isDone = false;
+                        let badgeText = "";
+                        let badgeType: "info" | "success" | "muted" = "muted";
+
+                        if (s.key === "basics") {
+                            isDone = Boolean(title.trim());
+                            badgeText = isDone ? "Configured" : "Required";
+                            badgeType = isDone ? "success" : "info";
+                        } else if (s.key === "video") {
+                            isDone = Boolean(videoUrl.trim());
+                            badgeText = isDone ? "✓ Attached" : "Optional";
+                            badgeType = isDone ? "success" : "muted";
+                        } else if (s.key === "content") {
+                            isDone = Boolean(content.trim());
+                            badgeText = isDone ? "✓ Written" : "Optional";
+                            badgeType = isDone ? "success" : "muted";
+                        } else if (s.key === "classroom") {
+                            isDone = Boolean(googleClassroomUrl.trim() || googleSheetsUrl.trim());
+                            badgeText = isDone ? "✓ Linked" : "Optional";
+                            badgeType = isDone ? "success" : "muted";
+                        } else if (s.key === "assessment") {
+                            isDone = quizData.questions.length > 0;
+                            badgeText = quizData.questions.length > 0 ? `${quizData.questions.length} Qs` : "Optional";
+                            badgeType = quizData.questions.length > 0 ? "success" : "muted";
+                        }
+
+                        return (
+                            <button
+                                key={s.key}
+                                type="button"
+                                className={`lesson-step-tab ${isActive ? "active" : ""} ${isDone ? "step-done" : ""}`}
+                                onClick={() => setActiveTab(s.key)}
+                                title={`Step ${s.stepNum}: ${s.label}`}
+                            >
+                                <div className="step-number-circle">
+                                    {isDone && !isActive ? "✓" : s.stepNum}
+                                </div>
+                                <div className="step-text-wrap">
+                                    <div className="step-title-row">
+                                        <span className="step-icon">{s.icon}</span>
+                                        <span className="step-name">{s.label}</span>
+                                    </div>
+                                    <div className="step-status-chip-row">
+                                        <span className={`step-status-chip ${badgeType}`}>{badgeText}</span>
+                                    </div>
+                                </div>
+                            </button>
+                        );
+                    })}
                 </div>
 
                 {/* Sub-navigation Hint Strip */}
@@ -351,13 +358,21 @@ export const LessonEditorModal: React.FC<LessonEditorModalProps> = ({
                         {activeTab === "assessment" && "Step 5 of 5 • Graded Summative Assessment Question Builder"}
                         {activeTab === "templates" && "Curriculum Template Library • Apply 1-Click Lesson Layouts"}
                     </span>
-                    {activeTab !== "templates" && (
+                    {activeTab !== "templates" ? (
                         <button
                             type="button"
                             className="subnav-template-link"
                             onClick={() => setActiveTab("templates")}
                         >
                             📋 Apply Ready-Made Template →
+                        </button>
+                    ) : (
+                        <button
+                            type="button"
+                            className="subnav-template-link"
+                            onClick={() => setActiveTab("basics")}
+                        >
+                            ← Back to Step 1 (Lesson Info)
                         </button>
                     )}
                 </div>
@@ -1052,6 +1067,15 @@ export const LessonEditorModal: React.FC<LessonEditorModalProps> = ({
                                 disabled={saving}
                             >
                                 Next: {nextStep.label} →
+                            </button>
+                        )}
+                        {activeTab === "templates" && (
+                            <button
+                                type="button"
+                                className="btn-secondary btn-step-nav btn-step-next"
+                                onClick={() => setActiveTab("basics")}
+                            >
+                                Continue to Step 1: Lesson Info →
                             </button>
                         )}
                         <button type="button" className="btn-primary" onClick={handleSave} disabled={saving}>
