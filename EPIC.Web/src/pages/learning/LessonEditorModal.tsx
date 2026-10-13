@@ -251,6 +251,17 @@ export const LessonEditorModal: React.FC<LessonEditorModalProps> = ({
     const formattedVideo = formatVideoEmbedUrl(videoUrl);
     const formattedSheets = formatGoogleSheetsEmbedUrl(googleSheetsUrl);
 
+    const steps: { key: TabKey; stepNum: string; label: string; icon: string }[] = [
+        { key: "basics", stepNum: "1", label: "Lesson Info", icon: "⚙️" },
+        { key: "video", stepNum: "2", label: "Video Embed", icon: "🎬" },
+        { key: "content", stepNum: "3", label: "Lesson Body", icon: "📑" },
+        { key: "classroom", stepNum: "4", label: "Classroom & Sheets", icon: "🏫" },
+        { key: "assessment", stepNum: "5", label: "Summative Test", icon: "🏆" },
+    ];
+    const currentStepIndex = steps.findIndex((s) => s.key === activeTab);
+    const prevStep = currentStepIndex > 0 ? steps[currentStepIndex - 1] : null;
+    const nextStep = currentStepIndex >= 0 && currentStepIndex < steps.length - 1 ? steps[currentStepIndex + 1] : null;
+
     return (
         <div className="lesson-editor-overlay">
             <div className="lesson-editor-modal">
@@ -272,20 +283,14 @@ export const LessonEditorModal: React.FC<LessonEditorModalProps> = ({
                     </button>
                 </div>
 
-                {/* Tab Navigation */}
+                {/* Tab Navigation with Clear Step Numbers & Meaningful Status Badges */}
                 <div className="lesson-editor-nav">
-                    <button
-                        type="button"
-                        className={`lesson-editor-tab-btn ${activeTab === "templates" ? "active" : ""}`}
-                        onClick={() => setActiveTab("templates")}
-                    >
-                        <span>📋</span> Ready-Made Templates
-                    </button>
                     <button
                         type="button"
                         className={`lesson-editor-tab-btn ${activeTab === "basics" ? "active" : ""}`}
                         onClick={() => setActiveTab("basics")}
                     >
+                        <span className="tab-step-badge">1</span>
                         <span>⚙️</span> Lesson Info
                     </button>
                     <button
@@ -293,32 +298,68 @@ export const LessonEditorModal: React.FC<LessonEditorModalProps> = ({
                         className={`lesson-editor-tab-btn ${activeTab === "video" ? "active" : ""}`}
                         onClick={() => setActiveTab("video")}
                     >
-                        <span>🎬</span> Video Upload
-                        {videoUrl && <span className="lesson-tab-badge">Active</span>}
+                        <span className="tab-step-badge">2</span>
+                        <span>🎬</span> Video Embed
+                        {videoUrl.trim() && <span className="lesson-tab-badge success">✓ Attached</span>}
                     </button>
                     <button
                         type="button"
                         className={`lesson-editor-tab-btn ${activeTab === "content" ? "active" : ""}`}
                         onClick={() => setActiveTab("content")}
                     >
+                        <span className="tab-step-badge">3</span>
                         <span>📑</span> Lesson Body
+                        {content.trim() && <span className="lesson-tab-badge info">✓ Written</span>}
                     </button>
                     <button
                         type="button"
                         className={`lesson-editor-tab-btn ${activeTab === "classroom" ? "active" : ""}`}
                         onClick={() => setActiveTab("classroom")}
                     >
-                        <span>🏫</span> Google Classroom & Sheets
-                        {(googleClassroomUrl || googleSheetsUrl) && <span className="lesson-tab-badge">Linked</span>}
+                        <span className="tab-step-badge">4</span>
+                        <span>🏫</span> Classroom & Sheets
+                        {(googleClassroomUrl.trim() || googleSheetsUrl.trim()) && (
+                            <span className="lesson-tab-badge success">✓ Linked</span>
+                        )}
                     </button>
                     <button
                         type="button"
                         className={`lesson-editor-tab-btn ${activeTab === "assessment" ? "active" : ""}`}
                         onClick={() => setActiveTab("assessment")}
                     >
+                        <span className="tab-step-badge">5</span>
                         <span>🏆</span> Summative Test
                         <span className="lesson-tab-badge">{quizData.questions.length} Qs</span>
                     </button>
+                    <button
+                        type="button"
+                        className={`lesson-editor-tab-btn template-tab-btn ${activeTab === "templates" ? "active" : ""}`}
+                        onClick={() => setActiveTab("templates")}
+                    >
+                        <span>📋</span> Ready-Made Templates
+                    </button>
+                </div>
+
+                {/* Sub-navigation Hint Strip */}
+                <div className="lesson-editor-subnav-strip">
+                    <span className="subnav-hint">
+                        💡 <strong>Current Section:</strong>{" "}
+                        {activeTab === "basics" && "Step 1 of 5 • Basic Lesson Metadata & Media Quick-Access Hub"}
+                        {activeTab === "video" && "Step 2 of 5 • Video Lecture URL & Live Student Player Preview"}
+                        {activeTab === "content" && "Step 3 of 5 • Lesson Exposition, Scripture Quotes & Callouts"}
+                        {activeTab === "classroom" && "Step 4 of 5 • Google Classroom Assignment & Embedded Google Sheets"}
+                        {activeTab === "assessment" && "Step 5 of 5 • Graded Summative Assessment Question Builder"}
+                        {activeTab === "templates" && "Curriculum Template Library • Apply 1-Click Lesson Layouts"}
+                    </span>
+                    {activeTab !== "templates" && (
+                        <button
+                            type="button"
+                            className="subnav-template-link"
+                            onClick={() => setActiveTab("templates")}
+                        >
+                            📋 Apply Ready-Made Template →
+                        </button>
+                    )}
                 </div>
 
                 {/* Error Banner */}
@@ -363,7 +404,7 @@ export const LessonEditorModal: React.FC<LessonEditorModalProps> = ({
 
                     {/* 2. BASICS & METADATA */}
                     {activeTab === "basics" && (
-                        <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
                             <div className="editor-form-group">
                                 <label>Lesson Title *</label>
                                 <input
@@ -426,7 +467,7 @@ export const LessonEditorModal: React.FC<LessonEditorModalProps> = ({
                                 </div>
                             </div>
 
-                            <div className="editor-form-row" style={{ marginTop: "8px" }}>
+                            <div className="editor-form-row" style={{ marginTop: "2px" }}>
                                 <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", fontSize: "13px", color: "#e2e8f0" }}>
                                     <input
                                         type="checkbox"
@@ -446,6 +487,184 @@ export const LessonEditorModal: React.FC<LessonEditorModalProps> = ({
                                     />
                                     <strong>Free Preview Lesson</strong> (Accessible to non-enrolled visitors)
                                 </label>
+                            </div>
+
+                            {/* MEDIA & EMBEDS QUICK-ACCESS HUB */}
+                            <div className="curriculum-components-hub">
+                                <div className="hub-header">
+                                    <h4>🎬 Video Lecture & Google Links Hub</h4>
+                                    <p>Paste video and classroom links directly below, or click any section to open its dedicated studio.</p>
+                                </div>
+
+                                <div className="hub-grid">
+                                    {/* Video Quick Box */}
+                                    <div className="hub-card">
+                                        <div className="hub-card-top">
+                                            <div className="hub-card-title">
+                                                <span className="hub-card-icon">🎬</span>
+                                                <div>
+                                                    <strong>Video Lecture (Embed)</strong>
+                                                    <span className="hub-card-sub">YouTube, Vimeo, or MP4</span>
+                                                </div>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                className="hub-jump-btn"
+                                                onClick={() => setActiveTab("video")}
+                                            >
+                                                Live Player Studio →
+                                            </button>
+                                        </div>
+                                        <input
+                                            className="editor-input"
+                                            value={videoUrl}
+                                            onChange={(e) => setVideoUrl(e.target.value)}
+                                            placeholder="Paste YouTube (watch or youtu.be), Vimeo, or MP4 URL..."
+                                        />
+                                        {videoUrl.trim() ? (
+                                            <div className="hub-status-box success">
+                                                <span>✓ Video attached: <strong>{videoUrl}</strong></span>
+                                                <button
+                                                    type="button"
+                                                    className="hub-preview-link"
+                                                    onClick={() => setActiveTab("video")}
+                                                >
+                                                    View Player Preview ▶
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <span className="hub-hint-text">Paste a video link above or click Live Player Studio to embed.</span>
+                                        )}
+                                    </div>
+
+                                    {/* Google Classroom Quick Box */}
+                                    <div className="hub-card">
+                                        <div className="hub-card-top">
+                                            <div className="hub-card-title">
+                                                <span className="hub-card-icon">🏫</span>
+                                                <div>
+                                                    <strong>Google Classroom Link</strong>
+                                                    <span className="hub-card-sub">Classroom assignment or stream</span>
+                                                </div>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                className="hub-jump-btn"
+                                                onClick={() => setActiveTab("classroom")}
+                                            >
+                                                Classroom Studio →
+                                            </button>
+                                        </div>
+                                        <input
+                                            className="editor-input"
+                                            value={googleClassroomUrl}
+                                            onChange={(e) => setGoogleClassroomUrl(e.target.value)}
+                                            placeholder="https://classroom.google.com/c/... or invite code link"
+                                        />
+                                        {googleClassroomUrl.trim() ? (
+                                            <div className="hub-status-box success">
+                                                <span>✓ Classroom assignment linked</span>
+                                                {isGoogleClassroomUrl(googleClassroomUrl) && (
+                                                    <a
+                                                        href={googleClassroomUrl}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="hub-preview-link"
+                                                    >
+                                                        Test Link ↗
+                                                    </a>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <span className="hub-hint-text">Allows learners to access your Google Classroom assignment directly.</span>
+                                        )}
+                                    </div>
+
+                                    {/* Google Sheets Quick Box */}
+                                    <div className="hub-card">
+                                        <div className="hub-card-top">
+                                            <div className="hub-card-title">
+                                                <span className="hub-card-icon">📊</span>
+                                                <div>
+                                                    <strong>Google Sheets Spreadsheet</strong>
+                                                    <span className="hub-card-sub">Interactive workbook or gradebook</span>
+                                                </div>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                className="hub-jump-btn"
+                                                onClick={() => setActiveTab("classroom")}
+                                            >
+                                                Sheets Embed Studio →
+                                            </button>
+                                        </div>
+                                        <input
+                                            className="editor-input"
+                                            value={googleSheetsUrl}
+                                            onChange={(e) => setGoogleSheetsUrl(e.target.value)}
+                                            placeholder="https://docs.google.com/spreadsheets/d/.../edit"
+                                        />
+                                        {googleSheetsUrl.trim() ? (
+                                            <div className="hub-status-box success">
+                                                <span>✓ Google Sheet spreadsheet attached</span>
+                                                <button
+                                                    type="button"
+                                                    className="hub-preview-link"
+                                                    onClick={() => setActiveTab("classroom")}
+                                                >
+                                                    View Embedded Sheet →
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <span className="hub-hint-text">Embeds a live interactive spreadsheet directly inside the lesson.</span>
+                                        )}
+                                    </div>
+
+                                    {/* Lesson Body & Summative Assessment Shortcuts */}
+                                    <div className="hub-card split">
+                                        <div className="hub-mini-card">
+                                            <div className="hub-card-top">
+                                                <div className="hub-card-title">
+                                                    <span className="hub-card-icon">📑</span>
+                                                    <strong>Lesson Body & Scripture</strong>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    className="hub-jump-btn"
+                                                    onClick={() => setActiveTab("content")}
+                                                >
+                                                    Edit Text →
+                                                </button>
+                                            </div>
+                                            <p className="hub-mini-p">
+                                                {content.trim().length > 0
+                                                    ? `Body content ready (${content.trim().split(/\s+/).length} words).`
+                                                    : "Lesson text is empty. Click to add scripture quotes & exposition."}
+                                            </p>
+                                        </div>
+
+                                        <div className="hub-mini-card">
+                                            <div className="hub-card-top">
+                                                <div className="hub-card-title">
+                                                    <span className="hub-card-icon">🏆</span>
+                                                    <strong>Summative Exam</strong>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    className="hub-jump-btn"
+                                                    onClick={() => setActiveTab("assessment")}
+                                                >
+                                                    Quiz Studio ({quizData.questions.length}) →
+                                                </button>
+                                            </div>
+                                            <p className="hub-mini-p">
+                                                {quizData.questions.length > 0
+                                                    ? `${quizData.questions.length} questions configured (${quizData.passingScorePercent}% pass score).`
+                                                    : "No quiz questions configured. Click to add graded questions."}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -798,17 +1017,43 @@ export const LessonEditorModal: React.FC<LessonEditorModalProps> = ({
                     )}
                 </div>
 
-                {/* Footer */}
+                {/* Footer with Step Navigation and Save Controls */}
                 <div className="lesson-editor-footer">
-                    <div>
-                        <span style={{ fontSize: "12px", color: "#64748b" }}>
-                            School Curriculum Specialist Studio • Autosaves ready
-                        </span>
+                    <div className="lesson-editor-footer-left">
+                        {currentStepIndex >= 0 ? (
+                            <span className="footer-step-pill">
+                                <strong>Step {currentStepIndex + 1} of 5:</strong> {steps[currentStepIndex].label}
+                            </span>
+                        ) : (
+                            <span className="footer-step-pill">
+                                📋 Curriculum Template Library
+                            </span>
+                        )}
                     </div>
                     <div className="lesson-editor-actions">
                         <button type="button" className="btn-secondary" onClick={onClose} disabled={saving}>
                             Cancel
                         </button>
+                        {prevStep && (
+                            <button
+                                type="button"
+                                className="btn-secondary btn-step-nav"
+                                onClick={() => setActiveTab(prevStep.key)}
+                                disabled={saving}
+                            >
+                                ← Previous: {prevStep.label}
+                            </button>
+                        )}
+                        {nextStep && (
+                            <button
+                                type="button"
+                                className="btn-secondary btn-step-nav btn-step-next"
+                                onClick={() => setActiveTab(nextStep.key)}
+                                disabled={saving}
+                            >
+                                Next: {nextStep.label} →
+                            </button>
+                        )}
                         <button type="button" className="btn-primary" onClick={handleSave} disabled={saving}>
                             {saving ? "Saving Lesson..." : initialLesson ? "Save Changes" : "Create & Publish Lesson"}
                         </button>

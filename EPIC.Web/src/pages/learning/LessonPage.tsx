@@ -79,6 +79,9 @@ const LessonPage: React.FC<LessonPageProps> = ({
     const [navigationLoading, setNavigationLoading] =
         useState(true);
 
+    const [courseModules, setCourseModules] =
+        useState<{ courseModuleId: number; title: string }[]>([]);
+
     const [isEditorOpen, setIsEditorOpen] =
         useState(false);
 
@@ -378,6 +381,13 @@ const LessonPage: React.FC<LessonPageProps> = ({
             if (
                 Array.isArray(data.modules)
             ) {
+                setCourseModules(
+                    data.modules.map((m: any) => ({
+                        courseModuleId: m.courseModuleId,
+                        title: m.title || `Module #${m.courseModuleId}`
+                    }))
+                );
+
                 const sortedModules =
                     [...data.modules].sort(
                         (
@@ -1607,6 +1617,8 @@ const LessonPage: React.FC<LessonPageProps> = ({
                     isOpen={isEditorOpen}
                     onClose={() => setIsEditorOpen(false)}
                     courseId={lesson.courseId ?? 0}
+                    courseTitle={lesson.moduleTitle ? `${lesson.moduleTitle}` : undefined}
+                    modules={courseModules}
                     moduleId={lesson.courseModuleId ?? 0}
                     initialLesson={{
                         lessonId: lesson.lessonId,

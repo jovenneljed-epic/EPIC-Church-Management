@@ -2373,6 +2373,11 @@ const ViewCourse: React.FC<ViewCourseProps> = ({
                     isOpen={editorModalOpen}
                     onClose={() => setEditorModalOpen(false)}
                     courseId={courseId}
+                    courseTitle={course?.courseTitle}
+                    modules={course?.modules?.map((m: any) => ({
+                        courseModuleId: m.courseModuleId,
+                        title: m.title
+                    }))}
                     moduleId={activeModuleId}
                     initialLesson={activeLessonForEdit}
                     onSaved={async () => {
