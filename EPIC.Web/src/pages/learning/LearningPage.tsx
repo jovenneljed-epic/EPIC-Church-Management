@@ -284,9 +284,13 @@ const LearningPage: React.FC<LearningPageProps> = ({
 
     useEffect(() => {
 
-        loadLearningData();
+        if (!isCurriculumSpecialist || viewMode === "student") {
+            loadLearningData();
+        } else {
+            setLoading(false);
+        }
 
-    }, []);
+    }, [isCurriculumSpecialist, viewMode]);
 
     // =====================================================
     // STATISTICS
@@ -578,7 +582,30 @@ const LearningPage: React.FC<LearningPageProps> = ({
     }
 
     // =====================================================
-    // LOADING
+    // CURRICULUM SPECIALIST & ADMINISTRATOR STUDIO
+    // High-priority studio view for curriculum makers & administrators
+    // =====================================================
+
+    if (isCurriculumSpecialist && viewMode === "studio") {
+        return (
+            <CurriculumStudio
+                onSwitchToLearnerView={() => {
+                    setViewMode("student");
+                    loadLearningData();
+                }}
+                onViewCourse={(courseId) => {
+                    if (onViewCourse) {
+                        onViewCourse(courseId);
+                    } else {
+                        setSelectedCourseId(courseId);
+                    }
+                }}
+            />
+        );
+    }
+
+    // =====================================================
+    // LOADING (LEARNER VIEW)
     // =====================================================
 
     if (loading) {
@@ -601,7 +628,7 @@ const LearningPage: React.FC<LearningPageProps> = ({
     }
 
     // =====================================================
-    // ERROR
+    // ERROR (LEARNER VIEW)
     // =====================================================
 
     if (error) {
@@ -621,36 +648,29 @@ const LearningPage: React.FC<LearningPageProps> = ({
                     {error}
                 </p>
 
-                <button
-                    type="button"
-                    className="learning-retry-btn"
-                    onClick={
-                        loadLearningData
-                    }
-                >
-                    Try Again
-                </button>
+                <div style={{ display: "flex", gap: "10px", marginTop: "16px", flexWrap: "wrap", justifyContent: "center" }}>
+                    <button
+                        type="button"
+                        className="learning-retry-btn"
+                        onClick={
+                            loadLearningData
+                        }
+                    >
+                        Try Again
+                    </button>
+                    {isCurriculumSpecialist && (
+                        <button
+                            type="button"
+                            className="learning-retry-btn"
+                            style={{ background: "#4f46e5" }}
+                            onClick={() => setViewMode("studio")}
+                        >
+                            Open Curriculum Studio
+                        </button>
+                    )}
+                </div>
 
             </div>
-        );
-    }
-
-    // =====================================================
-    // CURRICULUM SPECIALIST & ADMINISTRATOR STUDIO
-    // =====================================================
-
-    if (isCurriculumSpecialist && viewMode === "studio" && !selectedCourseId) {
-        return (
-            <CurriculumStudio
-                onSwitchToLearnerView={() => setViewMode("student")}
-                onViewCourse={(courseId) => {
-                    if (onViewCourse) {
-                        onViewCourse(courseId);
-                    } else {
-                        setSelectedCourseId(courseId);
-                    }
-                }}
-            />
         );
     }
 

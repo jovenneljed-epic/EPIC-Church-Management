@@ -841,132 +841,93 @@ static async Task SeedDatabaseAsync(
 
         try
         {
-            var schemaSql = @"
-                IF NOT EXISTS (
-                    SELECT 1 FROM sys.columns 
-                    WHERE Name = N'IsSetupCompleted' 
-                    AND Object_ID = Object_ID(N'Customers')
-                )
-                BEGIN
-                    ALTER TABLE Customers ADD IsSetupCompleted BIT NOT NULL CONSTRAINT DF_Customers_IsSetupCompleted DEFAULT 0;
-                END;
+            var migrations = new[]
+            {
+                // Customers
+                @"IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE Name = N'IsSetupCompleted' AND Object_ID = Object_ID(N'Customers'))
+                  BEGIN
+                      ALTER TABLE Customers ADD IsSetupCompleted BIT NOT NULL CONSTRAINT DF_Customers_IsSetupCompleted DEFAULT 0;
+                  END",
+                @"IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE Name = N'CustomAllowedModules' AND Object_ID = Object_ID(N'Customers'))
+                  BEGIN
+                      ALTER TABLE Customers ADD CustomAllowedModules NVARCHAR(1000) NULL;
+                  END",
+                @"IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE Name = N'MaxUsersOverride' AND Object_ID = Object_ID(N'Customers'))
+                  BEGIN
+                      ALTER TABLE Customers ADD MaxUsersOverride INT NULL;
+                  END",
+                @"IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE Name = N'MaxMembersOverride' AND Object_ID = Object_ID(N'Customers'))
+                  BEGIN
+                      ALTER TABLE Customers ADD MaxMembersOverride INT NULL;
+                  END",
 
-                IF NOT EXISTS (
-                    SELECT 1 FROM sys.columns 
-                    WHERE Name = N'CustomAllowedModules' 
-                    AND Object_ID = Object_ID(N'Customers')
-                )
-                BEGIN
-                    ALTER TABLE Customers ADD CustomAllowedModules NVARCHAR(1000) NULL;
-                END;
+                // Courses table curriculum specialist enhancements
+                @"IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE Name = N'InstructorName' AND Object_ID = Object_ID(N'Courses'))
+                  BEGIN
+                      ALTER TABLE Courses ADD InstructorName NVARCHAR(200) NULL;
+                  END",
+                @"IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE Name = N'GoogleClassroomUrl' AND Object_ID = Object_ID(N'Courses'))
+                  BEGIN
+                      ALTER TABLE Courses ADD GoogleClassroomUrl NVARCHAR(500) NULL;
+                  END",
+                @"IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE Name = N'GoogleSheetsUrl' AND Object_ID = Object_ID(N'Courses'))
+                  BEGIN
+                      ALTER TABLE Courses ADD GoogleSheetsUrl NVARCHAR(500) NULL;
+                  END",
+                @"IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE Name = N'CustomerId' AND Object_ID = Object_ID(N'Courses'))
+                  BEGIN
+                      ALTER TABLE Courses ADD CustomerId INT NULL;
+                  END",
 
-                IF NOT EXISTS (
-                    SELECT 1 FROM sys.columns 
-                    WHERE Name = N'MaxUsersOverride' 
-                    AND Object_ID = Object_ID(N'Customers')
-                )
-                BEGIN
-                    ALTER TABLE Customers ADD MaxUsersOverride INT NULL;
-                END;
+                // Lessons table curriculum specialist enhancements
+                @"IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE Name = N'LessonType' AND Object_ID = Object_ID(N'Lessons'))
+                  BEGIN
+                      ALTER TABLE Lessons ADD LessonType NVARCHAR(50) NULL;
+                  END",
+                @"IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE Name = N'GoogleClassroomUrl' AND Object_ID = Object_ID(N'Lessons'))
+                  BEGIN
+                      ALTER TABLE Lessons ADD GoogleClassroomUrl NVARCHAR(500) NULL;
+                  END",
+                @"IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE Name = N'GoogleSheetsUrl' AND Object_ID = Object_ID(N'Lessons'))
+                  BEGIN
+                      ALTER TABLE Lessons ADD GoogleSheetsUrl NVARCHAR(500) NULL;
+                  END",
+                @"IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE Name = N'QuizDataJson' AND Object_ID = Object_ID(N'Lessons'))
+                  BEGIN
+                      ALTER TABLE Lessons ADD QuizDataJson NVARCHAR(MAX) NULL;
+                  END"
+            };
 
-                IF NOT EXISTS (
-                    SELECT 1 FROM sys.columns 
-                    WHERE Name = N'MaxMembersOverride' 
-                    AND Object_ID = Object_ID(N'Customers')
-                )
-                BEGIN
-                    ALTER TABLE Customers ADD MaxMembersOverride INT NULL;
-                END;
+            foreach (var sql in migrations)
+            {
+                try
+                {
+                    await context.Database.ExecuteSqlRawAsync(sql);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[Schema Migration Column Add Note]: {ex.Message}");
+                }
+            }
 
-                -- Courses table curriculum specialist enhancements
-                IF NOT EXISTS (
-                    SELECT 1 FROM sys.columns 
-                    WHERE Name = N'InstructorName' 
-                    AND Object_ID = Object_ID(N'Courses')
-                )
-                BEGIN
-                    ALTER TABLE Courses ADD InstructorName NVARCHAR(200) NULL;
-                END;
-
-                IF NOT EXISTS (
-                    SELECT 1 FROM sys.columns 
-                    WHERE Name = N'GoogleClassroomUrl' 
-                    AND Object_ID = Object_ID(N'Courses')
-                )
-                BEGIN
-                    ALTER TABLE Courses ADD GoogleClassroomUrl NVARCHAR(500) NULL;
-                END;
-
-                IF NOT EXISTS (
-                    SELECT 1 FROM sys.columns 
-                    WHERE Name = N'GoogleSheetsUrl' 
-                    AND Object_ID = Object_ID(N'Courses')
-                )
-                BEGIN
-                    ALTER TABLE Courses ADD GoogleSheetsUrl NVARCHAR(500) NULL;
-                END;
-
-                IF NOT EXISTS (
-                    SELECT 1 FROM sys.columns 
-                    WHERE Name = N'CustomerId' 
-                    AND Object_ID = Object_ID(N'Courses')
-                )
-                BEGIN
-                    ALTER TABLE Courses ADD CustomerId INT NULL;
-                END;
-
-                -- Lessons table curriculum specialist enhancements
-                IF NOT EXISTS (
-                    SELECT 1 FROM sys.columns 
-                    WHERE Name = N'LessonType' 
-                    AND Object_ID = Object_ID(N'Lessons')
-                )
-                BEGIN
-                    ALTER TABLE Lessons ADD LessonType NVARCHAR(50) NULL;
-                END;
-
-                IF NOT EXISTS (
-                    SELECT 1 FROM sys.columns 
-                    WHERE Name = N'GoogleClassroomUrl' 
-                    AND Object_ID = Object_ID(N'Lessons')
-                )
-                BEGIN
-                    ALTER TABLE Lessons ADD GoogleClassroomUrl NVARCHAR(500) NULL;
-                END;
-
-                IF NOT EXISTS (
-                    SELECT 1 FROM sys.columns 
-                    WHERE Name = N'GoogleSheetsUrl' 
-                    AND Object_ID = Object_ID(N'Lessons')
-                )
-                BEGIN
-                    ALTER TABLE Lessons ADD GoogleSheetsUrl NVARCHAR(500) NULL;
-                END;
-
-                IF NOT EXISTS (
-                    SELECT 1 FROM sys.columns 
-                    WHERE Name = N'QuizDataJson' 
-                    AND Object_ID = Object_ID(N'Lessons')
-                )
-                BEGIN
-                    ALTER TABLE Lessons ADD QuizDataJson NVARCHAR(MAX) NULL;
-                END;
-
-                -- Ensure existing church accounts with existing records are marked completed
-                UPDATE Customers 
-                SET IsSetupCompleted = 1 
-                WHERE IsSetupCompleted = 0 
-                  AND (
-                    CustomerId = 1 
-                    OR EXISTS (SELECT 1 FROM ChurchServices WHERE ChurchServices.CustomerId = Customers.CustomerId)
-                    OR EXISTS (SELECT 1 FROM Members WHERE Members.CustomerId = Customers.CustomerId)
-                  );
-            ";
-            await context.Database.ExecuteSqlRawAsync(schemaSql);
+            // Safe setup completion update using sp_executesql to avoid compile-time column name failure
+            try
+            {
+                var updateSetupSql = @"
+                    IF EXISTS (SELECT 1 FROM sys.columns WHERE Name = N'IsSetupCompleted' AND Object_ID = Object_ID(N'Customers'))
+                    BEGIN
+                        EXEC sp_executesql N'UPDATE Customers SET IsSetupCompleted = 1 WHERE IsSetupCompleted = 0 AND CustomerId = 1';
+                    END";
+                await context.Database.ExecuteSqlRawAsync(updateSetupSql);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Schema Migration Setup Update Note]: {ex.Message}");
+            }
         }
-        catch
+        catch (Exception ex)
         {
-            // Fallback for in-memory or alternative db provider
+            Console.WriteLine($"[Schema Migration Top-Level Note]: {ex.Message}");
         }
 
 
