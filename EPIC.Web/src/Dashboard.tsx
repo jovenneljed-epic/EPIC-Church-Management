@@ -339,6 +339,21 @@ const Dashboard: React.FC = () => {
     const [error, setError] =
         useState("");
 
+    const churchName =
+        localStorage.getItem("currentChurchName") ||
+        localStorage.getItem("churchName") ||
+        (localStorage.getItem("customerId") === "1"
+            ? "Luke 4:18 Ministries"
+            : "Your Church");
+
+    const churchSub =
+        localStorage.getItem("currentChurchName") ||
+        localStorage.getItem("churchName")
+            ? "Church Dashboard"
+            : (localStorage.getItem("customerId") === "1"
+                ? "San Vicente Church"
+                : "Church Dashboard");
+
     const loadDashboard =
         useCallback(
             async (
@@ -917,11 +932,11 @@ const Dashboard: React.FC = () => {
                     </span>
 
                     <h2>
-                        Luke 4:18 Ministries
+                        {churchName}
                     </h2>
 
                     <p>
-                        San Vicente Church
+                        {churchSub}
                     </p>
                 </div>
 

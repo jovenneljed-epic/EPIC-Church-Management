@@ -2048,6 +2048,10 @@ const navigatePublic =
                 if (res.data.customerId) {
                     localStorage.setItem("customerId", String(res.data.customerId));
                 }
+                if (res.data.churchName) {
+                    localStorage.setItem("currentChurchName", res.data.churchName);
+                    localStorage.setItem("churchName", res.data.churchName);
+                }
 
                 if (res.data.isSetupCompleted === false && res.data.customerId) {
                     setSetupChurchInfo({
@@ -4001,11 +4005,18 @@ if(
 
                     <div>
                         <strong>
-                            Luke 4:18 Ministries
+                            {localStorage.getItem("currentChurchName") ||
+                             localStorage.getItem("churchName") ||
+                             setupChurchInfo.churchName ||
+                             (localStorage.getItem("customerId") === "1" ? "Luke 4:18 Ministries" : "Your Church")}
                         </strong>
 
                         <span>
-                            San Vicente Church
+                            {localStorage.getItem("currentChurchName") ||
+                             localStorage.getItem("churchName") ||
+                             setupChurchInfo.churchName
+                                ? "Church Portal"
+                                : (localStorage.getItem("customerId") === "1" ? "San Vicente Church" : "Church Portal")}
                         </span>
                     </div>
                 </div>

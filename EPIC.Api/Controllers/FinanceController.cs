@@ -1,4 +1,4 @@
-﻿using EPIC.Api.Data;
+using EPIC.Api.Data;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -24,10 +24,14 @@ namespace EPIC.Api.Controllers
         [HttpGet("summary")]
         public async Task<IActionResult> GetFinancialSummary()
         {
+            var customerId = GetCurrentCustomerId() ?? 1;
+
             var incomes = await _context.Incomes
+                .Where(i => i.CustomerId == customerId)
                 .ToListAsync();
 
             var expenses = await _context.Expenses
+                .Where(e => e.CustomerId == customerId)
                 .ToListAsync();
 
             decimal totalIncome =
@@ -118,8 +122,11 @@ namespace EPIC.Api.Controllers
             // GET INCOME
             // -----------------------------------------------------
 
+            var customerId = GetCurrentCustomerId() ?? 1;
+
             var incomes = await _context.Incomes
                 .Where(i =>
+                    i.CustomerId == customerId &&
                     i.IncomeDate >= start &&
                     i.IncomeDate < end)
                 .ToListAsync();
@@ -131,6 +138,7 @@ namespace EPIC.Api.Controllers
 
             var expenses = await _context.Expenses
                 .Where(e =>
+                    e.CustomerId == customerId &&
                     e.ExpenseDate >= start &&
                     e.ExpenseDate < end)
                 .ToListAsync();
@@ -234,9 +242,11 @@ namespace EPIC.Api.Controllers
             DateTime endDate =
                 startDate.AddMonths(1);
 
+            var customerId = GetCurrentCustomerId() ?? 1;
 
             var incomes = await _context.Incomes
                 .Where(i =>
+                    i.CustomerId == customerId &&
                     i.IncomeDate >= startDate &&
                     i.IncomeDate < endDate)
                 .ToListAsync();
@@ -244,6 +254,7 @@ namespace EPIC.Api.Controllers
 
             var expenses = await _context.Expenses
                 .Where(e =>
+                    e.CustomerId == customerId &&
                     e.ExpenseDate >= startDate &&
                     e.ExpenseDate < endDate)
                 .ToListAsync();
@@ -275,6 +286,22 @@ namespace EPIC.Api.Controllers
 
                 expenseRecords = expenses.Count
             });
+        }
+
+        // =========================================================
+        // GET CURRENT CUSTOMER ID
+        // =========================================================
+
+        private int? GetCurrentCustomerId()
+        {
+            var claim =
+                User.FindFirst("CustomerId")?.Value
+                ?? User.FindFirst("customerId")?.Value
+                ?? User.FindFirst("customer_id")?.Value;
+
+            return int.TryParse(claim, out var customerId) && customerId > 0
+                ? customerId
+                : null;
         }
     }
 }

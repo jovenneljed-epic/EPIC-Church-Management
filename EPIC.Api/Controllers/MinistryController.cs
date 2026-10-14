@@ -1,4 +1,4 @@
-﻿using EPIC.Api.Data;
+using EPIC.Api.Data;
 using EPIC.Api.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -26,8 +26,11 @@ namespace EPIC.Api.Controllers
         [HttpGet]
         public async Task<IActionResult> GetMinistries()
         {
+            var customerId = GetCurrentCustomerId() ?? 1;
+
             var ministries = await _context.Ministries
                 .AsNoTracking()
+                .Where(m => m.CustomerId == customerId)
                 .OrderBy(m => m.Name)
                 .ToListAsync();
 
@@ -42,10 +45,12 @@ namespace EPIC.Api.Controllers
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetMinistry(int id)
         {
+            var customerId = GetCurrentCustomerId() ?? 1;
+
             var ministry = await _context.Ministries
                 .AsNoTracking()
                 .FirstOrDefaultAsync(
-                    m => m.MinistryId == id);
+                    m => m.MinistryId == id && m.CustomerId == customerId);
 
             if (ministry == null)
             {
@@ -70,12 +75,14 @@ namespace EPIC.Api.Controllers
                     "PLEASE ENTER A MINISTRY NAME TO SEARCH.");
             }
 
+            var customerId = GetCurrentCustomerId() ?? 1;
             string keyword = name.Trim();
 
             var ministries = await _context.Ministries
                 .AsNoTracking()
                 .Where(m =>
-                    EF.Functions.Like(
+                    m.CustomerId == customerId &&
+                    (EF.Functions.Like(
                         m.Name,
                         $"%{keyword}%")
 
@@ -85,7 +92,7 @@ namespace EPIC.Api.Controllers
 
                     || EF.Functions.Like(
                         m.MinistryHead,
-                        $"%{keyword}%"))
+                        $"%{keyword}%")))
                 .OrderBy(m => m.Name)
                 .ToListAsync();
 
@@ -101,6 +108,9 @@ namespace EPIC.Api.Controllers
         public async Task<IActionResult> CreateMinistry(
             [FromBody] Ministry ministry)
         {
+            var customerId = GetCurrentCustomerId() ?? (ministry.CustomerId > 0 ? ministry.CustomerId : 1);
+            ministry.CustomerId = customerId;
+
             // -----------------------------------------------------
             // VALIDATE NAME
             // -----------------------------------------------------
@@ -147,13 +157,14 @@ namespace EPIC.Api.Controllers
                 ministry.MinistryCode))
             {
                 ministry.MinistryCode =
-                    await GenerateMinistryCode();
+                    await GenerateMinistryCode(customerId);
             }
             else
             {
                 bool codeExists =
                     await _context.Ministries
                         .AnyAsync(m =>
+                            m.CustomerId == customerId &&
                             m.MinistryCode ==
                             ministry.MinistryCode);
 
@@ -263,10 +274,12 @@ namespace EPIC.Api.Controllers
             int id,
             [FromBody] Ministry updatedMinistry)
         {
+            var customerId = GetCurrentCustomerId() ?? 1;
+
             var ministry =
                 await _context.Ministries
                     .FirstOrDefaultAsync(
-                        m => m.MinistryId == id);
+                        m => m.MinistryId == id && m.CustomerId == customerId);
 
             if (ministry == null)
             {
@@ -341,7 +354,7 @@ namespace EPIC.Api.Controllers
                 ministry.MinistryCode))
             {
                 ministry.MinistryCode =
-                    await GenerateMinistryCode();
+                    await GenerateMinistryCode(customerId);
             }
 
             // -----------------------------------------------------
@@ -402,10 +415,12 @@ namespace EPIC.Api.Controllers
         public async Task<IActionResult> ActivateMinistry(
             int id)
         {
+            var customerId = GetCurrentCustomerId() ?? 1;
+
             var ministry =
                 await _context.Ministries
                     .FirstOrDefaultAsync(
-                        m => m.MinistryId == id);
+                        m => m.MinistryId == id && m.CustomerId == customerId);
 
             if (ministry == null)
             {
@@ -440,10 +455,12 @@ namespace EPIC.Api.Controllers
         public async Task<IActionResult>
             DeactivateMinistry(int id)
         {
+            var customerId = GetCurrentCustomerId() ?? 1;
+
             var ministry =
                 await _context.Ministries
                     .FirstOrDefaultAsync(
-                        m => m.MinistryId == id);
+                        m => m.MinistryId == id && m.CustomerId == customerId);
 
             if (ministry == null)
             {
@@ -482,10 +499,13 @@ namespace EPIC.Api.Controllers
         public async Task<IActionResult>
             GetActiveMinistries()
         {
+            var customerId = GetCurrentCustomerId() ?? 1;
+
             var ministries =
                 await _context.Ministries
                     .AsNoTracking()
                     .Where(m =>
+                        m.CustomerId == customerId &&
                         m.Status == "ACTIVE")
                     .OrderBy(m =>
                         m.Name)
@@ -503,9 +523,12 @@ namespace EPIC.Api.Controllers
         public async Task<IActionResult>
             GetMinistrySummary()
         {
+            var customerId = GetCurrentCustomerId() ?? 1;
+
             var ministries =
                 await _context.Ministries
                     .AsNoTracking()
+                    .Where(m => m.CustomerId == customerId)
                     .ToListAsync();
 
             int total =
@@ -537,12 +560,13 @@ namespace EPIC.Api.Controllers
         // =========================================================
 
         private async Task<string>
-            GenerateMinistryCode()
+            GenerateMinistryCode(int customerId)
         {
             int nextNumber = 1;
 
             var lastMinistry =
                 await _context.Ministries
+                    .Where(m => m.CustomerId == customerId)
                     .OrderByDescending(
                         m => m.MinistryId)
                     .FirstOrDefaultAsync();
@@ -562,6 +586,7 @@ namespace EPIC.Api.Controllers
 
             while (await _context.Ministries
                 .AnyAsync(m =>
+                    m.CustomerId == customerId &&
                     m.MinistryCode == code))
             {
                 nextNumber++;
@@ -571,6 +596,22 @@ namespace EPIC.Api.Controllers
             }
 
             return code;
+        }
+
+        // =========================================================
+        // GET CURRENT CUSTOMER ID
+        // =========================================================
+
+        private int? GetCurrentCustomerId()
+        {
+            var claim =
+                User.FindFirst("CustomerId")?.Value
+                ?? User.FindFirst("customerId")?.Value
+                ?? User.FindFirst("customer_id")?.Value;
+
+            return int.TryParse(claim, out var customerId) && customerId > 0
+                ? customerId
+                : null;
         }
     }
 }

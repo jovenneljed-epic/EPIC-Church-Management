@@ -33,7 +33,10 @@ namespace EPIC.Api.Controllers
         {
             try
             {
-                if (_cache.TryGetValue("web_dashboard_summary", out object? cachedData) && cachedData != null)
+                var customerId = GetCurrentCustomerId() ?? 1;
+                string cacheKey = $"web_dashboard_summary_{customerId}";
+
+                if (_cache.TryGetValue(cacheKey, out object? cachedData) && cachedData != null)
                 {
                     Response.Headers.CacheControl = "private, max-age=60";
                     return Ok(cachedData);
@@ -85,12 +88,13 @@ namespace EPIC.Api.Controllers
                 var totalMembers =
                     await _context.Members
                         .AsNoTracking()
-                        .CountAsync();
+                        .CountAsync(m => m.CustomerId == customerId);
 
                 var activeMembers =
                     await _context.Members
                         .AsNoTracking()
                         .CountAsync(m =>
+                            m.CustomerId == customerId &&
                             m.Status != null &&
                             m.Status.ToUpper() == "ACTIVE");
 
@@ -106,7 +110,7 @@ namespace EPIC.Api.Controllers
                 var totalVisitors =
                     await _context.Visitors
                         .AsNoTracking()
-                        .CountAsync();
+                        .CountAsync(v => v.CustomerId == customerId);
 
                 // =================================================
                 // MINISTRIES
@@ -115,12 +119,13 @@ namespace EPIC.Api.Controllers
                 var totalMinistries =
                     await _context.Ministries
                         .AsNoTracking()
-                        .CountAsync();
+                        .CountAsync(m => m.CustomerId == customerId);
 
                 var activeMinistries =
                     await _context.Ministries
                         .AsNoTracking()
                         .CountAsync(m =>
+                            m.CustomerId == customerId &&
                             m.Status != null &&
                             m.Status.ToUpper() == "ACTIVE");
 
@@ -142,7 +147,9 @@ namespace EPIC.Api.Controllers
                         .AsNoTracking()
                         .Where(a =>
                             a.AttendanceDate >= today &&
-                            a.AttendanceDate < tomorrow)
+                            a.AttendanceDate < tomorrow &&
+                            ((a.Member != null && a.Member.CustomerId == customerId) ||
+                             (a.ChurchService != null && a.ChurchService.CustomerId == customerId)))
                         .Select(a => a.Status)
                         .ToListAsync();
 
@@ -216,6 +223,7 @@ namespace EPIC.Api.Controllers
                     await _context.Givings
                         .AsNoTracking()
                         .Where(g =>
+                            g.CustomerId == customerId &&
                             g.GivingDate >= today &&
                             g.GivingDate < tomorrow)
                         .SumAsync(
@@ -229,6 +237,7 @@ namespace EPIC.Api.Controllers
                 var totalGiving =
                     await _context.Givings
                         .AsNoTracking()
+                        .Where(g => g.CustomerId == customerId)
                         .SumAsync(
                             g => (decimal?)g.Amount)
                     ?? 0m;
@@ -240,6 +249,7 @@ namespace EPIC.Api.Controllers
                 var totalIncome =
                     await _context.Incomes
                         .AsNoTracking()
+                        .Where(i => i.CustomerId == customerId)
                         .SumAsync(
                             i => (decimal?)i.Amount)
                     ?? 0m;
@@ -251,6 +261,7 @@ namespace EPIC.Api.Controllers
                 var totalExpenses =
                     await _context.Expenses
                         .AsNoTracking()
+                        .Where(e => e.CustomerId == customerId)
                         .SumAsync(
                             e => (decimal?)e.Amount)
                     ?? 0m;
@@ -275,6 +286,7 @@ namespace EPIC.Api.Controllers
                     await _context.ChurchServices
                         .AsNoTracking()
                         .Where(s =>
+                            s.CustomerId == customerId &&
                             s.ServiceDate >= today &&
                             s.Status != null &&
                             s.Status.ToUpper() == "SCHEDULED")
@@ -324,12 +336,13 @@ namespace EPIC.Api.Controllers
                 var totalEvents =
                     await _context.ChurchServices
                         .AsNoTracking()
-                        .CountAsync();
+                        .CountAsync(s => s.CustomerId == customerId);
 
                 var scheduledEvents =
                     await _context.ChurchServices
                         .AsNoTracking()
                         .CountAsync(s =>
+                            s.CustomerId == customerId &&
                             s.Status != null &&
                             s.Status.ToUpper() == "SCHEDULED");
 
@@ -337,6 +350,7 @@ namespace EPIC.Api.Controllers
                     await _context.ChurchServices
                         .AsNoTracking()
                         .CountAsync(s =>
+                            s.CustomerId == customerId &&
                             s.Status != null &&
                             s.Status.ToUpper() == "COMPLETED");
 
@@ -344,6 +358,7 @@ namespace EPIC.Api.Controllers
                     await _context.ChurchServices
                         .AsNoTracking()
                         .CountAsync(s =>
+                            s.CustomerId == customerId &&
                             s.ServiceDate >= today &&
                             s.Status != null &&
                             s.Status.ToUpper() == "SCHEDULED");
@@ -352,104 +367,85 @@ namespace EPIC.Api.Controllers
                 // SUBSCRIPTIONS
                 // =================================================
 
+                var customerSubscriptions = _context.Subscriptions
+                    .AsNoTracking()
+                    .Where(s => s.CustomerId == customerId);
+
                 var totalSubscriptions =
-                    await _context.Subscriptions
-                        .AsNoTracking()
-                        .CountAsync();
+                    await customerSubscriptions.CountAsync();
 
                 var trialSubscriptions =
-                    await _context.Subscriptions
-                        .AsNoTracking()
-                        .CountAsync(s =>
-                            s.Status != null &&
-                            s.Status.ToUpper() == "TRIAL");
+                    await customerSubscriptions.CountAsync(s =>
+                        s.Status != null &&
+                        s.Status.ToUpper() == "TRIAL");
 
                 var activeSubscriptions =
-                    await _context.Subscriptions
-                        .AsNoTracking()
-                        .CountAsync(s =>
-                            s.Status != null &&
-                            s.Status.ToUpper() == "ACTIVE");
+                    await customerSubscriptions.CountAsync(s =>
+                        s.Status != null &&
+                        s.Status.ToUpper() == "ACTIVE");
 
                 var pastDueSubscriptions =
-                    await _context.Subscriptions
-                        .AsNoTracking()
-                        .CountAsync(s =>
-                            s.Status != null &&
-                            s.Status.ToUpper() == "PAST_DUE");
+                    await customerSubscriptions.CountAsync(s =>
+                        s.Status != null &&
+                        s.Status.ToUpper() == "PAST_DUE");
 
                 var suspendedSubscriptions =
-                    await _context.Subscriptions
-                        .AsNoTracking()
-                        .CountAsync(s =>
-                            s.Status != null &&
-                            s.Status.ToUpper() == "SUSPENDED");
+                    await customerSubscriptions.CountAsync(s =>
+                        s.Status != null &&
+                        s.Status.ToUpper() == "SUSPENDED");
 
                 var expiredSubscriptions =
-                    await _context.Subscriptions
-                        .AsNoTracking()
-                        .CountAsync(s =>
-                            s.Status != null &&
-                            s.Status.ToUpper() == "EXPIRED");
+                    await customerSubscriptions.CountAsync(s =>
+                        s.Status != null &&
+                        s.Status.ToUpper() == "EXPIRED");
 
                 var cancelledSubscriptions =
-                    await _context.Subscriptions
-                        .AsNoTracking()
-                        .CountAsync(s =>
-                            s.Status != null &&
-                            s.Status.ToUpper() == "CANCELLED");
+                    await customerSubscriptions.CountAsync(s =>
+                        s.Status != null &&
+                        s.Status.ToUpper() == "CANCELLED");
 
                 // =================================================
                 // PAYMENTS
                 // =================================================
 
+                var customerPayments = _context.Payments
+                    .AsNoTracking()
+                    .Where(p => customerSubscriptions.Any(s => s.SubscriptionId == p.SubscriptionId));
+
                 var totalPayments =
-                    await _context.Payments
-                        .AsNoTracking()
-                        .CountAsync();
+                    await customerPayments.CountAsync();
 
                 var paidPayments =
-                    await _context.Payments
-                        .AsNoTracking()
-                        .CountAsync(p =>
-                            p.Status != null &&
-                            p.Status.ToUpper() == "PAID");
+                    await customerPayments.CountAsync(p =>
+                        p.Status != null &&
+                        p.Status.ToUpper() == "PAID");
 
                 var pendingPayments =
-                    await _context.Payments
-                        .AsNoTracking()
-                        .CountAsync(p =>
-                            p.Status != null &&
-                            p.Status.ToUpper() == "PENDING");
+                    await customerPayments.CountAsync(p =>
+                        p.Status != null &&
+                        p.Status.ToUpper() == "PENDING");
 
                 var failedPayments =
-                    await _context.Payments
-                        .AsNoTracking()
-                        .CountAsync(p =>
-                            p.Status != null &&
-                            p.Status.ToUpper() == "FAILED");
+                    await customerPayments.CountAsync(p =>
+                        p.Status != null &&
+                        p.Status.ToUpper() == "FAILED");
 
                 var refundedPayments =
-                    await _context.Payments
-                        .AsNoTracking()
-                        .CountAsync(p =>
-                            p.Status != null &&
-                            p.Status.ToUpper() == "REFUNDED");
+                    await customerPayments.CountAsync(p =>
+                        p.Status != null &&
+                        p.Status.ToUpper() == "REFUNDED");
 
                 var cancelledPayments =
-                    await _context.Payments
-                        .AsNoTracking()
-                        .CountAsync(p =>
-                            p.Status != null &&
-                            p.Status.ToUpper() == "CANCELLED");
+                    await customerPayments.CountAsync(p =>
+                        p.Status != null &&
+                        p.Status.ToUpper() == "CANCELLED");
 
                 // =================================================
                 // REVENUE
                 // =================================================
 
                 var totalRevenue =
-                    await _context.Payments
-                        .AsNoTracking()
+                    await customerPayments
                         .Where(p =>
                             p.Status != null &&
                             p.Status.ToUpper() == "PAID")
@@ -458,8 +454,7 @@ namespace EPIC.Api.Controllers
                     ?? 0m;
 
                 var currentMonthRevenue =
-                    await _context.Payments
-                        .AsNoTracking()
+                    await customerPayments
                         .Where(p =>
                             p.Status != null &&
                             p.Status.ToUpper() == "PAID" &&
@@ -471,8 +466,7 @@ namespace EPIC.Api.Controllers
                     ?? 0m;
 
                 var currentYearRevenue =
-                    await _context.Payments
-                        .AsNoTracking()
+                    await customerPayments
                         .Where(p =>
                             p.Status != null &&
                             p.Status.ToUpper() == "PAID" &&
@@ -686,7 +680,7 @@ namespace EPIC.Api.Controllers
                     }
                 };
 
-                _cache.Set("web_dashboard_summary", responseData, TimeSpan.FromSeconds(60));
+                _cache.Set(cacheKey, responseData, TimeSpan.FromSeconds(60));
                 Response.Headers.CacheControl = "private, max-age=60";
                 return Ok(responseData);
             }
@@ -731,7 +725,10 @@ namespace EPIC.Api.Controllers
         {
             try
             {
-                if (_cache.TryGetValue("mobile_dashboard_summary", out object? cachedMobileData) && cachedMobileData != null)
+                var customerId = GetCurrentCustomerId() ?? 1;
+                string cacheKey = $"mobile_dashboard_summary_{customerId}";
+
+                if (_cache.TryGetValue(cacheKey, out object? cachedMobileData) && cachedMobileData != null)
                 {
                     Response.Headers.CacheControl = "private, max-age=60";
                     return Ok(cachedMobileData);
@@ -759,6 +756,7 @@ namespace EPIC.Api.Controllers
                     await _context.ChurchServices
                         .AsNoTracking()
                         .Where(s =>
+                            s.CustomerId == customerId &&
                             s.ServiceDate >= today &&
                             s.Status != null &&
                             s.Status.ToUpper() == "SCHEDULED")
@@ -783,12 +781,13 @@ namespace EPIC.Api.Controllers
                 var totalMembers =
                     await _context.Members
                         .AsNoTracking()
-                        .CountAsync();
+                        .CountAsync(m => m.CustomerId == customerId);
 
                 var activeMembers =
                     await _context.Members
                         .AsNoTracking()
                         .CountAsync(m =>
+                            m.CustomerId == customerId &&
                             m.Status != null &&
                             m.Status.ToUpper() == "ACTIVE");
 
@@ -799,7 +798,7 @@ namespace EPIC.Api.Controllers
                 var totalVisitors =
                     await _context.Visitors
                         .AsNoTracking()
-                        .CountAsync();
+                        .CountAsync(v => v.CustomerId == customerId);
 
                 // =================================================
                 // MINISTRIES
@@ -808,7 +807,7 @@ namespace EPIC.Api.Controllers
                 var totalMinistries =
                     await _context.Ministries
                         .AsNoTracking()
-                        .CountAsync();
+                        .CountAsync(m => m.CustomerId == customerId);
 
                 // =================================================
                 // ATTENDANCE
@@ -820,7 +819,9 @@ namespace EPIC.Api.Controllers
                         .AsNoTracking()
                         .Where(a =>
                             a.AttendanceDate >= today &&
-                            a.AttendanceDate < tomorrow)
+                            a.AttendanceDate < tomorrow &&
+                            ((a.Member != null && a.Member.CustomerId == customerId) ||
+                             (a.ChurchService != null && a.ChurchService.CustomerId == customerId)))
                         .Select(a => a.Status)
                         .ToListAsync();
 
@@ -888,6 +889,7 @@ namespace EPIC.Api.Controllers
                     await _context.Givings
                         .AsNoTracking()
                         .Where(g =>
+                            g.CustomerId == customerId &&
                             g.GivingDate >= today &&
                             g.GivingDate < tomorrow)
                         .SumAsync(
@@ -931,7 +933,7 @@ namespace EPIC.Api.Controllers
                     upcomingService
                 };
 
-                _cache.Set("mobile_dashboard_summary", responseData, TimeSpan.FromSeconds(60));
+                _cache.Set(cacheKey, responseData, TimeSpan.FromSeconds(60));
                 Response.Headers.CacheControl = "private, max-age=60";
                 return Ok(responseData);
             }
@@ -964,6 +966,22 @@ namespace EPIC.Api.Controllers
                             ex.Message
                     });
             }
+        }
+
+        // =========================================================
+        // GET CURRENT CUSTOMER ID
+        // =========================================================
+
+        private int? GetCurrentCustomerId()
+        {
+            var claim =
+                User.FindFirst("CustomerId")?.Value
+                ?? User.FindFirst("customerId")?.Value
+                ?? User.FindFirst("customer_id")?.Value;
+
+            return int.TryParse(claim, out var customerId) && customerId > 0
+                ? customerId
+                : null;
         }
 
         // =========================================================

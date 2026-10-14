@@ -57,8 +57,11 @@ namespace EPIC.Api.Controllers
         [Permission("Visitors", "view")]
         public async Task<IActionResult> GetVisitors()
         {
+            var customerId = GetCurrentCustomerId() ?? 1;
+
             var visitors = await _context.Visitors
                 .AsNoTracking()
+                .Where(v => v.CustomerId == customerId)
                 .OrderByDescending(v => v.CreatedDate)
                 .ToListAsync();
 
@@ -87,10 +90,12 @@ namespace EPIC.Api.Controllers
         [Permission("Visitors", "view")]
         public async Task<IActionResult> GetVisitor(int id)
         {
+            var customerId = GetCurrentCustomerId() ?? 1;
+
             var visitor = await _context.Visitors
                 .AsNoTracking()
                 .FirstOrDefaultAsync(
-                    v => v.VisitorId == id);
+                    v => v.VisitorId == id && v.CustomerId == customerId);
 
             if (visitor == null)
             {
@@ -128,13 +133,15 @@ namespace EPIC.Api.Controllers
                 });
             }
 
+            var customerId = GetCurrentCustomerId() ?? 1;
             var keyword =
                 name.Trim().ToLower();
 
             var visitors = await _context.Visitors
                 .AsNoTracking()
                 .Where(v =>
-                    (v.FirstName ?? "")
+                    v.CustomerId == customerId &&
+                    ((v.FirstName ?? "")
                         .ToLower()
                         .Contains(keyword) ||
 
@@ -157,7 +164,7 @@ namespace EPIC.Api.Controllers
                     (v.VisitorCode ?? "")
                         .ToLower()
                         .Contains(keyword)
-                )
+                ))
                 .OrderBy(v => v.LastName)
                 .ThenBy(v => v.FirstName)
                 .ToListAsync();
@@ -212,10 +219,12 @@ namespace EPIC.Api.Controllers
         public async Task<IActionResult> GetVisitorAttendance(
             int id)
         {
+            var customerId = GetCurrentCustomerId() ?? 1;
+
             var visitor = await _context.Visitors
                 .AsNoTracking()
                 .FirstOrDefaultAsync(
-                    v => v.VisitorId == id);
+                    v => v.VisitorId == id && v.CustomerId == customerId);
 
             if (visitor == null)
             {
@@ -329,6 +338,7 @@ namespace EPIC.Api.Controllers
             // DUPLICATE PREVENTION LOGIC
             // Ensure no duplicate visitor is registered with the same name.
             // -----------------------------------------------------
+            var customerId = GetCurrentCustomerId() ?? 1;
             var reqFirst = request.FirstName.Trim();
             var reqLast = request.LastName.Trim();
             var reqMiddle = request.MiddleName?.Trim() ?? "";
@@ -336,6 +346,7 @@ namespace EPIC.Api.Controllers
             var existingCandidates = await _context.Visitors
                 .AsNoTracking()
                 .Where(v =>
+                    v.CustomerId == customerId &&
                     v.FirstName.ToLower() == reqFirst.ToLower() &&
                     v.LastName.ToLower() == reqLast.ToLower())
                 .ToListAsync();
@@ -376,8 +387,11 @@ namespace EPIC.Api.Controllers
             var visitor =
                 new Visitor
                 {
+                    CustomerId =
+                        customerId,
+
                     VisitorCode =
-                        await GenerateVisitorCode(),
+                        await GenerateVisitorCode(customerId),
 
                     FirstName =
                         request.FirstName.Trim(),
@@ -508,10 +522,12 @@ namespace EPIC.Api.Controllers
                 return validation;
             }
 
+            var customerId = GetCurrentCustomerId() ?? 1;
+
             var visitor =
                 await _context.Visitors
                     .FirstOrDefaultAsync(
-                        v => v.VisitorId == id);
+                        v => v.VisitorId == id && v.CustomerId == customerId);
 
             if (visitor == null)
             {
@@ -542,6 +558,7 @@ namespace EPIC.Api.Controllers
             var existingCandidates = await _context.Visitors
                 .AsNoTracking()
                 .Where(v =>
+                    v.CustomerId == customerId &&
                     v.VisitorId != id &&
                     v.FirstName.ToLower() == reqFirst.ToLower() &&
                     v.LastName.ToLower() == reqLast.ToLower())
@@ -744,10 +761,12 @@ namespace EPIC.Api.Controllers
                 });
             }
 
+            var customerId = GetCurrentCustomerId() ?? 1;
+
             var visitor =
                 await _context.Visitors
                     .FirstOrDefaultAsync(
-                        v => v.VisitorId == id);
+                        v => v.VisitorId == id && v.CustomerId == customerId);
 
             if (visitor == null)
             {
@@ -989,10 +1008,12 @@ namespace EPIC.Api.Controllers
 
             try
             {
+                var customerId = GetCurrentCustomerId() ?? 1;
+
                 var visitor =
                     await _context.Visitors
                         .FirstOrDefaultAsync(
-                            v => v.VisitorId == id);
+                            v => v.VisitorId == id && v.CustomerId == customerId);
 
                 if (visitor == null)
                 {
@@ -1023,11 +1044,14 @@ namespace EPIC.Api.Controllers
                     DateTime.Now;
 
                 var memberCode =
-                    await GenerateMemberCode();
+                    await GenerateMemberCode(customerId);
 
                 var member =
                     new Member
                     {
+                        CustomerId =
+                            customerId,
+
                         MemberCode =
                             memberCode,
 
@@ -1162,9 +1186,11 @@ namespace EPIC.Api.Controllers
         public async Task<IActionResult> AutoConvertEligibleScan(
             [FromQuery] int threshold = VisitorPromotionService.DefaultAttendanceThreshold)
         {
+            var customerId = GetCurrentCustomerId() ?? 1;
+
             var results = await _promotionService
                 .AutoConvertAllEligibleVisitorsAsync(
-                    customerId: null,
+                    customerId: customerId,
                     threshold: threshold,
                     recordedBy: User.Identity?.Name ?? "BATCH_AUTOMATION");
 
@@ -1189,8 +1215,10 @@ namespace EPIC.Api.Controllers
         public async Task<IActionResult> GetConversionMetrics(
             [FromQuery] int threshold = VisitorPromotionService.DefaultAttendanceThreshold)
         {
+            var customerId = GetCurrentCustomerId() ?? 1;
+
             var metrics = await _promotionService
-                .GetConversionMetricsAsync(customerId: null, threshold: threshold);
+                .GetConversionMetricsAsync(customerId: customerId, threshold: threshold);
 
             return Ok(metrics);
         }
@@ -1205,8 +1233,11 @@ namespace EPIC.Api.Controllers
         [Permission("Visitors", "edit")]
         public async Task<IActionResult> DeduplicateVisitors()
         {
+            var customerId = GetCurrentCustomerId() ?? 1;
+
             var allVisitors = await _context.Visitors
                 .Include(v => v.VisitorAttendances)
+                .Where(v => v.CustomerId == customerId)
                 .OrderBy(v => v.CreatedDate)
                 .ToListAsync();
 
@@ -1315,9 +1346,11 @@ namespace EPIC.Api.Controllers
         [Permission("Visitors", "edit")]
         public async Task<IActionResult> CleanConvertedVisitors()
         {
+            var customerId = GetCurrentCustomerId() ?? 1;
+
             var convertedVisitors = await _context.Visitors
                 .Include(v => v.VisitorAttendances)
-                .Where(v => v.IsConvertedToMember || v.ConvertedMemberId.HasValue || v.FollowUpStatus == "CONVERTED")
+                .Where(v => v.CustomerId == customerId && (v.IsConvertedToMember || v.ConvertedMemberId.HasValue || v.FollowUpStatus == "CONVERTED"))
                 .ToListAsync();
 
             if (!convertedVisitors.Any())
@@ -1361,11 +1394,13 @@ namespace EPIC.Api.Controllers
         public async Task<IActionResult>
             DeleteVisitor(int id)
         {
+            var customerId = GetCurrentCustomerId() ?? 1;
+
             var visitor =
                 await _context.Visitors
                     .Include(v => v.VisitorAttendances)
                     .FirstOrDefaultAsync(
-                        v => v.VisitorId == id);
+                        v => v.VisitorId == id && v.CustomerId == customerId);
 
             if (visitor == null)
             {
@@ -1408,9 +1443,12 @@ namespace EPIC.Api.Controllers
         [Permission("Visitors", "view")]
         public async Task<IActionResult> GetDashboard()
         {
+            var customerId = GetCurrentCustomerId() ?? 1;
+
             var visitors =
                 await _context.Visitors
                     .AsNoTracking()
+                    .Where(v => v.CustomerId == customerId)
                     .ToListAsync();
 
             // =====================================================
@@ -1750,7 +1788,7 @@ namespace EPIC.Api.Controllers
         // =========================================================
 
         private async Task<string>
-            GenerateVisitorCode()
+            GenerateVisitorCode(int customerId)
         {
             var year =
                 DateTime.Now.Year;
@@ -1762,6 +1800,7 @@ namespace EPIC.Api.Controllers
                 await _context.Visitors
                     .AsNoTracking()
                     .Where(v =>
+                        v.CustomerId == customerId &&
                         v.VisitorCode != null &&
                         v.VisitorCode.StartsWith(prefix))
                     .Select(v =>
@@ -1800,17 +1839,34 @@ namespace EPIC.Api.Controllers
         // =========================================================
 
         private async Task<string>
-            GenerateMemberCode()
+            GenerateMemberCode(int customerId)
         {
             var lastMemberId =
                 await _context.Members
                     .AsNoTracking()
+                    .Where(m => m.CustomerId == customerId)
                     .Select(m =>
                         (int?)m.MemberId)
                     .MaxAsync() ?? 0;
 
             return
                 $"MEM-{lastMemberId + 1:0000}";
+        }
+
+        // =========================================================
+        // GET CURRENT CUSTOMER ID
+        // =========================================================
+
+        private int? GetCurrentCustomerId()
+        {
+            var claim =
+                User.FindFirst("CustomerId")?.Value
+                ?? User.FindFirst("customerId")?.Value
+                ?? User.FindFirst("customer_id")?.Value;
+
+            return int.TryParse(claim, out var customerId) && customerId > 0
+                ? customerId
+                : null;
         }
 
         // =========================================================

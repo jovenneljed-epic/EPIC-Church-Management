@@ -1,4 +1,8 @@
-﻿using EPIC.Api.Data;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using EPIC.Api.Data;
 using EPIC.Api.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -9,7 +13,6 @@ namespace EPIC.Api.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    [EPIC.Api.Authorization.InternalAccountOnly]
     public class IncomeController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -21,15 +24,16 @@ namespace EPIC.Api.Controllers
 
         // =========================================================
         // GET ALL INCOME
-        //
-        // GET /api/Income
         // =========================================================
 
         [HttpGet]
         public async Task<IActionResult> GetIncome()
         {
+            var customerId = GetCurrentCustomerId() ?? 1;
+
             var income = await _context.Incomes
                 .AsNoTracking()
+                .Where(i => i.CustomerId == customerId)
                 .OrderByDescending(i => i.IncomeDate)
                 .ThenByDescending(i => i.IncomeId)
                 .ToListAsync();
@@ -37,19 +41,18 @@ namespace EPIC.Api.Controllers
             return Ok(income);
         }
 
-
         // =========================================================
         // GET INCOME BY ID
-        //
-        // GET /api/Income/{id}
         // =========================================================
 
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetIncomeById(int id)
         {
+            var customerId = GetCurrentCustomerId() ?? 1;
+
             var income = await _context.Incomes
                 .AsNoTracking()
-                .FirstOrDefaultAsync(i => i.IncomeId == id);
+                .FirstOrDefaultAsync(i => i.IncomeId == id && i.CustomerId == customerId);
 
             if (income == null)
             {
@@ -62,23 +65,22 @@ namespace EPIC.Api.Controllers
             return Ok(income);
         }
 
-
         // =========================================================
         // GET INCOME BY DATE
-        //
-        // GET /api/Income/date?date=2026-08-02
         // =========================================================
 
         [HttpGet("date")]
         public async Task<IActionResult> GetIncomeByDate(
             [FromQuery] DateTime date)
         {
+            var customerId = GetCurrentCustomerId() ?? 1;
             var startDate = date.Date;
             var endDate = startDate.AddDays(1);
 
             var income = await _context.Incomes
                 .AsNoTracking()
                 .Where(i =>
+                    i.CustomerId == customerId &&
                     i.IncomeDate >= startDate &&
                     i.IncomeDate < endDate)
                 .OrderByDescending(i => i.IncomeId)
@@ -87,11 +89,8 @@ namespace EPIC.Api.Controllers
             return Ok(income);
         }
 
-
         // =========================================================
         // GET INCOME BY CATEGORY
-        //
-        // GET /api/Income/category?category=RENTAL
         // =========================================================
 
         [HttpGet("category")]
@@ -106,12 +105,13 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            var categoryName =
-                category.Trim().ToUpper();
+            var categoryName = category.Trim().ToUpper();
+            var customerId = GetCurrentCustomerId() ?? 1;
 
             var income = await _context.Incomes
                 .AsNoTracking()
                 .Where(i =>
+                    i.CustomerId == customerId &&
                     i.Category == categoryName)
                 .OrderByDescending(i => i.IncomeDate)
                 .ThenByDescending(i => i.IncomeId)
@@ -120,33 +120,17 @@ namespace EPIC.Api.Controllers
             return Ok(income);
         }
 
-
         // =========================================================
         // FINANCIAL DASHBOARD
-        //
-        // GET /api/Income/dashboard
-        //
-        // CALCULATES:
-        //
-        // TOTAL INCOME
-        // TOTAL EXPENSES
-        // NET CHURCH FUNDS
-        //
-        // NET CHURCH FUNDS =
-        // TOTAL INCOME - TOTAL EXPENSES
         // =========================================================
 
         [HttpGet("dashboard")]
         public async Task<IActionResult> GetIncomeDashboard()
         {
-            // =====================================================
-            // DATE SETTINGS
-            // =====================================================
+            var customerId = GetCurrentCustomerId() ?? 1;
 
             var today = DateTime.Today;
-
-            var tomorrow =
-                today.AddDays(1);
+            var tomorrow = today.AddDays(1);
 
             var firstDayOfMonth =
                 new DateTime(
@@ -157,288 +141,187 @@ namespace EPIC.Api.Controllers
             var firstDayOfNextMonth =
                 firstDayOfMonth.AddMonths(1);
 
-
-            // =====================================================
             // TOTAL INCOME
-            // =====================================================
-
             var totalIncome =
                 await _context.Incomes
                     .AsNoTracking()
+                    .Where(i => i.CustomerId == customerId)
                     .SumAsync(i => (decimal?)i.Amount)
                 ?? 0m;
 
-
-            // =====================================================
             // TODAY'S INCOME
-            // =====================================================
-
             var todayIncome =
                 await _context.Incomes
                     .AsNoTracking()
                     .Where(i =>
+                        i.CustomerId == customerId &&
                         i.IncomeDate >= today &&
                         i.IncomeDate < tomorrow)
                     .SumAsync(i => (decimal?)i.Amount)
                 ?? 0m;
 
-
-            // =====================================================
             // MONTHLY INCOME
-            // =====================================================
-
             var monthlyIncome =
                 await _context.Incomes
                     .AsNoTracking()
                     .Where(i =>
+                        i.CustomerId == customerId &&
                         i.IncomeDate >= firstDayOfMonth &&
                         i.IncomeDate < firstDayOfNextMonth)
                     .SumAsync(i => (decimal?)i.Amount)
                 ?? 0m;
 
-
-            // =====================================================
-            // INCOME RECORD COUNTS
-            // =====================================================
-
+            // RECORD COUNTS
             var totalIncomeRecords =
                 await _context.Incomes
                     .AsNoTracking()
+                    .Where(i => i.CustomerId == customerId)
                     .CountAsync();
 
             var todayIncomeRecords =
                 await _context.Incomes
                     .AsNoTracking()
-                    .CountAsync(i =>
+                    .Where(i =>
+                        i.CustomerId == customerId &&
                         i.IncomeDate >= today &&
-                        i.IncomeDate < tomorrow);
+                        i.IncomeDate < tomorrow)
+                    .CountAsync();
 
             var monthlyIncomeRecords =
                 await _context.Incomes
                     .AsNoTracking()
-                    .CountAsync(i =>
+                    .Where(i =>
+                        i.CustomerId == customerId &&
                         i.IncomeDate >= firstDayOfMonth &&
-                        i.IncomeDate < firstDayOfNextMonth);
+                        i.IncomeDate < firstDayOfNextMonth)
+                    .CountAsync();
 
-
-            // =====================================================
             // TOTAL EXPENSES
-            //
-            // THIS READS DIRECTLY FROM EXPENSES TABLE
-            // =====================================================
-
             var totalExpenses =
                 await _context.Expenses
                     .AsNoTracking()
+                    .Where(e => e.CustomerId == customerId)
                     .SumAsync(e => (decimal?)e.Amount)
                 ?? 0m;
 
-
-            // =====================================================
             // TODAY'S EXPENSES
-            // =====================================================
-
             var todayExpenses =
                 await _context.Expenses
                     .AsNoTracking()
                     .Where(e =>
+                        e.CustomerId == customerId &&
                         e.ExpenseDate >= today &&
                         e.ExpenseDate < tomorrow)
                     .SumAsync(e => (decimal?)e.Amount)
                 ?? 0m;
 
-
-            // =====================================================
             // MONTHLY EXPENSES
-            // =====================================================
-
             var monthlyExpenses =
                 await _context.Expenses
                     .AsNoTracking()
                     .Where(e =>
+                        e.CustomerId == customerId &&
                         e.ExpenseDate >= firstDayOfMonth &&
                         e.ExpenseDate < firstDayOfNextMonth)
                     .SumAsync(e => (decimal?)e.Amount)
                 ?? 0m;
 
-
-            // =====================================================
             // EXPENSE RECORD COUNTS
-            // =====================================================
-
             var totalExpenseRecords =
                 await _context.Expenses
                     .AsNoTracking()
+                    .Where(e => e.CustomerId == customerId)
                     .CountAsync();
 
             var todayExpenseRecords =
                 await _context.Expenses
                     .AsNoTracking()
-                    .CountAsync(e =>
+                    .Where(e =>
+                        e.CustomerId == customerId &&
                         e.ExpenseDate >= today &&
-                        e.ExpenseDate < tomorrow);
+                        e.ExpenseDate < tomorrow)
+                    .CountAsync();
 
             var monthlyExpenseRecords =
                 await _context.Expenses
                     .AsNoTracking()
-                    .CountAsync(e =>
+                    .Where(e =>
+                        e.CustomerId == customerId &&
                         e.ExpenseDate >= firstDayOfMonth &&
-                        e.ExpenseDate < firstDayOfNextMonth);
-
-
-            // =====================================================
-            // NET CHURCH FUNDS
-            //
-            // INCOME - EXPENSES
-            // =====================================================
+                        e.ExpenseDate < firstDayOfNextMonth)
+                    .CountAsync();
 
             var netChurchFunds =
                 totalIncome - totalExpenses;
 
-
-            // =====================================================
-            // TODAY NET FUNDS
-            // =====================================================
-
             var todayNetFunds =
                 todayIncome - todayExpenses;
-
-
-            // =====================================================
-            // MONTHLY NET FUNDS
-            // =====================================================
 
             var monthlyNetFunds =
                 monthlyIncome - monthlyExpenses;
 
-
-            // =====================================================
-            // INCOME CATEGORY BREAKDOWN
-            // =====================================================
-
             var incomeCategoryBreakdown =
                 await _context.Incomes
                     .AsNoTracking()
+                    .Where(i => i.CustomerId == customerId)
                     .GroupBy(i => i.Category)
                     .Select(g => new
                     {
                         category = g.Key,
-
-                        total =
-                            g.Sum(i => i.Amount),
-
-                        records =
-                            g.Count()
+                        total = g.Sum(i => i.Amount),
+                        records = g.Count()
                     })
                     .OrderByDescending(x => x.total)
                     .ToListAsync();
-
-
-            // =====================================================
-            // EXPENSE CATEGORY BREAKDOWN
-            // =====================================================
 
             var expenseCategoryBreakdown =
                 await _context.Expenses
                     .AsNoTracking()
+                    .Where(e => e.CustomerId == customerId)
                     .GroupBy(e => e.Category)
                     .Select(g => new
                     {
                         category = g.Key,
-
-                        total =
-                            g.Sum(e => e.Amount),
-
-                        records =
-                            g.Count()
+                        total = g.Sum(e => e.Amount),
+                        records = g.Count()
                     })
                     .OrderByDescending(x => x.total)
                     .ToListAsync();
 
-
-            // =====================================================
-            // COMPLETE FINANCIAL DASHBOARD
-            // =====================================================
-
             return Ok(new
             {
-                // =================================================
-                // INCOME
-                // =================================================
-
                 totalIncome,
-
                 todayIncome,
-
                 monthlyIncome,
-
-                totalRecords =
-                    totalIncomeRecords,
-
-                todayRecords =
-                    todayIncomeRecords,
-
-                monthlyRecords =
-                    monthlyIncomeRecords,
-
-
-                // =================================================
-                // EXPENSES
-                // =================================================
+                totalRecords = totalIncomeRecords,
+                todayRecords = todayIncomeRecords,
+                monthlyRecords = monthlyIncomeRecords,
 
                 totalExpenses,
-
                 todayExpenses,
-
                 monthlyExpenses,
-
                 totalExpenseRecords,
-
                 todayExpenseRecords,
-
                 monthlyExpenseRecords,
 
-
-                // =================================================
-                // NET CHURCH FUNDS
-                // =================================================
-
                 netChurchFunds,
-
                 todayNetFunds,
-
                 monthlyNetFunds,
 
-
-                // =================================================
-                // BREAKDOWNS
-                // =================================================
-
                 incomeCategoryBreakdown,
-
                 expenseCategoryBreakdown,
-
-
-                // =================================================
-                // FINANCIAL POSITION
-                // =================================================
 
                 financialPosition = new
                 {
                     totalIncome,
-
                     totalExpenses,
-
                     netChurchFunds
                 }
             });
         }
 
-
         // =========================================================
         // RECORD INCOME
-        //
-        // POST /api/Income
         // =========================================================
 
         [HttpPost]
@@ -449,176 +332,79 @@ namespace EPIC.Api.Controllers
             {
                 return BadRequest(new
                 {
-                    message =
-                        "INCOME INFORMATION IS REQUIRED."
+                    message = "INCOME INFORMATION IS REQUIRED."
                 });
             }
 
-
-            // =====================================================
-            // CATEGORY
-            // =====================================================
-
-            if (string.IsNullOrWhiteSpace(
-                income.Category))
+            if (string.IsNullOrWhiteSpace(income.Category))
             {
                 return BadRequest(new
                 {
-                    message =
-                        "CATEGORY IS REQUIRED."
+                    message = "CATEGORY IS REQUIRED."
                 });
             }
 
-
-            // =====================================================
-            // DESCRIPTION
-            // =====================================================
-
-            if (string.IsNullOrWhiteSpace(
-                income.Description))
+            if (string.IsNullOrWhiteSpace(income.Description))
             {
                 return BadRequest(new
                 {
-                    message =
-                        "DESCRIPTION IS REQUIRED."
+                    message = "DESCRIPTION IS REQUIRED."
                 });
             }
-
-
-            // =====================================================
-            // AMOUNT
-            // =====================================================
 
             if (income.Amount <= 0)
             {
                 return BadRequest(new
                 {
-                    message =
-                        "AMOUNT MUST BE GREATER THAN ZERO."
+                    message = "AMOUNT MUST BE GREATER THAN ZERO."
                 });
             }
 
+            var customerId = GetCurrentCustomerId() ?? (income.CustomerId > 0 ? income.CustomerId : 1);
+            income.CustomerId = customerId;
 
-            // =====================================================
-            // CLEAN DATA
-            // =====================================================
-
-            income.Category =
-                income.Category
-                    .Trim()
-                    .ToUpper();
-
-            income.Description =
-                income.Description.Trim();
-
-
-            // =====================================================
-            // DATE
-            // =====================================================
+            income.Category = income.Category.Trim().ToUpper();
+            income.Description = income.Description.Trim();
 
             if (income.IncomeDate == default)
             {
-                income.IncomeDate =
-                    DateTime.Today;
+                income.IncomeDate = DateTime.Today;
             }
 
-
-            // =====================================================
-            // PAYMENT METHOD
-            // =====================================================
-
-            income.PaymentMethod =
-                income.PaymentMethod?
-                    .Trim()
-                    .ToUpper()
-                ?? "";
-
-
-            // =====================================================
-            // REFERENCE NUMBER
-            // =====================================================
-
-            income.ReferenceNumber =
-                income.ReferenceNumber?
-                    .Trim()
-                ?? "";
-
-
-            // =====================================================
-            // RECORDED BY
-            // =====================================================
-
-            income.RecordedBy =
-                User.Identity?.Name
+            income.PaymentMethod = income.PaymentMethod?.Trim().ToUpper() ?? "";
+            income.ReferenceNumber = income.ReferenceNumber?.Trim() ?? "";
+            income.RecordedBy = User.Identity?.Name
                 ?? User.FindFirst("name")?.Value
                 ?? User.FindFirst("email")?.Value
                 ?? "SYSTEM";
-
-
-            income.RecordedDate =
-                DateTime.Now;
-
-
-            // =====================================================
-            // SAVE
-            // =====================================================
+            income.RecordedDate = DateTime.Now;
 
             _context.Incomes.Add(income);
-
             await _context.SaveChangesAsync();
-
-
-            // =====================================================
-            // RESPONSE
-            // =====================================================
 
             return CreatedAtAction(
                 nameof(GetIncomeById),
-
                 new
                 {
                     id = income.IncomeId
                 },
-
                 new
                 {
-                    message =
-                        "INCOME RECORDED SUCCESSFULLY.",
-
-                    incomeId =
-                        income.IncomeId,
-
-                    category =
-                        income.Category,
-
-                    description =
-                        income.Description,
-
-                    amount =
-                        income.Amount,
-
-                    incomeDate =
-                        income.IncomeDate,
-
-                    paymentMethod =
-                        income.PaymentMethod,
-
-                    referenceNumber =
-                        income.ReferenceNumber,
-
-                    recordedBy =
-                        income.RecordedBy,
-
-                    recordedDate =
-                        income.RecordedDate
+                    message = "INCOME RECORDED SUCCESSFULLY.",
+                    incomeId = income.IncomeId,
+                    category = income.Category,
+                    description = income.Description,
+                    amount = income.Amount,
+                    incomeDate = income.IncomeDate,
+                    paymentMethod = income.PaymentMethod,
+                    referenceNumber = income.ReferenceNumber,
+                    recordedBy = income.RecordedBy,
+                    recordedDate = income.RecordedDate
                 });
         }
 
-
         // =========================================================
         // UPDATE INCOME
-        //
-        // PUT /api/Income/{id}
         // =========================================================
 
         [HttpPut("{id:int}")]
@@ -626,305 +412,162 @@ namespace EPIC.Api.Controllers
             int id,
             [FromBody] Income updatedIncome)
         {
+            var customerId = GetCurrentCustomerId() ?? 1;
+
             var income =
                 await _context.Incomes
                     .FirstOrDefaultAsync(
-                        i => i.IncomeId == id);
-
-
-            // =====================================================
-            // CHECK RECORD
-            // =====================================================
+                        i => i.IncomeId == id && i.CustomerId == customerId);
 
             if (income == null)
             {
                 return NotFound(new
                 {
-                    message =
-                        "INCOME RECORD NOT FOUND."
+                    message = "INCOME RECORD NOT FOUND."
                 });
             }
-
-
-            // =====================================================
-            // CHECK DATA
-            // =====================================================
 
             if (updatedIncome == null)
             {
                 return BadRequest(new
                 {
-                    message =
-                        "INCOME INFORMATION IS REQUIRED."
+                    message = "INCOME INFORMATION IS REQUIRED."
                 });
             }
 
-
-            // =====================================================
-            // CATEGORY
-            // =====================================================
-
-            if (string.IsNullOrWhiteSpace(
-                updatedIncome.Category))
+            if (string.IsNullOrWhiteSpace(updatedIncome.Category))
             {
                 return BadRequest(new
                 {
-                    message =
-                        "CATEGORY IS REQUIRED."
+                    message = "CATEGORY IS REQUIRED."
                 });
             }
 
-
-            // =====================================================
-            // DESCRIPTION
-            // =====================================================
-
-            if (string.IsNullOrWhiteSpace(
-                updatedIncome.Description))
+            if (string.IsNullOrWhiteSpace(updatedIncome.Description))
             {
                 return BadRequest(new
                 {
-                    message =
-                        "DESCRIPTION IS REQUIRED."
+                    message = "DESCRIPTION IS REQUIRED."
                 });
             }
-
-
-            // =====================================================
-            // AMOUNT
-            // =====================================================
 
             if (updatedIncome.Amount <= 0)
             {
                 return BadRequest(new
                 {
-                    message =
-                        "AMOUNT MUST BE GREATER THAN ZERO."
+                    message = "AMOUNT MUST BE GREATER THAN ZERO."
                 });
             }
 
+            income.Category = updatedIncome.Category.Trim().ToUpper();
+            income.Description = updatedIncome.Description.Trim();
+            income.Amount = updatedIncome.Amount;
 
-            // =====================================================
-            // UPDATE CATEGORY
-            // =====================================================
+            if (updatedIncome.IncomeDate != default)
+            {
+                income.IncomeDate = updatedIncome.IncomeDate;
+            }
 
-            income.Category =
-                updatedIncome.Category
-                    .Trim()
-                    .ToUpper();
-
-
-            // =====================================================
-            // UPDATE DESCRIPTION
-            // =====================================================
-
-            income.Description =
-                updatedIncome.Description
-                    .Trim();
-
-
-            // =====================================================
-            // UPDATE AMOUNT
-            // =====================================================
-
-            income.Amount =
-                updatedIncome.Amount;
-
-
-            // =====================================================
-            // UPDATE DATE
-            // =====================================================
-
-            income.IncomeDate =
-                updatedIncome.IncomeDate == default
-                    ? income.IncomeDate
-                    : updatedIncome.IncomeDate;
-
-
-            // =====================================================
-            // UPDATE PAYMENT METHOD
-            // =====================================================
-
-            income.PaymentMethod =
-                updatedIncome.PaymentMethod?
-                    .Trim()
-                    .ToUpper()
-                ?? "";
-
-
-            // =====================================================
-            // UPDATE REFERENCE
-            // =====================================================
-
-            income.ReferenceNumber =
-                updatedIncome.ReferenceNumber?
-                    .Trim()
-                ?? "";
-
-
-            // =====================================================
-            // UPDATED BY
-            // =====================================================
-
-            income.RecordedBy =
-                User.Identity?.Name
+            income.PaymentMethod = updatedIncome.PaymentMethod?.Trim().ToUpper() ?? "";
+            income.ReferenceNumber = updatedIncome.ReferenceNumber?.Trim() ?? "";
+            income.RecordedBy = User.Identity?.Name
                 ?? User.FindFirst("name")?.Value
                 ?? User.FindFirst("email")?.Value
                 ?? income.RecordedBy;
-
-
-            income.RecordedDate =
-                DateTime.Now;
-
-
-            // =====================================================
-            // SAVE UPDATE
-            // =====================================================
+            income.RecordedDate = DateTime.Now;
 
             await _context.SaveChangesAsync();
 
-
-            // =====================================================
-            // RESPONSE
-            // =====================================================
-
             return Ok(new
             {
-                message =
-                    "INCOME UPDATED SUCCESSFULLY.",
-
-                incomeId =
-                    income.IncomeId,
-
-                category =
-                    income.Category,
-
-                description =
-                    income.Description,
-
-                amount =
-                    income.Amount,
-
-                incomeDate =
-                    income.IncomeDate,
-
-                paymentMethod =
-                    income.PaymentMethod,
-
-                referenceNumber =
-                    income.ReferenceNumber
+                message = "INCOME UPDATED SUCCESSFULLY.",
+                incomeId = income.IncomeId,
+                category = income.Category,
+                description = income.Description,
+                amount = income.Amount,
+                incomeDate = income.IncomeDate,
+                paymentMethod = income.PaymentMethod,
+                referenceNumber = income.ReferenceNumber
             });
         }
 
-
         // =========================================================
         // DELETE INCOME
-        //
-        // DELETE /api/Income/{id}
         // =========================================================
 
         [HttpDelete("{id:int}")]
-        public async Task<IActionResult> DeleteIncome(
-            int id)
+        public async Task<IActionResult> DeleteIncome(int id)
         {
+            var customerId = GetCurrentCustomerId() ?? 1;
+
             var income =
                 await _context.Incomes
                     .FirstOrDefaultAsync(
-                        i => i.IncomeId == id);
-
-
-            // =====================================================
-            // CHECK RECORD
-            // =====================================================
+                        i => i.IncomeId == id && i.CustomerId == customerId);
 
             if (income == null)
             {
                 return NotFound(new
                 {
-                    message =
-                        "INCOME RECORD NOT FOUND."
+                    message = "INCOME RECORD NOT FOUND."
                 });
             }
 
-
-            // =====================================================
-            // DELETE
-            // =====================================================
-
             _context.Incomes.Remove(income);
-
             await _context.SaveChangesAsync();
-
-
-            // =====================================================
-            // RESPONSE
-            // =====================================================
 
             return Ok(new
             {
-                message =
-                    "INCOME RECORD DELETED SUCCESSFULLY.",
-
-                incomeId =
-                    id
+                message = "INCOME RECORD DELETED SUCCESSFULLY.",
+                incomeId = id
             });
         }
 
-
         // =========================================================
         // INCOME SUMMARY
-        //
-        // GET /api/Income/summary
         // =========================================================
 
         [HttpGet("summary")]
         public async Task<IActionResult> GetIncomeSummary()
         {
+            var customerId = GetCurrentCustomerId() ?? 1;
+
             var totalIncome =
                 await _context.Incomes
                     .AsNoTracking()
+                    .Where(i => i.CustomerId == customerId)
                     .SumAsync(i => (decimal?)i.Amount)
                 ?? 0m;
-
 
             var totalRecords =
                 await _context.Incomes
                     .AsNoTracking()
+                    .Where(i => i.CustomerId == customerId)
                     .CountAsync();
-
 
             var byCategory =
                 await _context.Incomes
                     .AsNoTracking()
+                    .Where(i => i.CustomerId == customerId)
                     .GroupBy(i => i.Category)
                     .Select(g => new
                     {
-                        category =
-                            g.Key,
-
-                        total =
-                            g.Sum(i => i.Amount)
+                        category = g.Key,
+                        total = g.Sum(i => i.Amount)
                     })
-                    .OrderByDescending(
-                        x => x.total)
+                    .OrderByDescending(x => x.total)
                     .ToListAsync();
-
 
             return Ok(new
             {
                 totalRecords,
-
                 totalIncome,
-
                 byCategory
             });
         }
 
-
         // =========================================================
         // INCOME SUMMARY BY DATE RANGE
-        //
-        // GET /api/Income/summary/range
         // =========================================================
 
         [HttpGet("summary/range")]
@@ -933,91 +576,65 @@ namespace EPIC.Api.Controllers
                 [FromQuery] DateTime startDate,
                 [FromQuery] DateTime endDate)
         {
-            // =====================================================
-            // VALIDATE DATE
-            // =====================================================
-
             if (endDate.Date < startDate.Date)
             {
                 return BadRequest(new
                 {
-                    message =
-                        "END DATE CANNOT BE EARLIER THAN START DATE."
+                    message = "END DATE CANNOT BE EARLIER THAN START DATE."
                 });
             }
 
-
-            // =====================================================
-            // DATE RANGE
-            // =====================================================
-
-            var start =
-                startDate.Date;
-
-            var end =
-                endDate.Date.AddDays(1);
-
-
-            // =====================================================
-            // GET RECORDS
-            // =====================================================
+            var start = startDate.Date;
+            var end = endDate.Date.AddDays(1);
+            var customerId = GetCurrentCustomerId() ?? 1;
 
             var records =
                 await _context.Incomes
                     .AsNoTracking()
                     .Where(i =>
+                        i.CustomerId == customerId &&
                         i.IncomeDate >= start &&
                         i.IncomeDate < end)
                     .ToListAsync();
 
-
-            // =====================================================
-            // TOTAL
-            // =====================================================
-
             var totalIncome =
                 records.Sum(i => i.Amount);
-
-
-            // =====================================================
-            // CATEGORY BREAKDOWN
-            // =====================================================
 
             var byCategory =
                 records
                     .GroupBy(i => i.Category)
                     .Select(g => new
                     {
-                        category =
-                            g.Key,
-
-                        total =
-                            g.Sum(i => i.Amount)
+                        category = g.Key,
+                        total = g.Sum(i => i.Amount)
                     })
-                    .OrderByDescending(
-                        x => x.total)
+                    .OrderByDescending(x => x.total)
                     .ToList();
-
-
-            // =====================================================
-            // RESPONSE
-            // =====================================================
 
             return Ok(new
             {
-                startDate =
-                    start,
-
-                endDate =
-                    endDate.Date,
-
-                totalRecords =
-                    records.Count,
-
+                startDate = start,
+                endDate = endDate.Date,
+                totalRecords = records.Count,
                 totalIncome,
-
                 byCategory
             });
+        }
+
+        // =========================================================
+        // GET CURRENT CUSTOMER ID
+        // =========================================================
+
+        private int? GetCurrentCustomerId()
+        {
+            var claim =
+                User.FindFirst("CustomerId")?.Value
+                ?? User.FindFirst("customerId")?.Value
+                ?? User.FindFirst("customer_id")?.Value;
+
+            return int.TryParse(claim, out var customerId) && customerId > 0
+                ? customerId
+                : null;
         }
     }
 }

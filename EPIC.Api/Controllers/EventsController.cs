@@ -1,4 +1,4 @@
-﻿
+
 using EPIC.Api.Data;
 using EPIC.Api.Models;
 
@@ -117,30 +117,13 @@ namespace EPIC.Api.Controllers
                         .AsNoTracking()
                         .AsQueryable();
 
-                // -------------------------------------------------
-                // CLIENT = OWN CUSTOMER ONLY
-                // ADMIN = ALL EVENTS
-                // -------------------------------------------------
+                var customerId =
+                    GetCustomerId() ?? 1;
 
-                if (IsClientAccount())
-                {
-                    var customerId =
-                        GetCustomerId();
-
-                    if (!customerId.HasValue)
-                    {
-                        return Unauthorized(new
-                        {
-                            message =
-                                "CUSTOMER ID NOT FOUND IN CLIENT TOKEN."
-                        });
-                    }
-
-                    query =
-                        query.Where(e =>
-                            e.CustomerId ==
-                            customerId.Value);
-                }
+                query =
+                    query.Where(e =>
+                        e.CustomerId ==
+                        customerId);
 
                 var events =
                     await query
@@ -178,30 +161,13 @@ namespace EPIC.Api.Controllers
                         .AsNoTracking()
                         .AsQueryable();
 
-                // -------------------------------------------------
-                // CLIENT = OWN CUSTOMER ONLY
-                // ADMIN = ALL EVENTS
-                // -------------------------------------------------
+                var customerId =
+                    GetCustomerId() ?? 1;
 
-                if (IsClientAccount())
-                {
-                    var customerId =
-                        GetCustomerId();
-
-                    if (!customerId.HasValue)
-                    {
-                        return Unauthorized(new
-                        {
-                            message =
-                                "CUSTOMER ID NOT FOUND IN CLIENT TOKEN."
-                        });
-                    }
-
-                    query =
-                        query.Where(e =>
-                            e.CustomerId ==
-                            customerId.Value);
-                }
+                query =
+                    query.Where(e =>
+                        e.CustomerId ==
+                        customerId);
 
                 var today =
                     DateTime.Today;
@@ -246,30 +212,13 @@ namespace EPIC.Api.Controllers
                         .AsNoTracking()
                         .AsQueryable();
 
-                // -------------------------------------------------
-                // CLIENT = OWN CUSTOMER ONLY
-                // ADMIN = ALL EVENTS
-                // -------------------------------------------------
+                var customerId =
+                    GetCustomerId() ?? 1;
 
-                if (IsClientAccount())
-                {
-                    var customerId =
-                        GetCustomerId();
-
-                    if (!customerId.HasValue)
-                    {
-                        return Unauthorized(new
-                        {
-                            message =
-                                "CUSTOMER ID NOT FOUND IN CLIENT TOKEN."
-                        });
-                    }
-
-                    query =
-                        query.Where(e =>
-                            e.CustomerId ==
-                            customerId.Value);
-                }
+                query =
+                    query.Where(e =>
+                        e.CustomerId ==
+                        customerId);
 
                 var churchEvent =
                     await query
@@ -329,37 +278,11 @@ namespace EPIC.Api.Controllers
                 // CUSTOMER ID
                 // =================================================
 
-                if (IsClientAccount())
-                {
-                    var customerId =
-                        GetCustomerId();
+                var customerId =
+                    GetCustomerId() ?? (churchEvent.CustomerId > 0 ? churchEvent.CustomerId : 1);
 
-                    if (!customerId.HasValue)
-                    {
-                        return Unauthorized(new
-                        {
-                            message =
-                                "CUSTOMER ID NOT FOUND IN CLIENT TOKEN."
-                        });
-                    }
-
-                    // NEVER TRUST FRONTEND CUSTOMER ID
-                    churchEvent.CustomerId =
-                        customerId.Value;
-                }
-                else
-                {
-                    // ADMIN
-                    //
-                    // Preserve supplied CustomerId.
-                    // Default to Customer 1 for the current
-                    // single-church installation.
-
-                    if (churchEvent.CustomerId <= 0)
-                    {
-                        churchEvent.CustomerId = 1;
-                    }
-                }
+                churchEvent.CustomerId =
+                    customerId;
 
                 // =================================================
                 // VERIFY CUSTOMER
@@ -502,29 +425,13 @@ namespace EPIC.Api.Controllers
                     _context.Events
                         .AsQueryable();
 
-                // =================================================
-                // CLIENT TENANT FILTER
-                // =================================================
+                var customerId =
+                    GetCustomerId() ?? 1;
 
-                if (IsClientAccount())
-                {
-                    var customerId =
-                        GetCustomerId();
-
-                    if (!customerId.HasValue)
-                    {
-                        return Unauthorized(new
-                        {
-                            message =
-                                "CUSTOMER ID NOT FOUND IN CLIENT TOKEN."
-                        });
-                    }
-
-                    query =
-                        query.Where(e =>
-                            e.CustomerId ==
-                            customerId.Value);
-                }
+                query =
+                    query.Where(e =>
+                        e.CustomerId ==
+                        customerId);
 
                 // =================================================
                 // LOAD EXISTING EVENT
@@ -680,29 +587,13 @@ namespace EPIC.Api.Controllers
                     _context.Events
                         .AsQueryable();
 
-                // =================================================
-                // CLIENT TENANT FILTER
-                // =================================================
+                var customerId =
+                    GetCustomerId() ?? 1;
 
-                if (IsClientAccount())
-                {
-                    var customerId =
-                        GetCustomerId();
-
-                    if (!customerId.HasValue)
-                    {
-                        return Unauthorized(new
-                        {
-                            message =
-                                "CUSTOMER ID NOT FOUND IN CLIENT TOKEN."
-                        });
-                    }
-
-                    query =
-                        query.Where(e =>
-                            e.CustomerId ==
-                            customerId.Value);
-                }
+                query =
+                    query.Where(e =>
+                        e.CustomerId ==
+                        customerId);
 
                 // =================================================
                 // LOAD EVENT

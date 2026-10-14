@@ -36,58 +36,27 @@ namespace EPIC.Api.Controllers
         [Permission("Reports", "view")]
         public async Task<IActionResult> GetDashboard()
         {
-            var customerId = GetCurrentCustomerId();
+            var customerId = GetCurrentCustomerId() ?? 1;
 
             IQueryable<Member> membersQuery =
-                _context.Members.AsNoTracking();
+                _context.Members.AsNoTracking()
+                    .Where(m => m.CustomerId == customerId);
 
             IQueryable<ChurchService> servicesQuery =
-                _context.ChurchServices.AsNoTracking();
+                _context.ChurchServices.AsNoTracking()
+                    .Where(s => s.CustomerId == customerId);
 
             IQueryable<Giving> givingQuery =
-                _context.Givings.AsNoTracking();
+                _context.Givings.AsNoTracking()
+                    .Where(g => g.Member != null && g.Member.CustomerId == customerId);
 
             IQueryable<Attendance> attendanceQuery =
-                _context.Attendances.AsNoTracking();
+                _context.Attendances.AsNoTracking()
+                    .Where(a => a.Member != null && a.Member.CustomerId == customerId);
 
             IQueryable<MinistryMember> ministryMembersQuery =
-                _context.MinistryMembers.AsNoTracking();
-
-            if (!IsCurrentUserAdmin())
-            {
-                if (!customerId.HasValue)
-                {
-                    return CustomerIdUnauthorized();
-                }
-
-                membersQuery =
-                    membersQuery.Where(
-                        m => m.CustomerId == customerId.Value);
-
-                servicesQuery =
-                    servicesQuery.Where(
-                        s => s.CustomerId == customerId.Value);
-
-                // Giving does not have CustomerId.
-                // Scope it through the member relationship.
-                givingQuery =
-                    givingQuery.Where(g =>
-                        g.Member != null &&
-                        g.Member.CustomerId ==
-                            customerId.Value);
-
-                attendanceQuery =
-                    attendanceQuery.Where(a =>
-                        a.Member != null &&
-                        a.Member.CustomerId ==
-                            customerId.Value);
-
-                ministryMembersQuery =
-                    ministryMembersQuery.Where(mm =>
-                        mm.Member != null &&
-                        mm.Member.CustomerId ==
-                            customerId.Value);
-            }
+                _context.MinistryMembers.AsNoTracking()
+                    .Where(mm => mm.Member != null && mm.Member.CustomerId == customerId);
 
             var totalMembers =
                 await membersQuery.CountAsync();
@@ -269,28 +238,16 @@ namespace EPIC.Api.Controllers
         public async Task<IActionResult> GetAttendanceReport()
         {
             var customerId =
-                GetCurrentCustomerId();
+                GetCurrentCustomerId() ?? 1;
 
             var query =
                 _context.Attendances
                     .AsNoTracking()
                     .Include(a => a.Member)
                     .Include(a => a.ChurchService)
-                    .AsQueryable();
-
-            if (!IsCurrentUserAdmin())
-            {
-                if (!customerId.HasValue)
-                {
-                    return CustomerIdUnauthorized();
-                }
-
-                query =
-                    query.Where(a =>
+                    .Where(a =>
                         a.Member != null &&
-                        a.Member.CustomerId ==
-                            customerId.Value);
-            }
+                        a.Member.CustomerId == customerId);
 
             var records =
                 await query
@@ -426,28 +383,16 @@ namespace EPIC.Api.Controllers
         public async Task<IActionResult> GetGivingReport()
         {
             var customerId =
-                GetCurrentCustomerId();
+                GetCurrentCustomerId() ?? 1;
 
             var query =
                 _context.Givings
                     .AsNoTracking()
                     .Include(g => g.Member)
                     .Include(g => g.ChurchService)
-                    .AsQueryable();
-
-            if (!IsCurrentUserAdmin())
-            {
-                if (!customerId.HasValue)
-                {
-                    return CustomerIdUnauthorized();
-                }
-
-                query =
-                    query.Where(g =>
+                    .Where(g =>
                         g.Member != null &&
-                        g.Member.CustomerId ==
-                            customerId.Value);
-            }
+                        g.Member.CustomerId == customerId);
 
             var records =
                 await query
@@ -634,29 +579,14 @@ namespace EPIC.Api.Controllers
             GetMinistryReport()
         {
             var customerId =
-                GetCurrentCustomerId();
+                GetCurrentCustomerId() ?? 1;
 
             var query =
                 _context.Ministries
                     .AsNoTracking()
                     .Include(m => m.MinistryMembers)
                     .ThenInclude(mm => mm.Member)
-                    .AsQueryable();
-
-            if (!IsCurrentUserAdmin())
-            {
-                if (!customerId.HasValue)
-                {
-                    return CustomerIdUnauthorized();
-                }
-
-                query =
-                    query.Where(m =>
-                        m.MinistryMembers.Any(mm =>
-                            mm.Member != null &&
-                            mm.Member.CustomerId ==
-                                customerId.Value));
-            }
+                    .Where(m => m.CustomerId == customerId);
 
             var ministries =
                 await query
@@ -682,12 +612,7 @@ namespace EPIC.Api.Controllers
                             m.MinistryMembers.Count(
                                 mm =>
                                     mm.Member != null &&
-                                    (
-                                        IsCurrentUserAdminLocal()
-                                        ||
-                                        mm.Member.CustomerId ==
-                                            customerId
-                                    ))
+                                    mm.Member.CustomerId == customerId)
                     })
                     .ToListAsync();
 
@@ -707,7 +632,7 @@ namespace EPIC.Api.Controllers
         [Permission("Reports", "view")]
         public async Task<IActionResult> GetLearningReport()
         {
-            var customerId = GetCurrentCustomerId();
+            var customerId = GetCurrentCustomerId() ?? 1;
 
             // 1. Fetch published courses
             var courses = await _context.Courses
@@ -725,15 +650,10 @@ namespace EPIC.Api.Controllers
                 .Include(e => e.User)
                     .ThenInclude(u => u!.Member)
                 .Include(e => e.LessonProgresses)
-                .AsQueryable();
-
-            if (!IsCurrentUserAdmin() && customerId.HasValue)
-            {
-                enrollmentsQuery = enrollmentsQuery.Where(e =>
+                .Where(e =>
                     e.User != null &&
-                    (e.User.CustomerId == customerId.Value ||
-                     (e.User.Member != null && e.User.Member.CustomerId == customerId.Value)));
-            }
+                    (e.User.CustomerId == customerId ||
+                     (e.User.Member != null && e.User.Member.CustomerId == customerId)));
 
             var enrollments = await enrollmentsQuery.ToListAsync();
 
@@ -743,13 +663,8 @@ namespace EPIC.Api.Controllers
                 .Include(e => e.Course)
                 .Include(e => e.ClientMember)
                     .ThenInclude(cm => cm.Member)
-                .AsQueryable();
-
-            if (!IsCurrentUserAdmin() && customerId.HasValue)
-            {
-                clientEnrollmentsQuery = clientEnrollmentsQuery.Where(e =>
-                    e.ClientMember != null && e.ClientMember.CustomerId == customerId.Value);
-            }
+                .Where(e =>
+                    e.ClientMember != null && e.ClientMember.CustomerId == customerId);
 
             var clientEnrollments = await clientEnrollmentsQuery.ToListAsync();
             var clientEnrollmentIds = clientEnrollments.Select(e => e.Id).ToList();
@@ -759,12 +674,14 @@ namespace EPIC.Api.Controllers
                 .Where(c => clientEnrollmentIds.Contains(c.ClientCourseEnrollmentId))
                 .ToListAsync();
 
-            // 4. Query public academy intake applications from DemoRequests
-            var demoRequests = await _context.DemoRequests
-                .AsNoTracking()
-                .Where(d => (d.Position != null && d.Position.Contains("Academy Enrollment")) ||
-                            (d.Message != null && d.Message.Contains("ACADEMY ENROLLMENT")))
-                .ToListAsync();
+            // 4. Query public academy intake applications from DemoRequests (only for Customer 1)
+            var demoRequests = customerId == 1
+                ? await _context.DemoRequests
+                    .AsNoTracking()
+                    .Where(d => (d.Position != null && d.Position.Contains("Academy Enrollment")) ||
+                                (d.Message != null && d.Message.Contains("ACADEMY ENROLLMENT")))
+                    .ToListAsync()
+                : new List<DemoRequest>();
 
             var studentRecords = new List<object>();
             var seenStudentCourse = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -934,8 +851,8 @@ namespace EPIC.Api.Controllers
                 });
             }
 
-            // D. Fallback: Only populate demo records if database has ZERO enrollments
-            if (studentRecords.Count == 0)
+            // D. Fallback: Only populate demo records if database has ZERO enrollments AND customerId == 1
+            if (studentRecords.Count == 0 && customerId == 1)
             {
                 var defaults = GetAuthenticSanVicenteEnrollments();
                 foreach (var item in defaults)
@@ -1212,56 +1129,28 @@ namespace EPIC.Api.Controllers
         // TENANT MEMBERS
         // =========================================================
 
-        private IQueryable<Member>?
+        private IQueryable<Member>
             GetTenantMembersQuery()
         {
-            var query =
-                _context.Members.AsQueryable();
-
-            if (IsCurrentUserAdmin())
-            {
-                return query;
-            }
-
             var customerId =
-                GetCurrentCustomerId();
+                GetCurrentCustomerId() ?? 1;
 
-            if (!customerId.HasValue)
-            {
-                return null;
-            }
-
-            return query.Where(
-                m => m.CustomerId ==
-                    customerId.Value);
+            return _context.Members
+                .Where(m => m.CustomerId == customerId);
         }
 
         // =========================================================
         // TENANT CHURCH SERVICES
         // =========================================================
 
-        private IQueryable<ChurchService>?
+        private IQueryable<ChurchService>
             GetTenantChurchServicesQuery()
         {
-            var query =
-                _context.ChurchServices.AsQueryable();
-
-            if (IsCurrentUserAdmin())
-            {
-                return query;
-            }
-
             var customerId =
-                GetCurrentCustomerId();
+                GetCurrentCustomerId() ?? 1;
 
-            if (!customerId.HasValue)
-            {
-                return null;
-            }
-
-            return query.Where(
-                s => s.CustomerId ==
-                    customerId.Value);
+            return _context.ChurchServices
+                .Where(s => s.CustomerId == customerId);
         }
 
         // =========================================================

@@ -1324,33 +1324,8 @@ namespace EPIC.Api.Controllers
         private IQueryable<Member>?
             GetTenantMembersQuery()
         {
-            var query =
-                _context.Members.AsQueryable();
-
-            // =====================================================
-            // ADMIN
-            // =====================================================
-
-            if (IsCurrentUserAdmin())
-            {
-                return query;
-            }
-
-            // =====================================================
-            // CLIENT / MEMBER
-            // =====================================================
-
-            var customerId =
-                GetCurrentCustomerId();
-
-            if (!customerId.HasValue)
-            {
-                return null;
-            }
-
-            return query.Where(
-                m => m.CustomerId ==
-                    customerId.Value);
+            var customerId = GetCurrentCustomerId() ?? 1;
+            return _context.Members.Where(m => m.CustomerId == customerId);
         }
 
         // =========================================================
@@ -1383,17 +1358,14 @@ namespace EPIC.Api.Controllers
             ResolveCustomerIdForWrite(
                 int suppliedCustomerId)
         {
-            // =====================================================
-            // ADMIN
-            // =====================================================
-
-            if (IsCurrentUserAdmin())
+            var currentCustomerId = GetCurrentCustomerId();
+            if (currentCustomerId.HasValue && currentCustomerId.Value > 0)
             {
-                if (suppliedCustomerId <= 0)
-                {
-                    return null;
-                }
+                return currentCustomerId.Value;
+            }
 
+            if (suppliedCustomerId > 0)
+            {
                 var exists =
                     await _context.Customers
                         .AsNoTracking()
@@ -1401,18 +1373,13 @@ namespace EPIC.Api.Controllers
                             c.CustomerId ==
                             suppliedCustomerId);
 
-                return exists
-                    ? suppliedCustomerId
-                    : null;
+                if (exists)
+                {
+                    return suppliedCustomerId;
+                }
             }
 
-            // =====================================================
-            // NON-ADMIN
-            //
-            // NEVER TRUST CUSTOMER ID FROM FRONTEND
-            // =====================================================
-
-            return GetCurrentCustomerId();
+            return 1;
         }
 
         // =========================================================

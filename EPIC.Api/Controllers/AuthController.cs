@@ -1,4 +1,4 @@
-﻿
+
 using BCrypt.Net;
 
 using EPIC.Api.Data;
@@ -536,6 +536,16 @@ namespace EPIC.Api.Controllers
             var token =
                 GenerateJwtToken(user);
 
+            string? churchName = null;
+            if (user.CustomerId.HasValue && user.CustomerId.Value > 0)
+            {
+                churchName = await _context.Customers
+                    .AsNoTracking()
+                    .Where(c => c.CustomerId == user.CustomerId.Value)
+                    .Select(c => c.ChurchName)
+                    .FirstOrDefaultAsync();
+            }
+
             // -----------------------------------------------------
             // LOGIN RESPONSE
             // -----------------------------------------------------
@@ -565,6 +575,9 @@ namespace EPIC.Api.Controllers
 
                 customerId =
                     user.CustomerId,
+
+                churchName =
+                    churchName,
 
                 approvalStatus =
                     approvalStatus,

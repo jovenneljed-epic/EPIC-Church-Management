@@ -45,6 +45,7 @@ interface LoginResponse {
 
     memberId?: number | null;
     customerId?: number | null;
+    churchName?: string | null;
 
     approvalStatus?: string;
 
@@ -73,6 +74,7 @@ interface EpicUserSession {
 
     memberId?: number | null;
     customerId?: number | null;
+    churchName?: string | null;
 
     approvalStatus?: string;
 
@@ -833,6 +835,11 @@ const Login: React.FC<LoginProps> = ({
                 );
             }
 
+            if (data?.churchName) {
+                localStorage.setItem("currentChurchName", data.churchName);
+                localStorage.setItem("churchName", data.churchName);
+            }
+
             // =================================================
             // SAVE APPROVAL STATUS
             // =================================================
@@ -985,6 +992,9 @@ const Login: React.FC<LoginProps> = ({
 
                 customerId:
                     data?.customerId,
+
+                churchName:
+                    data?.churchName,
 
                 approvalStatus:
                     savedApprovalStatus,
