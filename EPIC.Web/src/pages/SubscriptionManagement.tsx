@@ -128,6 +128,7 @@ interface ApiErrorResponse {
 
 type FilterStatus =
     | "ALL"
+    | "PENDING_PAYMENT"
     | "TRIAL"
     | "ACTIVE"
     | "PAST_DUE"
@@ -166,6 +167,7 @@ const PAYMENTS_ENDPOINT =
     `${API_BASE_URL}/Payments`;
 
 const ACTIVE_STATUSES: readonly SubscriptionStatus[] = [
+    "PENDING_PAYMENT",
     "TRIAL",
     "ACTIVE",
     "PAST_DUE"
@@ -201,6 +203,7 @@ const getSubscriptionStatus = (
         normalizeStatus(status);
 
     const validStatuses: SubscriptionStatus[] = [
+        "PENDING_PAYMENT",
         "TRIAL",
         "ACTIVE",
         "PAST_DUE",
@@ -247,6 +250,7 @@ const getStatusLabel = (
         normalizeStatus(status);
 
     const labels: Record<string, string> = {
+        PENDING_PAYMENT: "Pending Payment",
         PAST_DUE: "Past Due",
         CANCELLED: "Cancelled",
         SUSPENDED: "Suspended",
@@ -937,6 +941,89 @@ const SubscriptionManagement: React.FC = () => {
         );
 
     // =====================================================
+    // DELETE
+    // =====================================================
+
+    const deleteSubscription =
+        useCallback(
+            async (
+                subscription: Subscription
+            ) => {
+
+                const churchName =
+                    subscription.churchName ||
+                    "this church";
+
+                const confirmed =
+                    window.confirm(
+                        `Are you sure you want to permanently delete the subscription for "${churchName}"?\n\nThis will permanently remove the subscription and its payment history from the database.`
+                    );
+
+                if (!confirmed) {
+                    return;
+                }
+
+                const subscriptionId =
+                    subscription.subscriptionId;
+
+                setProcessingId(
+                    subscriptionId
+                );
+
+                setError("");
+
+                try {
+
+                    await axios.delete(
+                        `${SUBSCRIPTIONS_ENDPOINT}/${subscriptionId}`,
+                        getAuthConfig()
+                    );
+
+                    await loadData(true);
+
+                    if (
+                        selectedSubscription?.subscriptionId ===
+                        subscriptionId
+                    ) {
+                        closeDetails();
+                    }
+
+                } catch (error) {
+
+                    console.error(
+                        "Delete subscription error:",
+                        error
+                    );
+
+                    const message =
+                        getErrorMessage(
+                            error,
+                            "Unable to delete subscription."
+                        );
+
+                    setError(message);
+
+                    window.alert(
+                        message
+                    );
+
+                } finally {
+
+                    setProcessingId(null);
+
+                }
+
+            },
+            [
+                getAuthConfig,
+                loadData,
+                selectedSubscription,
+                closeDetails,
+                getErrorMessage
+            ]
+        );
+
+    // =====================================================
     // REFRESH
     // =====================================================
 
@@ -1395,6 +1482,10 @@ const SubscriptionManagement: React.FC = () => {
                             All Statuses
                         </option>
 
+                        <option value="PENDING_PAYMENT">
+                            Pending Payment
+                        </option>
+
                         <option value="TRIAL">
                             Trial
                         </option>
@@ -1645,6 +1736,22 @@ const SubscriptionManagement: React.FC = () => {
                                                             </button>
 
                                                         )}
+
+                                                        <button
+                                                            type="button"
+                                                            className="delete-button"
+                                                            onClick={() =>
+                                                                void deleteSubscription(
+                                                                    subscription
+                                                                )
+                                                            }
+                                                            disabled={
+                                                                isProcessing
+                                                            }
+                                                            title="Permanently delete subscription"
+                                                        >
+                                                            Delete
+                                                        </button>
 
                                                     </div>
 

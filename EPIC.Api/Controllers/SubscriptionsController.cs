@@ -782,6 +782,63 @@ namespace EPIC.Api.Controllers
         }
 
         // =========================================================
+        // DELETE
+        // DELETE: api/Subscriptions/{id}
+        // =========================================================
+
+        [HttpDelete("{id:int}")]
+        public async Task<IActionResult> DeleteSubscription(int id)
+        {
+            if (id <= 0)
+            {
+                return BadRequest(new
+                {
+                    message = "Invalid subscription ID."
+                });
+            }
+
+            var subscription = await _context.Subscriptions
+                .FirstOrDefaultAsync(s => s.SubscriptionId == id);
+
+            if (subscription == null)
+            {
+                return NotFound(new
+                {
+                    message = "Subscription not found."
+                });
+            }
+
+            try
+            {
+                // Remove any payments linked to this subscription first
+                var payments = await _context.Payments
+                    .Where(p => p.SubscriptionId == id)
+                    .ToListAsync();
+
+                if (payments.Count > 0)
+                {
+                    _context.Payments.RemoveRange(payments);
+                }
+
+                _context.Subscriptions.Remove(subscription);
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "Subscription and associated payment records deleted successfully."
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    message = "Failed to delete subscription: " + ex.Message
+                });
+            }
+        }
+
+        // =========================================================
         // PAYMENT HISTORY
         // GET: api/Subscriptions/{id}/payments
         // =========================================================
