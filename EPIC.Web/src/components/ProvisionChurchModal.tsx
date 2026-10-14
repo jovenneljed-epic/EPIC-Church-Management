@@ -310,6 +310,30 @@ export const ProvisionChurchModal: React.FC<ProvisionChurchModalProps> = ({
                 </span>
               </div>
 
+              <div
+                style={{
+                  background: "#f0fdf4",
+                  border: "1px solid #bbf7d0",
+                  borderRadius: "10px",
+                  padding: "12px 14px",
+                  marginTop: "14px",
+                  fontSize: "13px",
+                  color: "#166534",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "10px",
+                  lineHeight: "1.4",
+                  textAlign: "left"
+                }}
+              >
+                <Mail size={18} style={{ color: "#16a34a", flexShrink: 0 }} />
+                <span>
+                  <strong>Confirmation Email Sent:</strong> An official welcome email containing the direct{" "}
+                  <strong>First-Time Church Setup Wizard link</strong> and credentials has been dispatched to{" "}
+                  <code>{result.adminEmail}</code>.
+                </span>
+              </div>
+
               <div className="prov-success-actions">
                 <button
                   type="button"

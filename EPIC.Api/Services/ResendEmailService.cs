@@ -957,6 +957,232 @@ namespace EPIC.Api.Services
             await SafeSendAsync(email, subject, html);
         }
 
+        // =====================================================
+        // CHURCH SUBSCRIPTION & TENANT WELCOME (WITH SETUP WIZARD LINK)
+        // =====================================================
+
+        public async Task SendChurchSubscriptionWelcomeAsync(
+            string recipientEmail,
+            string pastorName,
+            string churchName,
+            int customerId,
+            string? temporaryPassword,
+            string planName,
+            string billingCycle,
+            decimal amount,
+            string? customWizardUrl = null)
+        {
+            var appUrl = _configuration["AppUrl"] ?? "https://epic-cms.vercel.app";
+            var wizardUrl = !string.IsNullOrWhiteSpace(customWizardUrl)
+                ? customWizardUrl
+                : $"{appUrl.TrimEnd('/')}/login?email={Uri.EscapeDataString(recipientEmail)}&redirect=setup-wizard";
+
+            var safePastor = System.Net.WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(pastorName) ? "Pastor" : pastorName);
+            var safeChurch = System.Net.WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(churchName) ? "Church Fellowship" : churchName);
+            var safePlan = System.Net.WebUtility.HtmlEncode(string.IsNullOrWhiteSpace(planName) ? "EPIC Church Management System" : planName);
+            var safeEmail = System.Net.WebUtility.HtmlEncode(recipientEmail);
+            var safePassword = !string.IsNullOrWhiteSpace(temporaryPassword) ? System.Net.WebUtility.HtmlEncode(temporaryPassword) : null;
+
+            var passwordHtmlRow = safePassword != null
+                ? $@"
+                <tr style='background: #fefce8;'>
+                    <td style='padding: 12px 16px; font-weight: 600; color: #854d0e; border-bottom: 1px solid #e2e8f0;'>Initial Password</td>
+                    <td style='padding: 12px 16px; border-bottom: 1px solid #e2e8f0;'>
+                        <code style='background: #fef08a; padding: 4px 10px; border-radius: 6px; font-weight: 700; color: #713f12; font-size: 14px; border: 1px solid #fde047;'>{safePassword}</code>
+                        <div style='margin-top: 4px; font-size: 11px; color: #a16207;'>You can change this password after signing in.</div>
+                    </td>
+                </tr>"
+                : "";
+
+            var html = $@"
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset='utf-8'>
+  <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+  <title>Welcome to EPIC Church Management System</title>
+</head>
+<body style='margin: 0; padding: 24px 12px; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, ""Segoe UI"", Roboto, Helvetica, Arial, sans-serif;'>
+  <div style='max-width: 640px; margin: 0 auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08); border: 1px solid #e2e8f0;'>
+    
+    <!-- Header Banner -->
+    <div style='background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%); color: #ffffff; padding: 36px 32px; text-align: left;'>
+      <div style='display: inline-block; background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(147, 197, 253, 0.3); border-radius: 999px; padding: 5px 14px; font-size: 12px; font-weight: 700; color: #93c5fd; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;'>
+        ⛪ Church Workspace Active
+      </div>
+      <h1 style='margin: 0; font-size: 26px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;'>
+        EPIC Church Management System
+      </h1>
+      <p style='margin: 6px 0 0; font-size: 14px; color: #94a3b8; font-weight: 500;'>
+        Engaging People Into Christ &bull; Luke 4:18 Ministries
+      </p>
+    </div>
+
+    <!-- Main Content -->
+    <div style='padding: 32px 30px;'>
+      
+      <h2 style='margin: 0 0 12px; font-size: 20px; color: #0f172a; font-weight: 700;'>
+        Welcome to EPIC, {safePastor}!
+      </h2>
+      <p style='margin: 0 0 20px; font-size: 15px; color: #475569; line-height: 1.6;'>
+        We are thrilled to welcome <strong>{safeChurch}</strong> to the EPIC Church Management family. Your dedicated, isolated church workspace has been created and is ready for your ministry team.
+      </p>
+
+      <!-- First-Time Setup Wizard Callout Box -->
+      <div style='background: linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%); border: 1.5px solid #93c5fd; border-radius: 14px; padding: 24px 22px; margin-bottom: 26px; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.08);'>
+        <div style='display: flex; align-items: center; margin-bottom: 12px;'>
+          <span style='font-size: 24px; margin-right: 10px;'>🚀</span>
+          <div>
+            <h3 style='margin: 0; font-size: 18px; color: #1e3a8a; font-weight: 800;'>
+              First-Time Church Setup Wizard
+            </h3>
+            <p style='margin: 2px 0 0; font-size: 13px; color: #3b82f6;'>
+              Quick 3-step configuration for your church workspace
+            </p>
+          </div>
+        </div>
+
+        <p style='margin: 0 0 16px; font-size: 14px; color: #1e40af; line-height: 1.5;'>
+          Upon clicking the link below, your workspace will automatically launch the <strong>3-Step Setup Wizard</strong> to customize your church in under 5 minutes:
+        </p>
+
+        <div style='background: rgba(255, 255, 255, 0.95); border-radius: 10px; padding: 16px; margin-bottom: 22px; border: 1px solid #bfdbfe;'>
+          <div style='margin-bottom: 12px; font-size: 13px; color: #1e293b; line-height: 1.5;'>
+            <strong style='color: #2563eb;'>1. Church Profile & Sunday Schedule:</strong><br/>
+            Set your main sanctuary location and Sunday celebration worship service times.
+          </div>
+          <div style='margin-bottom: 12px; font-size: 13px; color: #1e293b; line-height: 1.5;'>
+            <strong style='color: #2563eb;'>2. Department & Ministry Activation:</strong><br/>
+            Activate Worship & Praise, Media / Live Stream, Ushers & Greeters, Youth, and Children's Church.
+          </div>
+          <div style='font-size: 13px; color: #1e293b; line-height: 1.5;'>
+            <strong style='color: #2563eb;'>3. Congregational Stewardship & Attendance:</strong><br/>
+            Connect giving funds, track attendance, and launch SMILE Face Scanner.
+          </div>
+        </div>
+
+        <!-- Call to Action Button -->
+        <div style='text-align: center; margin: 10px 0 16px;'>
+          <a href='{wizardUrl}' target='_blank' style='display: inline-block; background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #ffffff; text-decoration: none; padding: 14px 34px; border-radius: 10px; font-size: 16px; font-weight: 700; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35); text-align: center;'>
+            ✨ Launch Church Setup Wizard &rarr;
+          </a>
+        </div>
+
+        <div style='font-size: 12px; color: #64748b; text-align: center; word-break: break-all;'>
+          Direct Link: <a href='{wizardUrl}' target='_blank' style='color: #2563eb; text-decoration: underline;'>{wizardUrl}</a>
+        </div>
+      </div>
+
+      <!-- Account & Credentials Summary -->
+      <h3 style='margin: 0 0 14px; font-size: 16px; color: #0f172a; font-weight: 700;'>
+        📋 Your Workspace & Login Credentials
+      </h3>
+
+      <table style='width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 14px; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden;'>
+        <tr style='background: #f8fafc;'>
+          <td style='padding: 12px 16px; font-weight: 600; color: #475569; width: 40%; border-bottom: 1px solid #e2e8f0;'>Church Name</td>
+          <td style='padding: 12px 16px; font-weight: 700; color: #0f172a; border-bottom: 1px solid #e2e8f0;'>{safeChurch}</td>
+        </tr>
+        <tr>
+          <td style='padding: 12px 16px; font-weight: 600; color: #475569; border-bottom: 1px solid #e2e8f0;'>Tenant ID</td>
+          <td style='padding: 12px 16px; font-family: monospace; font-weight: 700; color: #2563eb; border-bottom: 1px solid #e2e8f0;'>#{customerId}</td>
+        </tr>
+        <tr style='background: #f8fafc;'>
+          <td style='padding: 12px 16px; font-weight: 600; color: #475569; border-bottom: 1px solid #e2e8f0;'>Subscription Plan</td>
+          <td style='padding: 12px 16px; font-weight: 700; color: #0f172a; border-bottom: 1px solid #e2e8f0;'>{safePlan} ({billingCycle})</td>
+        </tr>
+        <tr>
+          <td style='padding: 12px 16px; font-weight: 600; color: #475569; border-bottom: 1px solid #e2e8f0;'>Amount</td>
+          <td style='padding: 12px 16px; font-weight: 700; color: #0f172a; border-bottom: 1px solid #e2e8f0;'>PHP {amount:N2}</td>
+        </tr>
+        <tr style='background: #f8fafc;'>
+          <td style='padding: 12px 16px; font-weight: 600; color: #475569; border-bottom: 1px solid #e2e8f0;'>Admin Login Email</td>
+          <td style='padding: 12px 16px; font-weight: 700; color: #0f172a; border-bottom: 1px solid #e2e8f0;'>{safeEmail}</td>
+        </tr>
+        {passwordHtmlRow}
+        <tr>
+          <td style='padding: 12px 16px; font-weight: 600; color: #475569;'>Tenant Isolation</td>
+          <td style='padding: 12px 16px; color: #16a34a; font-weight: 600;'>✓ 100% Dedicated & Private Workspace</td>
+        </tr>
+      </table>
+
+      <!-- Pastoral Encouragement -->
+      <div style='background: #f8fafc; border-left: 4px solid #3b82f6; padding: 14px 18px; border-radius: 6px; margin-bottom: 24px;'>
+        <p style='margin: 0; color: #334155; font-size: 13px; font-style: italic; line-height: 1.5;'>
+          &ldquo;For God is not the author of confusion, but of peace, as in all churches of the saints.&rdquo; &mdash; 1 Corinthians 14:33
+        </p>
+      </div>
+
+      <p style='margin: 0; color: #475569; font-size: 14px; line-height: 1.6;'>
+        If you have any questions or require assistance during your setup, our pastoral technology team is here to support you every step of the way.
+      </p>
+
+      <br/>
+
+      <p style='margin: 0; font-size: 14px; color: #0f172a;'>
+        Standing with you in ministry,<br/>
+        <strong style='color: #1e3a8a;'>EPIC Church Management Team</strong><br/>
+        <span style='font-size: 12px; color: #64748b;'>Engaging People Into Christ &bull; Luke 4:18 Ministries</span>
+      </p>
+
+    </div>
+
+    <!-- Footer -->
+    <div style='background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 18px 30px; text-align: center; font-size: 12px; color: #94a3b8;'>
+      This confirmation was sent to {safeEmail} for church workspace #{customerId}.<br/>
+      &copy; {DateTime.UtcNow.Year} EPIC Church Management System. All rights reserved.
+    </div>
+
+  </div>
+</body>
+</html>";
+
+            var subject = $"⛪ Welcome to EPIC! Church Setup Wizard for {safeChurch}";
+
+            try
+            {
+                await SendEmailAsync(recipientEmail, subject, html);
+                Console.WriteLine($"Church subscription welcome & wizard email sent to {recipientEmail}.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to send church subscription welcome email to {recipientEmail}: {ex.Message}");
+
+                var adminEmail = _configuration["Resend:AdminEmail"];
+                if (!string.IsNullOrWhiteSpace(adminEmail) &&
+                    !string.Equals(recipientEmail, adminEmail, StringComparison.OrdinalIgnoreCase))
+                {
+                    try
+                    {
+                        var sandboxNotice = $@"
+<div style='background: #fff3cd; border: 1.5px solid #ffeeba; color: #856404; padding: 14px 18px; border-radius: 8px; margin-bottom: 24px; font-size: 13px; line-height: 1.5;'>
+    <strong>⚠️ Resend Sandbox Mode Notice (Testing Address Unverified):</strong><br />
+    This confirmation was intended for <strong>{safePastor}</strong> at <strong>{safeChurch}</strong> ({recipientEmail}).<br />
+    Because your Resend account is currently configured with the test domain (<code>onboarding@resend.dev</code>), Resend only delivers to your registered account email (<code>{adminEmail}</code>).
+    <br /><br />
+    <strong>To deliver emails directly to client churches:</strong><br />
+    Verify your custom domain at <a href='https://resend.com/domains' target='_blank' style='color: #856404; font-weight: bold;'>resend.com/domains</a>.
+</div>";
+
+                        var htmlWithNotice = html.Replace(
+                            "<div style='padding: 32px 30px;'>",
+                            "<div style='padding: 32px 30px;'>" + sandboxNotice);
+
+                        await SendEmailAsync(
+                            adminEmail,
+                            $"[Church Copy for {recipientEmail}] {subject}",
+                            htmlWithNotice);
+
+                        Console.WriteLine($"Delivered church subscription welcome copy to admin {adminEmail} due to Resend sandbox restriction.");
+                    }
+                    catch (Exception fallbackEx)
+                    {
+                        Console.WriteLine($"Fallback church subscription copy failed: {fallbackEx.Message}");
+                    }
+                }
+            }
+        }
+
         private async Task SafeSendAsync(string email, string subject, string html)
         {
             try { await SendEmailAsync(email, subject, html); }

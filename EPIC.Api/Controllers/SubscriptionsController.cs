@@ -1,5 +1,6 @@
 using EPIC.Api.Data;
 using EPIC.Api.Models;
+using EPIC.Api.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -14,6 +15,7 @@ namespace EPIC.Api.Controllers
     public class SubscriptionsController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly ResendEmailService _emailService;
 
         private static readonly string[] AllowedStatuses =
         {
@@ -43,9 +45,11 @@ namespace EPIC.Api.Controllers
         };
 
         public SubscriptionsController(
-            ApplicationDbContext context)
+            ApplicationDbContext context,
+            ResendEmailService emailService)
         {
             _context = context;
+            _emailService = emailService;
         }
 
         // =========================================================
@@ -280,6 +284,24 @@ namespace EPIC.Api.Controllers
 
             await _context.SaveChangesAsync();
 
+            // Send Church Welcome & Setup Wizard Confirmation Email
+            try
+            {
+                await _emailService.SendChurchSubscriptionWelcomeAsync(
+                    recipientEmail: subscription.ContactEmail,
+                    pastorName: subscription.ContactName,
+                    churchName: subscription.ChurchName,
+                    customerId: customer.CustomerId,
+                    temporaryPassword: null,
+                    planName: plan.PlanName,
+                    billingCycle: subscription.BillingCycle,
+                    amount: subscription.Amount);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error sending church welcome email: {ex.Message}");
+            }
+
             return CreatedAtAction(
                 nameof(GetSubscription),
                 new
@@ -290,7 +312,7 @@ namespace EPIC.Api.Controllers
                 {
                     success = true,
                     message =
-                        "Subscription created successfully.",
+                        "Subscription created successfully. Confirmation email with Setup Wizard link has been sent.",
 
                     subscription =
                         ToResponseDto(

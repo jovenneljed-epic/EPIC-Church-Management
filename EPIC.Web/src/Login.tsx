@@ -420,8 +420,13 @@ const Login: React.FC<LoginProps> = ({
         setError
     ] = useState("");
 
+    const [
+        isSetupWizardRedirect,
+        setIsSetupWizardRedirect
+    ] = useState(false);
+
     // =========================================================
-    // PRE-WARM BACKEND (PREVENTS COLD-START DELAY)
+    // PRE-WARM BACKEND & READ URL PARAMS (SETUP WIZARD FLOW)
     // =========================================================
 
     useEffect(() => {
@@ -430,6 +435,21 @@ const Login: React.FC<LoginProps> = ({
             fetch(healthUrl, { method: "GET" }).catch(() => {});
         } catch {
             // Ignore pre-warm errors
+        }
+
+        try {
+            const params = new URLSearchParams(window.location.search);
+            const emailParam = params.get("email");
+            const redirectParam = params.get("redirect");
+
+            if (emailParam) {
+                setUsername(emailParam);
+            }
+            if (redirectParam === "setup-wizard") {
+                setIsSetupWizardRedirect(true);
+            }
+        } catch {
+            // Ignore URL search params error
         }
     }, []);
 
@@ -1273,6 +1293,35 @@ const Login: React.FC<LoginProps> = ({
 
                         </div>
 
+                    )}
+
+                    {isSetupWizardRedirect && (
+                        <div
+                            style={{
+                                background: "linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(59, 130, 246, 0.12))",
+                                border: "1.5px solid #93c5fd",
+                                borderRadius: "12px",
+                                padding: "14px 16px",
+                                marginBottom: "20px",
+                                fontSize: "13px",
+                                color: "#1e3a8a",
+                                display: "flex",
+                                alignItems: "flex-start",
+                                gap: "10px",
+                                lineHeight: "1.5",
+                                textAlign: "left"
+                            }}
+                        >
+                            <span style={{ fontSize: "20px" }}>⛪</span>
+                            <div>
+                                <strong style={{ color: "#1d4ed8", display: "block", marginBottom: "2px" }}>
+                                    Welcome to your new Church Workspace!
+                                </strong>
+                                <span style={{ color: "#334155" }}>
+                                    Sign in below to launch your <strong>First-Time Church Setup Wizard</strong> and personalize your Sunday services and ministries.
+                                </span>
+                            </div>
+                        </div>
                     )}
 
                     <form

@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using EPIC.Api.Data;
 using EPIC.Api.Models;
+using EPIC.Api.Services;
 using EPIC.Core.Interfaces;
 
 using Microsoft.AspNetCore.Authorization;
@@ -26,13 +27,19 @@ namespace EPIC.Api.Controllers
 
         private readonly ApplicationDbContext _context;
         private readonly IPermissionService _permissionService;
+        private readonly ResendEmailService _emailService;
+        private readonly IConfiguration _configuration;
 
         public CustomersController(
             ApplicationDbContext context,
-            IPermissionService permissionService)
+            IPermissionService permissionService,
+            ResendEmailService emailService,
+            IConfiguration configuration)
         {
             _context = context;
             _permissionService = permissionService;
+            _emailService = emailService;
+            _configuration = configuration;
         }
 
         // =========================================================
@@ -1213,10 +1220,33 @@ namespace EPIC.Api.Controllers
 
             await _context.SaveChangesAsync();
 
+            // 5. Send Welcome & First-Time Church Setup Wizard Email
+            try
+            {
+                var plan = await _context.SubscriptionPlans
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(p => p.SubscriptionPlanId == subscription.SubscriptionPlanId);
+                var planName = plan?.PlanName ?? "EPIC Starter (30-day Free Trial)";
+
+                await _emailService.SendChurchSubscriptionWelcomeAsync(
+                    recipientEmail: customer.Email,
+                    pastorName: customer.ContactPerson,
+                    churchName: customer.ChurchName,
+                    customerId: customer.CustomerId,
+                    temporaryPassword: request.Password,
+                    planName: planName,
+                    billingCycle: subscription.BillingCycle,
+                    amount: subscription.Amount);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error sending church welcome email: {ex.Message}");
+            }
+
             return Ok(new
             {
                 success = true,
-                message = "New church tenant provisioned successfully!",
+                message = "New church tenant provisioned successfully! A confirmation email with the First-Time Setup Wizard link has been sent.",
                 customerId = customer.CustomerId,
                 churchName = customer.ChurchName,
                 adminEmail = customer.Email,

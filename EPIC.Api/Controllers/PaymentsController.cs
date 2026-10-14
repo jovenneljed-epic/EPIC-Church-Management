@@ -862,6 +862,7 @@ namespace EPIC.Api.Controllers
 
             var subscription =
                 await _context.Subscriptions
+                    .Include(s => s.SubscriptionPlan)
                     .FirstOrDefaultAsync(s =>
                         s.SubscriptionId ==
                         payment.SubscriptionId);
@@ -898,6 +899,33 @@ namespace EPIC.Api.Controllers
                 payment.Currency,
                 payment.Status,
                 payment.ReferenceNumber);
+
+            // If subscription payment is verified and church setup is pending, dispatch Church Welcome & Setup Wizard email
+            if (normalizedStatus == "PAID")
+            {
+                try
+                {
+                    var customer = await _context.Customers
+                        .FirstOrDefaultAsync(c => c.CustomerId == subscription.CustomerId);
+
+                    if (customer != null && !customer.IsSetupCompleted)
+                    {
+                        await _emailService.SendChurchSubscriptionWelcomeAsync(
+                            recipientEmail: subscription.ContactEmail,
+                            pastorName: subscription.ContactName,
+                            churchName: subscription.ChurchName,
+                            customerId: customer.CustomerId,
+                            temporaryPassword: null,
+                            planName: subscription.SubscriptionPlan?.PlanName ?? "EPIC Church Management System",
+                            billingCycle: subscription.BillingCycle,
+                            amount: subscription.Amount);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error sending church welcome email on payment approval: {ex.Message}");
+                }
+            }
 
             return Ok(new
             {
