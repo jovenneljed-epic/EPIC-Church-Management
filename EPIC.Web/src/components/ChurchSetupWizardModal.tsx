@@ -160,6 +160,7 @@ export const ChurchSetupWizardModal: React.FC<ChurchSetupWizardModalProps> = ({
         sessionStorage.getItem("accessToken");
 
       const payload = {
+        customerId: customerId,
         churchName: churchName.trim(),
         pastorName: pastorName.trim(),
         phone: phone.trim() || null,
@@ -188,8 +189,13 @@ export const ChurchSetupWizardModal: React.FC<ChurchSetupWizardModalProps> = ({
       }
     } catch (err: unknown) {
       console.error("Setup completion error:", err);
-      if (axios.isAxiosError(err) && err.response?.data?.message) {
-        setErrorMessage(err.response.data.message);
+      if (axios.isAxiosError(err)) {
+        const msg =
+          err.response?.data?.message ||
+          (typeof err.response?.data === "string" ? err.response.data : null);
+        setErrorMessage(
+          msg || `Unable to complete setup (HTTP ${err.response?.status || "network"}). Please try again.`
+        );
       } else {
         setErrorMessage("Unable to save setup configuration. Please try again.");
       }

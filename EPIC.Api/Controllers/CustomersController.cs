@@ -981,123 +981,143 @@ namespace EPIC.Api.Controllers
                 return BadRequest(new { message = "Setup data is required." });
             }
 
-            var customerId = await GetCurrentCustomerIdAsync();
-
-            if (!customerId.HasValue || customerId.Value <= 0)
+            try
             {
-                return BadRequest(new { message = "No valid church tenant associated with your account." });
-            }
+                var customerId = await GetCurrentCustomerIdAsync() ?? request.CustomerId;
 
-            var customer = await _context.Customers
-                .FirstOrDefaultAsync(c => c.CustomerId == customerId.Value);
-
-            if (customer == null)
-            {
-                return NotFound(new { message = "Church tenant not found." });
-            }
-
-            // 1. Update Customer Profile
-            if (!string.IsNullOrWhiteSpace(request.ChurchName))
-            {
-                customer.ChurchName = request.ChurchName.Trim();
-            }
-
-            if (!string.IsNullOrWhiteSpace(request.PastorName))
-            {
-                customer.ContactPerson = request.PastorName.Trim();
-            }
-
-            if (!string.IsNullOrWhiteSpace(request.Phone))
-            {
-                customer.Phone = request.Phone.Trim();
-            }
-
-            customer.IsSetupCompleted = true;
-            customer.UpdatedDate = DateTime.Now;
-
-            // 2. Initialize First Church Service if none exists
-            var existingService = await _context.ChurchServices
-                .AnyAsync(s => s.CustomerId == customer.CustomerId);
-
-            if (!existingService)
-            {
-                var now = DateTime.Now;
-                var daysUntilSunday = ((int)DayOfWeek.Sunday - (int)now.DayOfWeek + 7) % 7;
-                if (daysUntilSunday == 0 && now.Hour >= 12)
+                if (!customerId.HasValue || customerId.Value <= 0)
                 {
-                    daysUntilSunday = 7;
+                    return BadRequest(new { message = "No valid church tenant associated with your account." });
                 }
-                var nextSunday = now.Date.AddDays(daysUntilSunday);
 
-                var churchService = new ChurchService
+                var customer = await _context.Customers
+                    .FirstOrDefaultAsync(c => c.CustomerId == customerId.Value);
+
+                if (customer == null)
                 {
-                    CustomerId = customer.CustomerId,
-                    ServiceName = string.IsNullOrWhiteSpace(request.ServiceName)
-                        ? "Sunday Celebration Service"
-                        : request.ServiceName.Trim(),
-                    ServiceType = string.IsNullOrWhiteSpace(request.ServiceType)
-                        ? "Sunday Worship"
-                        : request.ServiceType.Trim(),
-                    ServiceDate = nextSunday,
-                    StartTime = string.IsNullOrWhiteSpace(request.StartTime)
-                        ? "08:00 AM"
-                        : request.StartTime.Trim(),
-                    EndTime = string.IsNullOrWhiteSpace(request.EndTime)
-                        ? "10:00 AM"
-                        : request.EndTime.Trim(),
-                    Location = string.IsNullOrWhiteSpace(request.Location)
-                        ? "Main Sanctuary"
-                        : request.Location.Trim(),
-                    ServiceLeader = customer.ContactPerson,
-                    Speaker = customer.ContactPerson,
-                    Description = "Weekly fellowship and worship celebration.",
-                    Status = "SCHEDULED",
-                    CreatedDate = DateTime.Now
-                };
+                    return NotFound(new { message = "Church tenant not found." });
+                }
 
-                _context.ChurchServices.Add(churchService);
-            }
-
-            // 3. Initialize Default Ministries if selected
-            if (request.Ministries != null && request.Ministries.Any())
-            {
-                foreach (var ministryName in request.Ministries)
+                // 1. Update Customer Profile
+                if (!string.IsNullOrWhiteSpace(request.ChurchName))
                 {
-                    var trimmed = ministryName.Trim();
-                    if (string.IsNullOrWhiteSpace(trimmed)) continue;
+                    customer.ChurchName = request.ChurchName.Trim();
+                }
 
-                    var minExists = await _context.Ministries
-                        .AnyAsync(m => m.CustomerId == customer.CustomerId && m.Name.ToLower() == trimmed.ToLower());
+                if (!string.IsNullOrWhiteSpace(request.PastorName))
+                {
+                    customer.ContactPerson = request.PastorName.Trim();
+                }
 
-                    if (!minExists)
+                if (!string.IsNullOrWhiteSpace(request.Phone))
+                {
+                    customer.Phone = request.Phone.Trim();
+                }
+
+                customer.IsSetupCompleted = true;
+                customer.UpdatedDate = DateTime.Now;
+
+                // 2. Initialize First Church Service if none exists
+                var existingService = await _context.ChurchServices
+                    .AnyAsync(s => s.CustomerId == customer.CustomerId);
+
+                if (!existingService)
+                {
+                    var now = DateTime.Now;
+                    var daysUntilSunday = ((int)DayOfWeek.Sunday - (int)now.DayOfWeek + 7) % 7;
+                    if (daysUntilSunday == 0 && now.Hour >= 12)
                     {
-                        _context.Ministries.Add(new Ministry
+                        daysUntilSunday = 7;
+                    }
+                    var nextSunday = now.Date.AddDays(daysUntilSunday);
+
+                    var safeLeader = !string.IsNullOrWhiteSpace(customer.ContactPerson)
+                        ? customer.ContactPerson
+                        : (!string.IsNullOrWhiteSpace(request.PastorName) ? request.PastorName.Trim() : "Pastor");
+
+                    var churchService = new ChurchService
+                    {
+                        CustomerId = customer.CustomerId,
+                        ServiceName = string.IsNullOrWhiteSpace(request.ServiceName)
+                            ? "Sunday Celebration Service"
+                            : request.ServiceName.Trim(),
+                        ServiceType = string.IsNullOrWhiteSpace(request.ServiceType)
+                            ? "Sunday Worship"
+                            : request.ServiceType.Trim(),
+                        ServiceDate = nextSunday,
+                        StartTime = string.IsNullOrWhiteSpace(request.StartTime)
+                            ? "08:00 AM"
+                            : request.StartTime.Trim(),
+                        EndTime = string.IsNullOrWhiteSpace(request.EndTime)
+                            ? "10:00 AM"
+                            : request.EndTime.Trim(),
+                        Location = string.IsNullOrWhiteSpace(request.Location)
+                            ? "Main Sanctuary"
+                            : request.Location.Trim(),
+                        ServiceLeader = safeLeader,
+                        Speaker = safeLeader,
+                        Description = "Weekly fellowship and worship celebration.",
+                        Status = "SCHEDULED",
+                        CreatedDate = DateTime.Now
+                    };
+
+                    _context.ChurchServices.Add(churchService);
+                }
+
+                // 3. Initialize Default Ministries if selected
+                if (request.Ministries != null && request.Ministries.Any())
+                {
+                    var minIndex = 1;
+                    foreach (var ministryName in request.Ministries)
+                    {
+                        var trimmed = ministryName.Trim();
+                        if (string.IsNullOrWhiteSpace(trimmed)) continue;
+
+                        var minExists = await _context.Ministries
+                            .AnyAsync(m => m.CustomerId == customer.CustomerId && m.Name.ToLower() == trimmed.ToLower());
+
+                        if (!minExists)
                         {
-                            CustomerId = customer.CustomerId,
-                            Name = trimmed,
-                            MinistryHead = customer.ContactPerson,
-                            Description = $"Active ministry team for {trimmed}.",
-                            MeetingDay = "Sunday",
-                            MeetingTime = "After Service",
-                            CreatedDate = DateTime.Now
-                        });
+                            var code = $"MIN-{customer.CustomerId:D3}-{minIndex:D2}";
+                            minIndex++;
+
+                            _context.Ministries.Add(new Ministry
+                            {
+                                CustomerId = customer.CustomerId,
+                                Name = trimmed,
+                                MinistryCode = code,
+                                MinistryHead = !string.IsNullOrWhiteSpace(customer.ContactPerson) ? customer.ContactPerson : "Ministry Lead",
+                                ContactNumber = !string.IsNullOrWhiteSpace(customer.Phone) ? customer.Phone : "N/A",
+                                Description = $"Active ministry team for {trimmed}.",
+                                MeetingDay = "Sunday",
+                                MeetingTime = "After Service",
+                                MeetingLocation = !string.IsNullOrWhiteSpace(request.Location) ? request.Location.Trim() : "Main Sanctuary",
+                                Status = "ACTIVE",
+                                CreatedDate = DateTime.Now
+                            });
+                        }
                     }
                 }
+
+                // 4. Seed default ClientRoles and Permissions for this customer
+                await ClientRoleSeeder.SeedForCustomerAsync(_context, customer.CustomerId);
+
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "Church workspace successfully initialized!",
+                    customerId = customer.CustomerId,
+                    churchName = customer.ChurchName,
+                    isSetupCompleted = true
+                });
             }
-
-            // 4. Seed default ClientRoles and Permissions for this customer
-            await ClientRoleSeeder.SeedForCustomerAsync(_context, customer.CustomerId);
-
-            await _context.SaveChangesAsync();
-
-            return Ok(new
+            catch (Exception ex)
             {
-                success = true,
-                message = "Church workspace successfully initialized!",
-                customerId = customer.CustomerId,
-                churchName = customer.ChurchName,
-                isSetupCompleted = true
-            });
+                Console.WriteLine($"Error completing church setup: {ex}");
+                return StatusCode(500, new { message = $"Unable to complete setup: {ex.Message}" });
+            }
         }
 
         // =========================================================
@@ -1558,6 +1578,7 @@ namespace EPIC.Api.Controllers
 
     public class CompleteChurchSetupRequest
     {
+        public int? CustomerId { get; set; }
         public string? ChurchName { get; set; }
         public string? PastorName { get; set; }
         public string? Phone { get; set; }
