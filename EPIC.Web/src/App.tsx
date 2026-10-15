@@ -1453,6 +1453,11 @@ const App: React.FC = () => {
         lockReason: "",
     });
 
+    const [isExpiringSoon, setIsExpiringSoon] = useState(false);
+    const [expirationWarning, setExpirationWarning] = useState<string | null>(null);
+    const [daysUntilExpiration, setDaysUntilExpiration] = useState<number | null>(null);
+    const [dismissExpirationBanner, setDismissExpirationBanner] = useState(false);
+
     // =====================================================
     // ROUTING
     // =====================================================
@@ -2039,6 +2044,16 @@ const navigatePublic =
                     });
                 } else {
                     setIsSubscriptionLocked(false);
+                }
+
+                if (res.data.isExpiringSoon === true && res.data.customerId !== 1) {
+                    setIsExpiringSoon(true);
+                    setExpirationWarning(res.data.expirationWarning || null);
+                    setDaysUntilExpiration(res.data.daysUntilExpiration ?? null);
+                } else {
+                    setIsExpiringSoon(false);
+                    setExpirationWarning(null);
+                    setDaysUntilExpiration(null);
                 }
 
                 if (Array.isArray(res.data.allowedModules)) {
@@ -4245,6 +4260,54 @@ if(
                         </div>
                     </div>
                 </header>
+
+                {isAuthenticated && isExpiringSoon && !dismissExpirationBanner && expirationWarning && (
+                    <div className="subscription-warning-banner">
+                        <div className="subscription-warning-left">
+                            <span className="warning-banner-icon">⚠️</span>
+                            <div className="warning-banner-text">
+                                {daysUntilExpiration !== null && (
+                                    <span style={{
+                                        marginRight: "8px",
+                                        background: "rgba(245, 158, 11, 0.35)",
+                                        border: "1px solid rgba(245, 158, 11, 0.5)",
+                                        padding: "2px 8px",
+                                        borderRadius: "999px",
+                                        fontWeight: 700,
+                                        fontSize: "11px",
+                                        color: "#fef3c7"
+                                    }}>
+                                        {daysUntilExpiration === 0 ? "EXPIRES TODAY" : `${daysUntilExpiration}D REMAINING`}
+                                    </span>
+                                )}
+                                <strong>Subscription Notice:</strong> {expirationWarning}
+                            </div>
+                        </div>
+                        <div className="subscription-warning-actions">
+                            <button
+                                type="button"
+                                className="warning-banner-renew-btn"
+                                onClick={() => {
+                                    if (role === "DEVELOPER" || role === "ADMIN") {
+                                        setActivePage("settings");
+                                    } else {
+                                        setActivePage("client-payment");
+                                    }
+                                }}
+                            >
+                                ⚡ Renew Plan
+                            </button>
+                            <button
+                                type="button"
+                                className="warning-banner-dismiss-btn"
+                                onClick={() => setDismissExpirationBanner(true)}
+                                title="Dismiss notice for this session"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 <section className="epic-content">
                     {

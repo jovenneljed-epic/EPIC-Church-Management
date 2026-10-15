@@ -425,7 +425,7 @@ namespace EPIC.Api.Controllers
         }
 
         // =========================================================
-        // DELETE CUSTOMER
+        // DELETE CUSTOMER (FULL CASCADE PURGE)
         // DELETE: /api/Customers/{id}
         // =========================================================
 
@@ -433,56 +433,38 @@ namespace EPIC.Api.Controllers
         public async Task<IActionResult> DeleteCustomer(
             int id)
         {
-            if (!await HasPermissionAsync("delete"))
+            var callerCustomerId = await GetCurrentCustomerIdAsync();
+            if (callerCustomerId.HasValue && callerCustomerId.Value > 1)
             {
                 return Forbid();
             }
 
-            var customer = await _context.Customers
-                .FirstOrDefaultAsync(x =>
-                    x.CustomerId == id);
+            if (!IsAdminUser() && !await HasPermissionAsync("delete"))
+            {
+                return Forbid();
+            }
 
-            if (customer == null)
+            if (id <= 1)
+            {
+                return BadRequest(new
+                {
+                    message = "Cannot delete the platform master workspace (Tenant #1)."
+                });
+            }
+
+            var success = await CascadeDeleteCustomerAsync(id);
+            if (!success)
             {
                 return NotFound(new
                 {
-                    message = "Customer not found."
+                    message = "Customer workspace not found."
                 });
             }
-
-            // =====================================================
-            // CHECK ACTIVE SUBSCRIPTIONS
-            // =====================================================
-
-            var hasActiveSubscription =
-                await _context.Subscriptions
-                    .AnyAsync(x =>
-                        x.ContactEmail == customer.Email &&
-                        (
-                            x.Status == "TRIAL" ||
-                            x.Status == "ACTIVE" ||
-                            x.Status == "PAST_DUE"
-                        ));
-
-            if (hasActiveSubscription)
-            {
-                return Conflict(new
-                {
-                    message =
-                        "This customer cannot be deleted because they have an active subscription."
-                });
-            }
-
-            _context.Customers.Remove(customer);
-
-            await _context.SaveChangesAsync();
 
             return Ok(new
             {
                 success = true,
-
-                message =
-                    "Customer deleted successfully."
+                message = $"Customer workspace (Tenant #{id}) and all associated data deleted successfully."
             });
         }
 
@@ -763,6 +745,10 @@ namespace EPIC.Api.Controllers
             // --------------------------------------------------------
             bool isLocked = false;
             string? lockReason = null;
+            bool isExpiringSoon = false;
+            int? daysUntilExpiration = null;
+            string? expirationWarning = null;
+            DateTime? expirationDate = null;
             int? subscriptionId = null;
             string? subscriptionStatus = null;
             DateTime? nextBillingDate = null;
@@ -772,7 +758,7 @@ namespace EPIC.Api.Controllers
 
             if (customer.CustomerId == 1)
             {
-                // Permanent lifetime access for your church
+                // Permanent lifetime access for platform master
                 isLocked = false;
             }
             else
@@ -785,7 +771,7 @@ namespace EPIC.Api.Controllers
                 if (subscription == null)
                 {
                     isLocked = true;
-                    lockReason = "No active subscription plan found for this church.";
+                    lockReason = "No active subscription plan found for this church. Please contact the administrator to activate your workspace.";
                 }
                 else
                 {
@@ -808,14 +794,15 @@ namespace EPIC.Api.Controllers
                         subscriptionStatus = "EXPIRED";
                         await _context.SaveChangesAsync();
                     }
-                    // Automatically check if active subscription is past due date
+                    // Automatically check if active subscription has passed renewal/billing date
                     else if (string.Equals(subscription.Status, "ACTIVE", StringComparison.OrdinalIgnoreCase)
                         && subscription.NextBillingDate.HasValue
                         && subscription.NextBillingDate.Value <= now)
                     {
-                        subscription.Status = "PAST_DUE";
+                        subscription.Status = "EXPIRED";
+                        subscription.EndDate = subscription.NextBillingDate.Value;
                         subscription.UpdatedDate = now;
-                        subscriptionStatus = "PAST_DUE";
+                        subscriptionStatus = "EXPIRED";
                         await _context.SaveChangesAsync();
                     }
 
@@ -824,7 +811,7 @@ namespace EPIC.Api.Controllers
                     if (statusUpper == "EXPIRED")
                     {
                         isLocked = true;
-                        lockReason = "Your church subscription has expired. Please renew your monthly subscription to unlock your workspace.";
+                        lockReason = $"Your church subscription expired on {subscription.NextBillingDate ?? subscription.EndDate ?? now:MMMM dd, yyyy}. Please renew your subscription to unlock your workspace.";
                     }
                     else if (statusUpper == "PAST_DUE")
                     {
@@ -834,12 +821,45 @@ namespace EPIC.Api.Controllers
                     else if (statusUpper == "SUSPENDED")
                     {
                         isLocked = true;
-                        lockReason = "Your church workspace has been suspended by the administrator.";
+                        lockReason = "Your church workspace has been suspended by the platform administrator.";
                     }
                     else if (statusUpper == "CANCELLED")
                     {
                         isLocked = true;
                         lockReason = "Your church workspace subscription has been cancelled.";
+                    }
+                    else
+                    {
+                        // Calculate warning for active / trial subscriptions
+                        expirationDate = string.Equals(statusUpper, "TRIAL", StringComparison.OrdinalIgnoreCase)
+                            ? subscription.TrialEndsAt
+                            : subscription.NextBillingDate;
+
+                        if (expirationDate.HasValue)
+                        {
+                            var diff = expirationDate.Value - now;
+                            var days = (int)Math.Ceiling(diff.TotalDays);
+                            var isAnnual = string.Equals(subscription.BillingCycle, "Annual", StringComparison.OrdinalIgnoreCase);
+                            var warningThreshold = string.Equals(statusUpper, "TRIAL", StringComparison.OrdinalIgnoreCase) ? 3 : (isAnnual ? 14 : 7);
+
+                            if (days <= warningThreshold && days >= 0)
+                            {
+                                isExpiringSoon = true;
+                                daysUntilExpiration = days;
+                                if (days == 0)
+                                {
+                                    expirationWarning = $"⚠️ URGENT: Your church subscription expires TODAY ({expirationDate.Value:MMMM dd, yyyy}). Please renew immediately to prevent workspace access from being locked.";
+                                }
+                                else if (days == 1)
+                                {
+                                    expirationWarning = $"⚠️ URGENT: Your church subscription expires TOMORROW ({expirationDate.Value:MMMM dd, yyyy}). Please renew to ensure uninterrupted access.";
+                                }
+                                else
+                                {
+                                    expirationWarning = $"⚠️ NOTICE: Your {planName} subscription expires in {days} days on {expirationDate.Value:MMMM dd, yyyy}. Please renew soon to avoid workspace lockout.";
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -959,6 +979,10 @@ namespace EPIC.Api.Controllers
 
                 isLocked = isLocked,
                 lockReason = lockReason,
+                isExpiringSoon = isExpiringSoon,
+                daysUntilExpiration = daysUntilExpiration,
+                expirationWarning = expirationWarning,
+                expirationDate = expirationDate,
                 subscriptionId = subscriptionId,
                 subscriptionStatus = subscriptionStatus,
                 nextBillingDate = nextBillingDate,
@@ -1323,6 +1347,28 @@ namespace EPIC.Api.Controllers
                     isLocked = true;
                 }
 
+                var isExpiringSoon = false;
+                int? daysUntilExpiration = null;
+                if (!isLocked && sub != null)
+                {
+                    var expDate = string.Equals(sub.Status, "TRIAL", StringComparison.OrdinalIgnoreCase)
+                        ? sub.TrialEndsAt
+                        : sub.NextBillingDate;
+
+                    if (expDate.HasValue)
+                    {
+                        var days = (int)Math.Ceiling((expDate.Value - now).TotalDays);
+                        var isAnnual = string.Equals(sub.BillingCycle, "Annual", StringComparison.OrdinalIgnoreCase);
+                        var threshold = string.Equals(sub.Status, "TRIAL", StringComparison.OrdinalIgnoreCase) ? 3 : (isAnnual ? 14 : 7);
+
+                        if (days <= threshold && days >= 0)
+                        {
+                            isExpiringSoon = true;
+                            daysUntilExpiration = days;
+                        }
+                    }
+                }
+
                 result.Add(new
                 {
                     customerId = c.CustomerId,
@@ -1335,12 +1381,17 @@ namespace EPIC.Api.Controllers
                     createdDate = c.CreatedDate,
 
                     subscriptionId = sub?.SubscriptionId,
+                    planId = sub?.SubscriptionPlanId,
                     planName = sub?.SubscriptionPlan?.PlanName ?? "Monthly Subscription",
                     billingCycle = sub?.BillingCycle ?? "Monthly",
                     amount = sub?.Amount ?? (sub?.SubscriptionPlan?.MonthlyPrice ?? 0),
                     nextBillingDate = sub?.NextBillingDate,
+                    trialEndsAt = sub?.TrialEndsAt,
+                    notes = sub?.Notes,
                     subscriptionStatus = sub?.Status ?? "NONE",
                     isLocked = isLocked,
+                    isExpiringSoon = isExpiringSoon,
+                    daysUntilExpiration = daysUntilExpiration,
 
                     maxUsers = maxUsers,
                     userCount = userCount,
@@ -1562,11 +1613,613 @@ namespace EPIC.Api.Controllers
                 status = subscription.Status
             });
         }
+
+        // =========================================================
+        // UPDATE SUBSCRIPTION SETTINGS & EXPIRATION (SCALABLE ADMIN)
+        // PUT: /api/Customers/{id}/subscription-settings
+        // =========================================================
+
+        [HttpPut("{id:int}/subscription-settings")]
+        public async Task<IActionResult> UpdateSubscriptionSettings(
+            int id,
+            [FromBody] UpdateSubscriptionSettingsRequest request)
+        {
+            var callerCustomerId = await GetCurrentCustomerIdAsync();
+            if (callerCustomerId.HasValue && callerCustomerId.Value > 1)
+            {
+                return Forbid();
+            }
+
+            if (request == null)
+            {
+                return BadRequest(new { message = "Subscription settings data is required." });
+            }
+
+            var customer = await _context.Customers.FindAsync(id);
+            if (customer == null)
+            {
+                return NotFound(new { message = "Church workspace not found." });
+            }
+
+            var subscription = await _context.Subscriptions
+                .Include(s => s.SubscriptionPlan)
+                .OrderByDescending(s => s.CreatedDate)
+                .FirstOrDefaultAsync(s => s.CustomerId == id);
+
+            var now = DateTime.Now;
+
+            if (subscription == null)
+            {
+                var planId = request.SubscriptionPlanId ?? 1;
+                var plan = await _context.SubscriptionPlans.FindAsync(planId)
+                    ?? await _context.SubscriptionPlans.FirstOrDefaultAsync(p => p.IsActive);
+
+                subscription = new Subscription
+                {
+                    CustomerId = customer.CustomerId,
+                    ChurchName = customer.ChurchName,
+                    ContactName = customer.ContactPerson,
+                    ContactEmail = customer.Email,
+                    ContactPhone = customer.Phone ?? string.Empty,
+                    SubscriptionPlanId = plan?.SubscriptionPlanId ?? 1,
+                    BillingCycle = string.IsNullOrWhiteSpace(request.BillingCycle) ? "Monthly" : request.BillingCycle.Trim(),
+                    Amount = request.Amount ?? (plan?.MonthlyPrice ?? 999m),
+                    Currency = "PHP",
+                    Status = string.IsNullOrWhiteSpace(request.Status) ? "ACTIVE" : request.Status.Trim().ToUpperInvariant(),
+                    StartDate = now,
+                    NextBillingDate = request.NextBillingDate ?? now.AddMonths(1),
+                    TrialEndsAt = request.TrialEndsAt,
+                    Notes = request.Notes,
+                    CreatedDate = now,
+                    UpdatedDate = now
+                };
+                _context.Subscriptions.Add(subscription);
+            }
+            else
+            {
+                if (request.SubscriptionPlanId.HasValue && request.SubscriptionPlanId.Value > 0)
+                {
+                    var plan = await _context.SubscriptionPlans.FindAsync(request.SubscriptionPlanId.Value);
+                    if (plan != null)
+                    {
+                        subscription.SubscriptionPlanId = plan.SubscriptionPlanId;
+                        if (!request.Amount.HasValue)
+                        {
+                            subscription.Amount = subscription.BillingCycle.Equals("Annual", StringComparison.OrdinalIgnoreCase)
+                                ? plan.AnnualPrice
+                                : plan.MonthlyPrice;
+                        }
+                    }
+                }
+
+                if (request.Amount.HasValue)
+                {
+                    subscription.Amount = request.Amount.Value;
+                }
+
+                if (!string.IsNullOrWhiteSpace(request.BillingCycle))
+                {
+                    subscription.BillingCycle = request.BillingCycle.Trim();
+                }
+
+                if (!string.IsNullOrWhiteSpace(request.Status))
+                {
+                    subscription.Status = request.Status.Trim().ToUpperInvariant();
+                }
+
+                if (request.NextBillingDate.HasValue)
+                {
+                    subscription.NextBillingDate = request.NextBillingDate.Value;
+                }
+
+                if (request.TrialEndsAt.HasValue)
+                {
+                    subscription.TrialEndsAt = request.TrialEndsAt.Value;
+                }
+
+                if (request.Notes != null)
+                {
+                    subscription.Notes = request.Notes;
+                }
+
+                if (subscription.Status == "EXPIRED")
+                {
+                    subscription.EndDate = subscription.NextBillingDate ?? now;
+                }
+                else if (subscription.Status == "ACTIVE")
+                {
+                    subscription.EndDate = null;
+                }
+
+                subscription.UpdatedDate = now;
+            }
+
+            await _context.SaveChangesAsync();
+            await _context.Entry(subscription).Reference(s => s.SubscriptionPlan).LoadAsync();
+
+            var isLocked = (subscription.Status == "EXPIRED" ||
+                            subscription.Status == "PAST_DUE" ||
+                            subscription.Status == "SUSPENDED" ||
+                            subscription.Status == "CANCELLED" ||
+                            (subscription.NextBillingDate.HasValue && subscription.NextBillingDate.Value <= now));
+
+            return Ok(new
+            {
+                success = true,
+                message = $"Subscription settings successfully updated for {customer.ChurchName}.",
+                subscription = new
+                {
+                    subscriptionId = subscription.SubscriptionId,
+                    customerId = customer.CustomerId,
+                    churchName = customer.ChurchName,
+                    planId = subscription.SubscriptionPlanId,
+                    planName = subscription.SubscriptionPlan?.PlanName ?? "Monthly Subscription",
+                    billingCycle = subscription.BillingCycle,
+                    amount = subscription.Amount,
+                    status = subscription.Status,
+                    nextBillingDate = subscription.NextBillingDate,
+                    trialEndsAt = subscription.TrialEndsAt,
+                    notes = subscription.Notes,
+                    isLocked = isLocked
+                }
+            });
+        }
+
+        // =========================================================
+        // QUICK RENEW SUBSCRIPTION (MASTER ADMIN)
+        // POST: /api/Customers/{id}/renew
+        // =========================================================
+
+        [HttpPost("{id:int}/renew")]
+        public async Task<IActionResult> QuickRenewCustomer(int id, [FromBody] QuickRenewRequest? request = null)
+        {
+            var callerCustomerId = await GetCurrentCustomerIdAsync();
+            if (callerCustomerId.HasValue && callerCustomerId.Value > 1)
+            {
+                return Forbid();
+            }
+
+            var customer = await _context.Customers.FindAsync(id);
+            if (customer == null)
+            {
+                return NotFound(new { message = "Church workspace not found." });
+            }
+
+            var subscription = await _context.Subscriptions
+                .Include(s => s.SubscriptionPlan)
+                .OrderByDescending(s => s.CreatedDate)
+                .FirstOrDefaultAsync(s => s.CustomerId == id);
+
+            var now = DateTime.Now;
+            var daysToAdd = request?.Days ?? 30;
+
+            if (subscription == null)
+            {
+                var plan = await _context.SubscriptionPlans.FirstOrDefaultAsync(p => p.IsActive);
+                subscription = new Subscription
+                {
+                    CustomerId = customer.CustomerId,
+                    ChurchName = customer.ChurchName,
+                    ContactName = customer.ContactPerson,
+                    ContactEmail = customer.Email,
+                    ContactPhone = customer.Phone ?? string.Empty,
+                    SubscriptionPlanId = plan?.SubscriptionPlanId ?? 1,
+                    BillingCycle = "Monthly",
+                    Amount = plan?.MonthlyPrice ?? 999m,
+                    Currency = "PHP",
+                    Status = "ACTIVE",
+                    StartDate = now,
+                    NextBillingDate = now.AddDays(daysToAdd),
+                    Notes = request?.Notes ?? "Renewed from Platform Control Center",
+                    CreatedDate = now,
+                    UpdatedDate = now
+                };
+                _context.Subscriptions.Add(subscription);
+            }
+            else
+            {
+                var baseDate = (subscription.NextBillingDate.HasValue && subscription.NextBillingDate.Value > now)
+                    ? subscription.NextBillingDate.Value
+                    : now;
+
+                subscription.Status = "ACTIVE";
+                subscription.EndDate = null;
+                subscription.NextBillingDate = baseDate.AddDays(daysToAdd);
+                subscription.UpdatedDate = now;
+                if (!string.IsNullOrWhiteSpace(request?.Notes))
+                {
+                    subscription.Notes = request.Notes;
+                }
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                success = true,
+                message = $"Subscription for {customer.ChurchName} extended by {daysToAdd} days until {subscription.NextBillingDate:MMMM dd, yyyy}.",
+                nextBillingDate = subscription.NextBillingDate,
+                status = subscription.Status
+            });
+        }
+
+        // =========================================================
+        // PURGE ALL OTHER TENANTS (KEEP PTR. JULIUS OCARIZA & MASTER)
+        // POST: /api/Customers/purge-other-tenants
+        // =========================================================
+
+        [HttpPost("purge-other-tenants")]
+        public async Task<IActionResult> PurgeOtherTenants([FromBody] PurgeTenantsRequest? request = null)
+        {
+            var callerCustomerId = await GetCurrentCustomerIdAsync();
+            if (callerCustomerId.HasValue && callerCustomerId.Value > 1)
+            {
+                return Forbid();
+            }
+
+            var allTenants = await _context.Customers
+                .Where(c => c.CustomerId > 1)
+                .ToListAsync();
+
+            var keptCustomerIds = request?.KeepCustomerIds?.ToList() ?? new List<int>();
+            if (!keptCustomerIds.Contains(1)) keptCustomerIds.Add(1);
+
+            var deletedTenants = new List<object>();
+            var keptTenants = new List<object>();
+
+            foreach (var tenant in allTenants)
+            {
+                // Identify Pastor Julius Ocariza's church:
+                // Tenant #9, or by church name / contact person / email
+                bool isPtrJuliusChurch = tenant.CustomerId == 9
+                    || tenant.ChurchName.Contains("Praise Church", StringComparison.OrdinalIgnoreCase)
+                    || tenant.ContactPerson.Contains("Julius", StringComparison.OrdinalIgnoreCase)
+                    || tenant.ContactPerson.Contains("Ocariza", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(tenant.Email, "avigueteroronnel76@gmail.com", StringComparison.OrdinalIgnoreCase)
+                    || keptCustomerIds.Contains(tenant.CustomerId);
+
+                if (isPtrJuliusChurch)
+                {
+                    keptTenants.Add(new
+                    {
+                        customerId = tenant.CustomerId,
+                        churchName = tenant.ChurchName,
+                        contactPerson = tenant.ContactPerson,
+                        email = tenant.Email
+                    });
+                    continue;
+                }
+
+                var tenantInfo = new
+                {
+                    customerId = tenant.CustomerId,
+                    churchName = tenant.ChurchName,
+                    contactPerson = tenant.ContactPerson,
+                    email = tenant.Email
+                };
+
+                var deleted = await CascadeDeleteCustomerAsync(tenant.CustomerId);
+                if (deleted)
+                {
+                    deletedTenants.Add(tenantInfo);
+                }
+            }
+
+            return Ok(new
+            {
+                success = true,
+                message = $"Successfully purged {deletedTenants.Count} demo/test tenant(s). Preserved Pastor Julius Ocariza's church and platform master.",
+                deletedCount = deletedTenants.Count,
+                deletedTenants = deletedTenants,
+                keptTenants = keptTenants
+            });
+        }
+
+        // =========================================================
+        // HELPER: CASCADE DELETE CUSTOMER AND ALL ASSOCIATED DATA
+        // =========================================================
+
+        private async Task<bool> CascadeDeleteCustomerAsync(int customerId)
+        {
+            if (customerId <= 1)
+            {
+                return false; // Platform master cannot be deleted
+            }
+
+            var customer = await _context.Customers.FirstOrDefaultAsync(c => c.CustomerId == customerId);
+            if (customer == null)
+            {
+                return false;
+            }
+
+            // Collect IDs
+            var memberIds = await _context.Members
+                .Where(m => m.CustomerId == customerId)
+                .Select(m => m.MemberId)
+                .ToListAsync();
+
+            var eventIds = await _context.Events
+                .Where(e => e.CustomerId == customerId)
+                .Select(e => e.EventId)
+                .ToListAsync();
+
+            var ministryIds = await _context.Ministries
+                .Where(m => m.CustomerId == customerId)
+                .Select(m => m.MinistryId)
+                .ToListAsync();
+
+            var clientRoleIds = await _context.ClientRoles
+                .Where(r => r.CustomerId == customerId)
+                .Select(r => r.ClientRoleId)
+                .ToListAsync();
+
+            var subscriptionIds = await _context.Subscriptions
+                .Where(s => s.CustomerId == customerId)
+                .Select(s => s.SubscriptionId)
+                .ToListAsync();
+
+            var visitorIds = await _context.Visitors
+                .Where(v => v.CustomerId == customerId)
+                .Select(v => v.VisitorId)
+                .ToListAsync();
+
+            // Collect User IDs
+            var userIds = await _context.Users
+                .Where(u => u.CustomerId == customerId)
+                .Select(u => u.UserId)
+                .ToListAsync();
+
+            var serviceIds = await _context.ChurchServices
+                .Where(s => s.CustomerId == customerId)
+                .Select(s => s.ChurchServiceId)
+                .ToListAsync();
+
+            // 1. QrScanLogs, MemberQrIdentities, CRBreakPasses, Courses & Certificates
+            if (memberIds.Count > 0)
+            {
+                var scanLogs = await _context.QrScanLogs
+                    .Where(q => memberIds.Contains(q.MemberId))
+                    .ToListAsync();
+                _context.QrScanLogs.RemoveRange(scanLogs);
+
+                var qrIdents = await _context.MemberQrIdentities
+                    .Where(q => memberIds.Contains(q.MemberId))
+                    .ToListAsync();
+                _context.MemberQrIdentities.RemoveRange(qrIdents);
+
+                var crPasses = await _context.CRBreakPasses
+                    .Where(c => memberIds.Contains(c.MemberId))
+                    .ToListAsync();
+                _context.CRBreakPasses.RemoveRange(crPasses);
+            }
+
+            if (userIds.Count > 0)
+            {
+                var enrollments = await _context.CourseEnrollments
+                    .Where(e => userIds.Contains(e.UserId))
+                    .ToListAsync();
+                if (enrollments.Count > 0)
+                {
+                    var enrollmentIds = enrollments.Select(e => e.CourseEnrollmentId).ToList();
+                    var progresses = await _context.LessonProgresses
+                        .Where(p => enrollmentIds.Contains(p.CourseEnrollmentId))
+                        .ToListAsync();
+                    _context.LessonProgresses.RemoveRange(progresses);
+                    _context.CourseEnrollments.RemoveRange(enrollments);
+                }
+
+                var certs = await _context.Certificates
+                    .Where(c => userIds.Contains(c.UserId))
+                    .ToListAsync();
+                _context.Certificates.RemoveRange(certs);
+            }
+
+            // 2. Events and event-dependent entities
+            if (eventIds.Count > 0)
+            {
+                var foodRes = await _context.FoodReservations
+                    .Where(f => eventIds.Contains(f.EventId) || (memberIds.Count > 0 && memberIds.Contains(f.MemberId)))
+                    .ToListAsync();
+                _context.FoodReservations.RemoveRange(foodRes);
+
+                var eventAtt = await _context.EventAttendances
+                    .Where(ea => eventIds.Contains(ea.EventId) || (memberIds.Count > 0 && memberIds.Contains(ea.MemberId)))
+                    .ToListAsync();
+                _context.EventAttendances.RemoveRange(eventAtt);
+
+                var eventAssign = await _context.EventAssignments
+                    .Where(ea => eventIds.Contains(ea.EventId))
+                    .ToListAsync();
+                _context.EventAssignments.RemoveRange(eventAssign);
+
+                var eventNeeds = await _context.EventNeeds
+                    .Where(en => eventIds.Contains(en.EventId))
+                    .ToListAsync();
+                _context.EventNeeds.RemoveRange(eventNeeds);
+
+                var eventCheck = await _context.EventChecklists
+                    .Where(ec => eventIds.Contains(ec.EventId))
+                    .ToListAsync();
+                _context.EventChecklists.RemoveRange(eventCheck);
+
+                var eventDepts = await _context.EventDepartments
+                    .Where(ed => eventIds.Contains(ed.EventId))
+                    .ToListAsync();
+                var deptIds = eventDepts.Select(d => d.EventDepartmentId).ToList();
+
+                if (deptIds.Count > 0)
+                {
+                    var eventRoles = await _context.EventRoles
+                        .Where(er => deptIds.Contains(er.EventDepartmentId))
+                        .ToListAsync();
+                    _context.EventRoles.RemoveRange(eventRoles);
+                }
+
+                _context.EventDepartments.RemoveRange(eventDepts);
+
+                var events = await _context.Events
+                    .Where(e => e.CustomerId == customerId)
+                    .ToListAsync();
+                _context.Events.RemoveRange(events);
+            }
+
+            // 3. Ministries and ministry-dependent entities
+            if (ministryIds.Count > 0)
+            {
+                var minMembers = await _context.MinistryMembers
+                    .Where(mm => ministryIds.Contains(mm.MinistryId) || (memberIds.Count > 0 && memberIds.Contains(mm.MemberId)))
+                    .ToListAsync();
+                var minMemberIds = minMembers.Select(m => m.MinistryMemberId).ToList();
+
+                if (minMemberIds.Count > 0)
+                {
+                    var minRatings = await _context.MinistryPerformanceRatings
+                        .Where(mr => minMemberIds.Contains(mr.MinistryMemberId))
+                        .ToListAsync();
+                    _context.MinistryPerformanceRatings.RemoveRange(minRatings);
+                }
+
+                _context.MinistryMembers.RemoveRange(minMembers);
+
+                var ministries = await _context.Ministries
+                    .Where(m => m.CustomerId == customerId)
+                    .ToListAsync();
+                _context.Ministries.RemoveRange(ministries);
+            }
+
+            // 4. Finance & Attendance & Services
+            var attendances = await _context.Attendances
+                .Where(a => (memberIds.Count > 0 && memberIds.Contains(a.MemberId))
+                    || (a.ChurchServiceId.HasValue && serviceIds.Contains(a.ChurchServiceId.Value))
+                    || (a.EventId.HasValue && eventIds.Contains(a.EventId.Value)))
+                .ToListAsync();
+            _context.Attendances.RemoveRange(attendances);
+
+            var givings = await _context.Givings
+                .Where(g => g.CustomerId == customerId || (g.MemberId.HasValue && memberIds.Count > 0 && memberIds.Contains(g.MemberId.Value)))
+                .ToListAsync();
+            _context.Givings.RemoveRange(givings);
+
+            var incomes = await _context.Incomes
+                .Where(i => i.CustomerId == customerId)
+                .ToListAsync();
+            _context.Incomes.RemoveRange(incomes);
+
+            var expenses = await _context.Expenses
+                .Where(e => e.CustomerId == customerId)
+                .ToListAsync();
+            _context.Expenses.RemoveRange(expenses);
+
+            var services = await _context.ChurchServices
+                .Where(s => s.CustomerId == customerId)
+                .ToListAsync();
+            _context.ChurchServices.RemoveRange(services);
+
+            // 5. Visitors
+            if (visitorIds.Count > 0)
+            {
+                var vAtt = await _context.VisitorAttendances
+                    .Where(va => visitorIds.Contains(va.VisitorId))
+                    .ToListAsync();
+                _context.VisitorAttendances.RemoveRange(vAtt);
+
+                var visitors = await _context.Visitors
+                    .Where(v => v.CustomerId == customerId)
+                    .ToListAsync();
+                _context.Visitors.RemoveRange(visitors);
+            }
+
+            // 6. Client Members, Roles, Users, Members
+            var clientMembers = await _context.ClientMembers
+                .Where(cm => cm.CustomerId == customerId || (memberIds.Count > 0 && memberIds.Contains(cm.MemberId)))
+                .ToListAsync();
+            _context.ClientMembers.RemoveRange(clientMembers);
+
+            if (clientRoleIds.Count > 0)
+            {
+                var clientPerms = await _context.ClientPermissions
+                    .Where(cp => clientRoleIds.Contains(cp.ClientRoleId))
+                    .ToListAsync();
+                _context.ClientPermissions.RemoveRange(clientPerms);
+
+                var clientRoles = await _context.ClientRoles
+                    .Where(cr => cr.CustomerId == customerId)
+                    .ToListAsync();
+                _context.ClientRoles.RemoveRange(clientRoles);
+            }
+
+            var users = await _context.Users
+                .Where(u => u.CustomerId == customerId)
+                .ToListAsync();
+            _context.Users.RemoveRange(users);
+
+            var members = await _context.Members
+                .Where(m => m.CustomerId == customerId)
+                .ToListAsync();
+            _context.Members.RemoveRange(members);
+
+            // 7. Custom Courses if any
+            var courses = await _context.Courses
+                .Where(c => c.CustomerId == customerId)
+                .ToListAsync();
+            _context.Courses.RemoveRange(courses);
+
+            // 9. Subscriptions & Payments
+            if (subscriptionIds.Count > 0)
+            {
+                var payments = await _context.Payments
+                    .Where(p => subscriptionIds.Contains(p.SubscriptionId))
+                    .ToListAsync();
+                _context.Payments.RemoveRange(payments);
+
+                var subscriptions = await _context.Subscriptions
+                    .Where(s => s.CustomerId == customerId)
+                    .ToListAsync();
+                _context.Subscriptions.RemoveRange(subscriptions);
+            }
+
+            // 10. Demo Requests
+            var demoRequests = await _context.DemoRequests
+                .Where(d => d.CustomerId == customerId)
+                .ToListAsync();
+            foreach (var demo in demoRequests)
+            {
+                demo.CustomerId = null;
+            }
+
+            // 11. Finally delete Customer
+            _context.Customers.Remove(customer);
+
+            await _context.SaveChangesAsync();
+            return true;
+        }
     }
 
     // =============================================================
     // DTOs
     // =============================================================
+
+    public class UpdateSubscriptionSettingsRequest
+    {
+        public int? SubscriptionPlanId { get; set; }
+        public string? Status { get; set; }
+        public DateTime? NextBillingDate { get; set; }
+        public DateTime? TrialEndsAt { get; set; }
+        public decimal? Amount { get; set; }
+        public string? BillingCycle { get; set; }
+        public string? Notes { get; set; }
+    }
+
+    public class QuickRenewRequest
+    {
+        public int Days { get; set; } = 30;
+        public string? Notes { get; set; }
+    }
+
+    public class PurgeTenantsRequest
+    {
+        public List<int>? KeepCustomerIds { get; set; }
+    }
 
     public class UpdateSubscriberPermissionsRequest
     {

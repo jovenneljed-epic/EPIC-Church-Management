@@ -2,6 +2,7 @@ import { API_BASE_URL } from "../config";
 import React, { useEffect, useMemo, useState } from "react";
 import PermissionService, { EPIC_PERMISSION_MODULES } from "../PermissionService";
 import { ChurchPermissionsModal } from "../components/ChurchPermissionsModal";
+import { SubscriptionSettingsModal } from "../components/SubscriptionSettingsModal";
 
 /*
 ============================================================
@@ -43,13 +44,19 @@ interface ChurchSubscriber {
     subscriptionId?: number | null;
     planId?: number | null;
     planName?: string;
+    billingCycle?: string;
     subscriptionStatus?: string;
     nextBillingDate?: string | null;
+    trialEndsAt?: string | null;
+    notes?: string | null;
     amount?: number | null;
     userCount: number;
     maxUsers: number;
     memberCount: number;
     maxMembers: number;
+    isLocked?: boolean;
+    isExpiringSoon?: boolean;
+    daysUntilExpiration?: number | null;
 }
 
 interface ChurchSetupStatus {
@@ -224,6 +231,8 @@ const Settings: React.FC = () => {
     const [loadingSubscribers, setLoadingSubscribers] = useState(false);
     const [selectedChurchFilter, setSelectedChurchFilter] = useState<string>("ALL");
     const [permModalCustomerId, setPermModalCustomerId] = useState<number | null>(null);
+    const [subSettingsModalSubscriber, setSubSettingsModalSubscriber] = useState<ChurchSubscriber | null>(null);
+    const [purgingTenants, setPurgingTenants] = useState<boolean>(false);
 
     // Client Church Workspace (for tenant admin)
     const [churchStatus, setChurchStatus] = useState<ChurchSetupStatus | null>(null);
@@ -473,6 +482,52 @@ const Settings: React.FC = () => {
         } catch (err: any) {
             setError(err.message || "Failed to toggle workspace lock.");
         } finally {
+            setProcessing(false);
+        }
+    };
+
+    const handleDeleteTenant = async (customerId: number, churchName: string) => {
+        if (customerId === 1) {
+            alert("Cannot delete the platform master workspace (Tenant #1).");
+            return;
+        }
+
+        const confirmed = window.confirm(
+            `⚠️ DANGER: Are you sure you want to permanently delete church workspace "${churchName}" (Tenant #${customerId})?\n\nThis will permanently remove all associated members, services, attendances, event data, and subscription records for this tenant.\n\nThis action cannot be undone.`
+        );
+        if (!confirmed) return;
+
+        try {
+            setProcessing(true);
+            await apiRequest(`/Customers/${customerId}`, { method: "DELETE" });
+            setMessage(`Tenant "${churchName}" (#${customerId}) deleted successfully.`);
+            await loadSubscribers();
+        } catch (err: any) {
+            setError(err.message || "Failed to delete tenant workspace.");
+        } finally {
+            setProcessing(false);
+        }
+    };
+
+    const handlePurgeOtherTenants = async () => {
+        const confirmed = window.confirm(
+            `🧹 CLEAN / PURGE OTHER TENANTS:\n\nAre you sure you want to delete all demo/test church workspaces and keep ONLY Pastor Julius Ocariza's church (#9 Praise Church) and the platform master account?\n\nThis will purge test tenants (#5, #6, #7, #8, etc.) so your system is completely clean before accepting new tenants.\n\nPress OK to proceed.`
+        );
+        if (!confirmed) return;
+
+        try {
+            setPurgingTenants(true);
+            setProcessing(true);
+            const res = await apiRequest<any>("/Customers/purge-other-tenants", {
+                method: "POST",
+                body: JSON.stringify({ keepCustomerIds: [1, 9] })
+            });
+            setMessage(res.message || "Successfully purged test tenants!");
+            await loadSubscribers();
+        } catch (err: any) {
+            setError(err.message || "Failed to purge tenants.");
+        } finally {
+            setPurgingTenants(false);
             setProcessing(false);
         }
     };
@@ -1774,7 +1829,23 @@ const Settings: React.FC = () => {
                             </p>
                         </div>
 
-                        <div className="toolbar-actions">
+                        <div className="toolbar-actions" style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                            <button
+                                type="button"
+                                className="secondary-button"
+                                style={{
+                                    background: "rgba(239, 68, 68, 0.15)",
+                                    borderColor: "rgba(239, 68, 68, 0.4)",
+                                    color: "#fca5a5",
+                                    fontWeight: 700
+                                }}
+                                onClick={handlePurgeOtherTenants}
+                                disabled={purgingTenants || loadingSubscribers}
+                                title="Permanently delete demo/test tenants and keep ONLY Pastor Julius Ocariza's church and platform master"
+                            >
+                                {purgingTenants ? "Purging Tenants..." : "🧹 Clean Other Tenants (Keep Ptr. Julius)"}
+                            </button>
+
                             <button
                                 type="button"
                                 className="secondary-button"
@@ -1861,9 +1932,24 @@ const Settings: React.FC = () => {
                                                 </td>
 
                                                 <td>
-                                                    <span style={{ fontSize: "12px", color: sub.nextBillingDate ? "#e2e8f0" : "#64748b" }}>
-                                                        {sub.nextBillingDate ? new Date(sub.nextBillingDate).toLocaleDateString() : "—"}
-                                                    </span>
+                                                    <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                                                        <span style={{ fontSize: "12px", color: sub.nextBillingDate ? "#e2e8f0" : "#64748b", fontWeight: 600 }}>
+                                                            {sub.nextBillingDate ? new Date(sub.nextBillingDate).toLocaleDateString() : "—"}
+                                                        </span>
+                                                        {sub.isLocked ? (
+                                                            <span className="status-chip inactive" style={{ fontSize: "9px", background: "rgba(239, 68, 68, 0.2)", color: "#f87171", borderColor: "rgba(239, 68, 68, 0.4)", width: "fit-content" }}>
+                                                                🔒 Locked / Expired
+                                                            </span>
+                                                        ) : sub.isExpiringSoon ? (
+                                                            <span className="status-chip active" style={{ fontSize: "9px", background: "rgba(245, 158, 11, 0.2)", color: "#fbbf24", borderColor: "rgba(245, 158, 11, 0.4)", width: "fit-content" }}>
+                                                                ⚠️ Expiring in {sub.daysUntilExpiration}d
+                                                            </span>
+                                                        ) : (
+                                                            <span style={{ fontSize: "10px", color: "#6ee7b7" }}>
+                                                                ✓ Active
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </td>
 
                                                 <td>
@@ -1879,7 +1965,16 @@ const Settings: React.FC = () => {
                                                 </td>
 
                                                 <td style={{ textAlign: "right" }}>
-                                                    <div className="action-buttons" style={{ justifyContent: "flex-end" }}>
+                                                    <div className="action-buttons" style={{ justifyContent: "flex-end", flexWrap: "wrap", gap: "6px" }}>
+                                                        <button
+                                                            type="button"
+                                                            title="Scalable Subscription Settings, Custom Expiration Dates & Rate"
+                                                            style={{ background: "rgba(99, 102, 241, 0.18)", borderColor: "rgba(99, 102, 241, 0.4)", color: "#a5b4fc" }}
+                                                            onClick={() => setSubSettingsModalSubscriber(sub)}
+                                                        >
+                                                            ⚙️ Subscription
+                                                        </button>
+
                                                         <button
                                                             type="button"
                                                             title="Configure Plan Permissions & Seat Overrides"
@@ -1910,6 +2005,21 @@ const Settings: React.FC = () => {
                                                         >
                                                             {isSuspended ? "🔓" : "🔒"}
                                                         </button>
+
+                                                        {sub.customerId !== 1 && (
+                                                            <button
+                                                                type="button"
+                                                                title={`Permanently delete workspace "${sub.churchName}"`}
+                                                                style={{
+                                                                    background: "rgba(239, 68, 68, 0.15)",
+                                                                    borderColor: "rgba(239, 68, 68, 0.4)",
+                                                                    color: "#f87171"
+                                                                }}
+                                                                onClick={() => handleDeleteTenant(sub.customerId, sub.churchName)}
+                                                            >
+                                                                🗑️
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </td>
                                             </tr>
@@ -3996,6 +4106,18 @@ const Settings: React.FC = () => {
                     customerId={permModalCustomerId}
                     isOpen={true}
                     onClose={() => setPermModalCustomerId(null)}
+                    onUpdated={loadSubscribers}
+                />
+            )}
+
+            {/* ==================================================
+                SCALABLE SUBSCRIPTION & EXPIRATION SETTINGS MODAL
+            ================================================== */}
+            {subSettingsModalSubscriber !== null && (
+                <SubscriptionSettingsModal
+                    subscriber={subSettingsModalSubscriber}
+                    isOpen={true}
+                    onClose={() => setSubSettingsModalSubscriber(null)}
                     onUpdated={loadSubscribers}
                 />
             )}

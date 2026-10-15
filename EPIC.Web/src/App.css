@@ -2062,3 +2062,110 @@ textarea {
     }
 }
 
+/* ============================================================
+   SUBSCRIPTION EXPIRATION WARNING BANNER
+============================================================ */
+
+.subscription-warning-banner {
+    background: linear-gradient(90deg, rgba(245, 158, 11, 0.18), rgba(217, 119, 6, 0.25));
+    border-bottom: 1px solid rgba(245, 158, 11, 0.45);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.12);
+    padding: 10px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    z-index: 99;
+    animation: subBannerSlideDown 0.3s ease-out;
+}
+
+@keyframes subBannerSlideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.subscription-warning-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+}
+
+.warning-banner-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.warning-banner-text {
+    font-size: 13px;
+    color: #fef3c7;
+    line-height: 1.4;
+}
+
+.warning-banner-text strong {
+    color: #fbbf24;
+}
+
+.subscription-warning-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.warning-banner-renew-btn {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    border: 1px solid rgba(251, 191, 36, 0.6);
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(217, 119, 6, 0.4);
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+
+.warning-banner-renew-btn:hover {
+    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(217, 119, 6, 0.5);
+}
+
+.warning-banner-dismiss-btn {
+    background: transparent;
+    border: none;
+    color: #fde68a;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.15s;
+    line-height: 1;
+}
+
+.warning-banner-dismiss-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+}
+
+@media (max-width: 640px) {
+    .subscription-warning-banner {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 10px 16px;
+    }
+
+    .subscription-warning-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+}
+
