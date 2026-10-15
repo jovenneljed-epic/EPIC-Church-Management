@@ -3,6 +3,14 @@ import React, { useEffect, useMemo, useState } from "react";
 import PermissionService, { EPIC_PERMISSION_MODULES } from "../PermissionService";
 import { ChurchPermissionsModal } from "../components/ChurchPermissionsModal";
 import { SubscriptionSettingsModal } from "../components/SubscriptionSettingsModal";
+import {
+    Settings as SettingsIcon,
+    Key,
+    RotateCw,
+    Lock,
+    Unlock,
+    Trash2
+} from "lucide-react";
 
 /*
 ============================================================
@@ -232,7 +240,6 @@ const Settings: React.FC = () => {
     const [selectedChurchFilter, setSelectedChurchFilter] = useState<string>("ALL");
     const [permModalCustomerId, setPermModalCustomerId] = useState<number | null>(null);
     const [subSettingsModalSubscriber, setSubSettingsModalSubscriber] = useState<ChurchSubscriber | null>(null);
-    const [purgingTenants, setPurgingTenants] = useState<boolean>(false);
 
     // Client Church Workspace (for tenant admin)
     const [churchStatus, setChurchStatus] = useState<ChurchSetupStatus | null>(null);
@@ -505,29 +512,6 @@ const Settings: React.FC = () => {
         } catch (err: any) {
             setError(err.message || "Failed to delete tenant workspace.");
         } finally {
-            setProcessing(false);
-        }
-    };
-
-    const handlePurgeOtherTenants = async () => {
-        const confirmed = window.confirm(
-            `🧹 CLEAN / PURGE OTHER TENANTS:\n\nAre you sure you want to delete all demo/test church workspaces and keep ONLY Pastor Julius Ocariza's church (#9 Praise Church) and the platform master account?\n\nThis will purge test tenants (#5, #6, #7, #8, etc.) so your system is completely clean before accepting new tenants.\n\nPress OK to proceed.`
-        );
-        if (!confirmed) return;
-
-        try {
-            setPurgingTenants(true);
-            setProcessing(true);
-            const res = await apiRequest<any>("/Customers/purge-other-tenants", {
-                method: "POST",
-                body: JSON.stringify({ keepCustomerIds: [1, 9] })
-            });
-            setMessage(res.message || "Successfully purged test tenants!");
-            await loadSubscribers();
-        } catch (err: any) {
-            setError(err.message || "Failed to purge tenants.");
-        } finally {
-            setPurgingTenants(false);
             setProcessing(false);
         }
     };
@@ -1829,30 +1813,16 @@ const Settings: React.FC = () => {
                             </p>
                         </div>
 
-                        <div className="toolbar-actions" style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                            <button
-                                type="button"
-                                className="secondary-button"
-                                style={{
-                                    background: "rgba(239, 68, 68, 0.15)",
-                                    borderColor: "rgba(239, 68, 68, 0.4)",
-                                    color: "#fca5a5",
-                                    fontWeight: 700
-                                }}
-                                onClick={handlePurgeOtherTenants}
-                                disabled={purgingTenants || loadingSubscribers}
-                                title="Permanently delete demo/test tenants and keep ONLY Pastor Julius Ocariza's church and platform master"
-                            >
-                                {purgingTenants ? "Purging Tenants..." : "🧹 Clean Other Tenants (Keep Ptr. Julius)"}
-                            </button>
-
+                        <div className="toolbar-actions" style={{ display: "flex", gap: "10px", alignItems: "center" }}>
                             <button
                                 type="button"
                                 className="secondary-button"
                                 onClick={loadSubscribers}
                                 disabled={loadingSubscribers}
+                                style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
                             >
-                                {loadingSubscribers ? "Loading..." : "↺ Refresh"}
+                                <RotateCw size={14} className={loadingSubscribers ? "spin" : ""} />
+                                {loadingSubscribers ? "Loading..." : "Refresh"}
                             </button>
                         </div>
                     </div>
@@ -1888,64 +1858,109 @@ const Settings: React.FC = () => {
                                             <tr key={sub.customerId}>
                                                 <td>
                                                     <div className="user-cell">
-                                                        <div className="user-avatar" style={{ background: "rgba(59, 130, 246, 0.2)", color: "#60a5fa" }}>
+                                                        <div className="user-avatar" style={{ background: "rgba(59, 130, 246, 0.15)", color: "#60a5fa", border: "1px solid rgba(59, 130, 246, 0.3)" }}>
                                                             ⛪
                                                         </div>
                                                         <div>
-                                                            <strong>{sub.churchName}</strong>
-                                                            <small>Tenant #{sub.customerId} • Created {new Date(sub.createdDate).toLocaleDateString()}</small>
+                                                            <strong style={{ color: "#ffffff", fontSize: "14px", fontWeight: 700 }}>{sub.churchName}</strong>
+                                                            <small style={{ color: "#94a3b8", fontSize: "11px", marginTop: "3px", display: "block" }}>
+                                                                Tenant #{sub.customerId} • Created {new Date(sub.createdDate).toLocaleDateString()}
+                                                            </small>
                                                         </div>
                                                     </div>
                                                 </td>
 
                                                 <td>
-                                                    <div style={{ fontSize: "12px" }}>
-                                                        <div style={{ fontWeight: 600 }}>{sub.contactPerson}</div>
-                                                        <small style={{ color: "#94a3b8" }}>{sub.email}</small>
+                                                    <div style={{ fontSize: "13px" }}>
+                                                        <div style={{ fontWeight: 600, color: "#f1f5f9" }}>{sub.contactPerson}</div>
+                                                        <small style={{ color: "#94a3b8", fontSize: "12px", display: "block", marginTop: "2px" }}>{sub.email}</small>
                                                     </div>
                                                 </td>
 
                                                 <td>
-                                                    <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                                                        <span className="role-chip" style={{ fontSize: "11px", fontWeight: 700 }}>
+                                                    <div style={{ display: "flex", flexDirection: "column", gap: "5px", alignItems: "flex-start" }}>
+                                                        <span style={{
+                                                            fontSize: "11px",
+                                                            fontWeight: 700,
+                                                            padding: "3px 8px",
+                                                            borderRadius: "6px",
+                                                            background: "rgba(99, 102, 241, 0.18)",
+                                                            color: "#a5b4fc",
+                                                            border: "1px solid rgba(99, 102, 241, 0.35)",
+                                                            letterSpacing: "0.4px"
+                                                        }}>
                                                             {sub.planName || "Monthly Plan"}
                                                         </span>
-                                                        <span className={`status-chip ${isSuspended ? "inactive" : isPastDue ? "inactive" : "active"}`} style={{ fontSize: "10px" }}>
-                                                            <span />
+                                                        <span style={{
+                                                            display: "inline-flex",
+                                                            alignItems: "center",
+                                                            gap: "5px",
+                                                            padding: "3px 8px",
+                                                            borderRadius: "999px",
+                                                            fontSize: "10px",
+                                                            fontWeight: 700,
+                                                            background: isSuspended ? "rgba(239, 68, 68, 0.15)" : isPastDue ? "rgba(245, 158, 11, 0.15)" : "rgba(16, 185, 129, 0.15)",
+                                                            color: isSuspended ? "#fca5a5" : isPastDue ? "#fcd34d" : "#6ee7b7",
+                                                            border: `1px solid ${isSuspended ? "rgba(239, 68, 68, 0.3)" : isPastDue ? "rgba(245, 158, 11, 0.3)" : "rgba(16, 185, 129, 0.3)"}`
+                                                        }}>
+                                                            <span style={{
+                                                                width: "5px",
+                                                                height: "5px",
+                                                                borderRadius: "50%",
+                                                                background: isSuspended ? "#f87171" : isPastDue ? "#fbbf24" : "#34d399"
+                                                            }} />
                                                             {sub.subscriptionStatus || "ACTIVE"}
                                                         </span>
                                                     </div>
                                                 </td>
 
                                                 <td>
-                                                    <div style={{ fontSize: "12px" }}>
-                                                        <strong>{sub.userCount} / {sub.maxUsers}</strong>
-                                                        <small style={{ display: "block", color: "#64748b" }}>seats</small>
+                                                    <div style={{ fontSize: "13px" }}>
+                                                        <strong style={{ color: "#ffffff", fontWeight: 700 }}>{sub.userCount} / {sub.maxUsers}</strong>
+                                                        <small style={{ display: "block", color: "#94a3b8", fontSize: "11px", marginTop: "2px" }}>staff seats</small>
                                                     </div>
                                                 </td>
 
                                                 <td>
-                                                    <div style={{ fontSize: "12px" }}>
-                                                        <strong>{sub.memberCount} / {sub.maxMembers}</strong>
-                                                        <small style={{ display: "block", color: "#64748b" }}>members</small>
+                                                    <div style={{ fontSize: "13px" }}>
+                                                        <strong style={{ color: "#ffffff", fontWeight: 700 }}>{sub.memberCount} / {sub.maxMembers}</strong>
+                                                        <small style={{ display: "block", color: "#94a3b8", fontSize: "11px", marginTop: "2px" }}>members</small>
                                                     </div>
                                                 </td>
 
                                                 <td>
-                                                    <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                                                        <span style={{ fontSize: "12px", color: sub.nextBillingDate ? "#e2e8f0" : "#64748b", fontWeight: 600 }}>
+                                                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                                                        <span style={{ fontSize: "13px", color: sub.nextBillingDate ? "#f1f5f9" : "#64748b", fontWeight: 700 }}>
                                                             {sub.nextBillingDate ? new Date(sub.nextBillingDate).toLocaleDateString() : "—"}
                                                         </span>
                                                         {sub.isLocked ? (
-                                                            <span className="status-chip inactive" style={{ fontSize: "9px", background: "rgba(239, 68, 68, 0.2)", color: "#f87171", borderColor: "rgba(239, 68, 68, 0.4)", width: "fit-content" }}>
-                                                                🔒 Locked / Expired
+                                                            <span style={{
+                                                                fontSize: "10px",
+                                                                fontWeight: 700,
+                                                                background: "rgba(239, 68, 68, 0.2)",
+                                                                color: "#f87171",
+                                                                border: "1px solid rgba(239, 68, 68, 0.4)",
+                                                                borderRadius: "6px",
+                                                                padding: "2px 7px",
+                                                                width: "fit-content"
+                                                            }}>
+                                                                🔒 Locked / Suspended
                                                             </span>
                                                         ) : sub.isExpiringSoon ? (
-                                                            <span className="status-chip active" style={{ fontSize: "9px", background: "rgba(245, 158, 11, 0.2)", color: "#fbbf24", borderColor: "rgba(245, 158, 11, 0.4)", width: "fit-content" }}>
+                                                            <span style={{
+                                                                fontSize: "10px",
+                                                                fontWeight: 700,
+                                                                background: "rgba(245, 158, 11, 0.2)",
+                                                                color: "#fbbf24",
+                                                                border: "1px solid rgba(245, 158, 11, 0.4)",
+                                                                borderRadius: "6px",
+                                                                padding: "2px 7px",
+                                                                width: "fit-content"
+                                                            }}>
                                                                 ⚠️ Expiring in {sub.daysUntilExpiration}d
                                                             </span>
                                                         ) : (
-                                                            <span style={{ fontSize: "10px", color: "#6ee7b7" }}>
+                                                            <span style={{ fontSize: "11px", fontWeight: 600, color: "#34d399" }}>
                                                                 ✓ Active
                                                             </span>
                                                         )}
@@ -1954,70 +1969,80 @@ const Settings: React.FC = () => {
 
                                                 <td>
                                                     {hasCustomOverrides ? (
-                                                        <span className="status-chip active" style={{ fontSize: "10px", background: "rgba(245, 158, 11, 0.15)", color: "#fbbf24", borderColor: "rgba(245, 158, 11, 0.3)" }}>
+                                                        <span style={{
+                                                            fontSize: "11px",
+                                                            fontWeight: 700,
+                                                            padding: "3px 8px",
+                                                            borderRadius: "6px",
+                                                            background: "rgba(245, 158, 11, 0.15)",
+                                                            color: "#fbbf24",
+                                                            border: "1px solid rgba(245, 158, 11, 0.35)",
+                                                            display: "inline-block"
+                                                        }}>
                                                             ⚡ Custom
                                                         </span>
                                                     ) : (
-                                                        <span className="status-chip inactive" style={{ fontSize: "10px", color: "#94a3b8" }}>
+                                                        <span style={{
+                                                            fontSize: "11px",
+                                                            fontWeight: 600,
+                                                            padding: "3px 8px",
+                                                            borderRadius: "6px",
+                                                            background: "rgba(148, 163, 184, 0.1)",
+                                                            color: "#94a3b8",
+                                                            border: "1px solid rgba(148, 163, 184, 0.2)",
+                                                            display: "inline-block"
+                                                        }}>
                                                             ✓ Plan Default
                                                         </span>
                                                     )}
                                                 </td>
 
                                                 <td style={{ textAlign: "right" }}>
-                                                    <div className="action-buttons" style={{ justifyContent: "flex-end", flexWrap: "wrap", gap: "6px" }}>
+                                                    <div className="action-buttons-cell">
                                                         <button
                                                             type="button"
-                                                            title="Scalable Subscription Settings, Custom Expiration Dates & Rate"
-                                                            style={{ background: "rgba(99, 102, 241, 0.18)", borderColor: "rgba(99, 102, 241, 0.4)", color: "#a5b4fc" }}
+                                                            className="action-icon-btn btn-subscription"
+                                                            title="Scalable Subscription Settings & Expiration Dates"
                                                             onClick={() => setSubSettingsModalSubscriber(sub)}
                                                         >
-                                                            ⚙️ Subscription
+                                                            <SettingsIcon size={16} />
                                                         </button>
 
                                                         <button
                                                             type="button"
-                                                            title="Configure Plan Permissions & Seat Overrides"
-                                                            style={{ background: "rgba(59, 130, 246, 0.18)", borderColor: "rgba(59, 130, 246, 0.4)", color: "#93c5fd" }}
+                                                            className="action-icon-btn btn-permissions"
+                                                            title="Configure Plan Permissions & Allowed Modules"
                                                             onClick={() => setPermModalCustomerId(sub.customerId)}
                                                         >
-                                                            🔑 Permissions
+                                                            <Key size={16} />
                                                         </button>
 
                                                         <button
                                                             type="button"
-                                                            title="Quick Renew for 30 Days"
-                                                            style={{ background: "rgba(16, 185, 129, 0.15)", borderColor: "rgba(16, 185, 129, 0.35)", color: "#6ee7b7" }}
+                                                            className="action-icon-btn btn-renew"
+                                                            title="Quick Renew (+30 Days Subscription)"
                                                             onClick={() => handleQuickRenew(sub.customerId, sub.churchName)}
                                                         >
-                                                            ⚡ Renew
+                                                            <RotateCw size={16} />
                                                         </button>
 
                                                         <button
                                                             type="button"
-                                                            title={isSuspended ? "Unlock workspace access" : "Lock & suspend workspace"}
-                                                            style={{
-                                                                background: isSuspended ? "rgba(16, 185, 129, 0.15)" : "rgba(239, 68, 68, 0.15)",
-                                                                borderColor: isSuspended ? "rgba(16, 185, 129, 0.3)" : "rgba(239, 68, 68, 0.3)",
-                                                                color: isSuspended ? "#6ee7b7" : "#fca5a5"
-                                                            }}
+                                                            className={`action-icon-btn ${isSuspended ? "btn-unlock" : "btn-lock"}`}
+                                                            title={isSuspended ? "Unlock & Restore Workspace Access" : "Lock & Suspend Workspace Access"}
                                                             onClick={() => handleToggleLock(sub.customerId, sub.churchName, sub.subscriptionStatus)}
                                                         >
-                                                            {isSuspended ? "🔓" : "🔒"}
+                                                            {isSuspended ? <Unlock size={16} /> : <Lock size={16} />}
                                                         </button>
 
                                                         {sub.customerId !== 1 && (
                                                             <button
                                                                 type="button"
+                                                                className="action-icon-btn btn-delete"
                                                                 title={`Permanently delete workspace "${sub.churchName}"`}
-                                                                style={{
-                                                                    background: "rgba(239, 68, 68, 0.15)",
-                                                                    borderColor: "rgba(239, 68, 68, 0.4)",
-                                                                    color: "#f87171"
-                                                                }}
                                                                 onClick={() => handleDeleteTenant(sub.customerId, sub.churchName)}
                                                             >
-                                                                🗑️
+                                                                <Trash2 size={16} />
                                                             </button>
                                                         )}
                                                     </div>
@@ -2368,9 +2393,9 @@ const Settings: React.FC = () => {
 
 
 
-            // ============================================================
-            // USERS
-            // ============================================================
+            {/* ============================================================
+                USERS
+            ============================================================ */}
 
             {activeTab === "users" && (
 
@@ -4681,10 +4706,14 @@ const styles = `
 }
 
 
-/* TABLE */
+/* TABLE SYSTEM (DARK GLASS & HIGH CONTRAST) */
 
 .table-container {
     overflow-x: auto;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(15, 23, 42, 0.7);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
 }
 
 .epic-table,
@@ -4693,25 +4722,50 @@ const styles = `
     border-collapse: collapse;
 }
 
+.epic-settings thead th,
 .epic-table th,
 .permission-table th {
-    padding: 13px 18px;
-    text-align: left;
-    color: #667993;
-    background: rgba(255,255,255,.018);
-    font-size: 9px;
-    letter-spacing: 1.2px;
+    padding: 14px 18px !important;
+    text-align: left !important;
+    color: #94a3b8 !important;
+    background: rgba(15, 23, 42, 0.95) !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    letter-spacing: 1px !important;
+    text-transform: uppercase !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
-.epic-table td {
-    padding: 15px 18px;
-    border-top: 1px solid rgba(124,154,200,.07);
-    color: #a9b8cc;
-    font-size: 12px;
+.epic-settings tbody tr,
+.epic-table tbody tr {
+    background: rgba(15, 23, 42, 0.7) !important;
+    transition: background 0.15s ease !important;
 }
 
+.epic-settings tbody tr:nth-child(even),
+.epic-table tbody tr:nth-child(even) {
+    background: rgba(20, 31, 51, 0.75) !important;
+}
+
+.epic-settings tbody tr:hover,
 .epic-table tbody tr:hover {
-    background: rgba(75,194,255,.025);
+    background: rgba(30, 41, 59, 0.95) !important;
+}
+
+.epic-settings tbody td,
+.epic-table td {
+    padding: 14px 18px !important;
+    border-top: none !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+    color: #cbd5e1 !important;
+    background: transparent !important;
+    font-size: 13px !important;
+    vertical-align: middle !important;
+}
+
+.epic-settings tbody tr:last-child td,
+.epic-table tbody tr:last-child td {
+    border-bottom: none !important;
 }
 
 .table-loading,
@@ -4719,6 +4773,7 @@ const styles = `
     padding: 50px !important;
     text-align: center !important;
     color: #637590 !important;
+    background: transparent !important;
 }
 
 
@@ -4826,6 +4881,112 @@ code {
 .action-buttons button:hover {
     color: #5edfff;
     border-color: rgba(75,210,255,.3);
+}
+
+/* ICONIC ACTION BUTTONS FOR CHURCH SUBSCRIBERS */
+
+.action-buttons-cell {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: nowrap;
+}
+
+.action-icon-btn {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    border-radius: 9px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    padding: 0 !important;
+    outline: none !important;
+}
+
+.action-icon-btn:hover {
+    transform: translateY(-2px) scale(1.08) !important;
+}
+
+.action-icon-btn.btn-subscription {
+    background: rgba(99, 102, 241, 0.16) !important;
+    border: 1px solid rgba(99, 102, 241, 0.45) !important;
+    color: #a5b4fc !important;
+}
+
+.action-icon-btn.btn-subscription:hover {
+    background: rgba(99, 102, 241, 0.3) !important;
+    border-color: rgba(99, 102, 241, 0.8) !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 14px rgba(99, 102, 241, 0.4) !important;
+}
+
+.action-icon-btn.btn-permissions {
+    background: rgba(14, 165, 233, 0.16) !important;
+    border: 1px solid rgba(14, 165, 233, 0.45) !important;
+    color: #38bdf8 !important;
+}
+
+.action-icon-btn.btn-permissions:hover {
+    background: rgba(14, 165, 233, 0.3) !important;
+    border-color: rgba(14, 165, 233, 0.8) !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 14px rgba(14, 165, 233, 0.4) !important;
+}
+
+.action-icon-btn.btn-renew {
+    background: rgba(16, 185, 129, 0.16) !important;
+    border: 1px solid rgba(16, 185, 129, 0.45) !important;
+    color: #34d399 !important;
+}
+
+.action-icon-btn.btn-renew:hover {
+    background: rgba(16, 185, 129, 0.3) !important;
+    border-color: rgba(16, 185, 129, 0.8) !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 14px rgba(16, 185, 129, 0.4) !important;
+}
+
+.action-icon-btn.btn-lock {
+    background: rgba(245, 158, 11, 0.16) !important;
+    border: 1px solid rgba(245, 158, 11, 0.45) !important;
+    color: #fbbf24 !important;
+}
+
+.action-icon-btn.btn-lock:hover {
+    background: rgba(245, 158, 11, 0.3) !important;
+    border-color: rgba(245, 158, 11, 0.8) !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 14px rgba(245, 158, 11, 0.4) !important;
+}
+
+.action-icon-btn.btn-unlock {
+    background: rgba(16, 185, 129, 0.16) !important;
+    border: 1px solid rgba(16, 185, 129, 0.45) !important;
+    color: #34d399 !important;
+}
+
+.action-icon-btn.btn-unlock:hover {
+    background: rgba(16, 185, 129, 0.3) !important;
+    border-color: rgba(16, 185, 129, 0.8) !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 14px rgba(16, 185, 129, 0.4) !important;
+}
+
+.action-icon-btn.btn-delete {
+    background: rgba(239, 68, 68, 0.16) !important;
+    border: 1px solid rgba(239, 68, 68, 0.45) !important;
+    color: #f87171 !important;
+}
+
+.action-icon-btn.btn-delete:hover {
+    background: rgba(239, 68, 68, 0.3) !important;
+    border-color: rgba(239, 68, 68, 0.8) !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 14px rgba(239, 68, 68, 0.4) !important;
 }
 /* DELETE USER */
 
