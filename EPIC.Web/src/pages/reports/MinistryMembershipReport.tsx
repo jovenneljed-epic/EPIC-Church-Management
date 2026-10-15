@@ -47,7 +47,12 @@ const FALLBACK_ROSTER: MinistryMemberRecord[] = [
 ];
 
 const MinistryMembershipReport: React.FC<MinistryMembershipReportProps> = ({ onBack }) => {
-    const [roster, setRoster] = useState<MinistryMemberRecord[]>(FALLBACK_ROSTER);
+    const customerId = localStorage.getItem("customerId") || "1";
+    const isMainCustomer = customerId === "1";
+    const churchName = localStorage.getItem("currentChurchName") || localStorage.getItem("churchName") || (isMainCustomer ? "Luke 4:18 Ministries" : "Church");
+    const churchSubtag = isMainCustomer ? "Luke 4:18 Ministries — San Vicente Church • Umingan, Pangasinan" : churchName;
+
+    const [roster, setRoster] = useState<MinistryMemberRecord[]>(isMainCustomer ? FALLBACK_ROSTER : []);
     const [loading, setLoading] = useState(false);
     const [ministryFilter, setMinistryFilter] = useState("ALL");
     const [roleFilter, setRoleFilter] = useState("ALL");
@@ -65,17 +70,17 @@ const MinistryMembershipReport: React.FC<MinistryMembershipReportProps> = ({ onB
                     const data = await res.json();
                     const list = Array.isArray(data) ? data : data.members || data.data || [];
                     const withMinistry = list.filter((m: any) => m.ministry && m.ministry.trim());
-                    if (withMinistry.length > 0) {
-                        const parsed: MinistryMemberRecord[] = withMinistry.map((m: any, i: number) => ({
-                            id: m.memberId || i + 1,
-                            memberName: `${m.firstName || ""} ${m.lastName || ""}`.trim() || m.memberCode || "Member",
-                            ministryName: m.ministry.trim(),
-                            role: i % 4 === 0 ? "Ministry Head" : i % 4 === 1 ? "Core Team" : "Volunteer",
-                            contactNumber: m.contactNumber,
-                            email: m.email,
-                            dateJoined: m.dateJoined,
-                            status: m.status?.toUpperCase() === "INACTIVE" ? "Inactive" : "Active"
-                        }));
+                    const parsed: MinistryMemberRecord[] = withMinistry.map((m: any, i: number) => ({
+                        id: m.memberId || i + 1,
+                        memberName: `${m.firstName || ""} ${m.lastName || ""}`.trim() || m.memberCode || "Member",
+                        ministryName: m.ministry.trim(),
+                        role: i % 4 === 0 ? "Ministry Head" : i % 4 === 1 ? "Core Team" : "Volunteer",
+                        contactNumber: m.contactNumber,
+                        email: m.email,
+                        dateJoined: m.dateJoined,
+                        status: m.status?.toUpperCase() === "INACTIVE" ? "Inactive" : "Active"
+                    }));
+                    if (parsed.length > 0 || !isMainCustomer) {
                         setRoster(parsed);
                     }
                 }
@@ -87,7 +92,7 @@ const MinistryMembershipReport: React.FC<MinistryMembershipReportProps> = ({ onB
         };
 
         fetchMinistries();
-    }, []);
+    }, [isMainCustomer]);
 
     // Unique ministry names
     const ministryNames = useMemo(() => {
@@ -152,8 +157,8 @@ const MinistryMembershipReport: React.FC<MinistryMembershipReportProps> = ({ onB
         <div className="ministry-report-page">
             {/* PRINT HEADER FOR PAPER */}
             <div className="print-header-sheet" style={{ display: "none" }}>
-                <h2>LUKE 4:18 MINISTRIES — SAN VICENTE CHURCH</h2>
-                <p>San Vicente, Umingan, Pangasinan • Official Ministry Membership & Service Roster</p>
+                <h2>{isMainCustomer ? "LUKE 4:18 MINISTRIES — SAN VICENTE CHURCH" : churchName.toUpperCase()}</h2>
+                <p>{isMainCustomer ? "San Vicente, Umingan, Pangasinan • Official Ministry Membership & Service Roster" : `Official Ministry Membership & Service Roster • ${churchName}`}</p>
                 <p style={{ fontSize: "8.5pt", color: "#64748b", marginTop: "2px" }}>
                     Generated: {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })} | Volunteers Displayed: {filtered.length}
                 </p>
@@ -167,7 +172,7 @@ const MinistryMembershipReport: React.FC<MinistryMembershipReportProps> = ({ onB
                         <div className="ministry-hero-eyebrow">EPIC REPORTS CENTER</div>
                         <h1 className="ministry-hero-title">Ministry Membership Report</h1>
                         <p className="ministry-hero-subtitle">
-                            Luke 4:18 Ministries — San Vicente Church • Umingan, Pangasinan
+                            {churchSubtag}
                         </p>
                     </div>
                 </div>
@@ -334,17 +339,17 @@ const MinistryMembershipReport: React.FC<MinistryMembershipReportProps> = ({ onB
             <div className="print-footer-sheet" style={{ display: "none" }}>
                 <div className="print-signature-box">
                     <div className="signature-line" />
-                    <div className="signature-name">Bro. Joshua Santos</div>
-                    <div className="signature-title">Ministries & Pastoral Coordinator</div>
+                    <div className="signature-name">{isMainCustomer ? "Bro. Joshua Santos" : "Ministries Coordinator"}</div>
+                    <div className="signature-title">Ministries &amp; Pastoral Coordinator</div>
                 </div>
                 <div className="print-signature-box">
                     <div className="signature-line" />
-                    <div className="signature-name">Pastor Mateo Santos</div>
-                    <div className="signature-title">Senior Pastor, Luke 4:18 Ministries</div>
+                    <div className="signature-name">{isMainCustomer ? "Pastor Mateo Santos" : (localStorage.getItem("userName") || "Senior Pastor")}</div>
+                    <div className="signature-title">Senior Pastor, {churchName}</div>
                 </div>
                 <div className="print-signature-box">
                     <div className="signature-line" />
-                    <div className="signature-name">San Vicente Church Council</div>
+                    <div className="signature-name">{isMainCustomer ? "San Vicente Church Council" : `${churchName} Church Council`}</div>
                     <div className="signature-title">Official Verification Stamp</div>
                 </div>
             </div>

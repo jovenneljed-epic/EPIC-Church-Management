@@ -54,8 +54,13 @@ function getDaysUntil(month: number, day: number): number {
 }
 
 const BirthdayAnniversaryReport: React.FC<BirthdayAnniversaryReportProps> = ({ onBack }) => {
+    const customerId = localStorage.getItem("customerId") || "1";
+    const isMainCustomer = customerId === "1";
+    const churchName = localStorage.getItem("currentChurchName") || localStorage.getItem("churchName") || (isMainCustomer ? "Luke 4:18 Ministries" : "Church");
+    const churchSubtag = isMainCustomer ? "Luke 4:18 Ministries — San Vicente Church • Umingan, Pangasinan" : churchName;
+
     const currentMonth = new Date().getMonth() + 1;
-    const [celebrants, setCelebrants] = useState<CelebrationRecord[]>(FALLBACK_CELEBRANTS);
+    const [celebrants, setCelebrants] = useState<CelebrationRecord[]>(isMainCustomer ? FALLBACK_CELEBRANTS : []);
     const [loading, setLoading] = useState(false);
     const [typeFilter, setTypeFilter] = useState<string>("ALL");
     const [monthFilter, setMonthFilter] = useState<string>("ALL");
@@ -72,29 +77,27 @@ const BirthdayAnniversaryReport: React.FC<BirthdayAnniversaryReportProps> = ({ o
                 if (res.ok) {
                     const data = await res.json();
                     const list = Array.isArray(data) ? data : data.members || data.data || [];
-                    if (list.length > 0) {
-                        const parsed: CelebrationRecord[] = [];
-                        list.forEach((m: any, idx: number) => {
-                            if (m.birthDate) {
-                                const d = new Date(m.birthDate);
-                                if (!isNaN(d.getTime())) {
-                                    parsed.push({
-                                        id: `b_${m.memberId || idx}`,
-                                        name: `${m.firstName || ""} ${m.lastName || ""}`.trim() || m.memberCode || "Member",
-                                        type: "BIRTHDAY",
-                                        dateString: m.birthDate,
-                                        month: d.getMonth() + 1,
-                                        day: d.getDate(),
-                                        year: d.getFullYear(),
-                                        ministry: m.ministry,
-                                        contactNumber: m.contactNumber
-                                    });
-                                }
+                    const parsed: CelebrationRecord[] = [];
+                    list.forEach((m: any, idx: number) => {
+                        if (m.birthDate) {
+                            const d = new Date(m.birthDate);
+                            if (!isNaN(d.getTime())) {
+                                parsed.push({
+                                    id: `b_${m.memberId || idx}`,
+                                    name: `${m.firstName || ""} ${m.lastName || ""}`.trim() || m.memberCode || "Member",
+                                    type: "BIRTHDAY",
+                                    dateString: m.birthDate,
+                                    month: d.getMonth() + 1,
+                                    day: d.getDate(),
+                                    year: d.getFullYear(),
+                                    ministry: m.ministry,
+                                    contactNumber: m.contactNumber
+                                });
                             }
-                        });
-                        if (parsed.length > 0) {
-                            setCelebrants(parsed);
                         }
+                    });
+                    if (parsed.length > 0 || !isMainCustomer) {
+                        setCelebrants(parsed);
                     }
                 }
             } catch {
@@ -105,7 +108,7 @@ const BirthdayAnniversaryReport: React.FC<BirthdayAnniversaryReportProps> = ({ o
         };
 
         loadCelebrants();
-    }, []);
+    }, [isMainCustomer]);
 
     // Filter celebrants
     const filtered = useMemo(() => {
@@ -170,8 +173,8 @@ const BirthdayAnniversaryReport: React.FC<BirthdayAnniversaryReportProps> = ({ o
         <div className="celebration-report-page">
             {/* PRINT HEADER FOR PAPER */}
             <div className="print-header-sheet" style={{ display: "none" }}>
-                <h2>LUKE 4:18 MINISTRIES — SAN VICENTE CHURCH</h2>
-                <p>San Vicente, Umingan, Pangasinan • Official Church Birthdays & Anniversaries Register</p>
+                <h2>{isMainCustomer ? "LUKE 4:18 MINISTRIES — SAN VICENTE CHURCH" : churchName.toUpperCase()}</h2>
+                <p>{isMainCustomer ? "San Vicente, Umingan, Pangasinan • Official Church Birthdays & Anniversaries Register" : `Official Church Birthdays & Anniversaries Register • ${churchName}`}</p>
                 <p style={{ fontSize: "8.5pt", color: "#64748b", marginTop: "2px" }}>
                     Generated: {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })} | Celebrants Displayed: {filtered.length}
                 </p>
@@ -185,7 +188,7 @@ const BirthdayAnniversaryReport: React.FC<BirthdayAnniversaryReportProps> = ({ o
                         <div className="celebration-hero-eyebrow">EPIC REPORTS CENTER</div>
                         <h1 className="celebration-hero-title">Birthdays & Anniversaries</h1>
                         <p className="celebration-hero-subtitle">
-                            Luke 4:18 Ministries — San Vicente Church • Umingan, Pangasinan
+                            {churchSubtag}
                         </p>
                     </div>
                 </div>
@@ -363,17 +366,17 @@ const BirthdayAnniversaryReport: React.FC<BirthdayAnniversaryReportProps> = ({ o
             <div className="print-footer-sheet" style={{ display: "none" }}>
                 <div className="print-signature-box">
                     <div className="signature-line" />
-                    <div className="signature-name">Sis. Leah Reyes</div>
-                    <div className="signature-title">Pastoral Care & Celebrations Coordinator</div>
+                    <div className="signature-name">{isMainCustomer ? "Sis. Leah Reyes" : "Celebrations Coordinator"}</div>
+                    <div className="signature-title">Pastoral Care &amp; Celebrations Coordinator</div>
                 </div>
                 <div className="print-signature-box">
                     <div className="signature-line" />
-                    <div className="signature-name">Pastor Mateo Santos</div>
-                    <div className="signature-title">Senior Pastor, Luke 4:18 Ministries</div>
+                    <div className="signature-name">{isMainCustomer ? "Pastor Mateo Santos" : (localStorage.getItem("userName") || "Senior Pastor")}</div>
+                    <div className="signature-title">Senior Pastor, {churchName}</div>
                 </div>
                 <div className="print-signature-box">
                     <div className="signature-line" />
-                    <div className="signature-name">San Vicente Church Council</div>
+                    <div className="signature-name">{isMainCustomer ? "San Vicente Church Council" : `${churchName} Church Council`}</div>
                     <div className="signature-title">Official Verification Stamp</div>
                 </div>
             </div>

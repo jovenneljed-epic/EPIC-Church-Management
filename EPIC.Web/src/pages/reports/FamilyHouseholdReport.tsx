@@ -99,7 +99,12 @@ const FALLBACK_HOUSEHOLDS: Household[] = [
 ];
 
 const FamilyHouseholdReport: React.FC<FamilyHouseholdReportProps> = ({ onBack }) => {
-    const [households, setHouseholds] = useState<Household[]>(FALLBACK_HOUSEHOLDS);
+    const customerId = localStorage.getItem("customerId") || "1";
+    const isMainCustomer = customerId === "1";
+    const churchName = localStorage.getItem("currentChurchName") || localStorage.getItem("churchName") || (isMainCustomer ? "Luke 4:18 Ministries" : "Church");
+    const churchSubtag = isMainCustomer ? "Luke 4:18 Ministries — San Vicente Church • Umingan, Pangasinan" : churchName;
+
+    const [households, setHouseholds] = useState<Household[]>(isMainCustomer ? FALLBACK_HOUSEHOLDS : []);
     const [loading, setLoading] = useState(false);
     const [search, setSearch] = useState("");
     const [barangayFilter, setBarangayFilter] = useState("ALL");
@@ -116,46 +121,44 @@ const FamilyHouseholdReport: React.FC<FamilyHouseholdReportProps> = ({ onBack })
                 if (res.ok) {
                     const data = await res.json();
                     const list = Array.isArray(data) ? data : data.members || data.data || [];
-                    if (list.length > 0) {
-                        // Group members by lastName & clean address
-                        const map = new Map<string, Household>();
-                        list.forEach((m: any, idx: number) => {
-                            const lName = (m.lastName || "Family").trim();
-                            const addr = (m.address || "San Vicente, Umingan").trim();
-                            const bgyMatch = addr.match(/San Vicente|Nancalabasaan|Flores|Poblacion/i);
-                            const bgy = bgyMatch ? bgyMatch[0] : "San Vicente";
-                            const key = `${lName.toLowerCase()}_${bgy.toLowerCase()}`;
+                    // Group members by lastName & clean address
+                    const map = new Map<string, Household>();
+                    list.forEach((m: any, idx: number) => {
+                        const lName = (m.lastName || "Family").trim();
+                        const addr = (m.address || (isMainCustomer ? "San Vicente, Umingan" : "Church Community")).trim();
+                        const bgyMatch = addr.match(/San Vicente|Nancalabasaan|Flores|Poblacion/i);
+                        const bgy = bgyMatch ? bgyMatch[0] : (isMainCustomer ? "San Vicente" : "General");
+                        const key = `${lName.toLowerCase()}_${bgy.toLowerCase()}`;
 
-                            const memberObj: FamilyMember = {
-                                id: m.memberId || idx + 1,
-                                fullName: `${m.firstName || ""} ${m.lastName || ""}`.trim() || m.memberCode || "Member",
-                                role: m.gender?.toUpperCase() === "MALE" && (m.civilStatus?.toUpperCase() === "MARRIED" || !map.has(key)) ? "Head" : (m.civilStatus?.toUpperCase() === "MARRIED" ? "Spouse" : "Member"),
-                                gender: m.gender,
-                                birthDate: m.birthDate,
-                                civilStatus: m.civilStatus,
-                                contactNumber: m.contactNumber,
-                                status: m.status?.toUpperCase() === "INACTIVE" ? "Inactive" : "Active"
-                            };
+                        const memberObj: FamilyMember = {
+                            id: m.memberId || idx + 1,
+                            fullName: `${m.firstName || ""} ${m.lastName || ""}`.trim() || m.memberCode || "Member",
+                            role: m.gender?.toUpperCase() === "MALE" && (m.civilStatus?.toUpperCase() === "MARRIED" || !map.has(key)) ? "Head" : (m.civilStatus?.toUpperCase() === "MARRIED" ? "Spouse" : "Member"),
+                            gender: m.gender,
+                            birthDate: m.birthDate,
+                            civilStatus: m.civilStatus,
+                            contactNumber: m.contactNumber,
+                            status: m.status?.toUpperCase() === "INACTIVE" ? "Inactive" : "Active"
+                        };
 
-                            if (!map.has(key)) {
-                                map.set(key, {
-                                    householdId: `HH-${String(map.size + 1).padStart(3, "0")}`,
-                                    familyName: `${lName} Family`,
-                                    headName: memberObj.fullName,
-                                    address: addr,
-                                    barangay: bgy,
-                                    contactNumber: m.contactNumber || "—",
-                                    members: [memberObj]
-                                });
-                            } else {
-                                const hh = map.get(key)!;
-                                hh.members.push(memberObj);
-                            }
-                        });
-
-                        if (map.size > 0) {
-                            setHouseholds(Array.from(map.values()));
+                        if (!map.has(key)) {
+                            map.set(key, {
+                                householdId: `HH-${String(map.size + 1).padStart(3, "0")}`,
+                                familyName: `${lName} Family`,
+                                headName: memberObj.fullName,
+                                address: addr,
+                                barangay: bgy,
+                                contactNumber: m.contactNumber || "—",
+                                members: [memberObj]
+                            });
+                        } else {
+                            const hh = map.get(key)!;
+                            hh.members.push(memberObj);
                         }
+                    });
+
+                    if (map.size > 0 || !isMainCustomer) {
+                        setHouseholds(Array.from(map.values()));
                     }
                 }
             } catch {
@@ -166,7 +169,7 @@ const FamilyHouseholdReport: React.FC<FamilyHouseholdReportProps> = ({ onBack })
         };
 
         fetchMembers();
-    }, []);
+    }, [isMainCustomer]);
 
     // Filtered households
     const filteredHouseholds = useMemo(() => {
@@ -239,8 +242,8 @@ const FamilyHouseholdReport: React.FC<FamilyHouseholdReportProps> = ({ onBack })
         <div className="family-report-page">
             {/* PRINT HEADER FOR PAPER */}
             <div className="print-header-sheet" style={{ display: "none" }}>
-                <h2>LUKE 4:18 MINISTRIES — SAN VICENTE CHURCH</h2>
-                <p>San Vicente, Umingan, Pangasinan • Official Church Household & Family Directory</p>
+                <h2>{isMainCustomer ? "LUKE 4:18 MINISTRIES — SAN VICENTE CHURCH" : churchName.toUpperCase()}</h2>
+                <p>{isMainCustomer ? "San Vicente, Umingan, Pangasinan • Official Church Household & Family Directory" : `Official Church Household & Family Directory • ${churchName}`}</p>
                 <p style={{ fontSize: "8.5pt", color: "#64748b", marginTop: "2px" }}>
                     Generated: {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })} | Total Families: {totalHouseholds} | Total Individuals: {totalMembers}
                 </p>
@@ -254,7 +257,7 @@ const FamilyHouseholdReport: React.FC<FamilyHouseholdReportProps> = ({ onBack })
                         <div className="family-hero-eyebrow">EPIC REPORTS CENTER</div>
                         <h1 className="family-hero-title">Family / Household Report</h1>
                         <p className="family-hero-subtitle">
-                            Luke 4:18 Ministries — San Vicente Church • Umingan, Pangasinan
+                            {churchSubtag}
                         </p>
                     </div>
                 </div>
@@ -433,17 +436,17 @@ const FamilyHouseholdReport: React.FC<FamilyHouseholdReportProps> = ({ onBack })
             <div className="print-footer-sheet" style={{ display: "none" }}>
                 <div className="print-signature-box">
                     <div className="signature-line" />
-                    <div className="signature-name">Sis. Leah Reyes</div>
+                    <div className="signature-name">{isMainCustomer ? "Sis. Leah Reyes" : "Membership Secretary"}</div>
                     <div className="signature-title">Church Membership Secretary</div>
                 </div>
                 <div className="print-signature-box">
                     <div className="signature-line" />
-                    <div className="signature-name">Pastor Mateo Santos</div>
-                    <div className="signature-title">Senior Pastor, Luke 4:18 Ministries</div>
+                    <div className="signature-name">{isMainCustomer ? "Pastor Mateo Santos" : (localStorage.getItem("userName") || "Senior Pastor")}</div>
+                    <div className="signature-title">Senior Pastor, {churchName}</div>
                 </div>
                 <div className="print-signature-box">
                     <div className="signature-line" />
-                    <div className="signature-name">San Vicente Church Council</div>
+                    <div className="signature-name">{isMainCustomer ? "San Vicente Church Council" : `${churchName} Church Council`}</div>
                     <div className="signature-title">Official Parish Verification Seal</div>
                 </div>
             </div>

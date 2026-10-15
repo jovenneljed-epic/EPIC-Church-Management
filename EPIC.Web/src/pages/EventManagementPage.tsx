@@ -206,6 +206,12 @@ const DEFAULT_ASSIGNMENT_FORM: AssignmentForm = {
 ========================================================= */
 
 const EventManagementPage: React.FC = () => {
+    const customerId = localStorage.getItem("customerId") || "1";
+    const isMainCustomer = customerId === "1";
+    const churchName = localStorage.getItem("currentChurchName") || localStorage.getItem("churchName") || (isMainCustomer ? "Luke 4:18 Ministries" : "Church");
+    const pastorName = isMainCustomer ? "Pastor Ronnel M. Aviguetero" : (localStorage.getItem("userName") || "Senior Pastor");
+    const churchLocation = isMainCustomer ? "San Vicente, Philippines • Ministry Operations & Secretariat" : `${churchName} • Ministry Operations & Secretariat`;
+
     /* =====================================================
        STATE
     ===================================================== */
@@ -404,8 +410,8 @@ const EventManagementPage: React.FC = () => {
                 startDate: event?.eventDate ?? event?.EventDate ?? event?.startDate ?? "",
                 startTime: event?.startTime ?? event?.StartTime ?? "09:00 AM",
                 endTime: event?.endTime ?? event?.EndTime ?? "11:30 AM",
-                coordinator: event?.speaker ?? event?.Speaker ?? event?.coordinator ?? "Pastor Ronnel M. Aviguetero",
-                ministry: event?.ministry ?? event?.Ministry ?? "Luke 4:18 Ministries",
+                coordinator: event?.speaker ?? event?.Speaker ?? event?.coordinator ?? (isMainCustomer ? "Pastor Ronnel M. Aviguetero" : pastorName),
+                ministry: event?.ministry ?? event?.Ministry ?? (isMainCustomer ? "Luke 4:18 Ministries" : churchName),
                 status: normalizeStatus(event?.status ?? event?.Status),
                 description: event?.description ?? event?.Description ?? "",
                 notes: event?.notes ?? event?.Notes ?? "",
@@ -1058,8 +1064,8 @@ const EventManagementPage: React.FC = () => {
                         <div className="print-church-logo">EPIC</div>
                         <div className="print-church-details">
                             <h1 className="church-main-title">EPIC CHURCH MANAGEMENT SYSTEM</h1>
-                            <h2 className="church-branch">LUKE 4:18 MINISTRIES • SAN VICENTE CHURCH</h2>
-                            <span className="church-location">San Vicente, Philippines • Ministry Operations & Secretariat</span>
+                            <h2 className="church-branch">{isMainCustomer ? "LUKE 4:18 MINISTRIES • SAN VICENTE CHURCH" : churchName.toUpperCase()}</h2>
+                            <span className="church-location">{churchLocation}</span>
                         </div>
                     </div>
 
@@ -1224,20 +1230,20 @@ const EventManagementPage: React.FC = () => {
                             <span className="sig-label">NOTED BY:</span>
                             <div className="sig-line" />
                             <strong className="sig-name">Head of Ministries</strong>
-                            <span className="sig-title">Luke 4:18 Pastoral Secretariat</span>
+                            <span className="sig-title">{isMainCustomer ? "Luke 4:18 Pastoral Secretariat" : `${churchName} Secretariat`}</span>
                         </div>
 
                         <div className="sig-box">
                             <span className="sig-label">APPROVED BY:</span>
                             <div className="sig-line" />
-                            <strong className="sig-name">PASTOR RONNEL M. AVIGUETERO</strong>
-                            <span className="sig-title">Senior Pastor • Luke 4:18 Ministries</span>
+                            <strong className="sig-name">{pastorName.toUpperCase()}</strong>
+                            <span className="sig-title">Senior Pastor • {churchName}</span>
                         </div>
                     </div>
                 </div>
 
                 <div className="print-footer-notice">
-                    <span>Official Church Directive • Luke 4:18 Ministries San Vicente • Generated via EPIC Church Management System</span>
+                    <span>Official Church Directive • {isMainCustomer ? "Luke 4:18 Ministries San Vicente" : churchName} • Generated via EPIC Church Management System</span>
                 </div>
             </div>
         );
@@ -1578,7 +1584,7 @@ const EventManagementPage: React.FC = () => {
                                     </div>
                                     <div className="meta-strip-item">
                                         <span className="meta-label">MINISTRY OVERSIGHT</span>
-                                        <strong className="meta-val"><Building size={14} /> {selectedEvent.ministry || "Luke 4:18 Ministries"}</strong>
+                                        <strong className="meta-val"><Building size={14} /> {selectedEvent.ministry || (isMainCustomer ? "Luke 4:18 Ministries" : churchName)}</strong>
                                     </div>
                                 </div>
                             </div>
@@ -1826,7 +1832,7 @@ const EventManagementPage: React.FC = () => {
                                             <div className="directive-item">
                                                 <span className="directive-label">EVENT OVERVIEW</span>
                                                 <p className="directive-content">
-                                                    {selectedEvent.description || "Official church program organized under Luke 4:18 Ministries San Vicente. All committee leaders are requested to observe proper call times and spiritual preparation."}
+                                                    {selectedEvent.description || `Official church program organized under ${churchName}. All committee leaders are requested to observe proper call times and spiritual preparation.`}
                                                 </p>
                                             </div>
 
@@ -1847,7 +1853,7 @@ const EventManagementPage: React.FC = () => {
                                             <div className="directive-item">
                                                 <span className="directive-label">SENIOR PASTOR ENDORSEMENT</span>
                                                 <p className="directive-content">
-                                                    “Let all things be done decently and in order.” Authorized and endorsed by <strong>Pastor Ronnel M. Aviguetero</strong>, Senior Pastor.
+                                                    “Let all things be done decently and in order.” Authorized and endorsed by <strong>{pastorName}</strong>, Senior Pastor.
                                                 </p>
                                             </div>
                                         </div>
@@ -1874,7 +1880,7 @@ const EventManagementPage: React.FC = () => {
                                 <Printer size={20} className="modal-print-icon" />
                                 <div>
                                     <h3>Print Final Event Plan Directive</h3>
-                                    <span>Preview the official letterhead document for Luke 4:18 Ministries San Vicente</span>
+                                    <span>Preview the official letterhead document for {churchName}</span>
                                 </div>
                             </div>
                             <div className="print-modal-header-actions">

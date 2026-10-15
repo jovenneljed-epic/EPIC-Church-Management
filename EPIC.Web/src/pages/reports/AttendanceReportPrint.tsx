@@ -77,6 +77,11 @@ const AttendanceReportPrint: React.FC<
     formatTime,
     getStatusLabel,
 }) => {
+    const customerId = localStorage.getItem("customerId") || "1";
+    const isMainCustomer = customerId === "1";
+    const churchName = localStorage.getItem("currentChurchName") || localStorage.getItem("churchName") || (isMainCustomer ? "Luke 4:18 Ministries" : "Church");
+    const pastorName = isMainCustomer ? "Pastor Mateo Santos" : (localStorage.getItem("userName") || "Senior Pastor");
+    const pastorTitle = isMainCustomer ? "Senior Pastor — Luke 4:18 Ministries" : `Senior Pastor — ${churchName}`;
 
         return (
             <div className="attendance-print-document">
@@ -96,7 +101,7 @@ const AttendanceReportPrint: React.FC<
                         <div>
 
                             <div className="attendance-print-eyebrow">
-                                LUKE 4:18 MINISTRIES
+                                {churchName.toUpperCase()}
                             </div>
 
                             <h1>
@@ -539,11 +544,11 @@ const AttendanceReportPrint: React.FC<
                         <div className="signature-line" />
 
                         <strong>
-                            Pastor Mateo Santos
+                            {pastorName}
                         </strong>
 
                         <span>
-                            Senior Pastor — Luke 4:18 Ministries
+                            {pastorTitle}
                         </span>
 
                     </div>

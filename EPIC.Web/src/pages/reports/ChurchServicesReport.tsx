@@ -102,7 +102,12 @@ const FALLBACK_SERVICES: ChurchServiceRecord[] = [
 ];
 
 const ChurchServicesReport: React.FC<ChurchServicesReportProps> = ({ onBack }) => {
-    const [services, setServices] = useState<ChurchServiceRecord[]>(FALLBACK_SERVICES);
+    const customerId = localStorage.getItem("customerId") || "1";
+    const isMainCustomer = customerId === "1";
+    const churchName = localStorage.getItem("currentChurchName") || localStorage.getItem("churchName") || (isMainCustomer ? "Luke 4:18 Ministries" : "Church");
+    const churchSubtag = isMainCustomer ? "Luke 4:18 Ministries — San Vicente Church • Umingan, Pangasinan" : churchName;
+
+    const [services, setServices] = useState<ChurchServiceRecord[]>(isMainCustomer ? FALLBACK_SERVICES : []);
     const [loading, setLoading] = useState(false);
     const [typeFilter, setTypeFilter] = useState("ALL");
     const [speakerFilter, setSpeakerFilter] = useState("ALL");
@@ -119,20 +124,20 @@ const ChurchServicesReport: React.FC<ChurchServicesReportProps> = ({ onBack }) =
                 if (res.ok) {
                     const data = await res.json();
                     const list = Array.isArray(data) ? data : data.services || data.data || [];
-                    if (list.length > 0) {
-                        const parsed: ChurchServiceRecord[] = list.map((s: any, idx: number) => ({
-                            id: s.serviceId || s.id || `SVC-${idx + 1}`,
-                            serviceName: s.serviceName || s.title || "Church Service",
-                            serviceType: s.serviceType || (s.serviceName?.toLowerCase().includes("youth") ? "Youth Alive" : s.serviceName?.toLowerCase().includes("midweek") ? "Midweek Service" : "Sunday Service"),
-                            serviceDate: s.serviceDate ? s.serviceDate.slice(0, 10) : new Date().toISOString().slice(0, 10),
-                            serviceTime: s.serviceTime || "09:00 AM",
-                            speaker: s.speaker || s.preacher || "Pastor Mateo Santos",
-                            sermonTopic: s.sermonTopic || s.theme || "The Living Word",
-                            attendanceCount: Number(s.attendanceCount || s.totalAttendance || 0),
-                            visitorCount: Number(s.visitorCount || s.visitors || 0),
-                            offeringAmount: Number(s.offeringAmount || s.totalOffering || 0),
-                            notes: s.notes
-                        }));
+                    const parsed: ChurchServiceRecord[] = list.map((s: any, idx: number) => ({
+                        id: s.serviceId || s.id || `SVC-${idx + 1}`,
+                        serviceName: s.serviceName || s.title || "Church Service",
+                        serviceType: s.serviceType || (s.serviceName?.toLowerCase().includes("youth") ? "Youth Alive" : s.serviceName?.toLowerCase().includes("midweek") ? "Midweek Service" : "Sunday Service"),
+                        serviceDate: s.serviceDate ? s.serviceDate.slice(0, 10) : new Date().toISOString().slice(0, 10),
+                        serviceTime: s.serviceTime || "09:00 AM",
+                        speaker: s.speaker || s.preacher || (isMainCustomer ? "Pastor Mateo Santos" : (localStorage.getItem("userName") || "Senior Pastor")),
+                        sermonTopic: s.sermonTopic || s.theme || "The Living Word",
+                        attendanceCount: Number(s.attendanceCount || s.totalAttendance || 0),
+                        visitorCount: Number(s.visitorCount || s.visitors || 0),
+                        offeringAmount: Number(s.offeringAmount || s.totalOffering || 0),
+                        notes: s.notes
+                    }));
+                    if (parsed.length > 0 || !isMainCustomer) {
                         setServices(parsed);
                     }
                 }
@@ -144,7 +149,7 @@ const ChurchServicesReport: React.FC<ChurchServicesReportProps> = ({ onBack }) =
         };
 
         fetchServices();
-    }, []);
+    }, [isMainCustomer]);
 
     // Unique speakers
     const speakers = useMemo(() => {
@@ -214,8 +219,8 @@ const ChurchServicesReport: React.FC<ChurchServicesReportProps> = ({ onBack }) =
         <div className="services-report-page">
             {/* PRINT HEADER FOR PAPER */}
             <div className="print-header-sheet" style={{ display: "none" }}>
-                <h2>LUKE 4:18 MINISTRIES — SAN VICENTE CHURCH</h2>
-                <p>San Vicente, Umingan, Pangasinan • Official Church Services & Worship Attendance Report</p>
+                <h2>{isMainCustomer ? "LUKE 4:18 MINISTRIES — SAN VICENTE CHURCH" : churchName.toUpperCase()}</h2>
+                <p>{isMainCustomer ? "San Vicente, Umingan, Pangasinan • Official Church Services & Worship Attendance Report" : `Official Church Services & Worship Attendance Report • ${churchName}`}</p>
                 <p style={{ fontSize: "8.5pt", color: "#64748b", marginTop: "2px" }}>
                     Generated: {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })} | Services Conducted: {totalServices} | Total Attendance: {totalAttendance}
                 </p>
@@ -229,7 +234,7 @@ const ChurchServicesReport: React.FC<ChurchServicesReportProps> = ({ onBack }) =
                         <div className="services-hero-eyebrow">EPIC REPORTS CENTER</div>
                         <h1 className="services-hero-title">Church Services Report</h1>
                         <p className="services-hero-subtitle">
-                            Luke 4:18 Ministries — San Vicente Church • Umingan, Pangasinan
+                            {churchSubtag}
                         </p>
                     </div>
                 </div>
@@ -411,17 +416,17 @@ const ChurchServicesReport: React.FC<ChurchServicesReportProps> = ({ onBack }) =
             <div className="print-footer-sheet" style={{ display: "none" }}>
                 <div className="print-signature-box">
                     <div className="signature-line" />
-                    <div className="signature-name">Bro. Eduardo Dela Cruz Sr.</div>
-                    <div className="signature-title">Elder & Worship Service Leader</div>
+                    <div className="signature-name">{isMainCustomer ? "Bro. Eduardo Dela Cruz Sr." : "Worship Service Leader"}</div>
+                    <div className="signature-title">Elder &amp; Worship Service Leader</div>
                 </div>
                 <div className="print-signature-box">
                     <div className="signature-line" />
-                    <div className="signature-name">Pastor Mateo Santos</div>
-                    <div className="signature-title">Senior Pastor, Luke 4:18 Ministries</div>
+                    <div className="signature-name">{isMainCustomer ? "Pastor Mateo Santos" : (localStorage.getItem("userName") || "Senior Pastor")}</div>
+                    <div className="signature-title">Senior Pastor, {churchName}</div>
                 </div>
                 <div className="print-signature-box">
                     <div className="signature-line" />
-                    <div className="signature-name">San Vicente Church Council</div>
+                    <div className="signature-name">{isMainCustomer ? "San Vicente Church Council" : `${churchName} Church Council`}</div>
                     <div className="signature-title">Official Verification Stamp</div>
                 </div>
             </div>

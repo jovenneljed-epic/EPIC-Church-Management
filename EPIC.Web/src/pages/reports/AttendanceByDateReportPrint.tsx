@@ -178,6 +178,11 @@ const AttendanceByDateReportPrint: React.FC<Props> = ({
     fromDate,
     toDate
 }) => {
+    const customerId = localStorage.getItem("customerId") || "1";
+    const isMainCustomer = customerId === "1";
+    const churchName = localStorage.getItem("currentChurchName") || localStorage.getItem("churchName") || (isMainCustomer ? "Luke 4:18 Ministries" : "Church");
+    const pastorName = isMainCustomer ? "Pastor Mateo Santos" : (localStorage.getItem("userName") || "Senior Pastor");
+    const pastorTitle = isMainCustomer ? "Senior Pastor — Luke 4:18 Ministries" : `Senior Pastor — ${churchName}`;
 
     const rangeText =
         fromDate === toDate
@@ -806,11 +811,11 @@ const AttendanceByDateReportPrint: React.FC<Props> = ({
                         <span />
 
                         <strong>
-                            Pastor Mateo Santos
+                            {pastorName}
                         </strong>
 
                         <small style={{ fontSize: "7px", color: "#64748b", display: "block", textAlign: "center" }}>
-                            Senior Pastor — Luke 4:18 Ministries
+                            {pastorTitle}
                         </small>
 
                     </div>

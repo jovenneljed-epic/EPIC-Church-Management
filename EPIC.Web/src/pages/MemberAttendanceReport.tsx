@@ -1267,6 +1267,14 @@ const MemberAttendanceReport: React.FC<
                 )
                 .join("");
 
+        const currentCustId = localStorage.getItem("customerId") || "1";
+        const isMainCust = currentCustId === "1";
+        const churchBranding = (localStorage.getItem("currentChurchName") || localStorage.getItem("churchName") || (isMainCust ? "LUKE 4:18 MINISTRIES" : "EPIC CHURCH")).toUpperCase();
+        const careName = isMainCust ? "Sis. Rebecca Santos" : "Pastoral Care";
+        const councilName = isMainCust ? "Bro. Eduardo Dela Cruz Sr." : "Church Council";
+        const pastorName = isMainCust ? "Pastor Mateo Santos" : (localStorage.getItem("userName") || "Senior Pastor");
+        const pastorTitle = isMainCust ? "Senior Pastor — Luke 4:18 Ministries" : `Senior Pastor — ${localStorage.getItem("currentChurchName") || localStorage.getItem("churchName") || "Church"}`;
+
         printWindow.document.write(`
             <!DOCTYPE html>
 
@@ -1806,7 +1814,7 @@ const MemberAttendanceReport: React.FC<
                             <div>
 
                                 <div class="brand-name">
-                                    LUKE 4:18 MINISTRIES
+                                    ${escapeHtml(churchBranding)}
                                 </div>
 
                                 <div class="brand-subtitle">
@@ -2137,18 +2145,18 @@ const MemberAttendanceReport: React.FC<
                         <div class="print-signatures">
                             <div class="print-signature-box">
                                 <div class="signature-line"></div>
-                                <div class="signature-name">Sis. Rebecca Santos</div>
+                                <div class="signature-name">${escapeHtml(careName)}</div>
                                 <div class="signature-title">Pastoral Care & Member Follow-Up</div>
                             </div>
                             <div class="print-signature-box">
                                 <div class="signature-line"></div>
-                                <div class="signature-name">Bro. Eduardo Dela Cruz Sr.</div>
+                                <div class="signature-name">${escapeHtml(councilName)}</div>
                                 <div class="signature-title">Head Deacon / Church Council</div>
                             </div>
                             <div class="print-signature-box">
                                 <div class="signature-line"></div>
-                                <div class="signature-name">Pastor Mateo Santos</div>
-                                <div class="signature-title">Senior Pastor — Luke 4:18 Ministries</div>
+                                <div class="signature-name">${escapeHtml(pastorName)}</div>
+                                <div class="signature-title">${escapeHtml(pastorTitle)}</div>
                             </div>
                         </div>
                     </div>

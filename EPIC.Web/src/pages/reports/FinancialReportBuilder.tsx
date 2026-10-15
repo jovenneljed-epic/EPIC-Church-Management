@@ -1295,6 +1295,14 @@ const FinancialReportBuilder: React.FC<FinancialReportBuilderProps> = ({
             return;
         }
 
+        const currentCustId = localStorage.getItem("customerId") || "1";
+        const isMainCust = currentCustId === "1";
+        const churchBranding = (localStorage.getItem("currentChurchName") || localStorage.getItem("churchName") || (isMainCust ? "LUKE 4:18 MINISTRIES" : "EPIC CHURCH")).toUpperCase();
+        const treasurerName = isMainCust ? "Sis. Leah Reyes" : "Church Treasurer";
+        const financeChairName = isMainCust ? "Bro. Benjamin Reyes" : "Finance Committee Chair";
+        const pastorName = isMainCust ? "Pastor Mateo Santos" : (localStorage.getItem("userName") || "Senior Pastor");
+        const pastorTitle = isMainCust ? "Senior Pastor — Luke 4:18 Ministries" : `Senior Pastor — ${localStorage.getItem("currentChurchName") || localStorage.getItem("churchName") || "Church"}`;
+
         printWindow.document.write(`
 
             <!DOCTYPE html>
@@ -1569,7 +1577,7 @@ const FinancialReportBuilder: React.FC<FinancialReportBuilderProps> = ({
                     <div>
 
                         <div class="brand">
-                            LUKE 4:18 MINISTRIES
+                            ${churchBranding}
                         </div>
 
                         <h1>
@@ -1736,18 +1744,18 @@ const FinancialReportBuilder: React.FC<FinancialReportBuilderProps> = ({
                     <div class="print-signatures">
                         <div class="print-signature-box">
                             <div class="signature-line"></div>
-                            <div class="signature-name">Sis. Leah Reyes</div>
+                            <div class="signature-name">${treasurerName}</div>
                             <div class="signature-title">Church Treasurer / Bookkeeper</div>
                         </div>
                         <div class="print-signature-box">
                             <div class="signature-line"></div>
-                            <div class="signature-name">Bro. Benjamin Reyes</div>
+                            <div class="signature-name">${financeChairName}</div>
                             <div class="signature-title">Finance & Stewardship Committee Chair</div>
                         </div>
                         <div class="print-signature-box">
                             <div class="signature-line"></div>
-                            <div class="signature-name">Pastor Mateo Santos</div>
-                            <div class="signature-title">Senior Pastor — Luke 4:18 Ministries</div>
+                            <div class="signature-name">${pastorName}</div>
+                            <div class="signature-title">${pastorTitle}</div>
                         </div>
                     </div>
                 </div>

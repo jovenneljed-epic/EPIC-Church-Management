@@ -352,7 +352,10 @@ const AUTHENTIC_SAN_VICENTE_ENROLLMENTS: EnrollmentRecord[] = [
     }
 ];
 
-const LOCAL_STORAGE_KEY = "epic_discipleship_roster_v4_reset";
+const getTenantStorageKey = (): string => {
+    const custId = localStorage.getItem("customerId") || "1";
+    return `epic_discipleship_roster_cust_${custId}`;
+};
 
 const getToken = (): string | null => {
     const keys = ["token", "accessToken", "jwt", "authToken", "epicToken"];
@@ -389,13 +392,18 @@ const generateModulesForEnrollment = (courseTitle: string, progressPct: number):
 // =========================================================================
 
 const LearningProgressReport: React.FC<LearningProgressReportProps> = ({ onBack }) => {
-    // Initial State: Load from authentic San Vicente roster + local additions
+    const customerId = localStorage.getItem("customerId") || "1";
+    const isMainCustomer = customerId === "1";
+    const churchName = localStorage.getItem("currentChurchName") || localStorage.getItem("churchName") || (isMainCustomer ? "Luke 4:18 Ministries" : "Church");
+    const churchSubtag = isMainCustomer ? "San Vicente Church, Umingan" : churchName;
+
+    // Initial State: Load from tenant storage or default to authentic San Vicente only for Customer 1
     const [enrollments, setEnrollments] = useState<EnrollmentRecord[]>(() => {
         try {
-            const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+            const saved = localStorage.getItem(getTenantStorageKey());
             if (saved) {
                 const parsed = JSON.parse(saved);
-                if (Array.isArray(parsed) && parsed.length > 0) {
+                if (Array.isArray(parsed)) {
                     return parsed.map((e: any) => ({
                         ...e,
                         modules: generateModulesForEnrollment(e.courseTitle, e.progressPercentage)
@@ -405,10 +413,13 @@ const LearningProgressReport: React.FC<LearningProgressReportProps> = ({ onBack 
         } catch {
             // ignore
         }
-        return AUTHENTIC_SAN_VICENTE_ENROLLMENTS.map((e) => ({
-            ...e,
-            modules: generateModulesForEnrollment(e.courseTitle, e.progressPercentage)
-        }));
+        if (isMainCustomer) {
+            return AUTHENTIC_SAN_VICENTE_ENROLLMENTS.map((e) => ({
+                ...e,
+                modules: generateModulesForEnrollment(e.courseTitle, e.progressPercentage)
+            }));
+        }
+        return [];
     });
 
     const [loading, setLoading] = useState<boolean>(false);
@@ -443,7 +454,7 @@ const LearningProgressReport: React.FC<LearningProgressReportProps> = ({ onBack 
     const saveEnrollments = useCallback((list: EnrollmentRecord[]) => {
         setEnrollments(list);
         try {
-            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(list));
+            localStorage.setItem(getTenantStorageKey(), JSON.stringify(list));
         } catch {
             // ignore
         }
@@ -502,14 +513,14 @@ const LearningProgressReport: React.FC<LearningProgressReportProps> = ({ onBack 
                 const repRes = await fetch(`${baseUrl}/Reports/learning`, { headers });
                 if (repRes.ok) {
                     const repData = await repRes.json();
-                    if (repData && Array.isArray(repData.enrollments) && repData.enrollments.length > 0) {
+                    if (repData && Array.isArray(repData.enrollments)) {
                         liveEnrollments = repData.enrollments.map((e: any) => ({
                             id: String(e.id || e.memberCode || `ENR-${Math.random()}`),
                             memberCode: e.memberCode || e.id,
                             studentName: e.studentName || "Disciple",
                             courseTitle: e.courseTitle || "Foundations of Faith",
-                            instructor: e.instructor || "Pastor Ronnel M. Aviguetero",
-                            enrolledDate: e.enrolledDate ? String(e.enrolledDate).slice(0, 10) : "2026-01-15",
+                            instructor: e.instructor || (isMainCustomer ? "Pastor Ronnel M. Aviguetero" : (localStorage.getItem("userName") || "Senior Pastor")),
+                            enrolledDate: e.enrolledDate ? String(e.enrolledDate).slice(0, 10) : new Date().toISOString().slice(0, 10),
                             progressPercentage: Number(e.progressPercentage || 0),
                             completedLessons: Number(e.completedLessons || 0),
                             totalLessons: Number(e.totalLessons || 30),
@@ -526,8 +537,8 @@ const LearningProgressReport: React.FC<LearningProgressReportProps> = ({ onBack 
                 // fallback to public reports
             }
 
-            // Fallback to /public/reports/learning if authorized call failed or yielded empty
-            if (!fetchedFromApi) {
+            // Fallback to /public/reports/learning ONLY if main customer and authorized call failed
+            if (!fetchedFromApi && isMainCustomer) {
                 try {
                     const pubRes = await fetch(`${baseUrl}/public/reports/learning`);
                     if (pubRes.ok) {
@@ -557,15 +568,15 @@ const LearningProgressReport: React.FC<LearningProgressReportProps> = ({ onBack 
                 }
             }
 
-            if (fetchedFromApi && liveEnrollments.length > 0) {
-                // Display real database student enrollments directly
+            if (fetchedFromApi) {
+                // Display real database student enrollments directly (even if 0 records for new church)
                 saveEnrollments(liveEnrollments);
                 setLastSyncTime(`${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} • LIVE DATABASE`);
                 if (isManualRefresh) {
-                    showToast("✓ Live learners progress successfully synced with San Vicente Church Database!");
+                    showToast(`✓ Live learners progress successfully synced with ${churchName} Database!`);
                 }
-            } else {
-                // Use authentic Luke 4:18 San Vicente roster
+            } else if (isMainCustomer) {
+                // Use authentic Luke 4:18 San Vicente roster ONLY for Customer 1
                 const resolved = AUTHENTIC_SAN_VICENTE_ENROLLMENTS.map((e) => ({
                     ...e,
                     modules: generateModulesForEnrollment(e.courseTitle, e.progressPercentage)
@@ -575,6 +586,9 @@ const LearningProgressReport: React.FC<LearningProgressReportProps> = ({ onBack 
                 if (isManualRefresh) {
                     showToast("Verified authentic San Vicente discipleship records loaded.");
                 }
+            } else {
+                saveEnrollments([]);
+                setLastSyncTime(`${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} • READY`);
             }
         } catch {
             // ignore
@@ -601,7 +615,7 @@ const LearningProgressReport: React.FC<LearningProgressReportProps> = ({ onBack 
         const contact = selectedMember ? selectedMember.contactNumber : "+63 917 000 0000";
 
         let total = 30;
-        let mentor = "Pastor Ronnel M. Aviguetero";
+        let mentor = isMainCustomer ? "Pastor Ronnel M. Aviguetero" : (localStorage.getItem("userName") || "Senior Pastor");
         if (newCourseTitle.includes("Leadership")) {
             total = 24;
         } else if (newCourseTitle.includes("Worship")) {
@@ -729,7 +743,7 @@ const LearningProgressReport: React.FC<LearningProgressReportProps> = ({ onBack 
                 [
                     `"${e.memberCode || e.id}"`,
                     `"${e.studentName}"`,
-                    `"${e.ministry || "San Vicente Member"}"`,
+                    `"${e.ministry || (isMainCustomer ? "San Vicente Member" : "Church Member")}"`,
                     `"${e.courseTitle}"`,
                     `"${e.instructor}"`,
                     `"${e.enrolledDate}"`,
@@ -746,7 +760,7 @@ const LearningProgressReport: React.FC<LearningProgressReportProps> = ({ onBack 
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        link.download = `EPIC_San_Vicente_Learning_Report_${new Date().toISOString().slice(0, 10)}.csv`;
+        link.download = `EPIC_${churchName.replace(/[^a-zA-Z0-9]/g, "_")}_Learning_Report_${new Date().toISOString().slice(0, 10)}.csv`;
         link.click();
         URL.revokeObjectURL(url);
     };
@@ -781,10 +795,12 @@ const LearningProgressReport: React.FC<LearningProgressReportProps> = ({ onBack 
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "2px solid #0f172a", paddingBottom: 10, marginBottom: 12 }}>
                     <div>
                         <h2 style={{ margin: 0, fontSize: "16pt", fontWeight: 900, letterSpacing: "-0.5px" }}>
-                            LUKE 4:18 MINISTRIES — SAN VICENTE CHURCH
+                            {isMainCustomer ? "LUKE 4:18 MINISTRIES — SAN VICENTE CHURCH" : churchName.toUpperCase()}
                         </h2>
                         <p style={{ margin: "2px 0 0", fontSize: "9pt", color: "#475569" }}>
-                            Official Discipleship &amp; Christian Learning Progress Report • Umingan, Pangasinan
+                            {isMainCustomer
+                                ? "Official Discipleship & Christian Learning Progress Report • Umingan, Pangasinan"
+                                : `Official Discipleship & Christian Learning Progress Report • ${churchName}`}
                         </p>
                     </div>
                     <div style={{ textAlign: "right", fontSize: "8pt", color: "#64748b" }}>
@@ -816,7 +832,7 @@ const LearningProgressReport: React.FC<LearningProgressReportProps> = ({ onBack 
                                 <span>LIVE COHORT REPOSITORY</span>
                             </span>
                             <span className="learning-hero-meta-sep">•</span>
-                            <span className="learning-hero-subtag">SAN VICENTE CHURCH, UMINGAN</span>
+                            <span className="learning-hero-subtag">{churchSubtag.toUpperCase()}</span>
                             <span className="learning-hero-meta-sep">•</span>
                             <span className="learning-hero-subtag">{lastSyncTime}</span>
                         </div>
@@ -843,7 +859,7 @@ const LearningProgressReport: React.FC<LearningProgressReportProps> = ({ onBack 
                         className="cyber-btn cyber-btn-ghost"
                         onClick={() => fetchLearningData(true)}
                         disabled={syncing}
-                        title="Sync live learners with San Vicente database"
+                        title={`Sync live learners with ${churchName} database`}
                     >
                         <RefreshCw size={15} className={syncing ? "spin-animation" : ""} />
                         <span>{syncing ? "Syncing..." : "Sync Live LMS"}</span>
@@ -1125,7 +1141,7 @@ const LearningProgressReport: React.FC<LearningProgressReportProps> = ({ onBack 
                                     <td colSpan={8} className="table-status-cell">
                                         <div className="loading-spinner-wrap">
                                             <div className="cyber-spinner" />
-                                            <span>Loading verified discipleship records from San Vicente Church...</span>
+                                            <span>Loading verified discipleship records from {churchName}...</span>
                                         </div>
                                     </td>
                                 </tr>
@@ -1192,7 +1208,7 @@ const LearningProgressReport: React.FC<LearningProgressReportProps> = ({ onBack 
                                                         </strong>
                                                         <div className="disciple-subtags">
                                                             <span className="member-loc-tag" style={{ color: "#94a3b8" }}>
-                                                                {e.ministry || "San Vicente Member"}
+                                                                {e.ministry || (isMainCustomer ? "San Vicente Member" : "Church Member")}
                                                             </span>
                                                             <span className="id-chip">
                                                                 {e.memberCode || e.id}
@@ -1309,7 +1325,7 @@ const LearningProgressReport: React.FC<LearningProgressReportProps> = ({ onBack 
                 <div className="learning-table-footer-hud">
                     <div className="verification-left">
                         <ShieldCheck size={18} color="#34d399" />
-                        <span>CRYPTOGRAPHICALLY VERIFIED DISCIPLESHIP RECORD • LUKE 4:18 MINISTRIES SAN VICENTE</span>
+                        <span>CRYPTOGRAPHICALLY VERIFIED DISCIPLESHIP RECORD • {churchName.toUpperCase()}</span>
                     </div>
                     <div className="verification-right">
                         <span>GENERATED: {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
@@ -1329,7 +1345,7 @@ const LearningProgressReport: React.FC<LearningProgressReportProps> = ({ onBack 
                                 </div>
                                 <div>
                                     <h3 className="cyber-modal-title">Discipleship Transcript &amp; Module Progress</h3>
-                                    <p className="cyber-modal-subtitle">Official Student Milestone Record • San Vicente Church</p>
+                                    <p className="cyber-modal-subtitle">Official Student Milestone Record • {churchName}</p>
                                 </div>
                             </div>
                             <button
@@ -1560,17 +1576,17 @@ const LearningProgressReport: React.FC<LearningProgressReportProps> = ({ onBack 
             <div className="print-footer-sheet">
                 <div className="print-signature-box">
                     <div className="signature-line" />
-                    <div className="signature-name">Bro. Eduardo Dela Cruz Sr.</div>
+                    <div className="signature-name">{isMainCustomer ? "Bro. Eduardo Dela Cruz Sr." : "Ministry Coordinator"}</div>
                     <div className="signature-title">Head Deacon &amp; Ministry Coordinator</div>
                 </div>
                 <div className="print-signature-box">
                     <div className="signature-line" />
-                    <div className="signature-name">Sis. Maria Elena Dela Cruz</div>
+                    <div className="signature-name">{isMainCustomer ? "Sis. Maria Elena Dela Cruz" : "Discipleship Coordinator"}</div>
                     <div className="signature-title">Discipleship &amp; Education Director</div>
                 </div>
                 <div className="print-signature-box">
                     <div className="signature-line" />
-                    <div className="signature-name">Pastor Ronnel M. Aviguetero</div>
+                    <div className="signature-name">{isMainCustomer ? "Pastor Ronnel M. Aviguetero" : (localStorage.getItem("userName") || "Senior Pastor")}</div>
                     <div className="signature-title">Senior Pastor &amp; Discipleship Director</div>
                 </div>
             </div>

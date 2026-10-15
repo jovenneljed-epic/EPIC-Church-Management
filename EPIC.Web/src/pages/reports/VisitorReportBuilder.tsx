@@ -815,6 +815,14 @@ const VisitorReportBuilder: React.FC<VisitorReportBuilderProps> = ({
                 )
                 .join("");
 
+        const currentCustId = localStorage.getItem("customerId") || "1";
+        const isMainCust = currentCustId === "1";
+        const churchBranding = (localStorage.getItem("currentChurchName") || localStorage.getItem("churchName") || (isMainCust ? "LUKE 4:18 MINISTRIES" : "EPIC CHURCH")).toUpperCase();
+        const coordinatorName = isMainCust ? "Sis. Charito Bautista" : "Assimilation Coordinator";
+        const hospitalityName = isMainCust ? "Bro. Eduardo Dela Cruz Jr." : "Hospitality Head";
+        const pastorName = isMainCust ? "Pastor Mateo Santos" : (localStorage.getItem("userName") || "Senior Pastor");
+        const pastorTitle = isMainCust ? "Senior Pastor — Luke 4:18 Ministries" : `Senior Pastor — ${localStorage.getItem("currentChurchName") || localStorage.getItem("churchName") || "Church"}`;
+
         printWindow.document.write(`
             <!DOCTYPE html>
 
@@ -1060,7 +1068,7 @@ const VisitorReportBuilder: React.FC<VisitorReportBuilderProps> = ({
                     <div>
 
                         <div class="brand">
-                            LUKE 4:18 MINISTRIES
+                            ${churchBranding}
                         </div>
 
                         <h1>
@@ -1209,18 +1217,18 @@ const VisitorReportBuilder: React.FC<VisitorReportBuilderProps> = ({
                     <div class="print-signatures">
                         <div class="print-signature-box">
                             <div class="signature-line"></div>
-                            <div class="signature-name">Sis. Charito Bautista</div>
+                            <div class="signature-name">${coordinatorName}</div>
                             <div class="signature-title">Assimilation & Follow-Up Coordinator</div>
                         </div>
                         <div class="print-signature-box">
                             <div class="signature-line"></div>
-                            <div class="signature-name">Bro. Eduardo Dela Cruz Jr.</div>
+                            <div class="signature-name">${hospitalityName}</div>
                             <div class="signature-title">Welcoming & Hospitality Head</div>
                         </div>
                         <div class="print-signature-box">
                             <div class="signature-line"></div>
-                            <div class="signature-name">Pastor Mateo Santos</div>
-                            <div class="signature-title">Senior Pastor — Luke 4:18 Ministries</div>
+                            <div class="signature-name">${pastorName}</div>
+                            <div class="signature-title">${pastorTitle}</div>
                         </div>
                     </div>
                 </div>
