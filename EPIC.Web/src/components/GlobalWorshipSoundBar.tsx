@@ -13,7 +13,6 @@ import {
     ChevronUp,
     ChevronDown,
     Music,
-    Radio,
     Plus,
     Repeat,
     ListMusic,
@@ -81,8 +80,8 @@ export const GlobalWorshipSoundBar: React.FC = () => {
         return `${m}:${s < 10 ? "0" : ""}${s}`;
     };
 
-    const handleNavigateToCommunity = (e: React.MouseEvent) => {
-        e.stopPropagation();
+    const handleNavigateToCommunity = (e?: React.MouseEvent) => {
+        e?.stopPropagation();
         if (window.location.pathname !== "/community") {
             window.history.pushState({}, "", "/community");
             window.dispatchEvent(new PopStateEvent("popstate"));
@@ -167,13 +166,13 @@ export const GlobalWorshipSoundBar: React.FC = () => {
                         </button>
                     </div>
                 ) : (
-                    /* Expanded Full Sound Bar Mode */
+                    /* Compact Sleek Sound Bar Mode */
                     <div className="epic-soundbar-full-card">
-                        {/* LEFT: Song Metadata & Animated Sound Visualizer */}
+                        {/* LEFT: Song Metadata */}
                         <div
                             className="epic-soundbar-left-meta"
                             onClick={handleNavigateToCommunity}
-                            title="Click to view Worship Sanctuary in Community"
+                            title="Open Worship Sanctuary in Community"
                         >
                             <div className={`epic-soundbar-vinyl-thumb ${isPlaying ? "spinning" : ""}`}>
                                 <img src={currentSong.albumCover} alt={currentSong.title} />
@@ -181,74 +180,52 @@ export const GlobalWorshipSoundBar: React.FC = () => {
                             </div>
 
                             <div className="epic-soundbar-titles-box">
-                                <div className="epic-soundbar-title-row">
-                                    <strong className="epic-soundbar-song-title">{currentSong.title}</strong>
-                                    <span className={`epic-soundbar-lang-badge ${currentSong.language.toLowerCase()}`}>
-                                        {currentSong.language === "Tagalog" ? "🇵🇭 Tagalog" : "🌐 English"}
-                                    </span>
-                                </div>
-                                <div className="epic-soundbar-artist-row">
-                                    <span>{currentSong.artist}</span>
-                                    <span className="meta-sep">•</span>
-                                    <span className="epic-soundbar-scripture-pill">{currentSong.duration}</span>
-                                </div>
-                            </div>
-
-                            {/* Sound Equalizer Visualizer */}
-                            <div className={`epic-eq-wave desktop-eq ${isPlaying ? "active" : ""}`} title="Active Sound Waves">
-                                <span className="eq-bar bar-1"></span>
-                                <span className="eq-bar bar-2"></span>
-                                <span className="eq-bar bar-3"></span>
-                                <span className="eq-bar bar-4"></span>
-                                <span className="eq-bar bar-5"></span>
+                                <strong className="epic-soundbar-song-title">{currentSong.title}</strong>
+                                <span className="epic-soundbar-artist-name">{currentSong.artist}</span>
                             </div>
                         </div>
 
-                        {/* CENTER: Playback Controls */}
+                        {/* CENTER: Playback Controls & Mini Track Bar */}
                         <div className="epic-soundbar-center-ctrls">
                             <div className="epic-soundbar-center-buttons-row">
                                 <button
                                     type="button"
                                     className="epic-soundbar-ctrl-btn skip"
                                     onClick={prevSong}
-                                    title="Previous Worship Song"
+                                    title="Previous Song"
                                 >
-                                    <SkipBack size={17} />
+                                    <SkipBack size={14} />
                                 </button>
 
                                 <button
                                     type="button"
                                     className={`epic-soundbar-main-play-btn ${isPlaying ? "playing" : ""}`}
                                     onClick={togglePlay}
-                                    title={isPlaying ? "Pause Worship" : "Play Worship"}
+                                    title={isPlaying ? "Pause" : "Play"}
                                 >
-                                    {isPlaying ? <Pause size={18} /> : <Play size={18} style={{ marginLeft: 2 }} />}
+                                    {isPlaying ? <Pause size={15} /> : <Play size={15} style={{ marginLeft: 2 }} />}
                                 </button>
 
                                 <button
                                     type="button"
                                     className="epic-soundbar-ctrl-btn skip"
                                     onClick={nextSong}
-                                    title="Next Worship Song"
+                                    title="Next Song"
                                 >
-                                    <SkipForward size={17} />
+                                    <SkipForward size={14} />
                                 </button>
 
                                 <button
                                     type="button"
                                     className={`epic-soundbar-ctrl-btn loop ${isContinuousLoop ? "active" : ""}`}
                                     onClick={toggleContinuousLoop}
-                                    title={
-                                        isContinuousLoop
-                                            ? "Continuous Worship Loop: Active (Loops automatically after last song)"
-                                            : "Continuous Loop: Disabled"
-                                    }
+                                    title={isContinuousLoop ? "Continuous Loop: ON" : "Continuous Loop: OFF"}
                                 >
-                                    <Repeat size={14} color={isContinuousLoop ? "#34d399" : "#64748b"} />
+                                    <Repeat size={12} color={isContinuousLoop ? "#34d399" : "#64748b"} />
                                 </button>
                             </div>
 
-                            {/* Track Progress Bar */}
+                            {/* Mini Scrubber Track */}
                             <div className="epic-soundbar-progress-row">
                                 <span className="epic-soundbar-time-text">{formatTime(currentTime)}</span>
                                 <div
@@ -259,7 +236,7 @@ export const GlobalWorshipSoundBar: React.FC = () => {
                                         const ratio = Math.max(0, Math.min(1, clickX / rect.width));
                                         seekTo(ratio * (durationTime || 300));
                                     }}
-                                    title="Click to seek position"
+                                    title="Click to seek"
                                 >
                                     <div
                                         className="epic-soundbar-progress-fill"
@@ -270,20 +247,11 @@ export const GlobalWorshipSoundBar: React.FC = () => {
                                 </div>
                                 <span className="epic-soundbar-time-text">{formatTime(durationTime)}</span>
                             </div>
-
-                            <div className="epic-soundbar-status-indicator">
-                                <Radio size={12} color="#34d399" className={isPlaying ? "live-pulse" : ""} />
-                                <span>
-                                    {isPlaying
-                                        ? `Continuous Praise Active ${isContinuousLoop ? "🔁 (Looping after last song)" : ""}`
-                                        : "Worship Audio Paused"}
-                                </span>
-                            </div>
                         </div>
 
-                        {/* RIGHT: Volume & Sound Bar Toggles */}
+                        {/* RIGHT: Essential Controls */}
                         <div className="epic-soundbar-right-actions">
-                            {/* Volume Slider & Mute Toggle */}
+                            {/* Volume */}
                             <div className="epic-soundbar-volume-group">
                                 <button
                                     type="button"
@@ -292,11 +260,11 @@ export const GlobalWorshipSoundBar: React.FC = () => {
                                     title={isMuted ? "Unmute" : "Mute"}
                                 >
                                     {isMuted || volume === 0 ? (
-                                        <VolumeX size={16} color="#f87171" />
+                                        <VolumeX size={15} color="#f87171" />
                                     ) : volume < 50 ? (
-                                        <Volume1 size={16} color="#38bdf8" />
+                                        <Volume1 size={15} color="#38bdf8" />
                                     ) : (
-                                        <Volume2 size={16} color="#38bdf8" />
+                                        <Volume2 size={15} color="#38bdf8" />
                                     )}
                                 </button>
                                 <input
@@ -310,88 +278,61 @@ export const GlobalWorshipSoundBar: React.FC = () => {
                                 />
                             </div>
 
-                            {/* Sing-Along Lyrics Button */}
+                            {/* Sing-Along Lyrics Icon Button */}
                             <button
                                 type="button"
-                                className="epic-soundbar-action-btn lyrics"
+                                className="epic-soundbar-icon-action-btn"
                                 onClick={() => openLyrics(currentSong)}
-                                title="View Sing-Along Lyrics & Chords"
+                                title="Sing-Along Lyrics & Chords"
                             >
-                                <FileText size={14} />
-                                <span className="btn-text">Lyrics</span>
+                                <FileText size={15} color="#38bdf8" />
                             </button>
 
-                            {/* Toggle Video Picture-in-Picture Frame */}
+                            {/* Video Picture-in-Picture Button */}
                             <button
                                 type="button"
-                                className={`epic-soundbar-action-btn video ${showVideoPlayer ? "active" : ""}`}
+                                className={`epic-soundbar-icon-action-btn ${showVideoPlayer ? "active" : ""}`}
                                 onClick={() => setShowVideoPlayer((v) => !v)}
-                                title={showVideoPlayer ? "Hide Video" : "Toggle Video Player"}
+                                title={showVideoPlayer ? "Hide Worship Video" : "Watch Worship Video"}
                             >
-                                <Tv size={14} />
-                                <span className="btn-text">{showVideoPlayer ? "Hide Video" : "Video"}</span>
+                                <Tv size={15} color="#38bdf8" />
                             </button>
 
-                            {/* Admin Upload Worship Song Button */}
-                            {isAdmin && (
-                                <button
-                                    type="button"
-                                    className="epic-soundbar-action-btn upload"
-                                    onClick={() => setIsUploadModalOpen(true)}
-                                    title="Admin: Upload Christian Worship Song with Proper Lyrics"
-                                >
-                                    <Plus size={14} color="#38bdf8" />
-                                    <span className="btn-text">Upload</span>
-                                </button>
-                            )}
-
-                            {/* Quick Playlist Drawer Button */}
+                            {/* Playlist / Songs Icon Button with Badge */}
                             <button
                                 type="button"
-                                className={`epic-soundbar-action-btn playlist ${showPlaylistModal ? "active" : ""}`}
+                                className={`epic-soundbar-icon-action-btn ${showPlaylistModal ? "active" : ""}`}
                                 onClick={() => setShowPlaylistModal((v) => !v)}
-                                title={`Browse All ${allSongs?.length || 52} Praise & Worship Songs`}
+                                title={`Browse All ${allSongs?.length || 52} Worship Songs`}
                             >
-                                <ListMusic size={14} color="#38bdf8" />
-                                <span className="btn-text">Songs ({allSongs?.length || 52})</span>
+                                <ListMusic size={15} color="#38bdf8" />
+                                <span className="epic-soundbar-icon-badge">{allSongs?.length || 52}</span>
                             </button>
 
-                            {/* Go to Sanctuary */}
-                            <button
-                                type="button"
-                                className="epic-soundbar-action-btn sanctuary"
-                                onClick={handleNavigateToCommunity}
-                                title="Open Full Worship Sanctuary in Community"
-                            >
-                                <span style={{ fontSize: 13 }}>❤️</span>
-                                <span className="btn-text">Sanctuary</span>
-                            </button>
-
-                            {/* Window Actions: Prominent Minimize and Close Buttons */}
+                            {/* Window Controls: Minimize & Close */}
                             <div className="epic-soundbar-window-controls">
                                 <button
                                     type="button"
-                                    className="epic-soundbar-minimize-btn"
+                                    className="epic-soundbar-mini-action-btn"
                                     onClick={() => {
                                         toggleSoundBar();
                                         setShowVideoPlayer(false);
                                     }}
-                                    title="Minimize Sound Bar so it won't block any content"
+                                    title="Minimize to small floating pill"
                                 >
-                                    <ChevronDown size={15} />
-                                    <span>Minimize</span>
+                                    <ChevronDown size={14} />
                                 </button>
 
                                 <button
                                     type="button"
-                                    className="epic-soundbar-close-btn"
+                                    className="epic-soundbar-mini-action-btn close"
                                     onClick={() => {
                                         setIsSoundBarVisible(false);
                                         setShowVideoPlayer(false);
                                     }}
                                     title="Close Sound Bar"
                                 >
-                                    <X size={15} />
+                                    <X size={14} />
                                 </button>
                             </div>
                         </div>
@@ -491,14 +432,41 @@ export const GlobalWorshipSoundBar: React.FC = () => {
                                     </small>
                                 </div>
                             </div>
-                            <button
-                                type="button"
-                                className="epic-lyrics-close-btn"
-                                onClick={() => setShowPlaylistModal(false)}
-                                title="Close Playlist"
-                            >
-                                <X size={18} />
-                            </button>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                {isAdmin && (
+                                    <button
+                                        type="button"
+                                        className="epic-soundbar-action-btn upload"
+                                        onClick={() => {
+                                            setShowPlaylistModal(false);
+                                            setIsUploadModalOpen(true);
+                                        }}
+                                        title="Admin: Upload Christian Worship Song"
+                                    >
+                                        <Plus size={14} color="#38bdf8" />
+                                        <span>Upload Song</span>
+                                    </button>
+                                )}
+                                <button
+                                    type="button"
+                                    className="epic-soundbar-action-btn sanctuary"
+                                    onClick={() => {
+                                        setShowPlaylistModal(false);
+                                        handleNavigateToCommunity();
+                                    }}
+                                    title="Open Full Worship Sanctuary in Community"
+                                >
+                                    <span>❤️ Sanctuary</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    className="epic-lyrics-close-btn"
+                                    onClick={() => setShowPlaylistModal(false)}
+                                    title="Close Playlist"
+                                >
+                                    <X size={18} />
+                                </button>
+                            </div>
                         </div>
 
                         {/* Search & Mood Filter Bar */}
