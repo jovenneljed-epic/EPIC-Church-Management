@@ -256,6 +256,17 @@ const MembershipDirectoryReport:
     }) => {
 
         /* =====================================================
+           TENANT RESOLUTION
+        ===================================================== */
+
+        const customerId = localStorage.getItem("customerId") || "1";
+        const isMainCustomer = customerId === "1";
+        const churchName =
+            localStorage.getItem("currentChurchName") ||
+            localStorage.getItem("churchName") ||
+            (isMainCustomer ? "Luke 4:18 Ministries" : "Church");
+
+        /* =====================================================
            STATE
         ===================================================== */
 
@@ -1313,7 +1324,7 @@ const handlePrint = (): void => {
                                 <div>
 
                                     <span className="document-label">
-                                        EPIC CHURCH MANAGEMENT SYSTEM
+                                        {isMainCustomer ? "EPIC CHURCH MANAGEMENT SYSTEM" : churchName.toUpperCase()}
                                     </span>
 
                                     <h2>

@@ -95,7 +95,7 @@ const AttendanceReportPrint: React.FC<
                     <div className="attendance-print-brand">
 
                         <div className="attendance-print-logo">
-                            EPIC
+                            {isMainCustomer ? "EPIC" : (churchName.split(/\s+/).map(w => w[0]).filter(Boolean).join("").toUpperCase().slice(0, 4) || "CH")}
                         </div>
 
                         <div>
@@ -109,7 +109,7 @@ const AttendanceReportPrint: React.FC<
                             </h1>
 
                             <p>
-                                Engaging People Into Christ
+                                {isMainCustomer ? "Engaging People Into Christ" : "Official Church Records"}
                             </p>
 
                         </div>

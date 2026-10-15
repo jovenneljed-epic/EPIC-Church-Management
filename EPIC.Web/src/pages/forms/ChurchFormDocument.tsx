@@ -136,6 +136,47 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
 }) => {
     const today = new Date().toISOString().split("T")[0];
 
+    // TENANT AND LEADERSHIP RESOLUTION
+    const customerId = localStorage.getItem("customerId") || "1";
+    const isMainCustomer = customerId === "1";
+    const churchName =
+        localStorage.getItem("currentChurchName") ||
+        localStorage.getItem("churchName") ||
+        (isMainCustomer ? "Luke 4:18 Ministries" : "Church");
+    const currentFullName =
+        localStorage.getItem("currentFullName") ||
+        localStorage.getItem("currentUser") ||
+        localStorage.getItem("userName") ||
+        "";
+    const pastorName = isMainCustomer
+        ? "Pastor Danilo Reyes"
+        : (currentFullName
+            ? (currentFullName.toLowerCase().startsWith("pastor") ? currentFullName : `Pastor ${currentFullName}`)
+            : "Senior Pastor");
+
+    // Dynamic church acronym (e.g. Praise Church -> PC, Luke 4:18 Ministries -> EPIC)
+    const churchInitials = isMainCustomer
+        ? "EPIC"
+        : (churchName
+            .split(/\s+/)
+            .map((w) => w[0])
+            .filter(Boolean)
+            .join("")
+            .toUpperCase()
+            .slice(0, 4) || "CH");
+
+    const docCodePrefix = isMainCustomer ? "EPIC" : churchInitials;
+    const letterheadChurchName = isMainCustomer ? "Luke 4:18 Ministries" : churchName;
+    const letterheadSubtag = isMainCustomer
+        ? "San Vicente Church • Umingan, Pangasinan"
+        : `${churchName} • Pastoral & Ministry Records`;
+    const letterheadTagline = isMainCustomer
+        ? 'Official Ministry Document & Records • "The Spirit of the Lord is upon me..." (Luke 4:18)'
+        : 'Official Ministry Document & Records • Dedicated to Serving God and Community';
+    const footerChurchInfo = isMainCustomer
+        ? "Luke 4:18 Ministries • San Vicente Church, Umingan, Pangasinan"
+        : `${churchName} • Official Church Records`;
+
     const [fields, setFields] = useState<Record<string, string>>({
         date: today,
     });
@@ -176,16 +217,16 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
                 occupation: "Teacher",
                 contactNo: "0917-123-4567",
                 email: "juan.delacruz@example.com",
-                address: "Barangay San Vicente, Umingan, Pangasinan",
+                address: isMainCustomer ? "Barangay San Vicente, Umingan, Pangasinan" : "Sanctuary District, Local Community",
                 dateAcceptedChrist: "2018-04-12",
                 baptizedDate: "2018-06-20",
                 previousChurch: "None",
-                reasonForJoining: "Spiritual growth and active ministry service in San Vicente",
+                reasonForJoining: isMainCustomer ? "Spiritual growth and active ministry service in San Vicente" : `Spiritual growth and active ministry service in ${churchName}`,
                 referredBy: "Bro. Manuel Santos",
                 spouseName: "Maria Dela Cruz",
                 childrenCount: "2",
                 applicantSignature: "Juan Dela Cruz",
-                pastorSignature: "Pastor Danilo Reyes",
+                pastorSignature: pastorName,
             });
             setCheckboxes({
                 interestWorship: true,
@@ -208,17 +249,17 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
                 bloodType: "O+",
                 contactNo: "0928-555-8901",
                 email: "grace.santos@example.com",
-                address: "Purok 4, San Vicente, Umingan, Pangasinan",
+                address: isMainCustomer ? "Purok 4, San Vicente, Umingan, Pangasinan" : "Purok 4, Local Community",
                 emergencyContact: "Elena Santos (Mother)",
                 emergencyPhone: "0920-111-2233",
                 education: "Bachelor of Science in Accountancy",
                 occupation: "Accountant",
-                company: "Umingan Commercial Corp.",
+                company: isMainCustomer ? "Umingan Commercial Corp." : "Local Enterprise Corp.",
                 cellGroupLeader: "Sis. Teresa Ramos",
                 ministry: "Worship Ministry - Vocalist",
                 spiritualGifts: "Exhortation, Music, Administration",
                 memberSignature: "Grace P. Santos",
-                officerSignature: "Secretary Maria Clara",
+                officerSignature: "Church Secretary",
             });
             setCheckboxes({ statusActive: true });
         } else if (form.id === "family-information") {
@@ -227,16 +268,16 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
                 familyCode: "FAM-2026-042",
                 headName: "Roberto Gomez",
                 headContact: "0919-876-5432",
-                address: "Barangay San Vicente, Umingan, Pangasinan",
+                address: isMainCustomer ? "Barangay San Vicente, Umingan, Pangasinan" : "Local Community, Church District",
                 spouseName: "Anita Gomez",
                 spouseContact: "0919-876-5433",
                 weddingDate: "2010-12-18",
-                child1Name: "Joshua Gomez", child1Dob: "2012-05-10", child1Baptized: "Yes", child1School: "Umingan NHS",
-                child2Name: "Sarah Gomez", child2Dob: "2015-09-24", child2Baptized: "Yes", child2School: "San Vicente Central",
+                child1Name: "Joshua Gomez", child1Dob: "2012-05-10", child1Baptized: "Yes", child1School: isMainCustomer ? "Umingan NHS" : "Community High School",
+                child2Name: "Sarah Gomez", child2Dob: "2015-09-24", child2Baptized: "Yes", child2School: isMainCustomer ? "San Vicente Central" : "Community Elementary School",
                 child3Name: "Elijah Gomez", child3Dob: "2020-02-14", child3Baptized: "No", child3School: "Preparatory",
                 prayerRequests: "Good health for parents, financial provision for children's studies",
                 headSignature: "Roberto Gomez",
-                pastorSignature: "Pastor Danilo Reyes",
+                pastorSignature: pastorName,
             });
             setCheckboxes({ regularDevotion: true, ministryTogether: true });
         } else if (form.id === "visitor-card") {
@@ -247,7 +288,7 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
                 ageGroup: "Young Adult (21-35)",
                 contactNo: "0935-789-0123",
                 email: "mark.villanueva@example.com",
-                address: "Barangay San Vicente, Umingan, Pangasinan",
+                address: isMainCustomer ? "Barangay San Vicente, Umingan, Pangasinan" : "Local Community, Church District",
                 howDidYouHear: "Invited by friend / family",
                 invitedBy: "Bro. Juan Dela Cruz",
                 prayerRequest: "Direction for newly opened job opportunity and peace of mind.",
@@ -274,7 +315,7 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
                 scheduleAvailability: "Sunday Mornings & Saturday Rehearsals",
                 volunteerSignature: "Daniel Cruz",
                 ministryHeadSignature: "Head Engr. Carlos D.",
-                pastorSignature: "Pastor Danilo Reyes",
+                pastorSignature: pastorName,
             });
             setCheckboxes({
                 agreePledge: true,
@@ -293,7 +334,7 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
                 responsibilities: "1. Coordinate usher schedules for Sunday services\n2. Oversee offering collection integrity\n3. Ensure warm reception for all guests and seniors",
                 supervisor: "Elder Renato Rivera",
                 appointeeSignature: "Manuel Santos",
-                pastorSignature: "Pastor Danilo Reyes",
+                pastorSignature: pastorName,
             });
         } else if (form.id === "baptism") {
             setFields({
@@ -303,17 +344,17 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
                 age: "20",
                 gender: "Female",
                 contactNo: "0946-123-9876",
-                address: "Purok 2, San Vicente, Umingan, Pangasinan",
+                address: isMainCustomer ? "Purok 2, San Vicente, Umingan, Pangasinan" : "Local Community, Church District",
                 dateAcceptedChrist: "2024-05-15",
                 mentorName: "Sis. Teresa Ramos",
                 classDateCompleted: "2026-09-12",
                 instructor: "Elder Renato Rivera",
                 baptismDate: "2026-10-04",
-                venue: "Luke 4:18 Sanctuary Baptistry",
-                officiatingPastor: "Pastor Danilo Reyes",
+                venue: isMainCustomer ? "Luke 4:18 Sanctuary Baptistry" : `${churchName} Sanctuary Baptistry`,
+                officiatingPastor: pastorName,
                 certNo: "BPT-2026-019",
                 candidateSignature: "Christine Joy Mendoza",
-                pastorSignature: "Pastor Danilo Reyes",
+                pastorSignature: pastorName,
             });
             setCheckboxes({ parentConsent: true, classCompleted: true });
         } else if (form.id === "child-dedication") {
@@ -322,24 +363,24 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
                 childName: "Nathaniel James Dela Cruz",
                 nickname: "Nate",
                 dob: "2026-04-18",
-                pob: "Umingan Medicare Community Hospital",
+                pob: isMainCustomer ? "Umingan Medicare Community Hospital" : "Community Medical Center",
                 gender: "Male",
                 fatherName: "Juan Dela Cruz",
                 fatherContact: "0917-123-4567",
                 motherName: "Maria Clara Dela Cruz",
                 motherContact: "0917-987-6543",
                 weddingDate: "2022-01-15",
-                address: "San Vicente, Umingan, Pangasinan",
+                address: isMainCustomer ? "San Vicente, Umingan, Pangasinan" : "Local Community, Church District",
                 dedicationDate: "2026-10-18",
                 serviceSlot: "Sunday 9:00 AM Worship Service",
-                officiatingPastor: "Pastor Danilo Reyes",
-                sponsor1: "Bro. Manuel Santos (Luke 4:18 Ministries)",
-                sponsor2: "Sis. Teresa Ramos (Luke 4:18 Ministries)",
+                officiatingPastor: pastorName,
+                sponsor1: isMainCustomer ? "Bro. Manuel Santos (Luke 4:18 Ministries)" : `Bro. Manuel Santos (${churchName})`,
+                sponsor2: isMainCustomer ? "Sis. Teresa Ramos (Luke 4:18 Ministries)" : `Sis. Teresa Ramos (${churchName})`,
                 sponsor3: "Engr. Carlos Diaz (Christian Fellowship Church)",
-                sponsor4: "Elena Gomez (Luke 4:18 Ministries)",
+                sponsor4: isMainCustomer ? "Elena Gomez (Luke 4:18 Ministries)" : `Elena Gomez (${churchName})`,
                 fatherSignature: "Juan Dela Cruz",
                 motherSignature: "Maria Clara Dela Cruz",
-                pastorSignature: "Pastor Danilo Reyes",
+                pastorSignature: pastorName,
             });
         } else if (form.id === "marriage") {
             setFields({
@@ -348,26 +389,26 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
                 groomDob: "1997-06-14",
                 groomAge: "29",
                 groomContact: "0915-222-3344",
-                groomAddress: "Umingan, Pangasinan",
+                groomAddress: isMainCustomer ? "Umingan, Pangasinan" : "Local Community, Church District",
                 groomParents: "Joseph & Rebecca Morales",
-                groomReligion: "Evangelical Christian (Luke 4:18)",
+                groomReligion: isMainCustomer ? "Evangelical Christian (Luke 4:18)" : `Evangelical Christian (${churchName})`,
                 brideName: "Sarah Jane Perez",
                 brideDob: "1999-09-20",
                 brideAge: "27",
                 brideContact: "0916-333-4455",
-                brideAddress: "San Vicente, Umingan, Pangasinan",
+                brideAddress: isMainCustomer ? "San Vicente, Umingan, Pangasinan" : "Local Community, Church District",
                 brideParents: "Manuel & Elena Perez",
-                brideReligion: "Evangelical Christian (Luke 4:18)",
-                counselorPastor: "Pastor Danilo Reyes",
+                brideReligion: isMainCustomer ? "Evangelical Christian (Luke 4:18)" : `Evangelical Christian (${churchName})`,
+                counselorPastor: pastorName,
                 counselingDates: "Sessions completed: Aug 8, Aug 15, Aug 22, Aug 29, 2026",
                 weddingDate: "2026-12-12",
                 weddingTime: "3:00 PM",
-                venue: "Luke 4:18 Ministries Sanctuary",
-                officiatingMinister: "Pastor Danilo Reyes (Lic. #98721)",
-                marriageLicenseNo: "ML-2026-9041 issued at Umingan, Pangasinan",
+                venue: isMainCustomer ? "Luke 4:18 Ministries Sanctuary" : `${churchName} Sanctuary`,
+                officiatingMinister: `${pastorName} (Lic. #98721)`,
+                marriageLicenseNo: isMainCustomer ? "ML-2026-9041 issued at Umingan, Pangasinan" : "ML-2026-9041 issued at Local Civil Registry",
                 groomSignature: "David J. Morales",
                 brideSignature: "Sarah Jane Perez",
-                pastorSignature: "Pastor Danilo Reyes",
+                pastorSignature: pastorName,
             });
             setCheckboxes({ groomBaptized: true, brideBaptized: true, counselingPassed: true });
         }
@@ -420,27 +461,27 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
                 <header className="epic-form-header">
                     <div className="epic-form-letterhead">
                         <div className="epic-form-brand-seal">
-                            EPIC
+                            {churchInitials}
                             <small>CHURCH</small>
                         </div>
                         <div className="epic-form-letterhead-info">
-                            <h1>Luke 4:18 Ministries</h1>
-                            <h2>San Vicente Church • Umingan, Pangasinan</h2>
-                            <p>Official Ministry Document & Records • "The Spirit of the Lord is upon me..." (Luke 4:18)</p>
+                            <h1>{letterheadChurchName}</h1>
+                            <h2>{letterheadSubtag}</h2>
+                            <p>{letterheadTagline}</p>
                         </div>
                     </div>
 
                     <div className="epic-form-meta-box">
                         <span className="epic-form-code">
-                            {form.id === "membership-registration" && "EPIC-FRM-01"}
-                            {form.id === "membership-information" && "EPIC-FRM-02"}
-                            {form.id === "family-information" && "EPIC-FRM-03"}
-                            {form.id === "visitor-card" && "EPIC-FRM-04"}
-                            {form.id === "ministry-volunteer" && "EPIC-FRM-05"}
-                            {form.id === "ministry-assignment" && "EPIC-FRM-06"}
-                            {form.id === "baptism" && "EPIC-FRM-07"}
-                            {form.id === "child-dedication" && "EPIC-FRM-08"}
-                            {form.id === "marriage" && "EPIC-FRM-09"}
+                            {form.id === "membership-registration" && `${docCodePrefix}-FRM-01`}
+                            {form.id === "membership-information" && `${docCodePrefix}-FRM-02`}
+                            {form.id === "family-information" && `${docCodePrefix}-FRM-03`}
+                            {form.id === "visitor-card" && `${docCodePrefix}-FRM-04`}
+                            {form.id === "ministry-volunteer" && `${docCodePrefix}-FRM-05`}
+                            {form.id === "ministry-assignment" && `${docCodePrefix}-FRM-06`}
+                            {form.id === "baptism" && `${docCodePrefix}-FRM-07`}
+                            {form.id === "child-dedication" && `${docCodePrefix}-FRM-08`}
+                            {form.id === "marriage" && `${docCodePrefix}-FRM-09`}
                         </span>
                         <span className="epic-form-meta-date">Date: {fields.date || today}</span>
                     </div>
@@ -491,7 +532,7 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
                                 <PrintField label="Referred / Invited By" name="referredBy" value={fields.referredBy} onChange={handleInputChange} />
                             </div>
                             <PrintField label="Previous Church Affiliation (if transferring)" name="previousChurch" value={fields.previousChurch} onChange={handleInputChange} />
-                            <PrintField label="Reason for Joining Luke 4:18 Ministries" name="reasonForJoining" value={fields.reasonForJoining} rows={2} onChange={handleInputChange} />
+                            <PrintField label={isMainCustomer ? "Reason for Joining Luke 4:18 Ministries" : `Reason for Joining ${churchName}`} name="reasonForJoining" value={fields.reasonForJoining} rows={2} onChange={handleInputChange} />
                         </section>
 
                         <section className="epic-form-section">
@@ -508,7 +549,7 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
                         </section>
 
                         <div className="epic-form-declaration-box">
-                            <strong>MEMBERSHIP COVENANT:</strong> Having received Jesus Christ as my personal Savior, and being in agreement with the vision, mission, and beliefs of Luke 4:18 Ministries, I hereby apply for church membership. I commit to attend worship faithfully, give of my tithes and offerings, and live a lifestyle honoring Christ.
+                            <strong>MEMBERSHIP COVENANT:</strong> Having received Jesus Christ as my personal Savior, and being in agreement with the vision, mission, and beliefs of {isMainCustomer ? "Luke 4:18 Ministries" : churchName}, I hereby apply for church membership. I commit to attend worship faithfully, give of my tithes and offerings, and live a lifestyle honoring Christ.
                         </div>
 
                         <div className="epic-form-signatures">
@@ -520,7 +561,7 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
                             <div className="epic-form-sig-block">
                                 <div className="epic-form-sig-line">{fields.pastorSignature || ""}</div>
                                 <span className="epic-form-sig-label">Senior Pastor / Minister</span>
-                                <span className="epic-form-sig-sub">San Vicente Church • Umingan</span>
+                                <span className="epic-form-sig-sub">{isMainCustomer ? "San Vicente Church • Umingan" : churchName}</span>
                             </div>
                             <div className="epic-form-seal-box">
                                 Official Church Seal
@@ -583,7 +624,7 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
                             <div className="epic-form-sig-block">
                                 <div className="epic-form-sig-line">{fields.officerSignature || ""}</div>
                                 <span className="epic-form-sig-label">Church Records Officer</span>
-                                <span className="epic-form-sig-sub">San Vicente Church • Umingan</span>
+                                <span className="epic-form-sig-sub">{isMainCustomer ? "San Vicente Church • Umingan" : churchName}</span>
                             </div>
                             <div className="epic-form-seal-box">
                                 Records Seal
@@ -754,7 +795,7 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
                         </section>
 
                         <div className="epic-form-declaration-box">
-                            <strong>VOLUNTEER PLEDGE OF SERVICE:</strong> I joyfully offer my gifts and time to serve God at Luke 4:18 Ministries. I commit to remain punctual, faithful, cooperative with leadership, and live a life worthy of Christ.
+                            <strong>VOLUNTEER PLEDGE OF SERVICE:</strong> I joyfully offer my gifts and time to serve God at {isMainCustomer ? "Luke 4:18 Ministries" : churchName}. I commit to remain punctual, faithful, cooperative with leadership, and live a life worthy of Christ.
                         </div>
 
                         <div className="epic-form-signatures">
@@ -813,7 +854,7 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
                         </section>
 
                         <div className="epic-form-declaration-box">
-                            <strong>APPOINTMENT RATIFICATION:</strong> This ministry assignment is issued with the prayer and blessing of Luke 4:18 Ministries leadership. The appointee agrees to shepherd and serve with humility and excellence.
+                            <strong>APPOINTMENT RATIFICATION:</strong> This ministry assignment is issued with the prayer and blessing of {isMainCustomer ? "Luke 4:18 Ministries" : churchName} leadership. The appointee agrees to shepherd and serve with humility and excellence.
                         </div>
 
                         <div className="epic-form-signatures">
@@ -1010,7 +1051,7 @@ export const ChurchFormDocument: React.FC<ChurchFormDocumentProps> = ({
 
                 {/* Official Footer Note */}
                 <footer className="epic-form-doc-footer">
-                    <span>Luke 4:18 Ministries • San Vicente Church, Umingan, Pangasinan</span>
+                    <span>{footerChurchInfo}</span>
                     <span>Printed via EPIC Church Management System</span>
                 </footer>
             </article>

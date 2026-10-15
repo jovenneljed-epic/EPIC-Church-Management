@@ -122,6 +122,14 @@ const MembershipDirectoryPrint:
         customTitle,
         customSubtitle
     }) => {
+        const customerId = typeof localStorage !== "undefined" ? localStorage.getItem("customerId") || "1" : "1";
+        const isMainCustomer = customerId === "1";
+        const churchName = (typeof localStorage !== "undefined"
+            ? localStorage.getItem("currentChurchName") || localStorage.getItem("churchName")
+            : null) || (isMainCustomer ? "Luke 4:18 Ministries" : "Church");
+        const churchInitials = isMainCustomer 
+            ? "EPIC" 
+            : (churchName.split(/\s+/).map(w => w[0]).filter(Boolean).join("").toUpperCase().slice(0, 4) || "CH");
 
         const total = members.length;
 
@@ -185,17 +193,17 @@ const MembershipDirectoryPrint:
                     <div className="print-brand">
 
                         <div className="print-brand-mark">
-                            EPIC
+                            {churchInitials}
                         </div>
 
                         <div>
 
                             <div className="print-brand-name">
-                                EPIC CHURCH
+                                {isMainCustomer ? "EPIC CHURCH" : churchName.toUpperCase()}
                             </div>
 
                             <div className="print-brand-system">
-                                CHURCH MANAGEMENT SYSTEM
+                                {isMainCustomer ? "CHURCH MANAGEMENT SYSTEM" : "OFFICIAL CHURCH DIRECTORY"}
                             </div>
 
                         </div>
@@ -577,7 +585,7 @@ const MembershipDirectoryPrint:
 
                         <p>
                             This report contains membership information
-                            generated from the EPIC Church Management System.
+                            generated from the {isMainCustomer ? "EPIC Church Management System" : `${churchName} Management System`}.
                             The information presented is based on the member
                             records available at the time this report was
                             generated.
@@ -602,7 +610,7 @@ const MembershipDirectoryPrint:
                         </strong>
 
                         <span>
-                            EPIC Church Management System
+                            {isMainCustomer ? "EPIC Church Management System" : `${churchName} Administration`}
                         </span>
 
                     </div>
@@ -646,11 +654,11 @@ const MembershipDirectoryPrint:
                     <div>
 
                         <strong>
-                            EPIC CHURCH
+                            {isMainCustomer ? "EPIC CHURCH" : churchName.toUpperCase()}
                         </strong>
 
                         <span>
-                            Engaging People Into Christ
+                            {isMainCustomer ? "Engaging People Into Christ" : "Official Church Records"}
                         </span>
 
                     </div>

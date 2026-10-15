@@ -15,7 +15,7 @@ const catalog: Record<string, {title:string; category:string; description:string
 type Report={churchName:string;kind:string;from:string;to:string;currentDirectory:boolean;rows:Record<string,string|number|null>[]};
 const forms = { 'Member registration':['Full name','Birth date','Address','Phone','Email','Emergency contact','Signature / date'], 'Visitor information':['Full name','Phone / email','Visit date','How did you hear about us?','May we contact you?','Prayer request'], 'Ministry volunteer':['Full name','Ministry','Contact details','Availability','Skills / experience','Signature / date'] };
 export default function ClientDocuments(){
-  const [kinds,setKinds]=useState<string[]>([]),[church,setChurch]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false);
+  const [kinds,setKinds]=useState<string[]>([]),[church,setChurch]=useState(() => (typeof localStorage !== 'undefined' ? localStorage.getItem("currentChurchName") || localStorage.getItem("churchName") : null) || ''),[error,setError]=useState(''),[busy,setBusy]=useState(false);
   const [tab,setTab]=useState<'reports'|'forms'>('reports'),[category,setCategory]=useState('All'),[search,setSearch]=useState(''),[selected,setSelected]=useState(''),[form,setForm]=useState<keyof typeof forms|null>(null);
   const localDate=(d:Date)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   const [from,setFrom]=useState(localDate(new Date(new Date().getFullYear(),new Date().getMonth(),1))),[to,setTo]=useState(localDate(new Date())),[report,setReport]=useState<Report|null>(null),[retry,setRetry]=useState(0);

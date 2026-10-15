@@ -223,21 +223,21 @@ const AttendanceByDateReportPrint: React.FC<Props> = ({
                 <div className="print-brand">
 
                     <div className="print-logo">
-                        <span>E</span>
+                        <span>{isMainCustomer ? "E" : (churchName.charAt(0).toUpperCase() || "C")}</span>
                     </div>
 
                     <div className="print-brand-text">
 
                         <div className="print-eyebrow">
-                            EPIC CHURCH MANAGEMENT SYSTEM
+                            {isMainCustomer ? "EPIC CHURCH MANAGEMENT SYSTEM" : churchName.toUpperCase()}
                         </div>
 
                         <div className="print-brand-name">
-                            EPIC
+                            {isMainCustomer ? "EPIC" : churchName.toUpperCase()}
                         </div>
 
                         <div className="print-tagline">
-                            Engaging People Into Christ
+                            {isMainCustomer ? "Engaging People Into Christ" : "Official Church Records"}
                         </div>
 
                     </div>

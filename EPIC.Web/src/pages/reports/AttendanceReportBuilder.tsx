@@ -121,6 +121,23 @@ export interface AttendanceReportBuilderProps {
 }
 
 const AttendanceReportBuilder: React.FC<AttendanceReportBuilderProps> = ({ onBack }) => {
+    // TENANT RESOLUTION
+    const customerId = localStorage.getItem("customerId") || "1";
+    const isMainCustomer = customerId === "1";
+    const churchName =
+        localStorage.getItem("currentChurchName") ||
+        localStorage.getItem("churchName") ||
+        (isMainCustomer ? "Luke 4:18 Ministries" : "Church");
+    const churchInitials = isMainCustomer
+        ? "EPIC"
+        : (churchName
+            .split(/\s+/)
+            .map((w) => w[0])
+            .filter(Boolean)
+            .join("")
+            .toUpperCase()
+            .slice(0, 4) || "CH");
+
     // =====================================================
     // STATE
     // =====================================================
@@ -1763,14 +1780,13 @@ const AttendanceReportBuilder: React.FC<AttendanceReportBuilderProps> = ({ onBac
                             <div>
 
                                 <div className="epic-report-logo-mark">
-                                    EPIC
+                                    {churchInitials}
                                 </div>
 
                                 <div>
 
                                     <span className="epic-report-preview-eyebrow">
-                                        LUKE 4:18
-                                        MINISTRIES
+                                        {isMainCustomer ? "LUKE 4:18 MINISTRIES" : churchName.toUpperCase()}
                                     </span>
 
                                     <h2>
@@ -1778,8 +1794,7 @@ const AttendanceReportBuilder: React.FC<AttendanceReportBuilderProps> = ({ onBac
                                     </h2>
 
                                     <p>
-                                        Engaging People
-                                        Into Christ
+                                        {isMainCustomer ? "Engaging People Into Christ" : "Official Church Records"}
                                     </p>
 
                                 </div>
