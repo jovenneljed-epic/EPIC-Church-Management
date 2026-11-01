@@ -4,6 +4,7 @@ export type GrowthStage = "SEED" | "ROOT" | "TRUNK" | "BRANCH" | "FRUIT_MULTIPLI
 export type HeartState = "THRIVING" | "PEACEFUL" | "BATTLING" | "DRAINED" | "CRISIS";
 export type BranchHealth = "HEALTHY" | "ATTENTION" | "AT_RISK";
 export type MeetingType = "COFFEE" | "CHURCH_FELLOWSHIP" | "CALL" | "HOME_VISIT";
+export type LeaderCategory = "PASTOR" | "ADULT" | "YOUTH" | "OTHER";
 
 export type ChurchPosition =
     | "EPIC_SENIOR_PASTOR"
@@ -24,6 +25,7 @@ export const SENIOR_PASTOR_TITLE = "EPIC SENIOR PASTOR";
  * EXEMPTION:
  * The Admin account / Senior Pastor Overseer is STRICTLY EXEMPT from this limit.
  * Admin has the apostolic authority to delegate their leaders and pastors without limits.
+ * All Assistant Pastors, Adult Leaders, and Youth Leaders belong directly under the Overseer branch.
  */
 export const MAX_DISCIPLES_PER_LEADER = 3;
 
@@ -65,7 +67,7 @@ export const POSITION_DETAILS: Record<
         bgSoft: "#ECFDF5",
         icon: "🏛️",
         shortTitle: "EPIC Leader",
-        description: "Department, Ministry & Cell Network Leader",
+        description: "Department, Adult, Youth & Cell Network Leader",
     },
     EPIC_DISCIPLER: {
         label: "EPIC DISCIPLER",
@@ -171,6 +173,8 @@ export interface DiscipleshipMemberNode {
     missedSundaysCount: number;
     ministry?: string;
     photoPath?: string;
+    leaderCategory?: LeaderCategory;
+    leaderCategoryLabel?: string;
 }
 
 export interface RealChurchMember {
@@ -189,12 +193,12 @@ export interface RealChurchMember {
 }
 
 const STORAGE_KEYS = {
-    BRANCH_ASSIGNMENTS: "@epic_discipleship_branch_assignments_v4_real_unlimited",
-    ASSIGNED_ROLES: "@epic_discipleship_assigned_roles_v4_real",
-    ENCOUNTERS: "@epic_discipleship_encounters_v4_real",
-    DEVOTIONS: "@epic_discipleship_devotions_v4_real",
-    THOUGHTS: "@epic_discipleship_thoughts_v4_real",
-    PULSE: "@epic_discipleship_pulse_v4_real",
+    BRANCH_ASSIGNMENTS: "@epic_discipleship_branch_assignments_v5_leaders",
+    ASSIGNED_ROLES: "@epic_discipleship_assigned_roles_v5_leaders",
+    ENCOUNTERS: "@epic_discipleship_encounters_v5",
+    DEVOTIONS: "@epic_discipleship_devotions_v5",
+    THOUGHTS: "@epic_discipleship_thoughts_v5",
+    PULSE: "@epic_discipleship_pulse_v5",
 };
 
 /**
@@ -218,25 +222,59 @@ function getAuthToken(): string | null {
 }
 
 /**
- * Purge legacy storage keys that held outdated fake or mock data
+ * Helper to identify leader category (Assistant Pastor, Adult Leader, Youth Leader, Church Leader)
  */
-function purgeLegacyFakeData(): void {
-    if (typeof localStorage === "undefined") return;
-    const legacyKeys = [
-        "@epic_discipleship_branch_assignments_v1",
-        "@epic_discipleship_branch_assignments_v2",
-        "@epic_discipleship_branch_assignments_v3_real",
-        "@epic_discipleship_assigned_roles_v1",
-        "@epic_discipleship_assigned_roles_v2",
-        "@epic_discipleship_assigned_roles_v3_real",
-    ];
-    for (const k of legacyKeys) {
-        localStorage.removeItem(k);
+export function detectLeaderCategory(ministry = "", position: ChurchPosition = "MEMBER"): {
+    category: LeaderCategory;
+    label: string;
+    icon: string;
+    badgeColor: string;
+    bgSoft: string;
+} {
+    const min = (ministry || "").toUpperCase().trim();
+    if (
+        position === "EPIC_ASSISTANT_PASTOR" ||
+        position === "EPIC_ASSISTANT_SENIOR_PASTOR" ||
+        min.includes("PASTOR") ||
+        min.includes("PASTORAL")
+    ) {
+        return {
+            category: "PASTOR",
+            label: "EPIC ASSISTANT PASTORS",
+            icon: "⭐",
+            badgeColor: "#2563EB",
+            bgSoft: "#EFF6FF",
+        };
     }
+    if (min.includes("ADULT") && (min.includes("LEADER") || position === "EPIC_LEADER")) {
+        return {
+            category: "ADULT",
+            label: "EPIC ADULT LEADER",
+            icon: "🌟",
+            badgeColor: "#7E22CE",
+            bgSoft: "#FAF5FF",
+        };
+    }
+    if (
+        (min.includes("YOUTH") || min.includes("YOUNG ADULT")) &&
+        (min.includes("LEADER") || min.includes("HEAD") || min.includes("DIRECTOR") || position === "EPIC_LEADER")
+    ) {
+        return {
+            category: "YOUTH",
+            label: "EPIC YOUTH LEADER",
+            icon: "🔥",
+            badgeColor: "#C2410C",
+            bgSoft: "#FFF7ED",
+        };
+    }
+    return {
+        category: "OTHER",
+        label: "EPIC LEADER",
+        icon: "🏛️",
+        badgeColor: "#059669",
+        bgSoft: "#ECFDF5",
+    };
 }
-
-// Run legacy cleanup once
-purgeLegacyFakeData();
 
 // ============================================================
 // SERVICE IMPLEMENTATION
@@ -434,7 +472,7 @@ export const discipleshipWebService = {
         }
         assignments[leaderId].push(discipleId);
 
-        // If assigned directly to Admin / Senior Pastor, set their position to EPIC_ASSISTANT_PASTOR
+        // If assigned directly to Admin / Senior Pastor, set their leadership position
         if (isAdminLeader) {
             const assignedRoles = this.getAssignedRoles();
             if (!assignedRoles[discipleId] || assignedRoles[discipleId] === "MEMBER" || assignedRoles[discipleId] === "DISCIPLE") {
@@ -446,7 +484,7 @@ export const discipleshipWebService = {
         return {
             success: true,
             message: isAdminLeader
-                ? "EPIC Pastor successfully delegated under Senior Pastoral oversight without limits."
+                ? "Leader successfully delegated under Senior Pastoral oversight without limits."
                 : "Disciple successfully assigned to leader's branch.",
         };
     },
@@ -473,9 +511,6 @@ export const discipleshipWebService = {
         return [];
     },
 
-    /**
-     * Save devotion for member
-     */
     saveMemberDevotion(memberId: number, devotion: DailyDevotion): void {
         const list = this.getMemberDevotions(memberId);
         list.unshift(devotion);
@@ -493,9 +528,6 @@ export const discipleshipWebService = {
         return [];
     },
 
-    /**
-     * Save thought for member
-     */
     saveMemberThought(memberId: number, thought: DiscipleThought): void {
         const list = this.getMemberThoughts(memberId);
         list.unshift(thought);
@@ -513,9 +545,6 @@ export const discipleshipWebService = {
         return undefined;
     },
 
-    /**
-     * Save pulse
-     */
     saveMemberPulse(memberId: number, pulse: SpiritualPulse): void {
         localStorage.setItem(`${STORAGE_KEYS.PULSE}_${memberId}`, JSON.stringify(pulse));
     },
@@ -571,11 +600,11 @@ export const discipleshipWebService = {
 
     /**
      * Build the entire connected Discipleship Spiritual Lineage Tree
-     * REAL DATA ONLY:
-     * - Fetches REAL church members.
-     * - Admin / Senior Pastor has full authority to delegate their EPIC Assistant Pastors WITHOUT LIMITS.
-     * - Gen 2 Disciples under Admin are REAL Assistant Pastors fetched from the database.
-     * - Disciples of ordinary leaders are restricted to maximum 3.
+     * GUARANTEED:
+     * - ALL Assistant Pastors, ALL Adult Leaders, and ALL Youth Leaders in the database
+     *   are placed directly under the Senior Pastor / Admin Overseer's branch!
+     * - Admin / Senior Pastor has UNLIMITED capacity.
+     * - Accountable disciples under each leader are distributed up to 3 (1:3 rule).
      */
     async buildFullLineageTree(): Promise<{ root: DiscipleshipMemberNode; allMembers: RealChurchMember[] }> {
         const members = await this.getChurchMembers();
@@ -610,8 +639,7 @@ export const discipleshipWebService = {
             memberMap.set(rootId, seniorPastorMember);
         }
 
-        // 3. PURGE NON-EXISTENT MEMBER IDS FROM ASSIGNMENTS
-        // Removes any ID that does not exist in the real member database.
+        // 3. Purge non-existent member IDs from assignments
         const cleanAssignments: Record<number, number[]> = {};
         for (const [leaderKey, discipleIds] of Object.entries(branchAssignments)) {
             const leaderId = Number(leaderKey);
@@ -624,88 +652,136 @@ export const discipleshipWebService = {
         }
         branchAssignments = cleanAssignments;
 
-        // 4. FIND REAL ASSISTANT PASTORS FROM THE DATABASE
-        const isRealAssistantPastor = (m: RealChurchMember): boolean => {
+        // 4. IDENTIFY ALL ASSISTANT PASTORS, ADULT LEADERS, AND YOUTH LEADERS
+        // All of them belong directly under the Overseer's branch!
+        const isAssistantPastor = (m: RealChurchMember): boolean => {
             if (m.memberId === rootId) return false;
             const nameLower = m.fullName.toLowerCase();
             if (nameLower.includes("ronnel") && nameLower.includes("aviguetero")) return false;
 
             const assigned = assignedRoles[m.memberId];
-            if (assigned === "EPIC_ASSISTANT_PASTOR" || assigned === "EPIC_ASSISTANT_SENIOR_PASTOR") {
-                return true;
-            }
+            if (assigned === "EPIC_ASSISTANT_PASTOR" || assigned === "EPIC_ASSISTANT_SENIOR_PASTOR") return true;
 
-            const minLower = (m.ministry || "").toLowerCase();
-            if (
-                minLower.includes("assistant pastor") ||
-                minLower.includes("asst pastor") ||
-                minLower.includes("asst. pastor") ||
-                minLower.includes("associate pastor") ||
-                minLower.includes("co-pastor") ||
-                minLower.includes("pastoral")
-            ) {
-                return true;
-            }
-
-            if (nameLower.startsWith("pastor") || nameLower.startsWith("ptr")) {
-                return true;
-            }
-
-            return false;
+            const min = (m.ministry || "").toUpperCase().trim();
+            return (
+                min.includes("PASTOR") ||
+                min.includes("PASTORAL") ||
+                nameLower.startsWith("pastor") ||
+                nameLower.startsWith("ptr")
+            );
         };
 
-        // All real members matching Assistant Pastor
-        let realAssistantPastors = members.filter(isRealAssistantPastor);
+        const isAdultLeader = (m: RealChurchMember): boolean => {
+            if (m.memberId === rootId) return false;
+            const min = (m.ministry || "").toUpperCase().trim();
+            return min.includes("ADULT") && min.includes("LEADER");
+        };
 
-        // If no members explicitly have "Pastor" in their ministry yet, detect leaders to serve as Assistant Pastors
-        if (realAssistantPastors.length === 0) {
-            realAssistantPastors = members.filter((m) => {
-                if (m.memberId === rootId) return false;
-                const min = (m.ministry || "").toUpperCase();
-                return (
-                    min.includes("LEADER") ||
-                    min.includes("HEAD") ||
-                    min.includes("DIRECTOR") ||
-                    min.includes("PASTOR") ||
-                    min.includes("ELDER")
-                );
-            });
+        const isYouthLeader = (m: RealChurchMember): boolean => {
+            if (m.memberId === rootId) return false;
+            const min = (m.ministry || "").toUpperCase().trim();
+            return (
+                (min.includes("YOUTH") || min.includes("YOUNG ADULT")) &&
+                (min.includes("LEADER") || min.includes("HEAD") || min.includes("DIRECTOR") || min.includes("COORDINATOR"))
+            );
+        };
+
+        const isChurchLeader = (m: RealChurchMember): boolean => {
+            if (m.memberId === rootId) return false;
+            const min = (m.ministry || "").toUpperCase().trim();
+            return min.includes("CHURCH LEADER") || min.includes("DEPARTMENT LEADER") || min.includes("MINISTRY LEADER");
+        };
+
+        // Discover all real leaders from the database
+        const realAssistantPastors = members.filter(isAssistantPastor);
+        const realAdultLeaders = members.filter(isAdultLeader);
+        const realYouthLeaders = members.filter(isYouthLeader);
+        const realOtherLeaders = members.filter(isChurchLeader);
+
+        const allDiscoveredLeaders = [
+            ...realAssistantPastors,
+            ...realAdultLeaders,
+            ...realYouthLeaders,
+            ...realOtherLeaders,
+        ];
+
+        // 5. ATTACH ALL OF THEM UNDER SENIOR PASTOR / ADMIN ROOT (UNLIMITED)
+        const existingRootDisciples = branchAssignments[rootId] || [];
+        const combinedLeaderIds = Array.from(
+            new Set([...existingRootDisciples, ...allDiscoveredLeaders.map((l) => l.memberId)])
+        );
+
+        let rootDisciples = combinedLeaderIds;
+
+        // If no explicit leaders found yet, assign active members as leaders
+        if (rootDisciples.length === 0) {
+            rootDisciples = members.filter((m) => m.memberId !== rootId).map((m) => m.memberId);
         }
 
-        // 5. ATTACH REAL ASSISTANT PASTORS UNDER ADMIN ROOT
-        // Note: Admin has NO LIMIT! Can hold any number of delegated pastors.
-        let rootDisciples = branchAssignments[rootId] || [];
+        branchAssignments[rootId] = rootDisciples;
 
-        // If Admin has not yet manually delegated anyone, auto-assign the real Assistant Pastors
-        if (rootDisciples.length === 0 && realAssistantPastors.length > 0) {
-            rootDisciples = realAssistantPastors.map((ap) => ap.memberId);
-            branchAssignments[rootId] = rootDisciples;
-
-            rootDisciples.forEach((apId) => {
-                if (!assignedRoles[apId]) {
-                    this.assignRole(apId, "EPIC_ASSISTANT_PASTOR");
-                    assignedRoles[apId] = "EPIC_ASSISTANT_PASTOR";
+        // Automatically assign their official leadership role in storage
+        rootDisciples.forEach((lId) => {
+            if (!assignedRoles[lId]) {
+                const memberObj = memberMap.get(lId);
+                if (memberObj) {
+                    if (isAssistantPastor(memberObj)) {
+                        this.assignRole(lId, "EPIC_ASSISTANT_PASTOR");
+                        assignedRoles[lId] = "EPIC_ASSISTANT_PASTOR";
+                    } else if (isAdultLeader(memberObj)) {
+                        this.assignRole(lId, "EPIC_LEADER");
+                        assignedRoles[lId] = "EPIC_LEADER";
+                    } else if (isYouthLeader(memberObj)) {
+                        this.assignRole(lId, "EPIC_LEADER");
+                        assignedRoles[lId] = "EPIC_LEADER";
+                    } else {
+                        this.assignRole(lId, "EPIC_LEADER");
+                        assignedRoles[lId] = "EPIC_LEADER";
+                    }
                 }
-            });
-        }
+            }
+        });
 
-        // 6. POPULATE ACCOUNTABLE DISCIPLES UNDER THE ASSISTANT PASTORS (Subject to 1:3 limit)
+        // 6. POPULATE ACCOUNTABLE DISCIPLES UNDER EACH LEADER (Subject to 1:3 limit)
+        // Disciples are smartly paired with their matching department!
         const usedMemberIds = new Set<number>([rootId, ...rootDisciples]);
 
-        for (const apId of rootDisciples) {
-            let apDisciples = branchAssignments[apId] || [];
-            // If this assistant pastor has no disciples assigned, distribute available real church members up to 3
-            if (apDisciples.length === 0) {
-                const availableMembers = members.filter((m) => !usedMemberIds.has(m.memberId));
-                const toAssign = availableMembers.slice(0, MAX_DISCIPLES_PER_LEADER);
+        for (const leaderId of rootDisciples) {
+            let leaderDisciples = branchAssignments[leaderId] || [];
 
-                apDisciples = toAssign.map((m) => {
+            if (leaderDisciples.length === 0) {
+                const leaderObj = memberMap.get(leaderId);
+                const leaderMin = (leaderObj?.ministry || "").toUpperCase();
+
+                // Candidate disciples not yet in any branch
+                let candidateMembers = members.filter((m) => !usedMemberIds.has(m.memberId));
+
+                if (leaderMin.includes("ADULT")) {
+                    const adultCandidates = candidateMembers.filter((m) => (m.ministry || "").toUpperCase().includes("ADULT"));
+                    if (adultCandidates.length > 0) {
+                        candidateMembers = [...adultCandidates, ...candidateMembers.filter((m) => !(m.ministry || "").toUpperCase().includes("ADULT"))];
+                    }
+                } else if (leaderMin.includes("YOUTH") || leaderMin.includes("YOUNG ADULT")) {
+                    const youthCandidates = candidateMembers.filter((m) => {
+                        const mMin = (m.ministry || "").toUpperCase();
+                        return mMin.includes("YOUTH") || mMin.includes("YOUNG ADULT");
+                    });
+                    if (youthCandidates.length > 0) {
+                        candidateMembers = [...youthCandidates, ...candidateMembers.filter((m) => {
+                            const mMin = (m.ministry || "").toUpperCase();
+                            return !mMin.includes("YOUTH") && !mMin.includes("YOUNG ADULT");
+                        })];
+                    }
+                }
+
+                const toAssign = candidateMembers.slice(0, MAX_DISCIPLES_PER_LEADER);
+                leaderDisciples = toAssign.map((m) => {
                     usedMemberIds.add(m.memberId);
                     return m.memberId;
                 });
-                branchAssignments[apId] = apDisciples;
+                branchAssignments[leaderId] = leaderDisciples;
             } else {
-                apDisciples.forEach((id) => usedMemberIds.add(id));
+                leaderDisciples.forEach((id) => usedMemberIds.add(id));
             }
         }
 
@@ -720,6 +796,9 @@ export const discipleshipWebService = {
                 return assignedRoles[memberId];
             }
             if (gen === 2) {
+                if (isAdultLeader(member) || isYouthLeader(member) || isChurchLeader(member)) {
+                    return "EPIC_LEADER";
+                }
                 return "EPIC_ASSISTANT_PASTOR";
             }
             const minLower = (member.ministry || "").toLowerCase();
@@ -773,6 +852,7 @@ export const discipleshipWebService = {
             }
 
             const parentLeader = parentLeaderId !== null ? memberMap.get(parentLeaderId) : undefined;
+            const leaderCat = gen === 2 ? detectLeaderCategory(m.ministry, position) : undefined;
 
             return {
                 memberId,
@@ -794,6 +874,8 @@ export const discipleshipWebService = {
                 missedSundaysCount: missedSundays,
                 ministry: m.ministry,
                 photoPath: m.photoPath,
+                leaderCategory: leaderCat?.category,
+                leaderCategoryLabel: leaderCat?.label,
             };
         };
 

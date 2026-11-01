@@ -508,13 +508,17 @@
 }
 
 .dt-node-name {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 800;
     color: #0f172a;
-    white-space: nowrap;
+    line-height: 1.25;
+    min-height: 32px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     overflow: hidden;
-    text-overflow: ellipsis;
-    margin-bottom: 2px;
+    margin-bottom: 3px;
+    word-break: break-word;
 }
 
 .dt-node-role-badge {
@@ -955,4 +959,337 @@
     border-radius: 6px;
     border: 1px solid #ddd6fe;
     font-weight: 700;
+}
+
+
+/* =========================================================
+   CANVAS TOOLBAR & FULL-VIEW ZOOM CONTROLS
+   ========================================================= */
+
+.dt-canvas-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding: 12px 18px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+}
+
+.dt-canvas-pills {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.dt-cat-pill {
+    font-size: 12px;
+    font-weight: 700;
+    padding: 6px 12px;
+    border-radius: 20px;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #334155;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.dt-cat-pill:hover {
+    border-color: #94a3b8;
+    background: #f1f5f9;
+}
+
+.dt-cat-pill.active {
+    background: #0f172a;
+    color: #ffffff;
+    border-color: #0f172a;
+}
+
+.dt-cat-pill.pastor.active {
+    background: #1d4ed8;
+    color: #ffffff;
+    border-color: #1d4ed8;
+}
+
+.dt-cat-pill.adult.active {
+    background: #7e22ce;
+    color: #ffffff;
+    border-color: #7e22ce;
+}
+
+.dt-cat-pill.youth.active {
+    background: #c2410c;
+    color: #ffffff;
+    border-color: #c2410c;
+}
+
+.dt-zoom-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.dt-zoom-btn {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #334155;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.15s ease;
+}
+
+.dt-zoom-btn:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+}
+
+.dt-zoom-level-text {
+    font-size: 12px;
+    font-weight: 800;
+    color: #0f172a;
+    min-width: 44px;
+    text-align: center;
+}
+
+.dt-zoom-fit {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-color: #bfdbfe;
+}
+
+.dt-collapse-all-btn.active {
+    background: #f5f3ff;
+    color: #6b21a8;
+    border-color: #d8b4fe;
+}
+
+/* =========================================================
+   FLEXIBLE DEPARTMENT COLUMNS GRID VIEW
+   ========================================================= */
+
+.dt-dept-view-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    width: 100%;
+}
+
+.dt-dept-root-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+
+.dt-dept-grid-columns {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    width: 100%;
+}
+
+@media (max-width: 1100px) {
+    .dt-dept-grid-columns {
+        grid-template-columns: 1fr;
+    }
+}
+
+.dt-dept-column {
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.dt-dept-column.pastor-col {
+    border-top: 4px solid #2563eb;
+    background: #fbfdff;
+}
+
+.dt-dept-column.adult-col {
+    border-top: 4px solid #7e22ce;
+    background: #fdfaff;
+}
+
+.dt-dept-column.youth-col {
+    border-top: 4px solid #ea580c;
+    background: #fffbfa;
+}
+
+.dt-dept-col-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.dt-dept-col-icon {
+    font-size: 22px;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dt-dept-col-header h3 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.dt-dept-col-header span {
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+}
+
+.dt-dept-cards-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.dt-dept-leader-card-wrapper {
+    background: #ffffff;
+    border-radius: 14px;
+    border: 1px solid #e2e8f0;
+    padding: 14px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+.dt-dept-disciples-tray {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px dashed #e2e8f0;
+}
+
+.dt-dept-tray-label {
+    font-size: 10px;
+    font-weight: 800;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+}
+
+.dt-dept-disciples-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.dt-disciple-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 6px 10px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.dt-disciple-chip:hover {
+    background: #eff6ff;
+    border-color: #93c5fd;
+}
+
+.dt-chip-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    background: #cbd5e1;
+    color: #334155;
+    font-size: 11px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dt-chip-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.dt-chip-info strong {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    color: #1e293b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dt-chip-info small {
+    display: block;
+    font-size: 10px;
+    color: #64748b;
+}
+
+.dt-health-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.dt-health-dot.HEALTHY { background: #10b981; }
+.dt-health-dot.ATTENTION { background: #f59e0b; }
+.dt-health-dot.AT_RISK { background: #ef4444; }
+
+.dt-dept-empty {
+    text-align: center;
+    padding: 30px 10px;
+    font-size: 12px;
+    color: #94a3b8;
+    font-style: italic;
+}
+
+.dt-btn-adopt-mini {
+    flex: 1;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 5px 8px;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #334155;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.dt-btn-adopt-mini:hover {
+    background: #eff6ff;
+    border-color: #2563eb;
+    color: #1d4ed8;
 }

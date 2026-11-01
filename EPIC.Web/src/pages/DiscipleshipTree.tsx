@@ -33,8 +33,12 @@ import {
     Layers,
     UserPlus,
     Award,
-    ExternalLink,
     Send,
+    ZoomIn,
+    ZoomOut,
+    Maximize2,
+    RotateCcw,
+    LayoutGrid,
 } from "lucide-react";
 
 export default function DiscipleshipTree() {
@@ -46,7 +50,11 @@ export default function DiscipleshipTree() {
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
     const [healthFilter, setHealthFilter] = useState<string>("ALL");
-    const [viewMode, setViewMode] = useState<"TREE" | "MATRIX" | "RADAR">("TREE");
+    const [viewMode, setViewMode] = useState<"TREE" | "COLUMNS" | "MATRIX" | "RADAR">("TREE");
+
+    // Canvas Zoom & Department Filter
+    const [zoomLevel, setZoomLevel] = useState<number>(0.85);
+    const [selectedCategory, setSelectedCategory] = useState<"ALL" | "PASTOR" | "ADULT" | "YOUTH">("ALL");
 
     // Collapsed nodes state (Set of memberIds whose children are hidden)
     const [collapsedIds, setCollapsedIds] = useState<Set<number>>(new Set());
@@ -107,6 +115,7 @@ export default function DiscipleshipTree() {
             localStorage.removeItem("@epic_discipleship_branch_assignments_v2");
             localStorage.removeItem("@epic_discipleship_branch_assignments_v3_real");
             localStorage.removeItem("@epic_discipleship_branch_assignments_v4_real_unlimited");
+            localStorage.removeItem("@epic_discipleship_branch_assignments_v5_leaders");
             await loadLineage();
         } finally {
             setLoading(false);
@@ -125,6 +134,31 @@ export default function DiscipleshipTree() {
         return result;
     }, [treeRoot]);
 
+    // Group Gen 2 leaders by department
+    const { asstPastors, adultLeaders, youthLeaders } = useMemo(() => {
+        const asst: DiscipleshipMemberNode[] = [];
+        const adult: DiscipleshipMemberNode[] = [];
+        const youth: DiscipleshipMemberNode[] = [];
+        const other: DiscipleshipMemberNode[] = [];
+
+        (treeRoot?.disciples || []).forEach((node) => {
+            const cat = node.leaderCategory || "OTHER";
+            if (cat === "PASTOR") asst.push(node);
+            else if (cat === "ADULT") adult.push(node);
+            else if (cat === "YOUTH") youth.push(node);
+            else other.push(node);
+        });
+
+        // Distribute any other church leaders into their matching department
+        other.forEach((n) => {
+            const min = (n.ministry || "").toUpperCase();
+            if (min.includes("ADULT")) adult.push(n);
+            else if (min.includes("YOUTH") || min.includes("YOUNG ADULT")) youth.push(n);
+            else asst.push(n);
+        });
+        return { asstPastors: asst, adultLeaders: adult, youthLeaders: youth };
+    }, [treeRoot]);
+
     // Statistics calculations
     const stats = useMemo(() => {
         const total = flattenedNodes.length;
@@ -137,7 +171,7 @@ export default function DiscipleshipTree() {
         return { total, healthy, attention, atRisk, maxGen, totalDevotions };
     }, [flattenedNodes]);
 
-    // Toggle collapse
+    // Toggle collapse for individual node
     const toggleCollapse = (memberId: number, e: React.MouseEvent) => {
         e.stopPropagation();
         setCollapsedIds((prev) => {
@@ -149,6 +183,23 @@ export default function DiscipleshipTree() {
             }
             return next;
         });
+    };
+
+    // Toggle collapse/expand all disciples
+    const areAllDisciplesCollapsed = useMemo(() => {
+        if (!treeRoot || treeRoot.disciples.length === 0) return false;
+        return treeRoot.disciples.every((d) => collapsedIds.has(d.memberId));
+    }, [treeRoot, collapsedIds]);
+
+    const toggleCollapseAllDisciples = () => {
+        if (!treeRoot) return;
+        if (areAllDisciplesCollapsed) {
+            setCollapsedIds(new Set());
+        } else {
+            const newSet = new Set<number>();
+            treeRoot.disciples.forEach((d) => newSet.add(d.memberId));
+            setCollapsedIds(newSet);
+        }
     };
 
     // =========================================================
@@ -218,7 +269,9 @@ export default function DiscipleshipTree() {
         const hasChildren = node.disciples && node.disciples.length > 0;
         const posInfo = POSITION_DETAILS[node.position] || POSITION_DETAILS.DISCIPLE;
         const isSeniorPastor = node.position === "EPIC_SENIOR_PASTOR" || node.generation === 1;
-        const isAssistantPastor = node.generation === 2 || node.position === "EPIC_ASSISTANT_PASTOR";
+        const isAssistantPastor = node.generation === 2 && (node.leaderCategory === "PASTOR" || node.position === "EPIC_ASSISTANT_PASTOR");
+        const isAdultLeader = node.generation === 2 && node.leaderCategory === "ADULT";
+        const isYouthLeader = node.generation === 2 && node.leaderCategory === "YOUTH";
         const isSelected = selectedMember?.memberId === node.memberId;
 
         // Filter check
@@ -229,6 +282,14 @@ export default function DiscipleshipTree() {
             (node.ministry || "").toLowerCase().includes(searchQuery.toLowerCase());
 
         const matchesHealth = healthFilter === "ALL" || node.health === healthFilter;
+
+        // Determine displayed children for Gen 1 (Senior Pastor) based on selectedCategory
+        let displayedChildren = node.disciples;
+        if (isSeniorPastor && selectedCategory !== "ALL") {
+            displayedChildren = node.disciples.filter((d) => (d.leaderCategory || "OTHER") === selectedCategory);
+        }
+
+        const hasDisplayedChildren = displayedChildren && displayedChildren.length > 0;
 
         return (
             <div key={node.memberId} className="dt-tree-node">
@@ -248,7 +309,11 @@ export default function DiscipleshipTree() {
                             {isSeniorPastor
                                 ? "GEN 1 · OVERSEER"
                                 : isAssistantPastor
-                                ? "GEN 2 · ASST. PASTOR (1ST GEN)"
+                                ? "GEN 2 · ASST. PASTOR"
+                                : isAdultLeader
+                                ? "GEN 2 · ADULT LEADER"
+                                : isYouthLeader
+                                ? "GEN 2 · YOUTH LEADER"
                                 : `GEN ${node.generation}`}
                         </span>
 
@@ -268,10 +333,14 @@ export default function DiscipleshipTree() {
                                     ? "linear-gradient(135deg, #7c3aed, #9333ea)"
                                     : isAssistantPastor
                                     ? "linear-gradient(135deg, #2563eb, #1d4ed8)"
+                                    : isAdultLeader
+                                    ? "linear-gradient(135deg, #7e22ce, #a855f7)"
+                                    : isYouthLeader
+                                    ? "linear-gradient(135deg, #ea580c, #f97316)"
                                     : undefined,
                             }}
                         >
-                            {isSeniorPastor ? "👑" : isAssistantPastor ? "⭐" : node.fullName.charAt(0)}
+                            {isSeniorPastor ? "👑" : isAssistantPastor ? "⭐" : isAdultLeader ? "🌟" : isYouthLeader ? "🔥" : node.fullName.charAt(0)}
                         </div>
 
                         <div className="dt-node-info">
@@ -281,14 +350,24 @@ export default function DiscipleshipTree() {
                             <span
                                 className="dt-node-role-badge"
                                 style={{
-                                    backgroundColor: posInfo.bgSoft,
-                                    color: posInfo.badgeColor,
+                                    backgroundColor: isAssistantPastor
+                                        ? "#EFF6FF"
+                                        : isAdultLeader
+                                        ? "#FAF5FF"
+                                        : isYouthLeader
+                                        ? "#FFF7ED"
+                                        : posInfo.bgSoft,
+                                    color: isAssistantPastor
+                                        ? "#2563EB"
+                                        : isAdultLeader
+                                        ? "#7E22CE"
+                                        : isYouthLeader
+                                        ? "#C2410C"
+                                        : posInfo.badgeColor,
                                     border: `1px solid ${posInfo.badgeColor}33`,
                                 }}
                             >
-                                {isAssistantPastor && node.position !== "EPIC_ASSISTANT_PASTOR"
-                                    ? "EPIC ASSISTANT PASTORS"
-                                    : posInfo.label}
+                                {node.leaderCategoryLabel || posInfo.label}
                             </span>
                         </div>
                     </div>
@@ -296,10 +375,10 @@ export default function DiscipleshipTree() {
                     {/* Footer Metrics */}
                     <div className="dt-node-footer">
                         {isSeniorPastor ? (
-                            <div className="dt-capacity-meter admin-unlimited" style={{ background: "#f5f3ff", color: "#6b21a8", borderColor: "#d8b4fe" }}>
+                            <div className="dt-capacity-meter admin-unlimited">
                                 <Users size={12} />
                                 <span>
-                                    👑 {node.disciples.length} Delegated Pastors (Admin · Unlimited)
+                                    👑 {node.disciples.length} Leaders Delegated (Admin · Unlimited)
                                 </span>
                             </div>
                         ) : (
@@ -339,7 +418,7 @@ export default function DiscipleshipTree() {
                                 }}
                                 onClick={(e) => handleOpenAdoptModal(node, e)}
                             >
-                                <Plus size={12} /> Delegate EPIC Pastor (Unlimited)
+                                <Plus size={12} /> Delegate EPIC Leader (Unlimited)
                             </button>
                         ) : node.disciples.length < MAX_DISCIPLES_PER_LEADER ? (
                             <button
@@ -384,15 +463,15 @@ export default function DiscipleshipTree() {
                 </div>
 
                 {/* Branch Line Downward */}
-                {hasChildren && !isCollapsed && (
+                {hasDisplayedChildren && !isCollapsed && (
                     <>
                         <div className="dt-branch-connector-down" />
                         <div
                             className={`dt-children-container ${
-                                node.disciples.length === 1 ? "single-child" : ""
+                                displayedChildren.length === 1 ? "single-child" : ""
                             }`}
                         >
-                            {node.disciples.map((child) => (
+                            {displayedChildren.map((child) => (
                                 <div key={child.memberId} style={{ position: "relative" }}>
                                     <div className="dt-child-connector-up" />
                                     {renderTreeNode(child)}
@@ -400,6 +479,106 @@ export default function DiscipleshipTree() {
                             ))}
                         </div>
                     </>
+                )}
+            </div>
+        );
+    };
+
+    // Helper for Department Grid block
+    const renderDepartmentLeaderBlock = (leader: DiscipleshipMemberNode) => {
+        const isSelected = selectedMember?.memberId === leader.memberId;
+        return (
+            <div key={leader.memberId} className="dt-dept-leader-card-wrapper">
+                <div
+                    className={`dt-node-card health-${leader.health} ${isSelected ? "selected" : ""}`}
+                    style={{ width: "100%", maxWidth: "100%" }}
+                    onClick={() => {
+                        setSelectedMember(leader);
+                        setDrawerTab("PULSE");
+                    }}
+                >
+                    <div className="dt-node-header">
+                        <span className="dt-gen-badge">GEN 2 · LEADER</span>
+                        <span className={`dt-health-badge ${leader.health}`}>
+                            {leader.health === "HEALTHY" ? "🟢 Healthy" : leader.health === "ATTENTION" ? "🟡 Attention" : "🔴 At-Risk"}
+                        </span>
+                    </div>
+                    <div className="dt-node-body">
+                        <div
+                            className="dt-node-avatar"
+                            style={{
+                                background:
+                                    leader.leaderCategory === "PASTOR"
+                                        ? "linear-gradient(135deg, #2563eb, #1d4ed8)"
+                                        : leader.leaderCategory === "ADULT"
+                                        ? "linear-gradient(135deg, #7e22ce, #9333ea)"
+                                        : "linear-gradient(135deg, #ea580c, #c2410c)",
+                            }}
+                        >
+                            {leader.leaderCategory === "PASTOR" ? "⭐" : leader.leaderCategory === "ADULT" ? "🌟" : "🔥"}
+                        </div>
+                        <div className="dt-node-info">
+                            <div className="dt-node-name" title={leader.fullName}>
+                                {leader.fullName}
+                            </div>
+                            <span className="dt-node-role-badge" style={{ background: "#eff6ff", color: "#1d4ed8" }}>
+                                {leader.leaderCategoryLabel || POSITION_DETAILS[leader.position]?.label}
+                            </span>
+                        </div>
+                    </div>
+                    <div className="dt-node-footer">
+                        <div className={`dt-capacity-meter ${leader.disciples.length >= MAX_DISCIPLES_PER_LEADER ? "full" : ""}`}>
+                            <Users size={12} />
+                            <span>{leader.disciples.length}/{MAX_DISCIPLES_PER_LEADER} Disciples</span>
+                        </div>
+                        <div className="dt-spiritual-stat">
+                            <span>📖 {leader.pulse?.wordDaysWeekly || 5}d</span>
+                            <span>🙏 {leader.pulse?.prayerDaysWeekly || 6}d</span>
+                        </div>
+                    </div>
+                    <div style={{ marginTop: 8, display: "flex", gap: 6 }} onClick={(e) => e.stopPropagation()}>
+                        {leader.disciples.length < MAX_DISCIPLES_PER_LEADER ? (
+                            <button
+                                type="button"
+                                className="dt-btn-adopt-mini"
+                                onClick={(e) => handleOpenAdoptModal(leader, e)}
+                            >
+                                <Plus size={11} /> Adopt Disciple ({leader.disciples.length}/3)
+                            </button>
+                        ) : (
+                            <div style={{ fontSize: 10, color: "#94a3b8", textAlign: "center", width: "100%", padding: "2px 0" }}>
+                                Full Capacity (3/3 Disciples)
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Accountable Disciples directly below leader in column */}
+                {leader.disciples.length > 0 && (
+                    <div className="dt-dept-disciples-tray">
+                        <div className="dt-dept-tray-label">
+                            Accountable Disciples ({leader.disciples.length}/3):
+                        </div>
+                        <div className="dt-dept-disciples-grid">
+                            {leader.disciples.map((disciple) => (
+                                <div
+                                    key={disciple.memberId}
+                                    className={`dt-disciple-chip health-${disciple.health}`}
+                                    onClick={() => {
+                                        setSelectedMember(disciple);
+                                        setDrawerTab("PULSE");
+                                    }}
+                                >
+                                    <div className="dt-chip-avatar">{disciple.fullName.charAt(0)}</div>
+                                    <div className="dt-chip-info">
+                                        <strong title={disciple.fullName}>{disciple.fullName}</strong>
+                                        <small>{disciple.ministry || "Disciple"}</small>
+                                    </div>
+                                    <span className={`dt-health-dot ${disciple.health}`} />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 )}
             </div>
         );
@@ -420,7 +599,7 @@ export default function DiscipleshipTree() {
                         <div className="dt-eyebrow">EPIC Church Management System</div>
                         <h1>EPIC Discipleship Tree</h1>
                         <div className="dt-subtitle">
-                            Continuous Lineage Growth, Pastoral Monitoring & Intentional Multiplication Control
+                            Full Lineage Growth, Pastoral Shepherding & Intentional Multiplication Control
                         </div>
                     </div>
                 </div>
@@ -450,7 +629,7 @@ export default function DiscipleshipTree() {
                         }}
                     >
                         <UserPlus size={14} />
-                        Delegate EPIC Pastor (Admin)
+                        Delegate EPIC Leader (Admin)
                     </button>
                 </div>
             </header>
@@ -475,11 +654,11 @@ export default function DiscipleshipTree() {
                 <div className="dt-banner-right">
                     <div className="dt-pill-rule">
                         <strong>Admin Apostolic Oversight</strong>
-                        <span>Delegates EPIC Pastors Without Limits</span>
+                        <span>Delegates All Pastors & Leaders Without Limits</span>
                     </div>
                     <div className="dt-pill-rule">
-                        <strong>Real Church Database</strong>
-                        <span>Assistant Pastors as 1st Gen Disciples</span>
+                        <strong>All Leaders Under Overseer</strong>
+                        <span>Assistant Pastors, Adult Leaders & Youth Leaders</span>
                     </div>
                 </div>
             </section>
@@ -595,9 +774,19 @@ export default function DiscipleshipTree() {
                         type="button"
                         className={`dt-toggle-btn ${viewMode === "TREE" ? "active" : ""}`}
                         onClick={() => setViewMode("TREE")}
+                        title="Interactive visual branch tree with full zoom & pan"
                     >
                         <GitBranch size={14} />
-                        Branch Tree
+                        Tree Flow
+                    </button>
+                    <button
+                        type="button"
+                        className={`dt-toggle-btn ${viewMode === "COLUMNS" ? "active" : ""}`}
+                        onClick={() => setViewMode("COLUMNS")}
+                        title="Flexible department columns (Assistant Pastors, Adult Leaders, Youth Leaders)"
+                    >
+                        <LayoutGrid size={14} />
+                        Flexible Department Grid
                     </button>
                     <button
                         type="button"
@@ -621,13 +810,102 @@ export default function DiscipleshipTree() {
             {/* VIEW MODE 1: ORGANIC BRANCH TREE */}
             {viewMode === "TREE" && (
                 <div className="dt-tree-container">
+                    {/* Canvas Toolbar: Department Pills & Zoom Controls */}
+                    {treeRoot && (
+                        <div className="dt-canvas-toolbar">
+                            <div className="dt-canvas-pills">
+                                <button
+                                    type="button"
+                                    className={`dt-cat-pill ${selectedCategory === "ALL" ? "active" : ""}`}
+                                    onClick={() => setSelectedCategory("ALL")}
+                                >
+                                    🌟 All Branch Leaders ({treeRoot.disciples.length})
+                                </button>
+                                <button
+                                    type="button"
+                                    className={`dt-cat-pill pastor ${selectedCategory === "PASTOR" ? "active" : ""}`}
+                                    onClick={() => setSelectedCategory("PASTOR")}
+                                >
+                                    ⭐ Assistant Pastors ({asstPastors.length})
+                                </button>
+                                <button
+                                    type="button"
+                                    className={`dt-cat-pill adult ${selectedCategory === "ADULT" ? "active" : ""}`}
+                                    onClick={() => setSelectedCategory("ADULT")}
+                                >
+                                    🌟 Adult Leaders ({adultLeaders.length})
+                                </button>
+                                <button
+                                    type="button"
+                                    className={`dt-cat-pill youth ${selectedCategory === "YOUTH" ? "active" : ""}`}
+                                    onClick={() => setSelectedCategory("YOUTH")}
+                                >
+                                    🔥 Youth Leaders ({youthLeaders.length})
+                                </button>
+                            </div>
+
+                            <div className="dt-zoom-controls">
+                                <button
+                                    type="button"
+                                    className="dt-zoom-btn"
+                                    onClick={() => setZoomLevel((z) => Math.max(0.4, Number((z - 0.1).toFixed(2))))}
+                                    title="Zoom Out"
+                                >
+                                    <ZoomOut size={14} />
+                                </button>
+                                <span className="dt-zoom-level-text">{Math.round(zoomLevel * 100)}%</span>
+                                <button
+                                    type="button"
+                                    className="dt-zoom-btn"
+                                    onClick={() => setZoomLevel((z) => Math.min(1.4, Number((z + 0.1).toFixed(2))))}
+                                    title="Zoom In"
+                                >
+                                    <ZoomIn size={14} />
+                                </button>
+                                <button
+                                    type="button"
+                                    className="dt-zoom-btn dt-zoom-fit"
+                                    onClick={() => setZoomLevel(0.65)}
+                                    title="Fit Screen (65% Scale)"
+                                >
+                                    <Maximize2 size={13} /> Fit Screen
+                                </button>
+                                <button
+                                    type="button"
+                                    className="dt-zoom-btn"
+                                    onClick={() => setZoomLevel(1)}
+                                    title="Reset 100%"
+                                >
+                                    <RotateCcw size={13} />
+                                </button>
+                                <button
+                                    type="button"
+                                    className={`dt-zoom-btn dt-collapse-all-btn ${areAllDisciplesCollapsed ? "active" : ""}`}
+                                    onClick={toggleCollapseAllDisciples}
+                                    title="Collapse all Gen 3 disciples into Gen 2 leaders for full overview"
+                                >
+                                    {areAllDisciplesCollapsed ? "📂 Expand Disciples" : "📁 Collapse Disciples (Leaders Only)"}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
                     {loading ? (
                         <div style={{ textAlign: "center", padding: "80px 0", color: "#64748b" }}>
                             <RefreshCw size={32} className="animate-spin" style={{ margin: "0 auto 12px" }} />
-                            <div>Fetching real Assistant Pastors & Lineage Tree from church database...</div>
+                            <div>Fetching real Leaders & Lineage Tree from church database...</div>
                         </div>
                     ) : treeRoot ? (
-                        <div className="dt-tree-wrapper">{renderTreeNode(treeRoot)}</div>
+                        <div
+                            className="dt-tree-wrapper"
+                            style={{
+                                transform: `scale(${zoomLevel})`,
+                                transformOrigin: "top center",
+                                transition: "transform 0.2s ease",
+                            }}
+                        >
+                            {renderTreeNode(treeRoot)}
+                        </div>
                     ) : (
                         <div style={{ textAlign: "center", padding: "60px 0", color: "#64748b" }}>
                             No discipleship lineage records found.
@@ -636,7 +914,124 @@ export default function DiscipleshipTree() {
                 </div>
             )}
 
-            {/* VIEW MODE 2: GENERATIONS MATRIX */}
+            {/* VIEW MODE 2: FLEXIBLE DEPARTMENT GRID */}
+            {viewMode === "COLUMNS" && treeRoot && (
+                <div className="dt-dept-view-container">
+                    {/* Top: Senior Pastor Root Card */}
+                    <div className="dt-dept-root-wrapper">
+                        <div
+                            className={`dt-node-card health-${treeRoot.health} ${selectedMember?.memberId === treeRoot.memberId ? "selected" : ""}`}
+                            style={{ margin: "0 auto", width: 340 }}
+                            onClick={() => {
+                                setSelectedMember(treeRoot);
+                                setDrawerTab("PULSE");
+                            }}
+                        >
+                            <div className="dt-node-header">
+                                <span className="dt-gen-badge">GEN 1 · OVERSEER</span>
+                                <span className="dt-health-badge HEALTHY">🟢 Active Overseer</span>
+                            </div>
+                            <div className="dt-node-body">
+                                <div className="dt-node-avatar" style={{ background: "linear-gradient(135deg, #7c3aed, #9333ea)" }}>
+                                    👑
+                                </div>
+                                <div className="dt-node-info">
+                                    <div className="dt-node-name" style={{ fontSize: 15, fontWeight: 800 }}>
+                                        {treeRoot.fullName}
+                                    </div>
+                                    <span className="dt-node-role-badge" style={{ background: "#f5f3ff", color: "#7c3aed" }}>
+                                        EPIC SENIOR PASTOR
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="dt-node-footer">
+                                <span style={{ fontWeight: 700, color: "#7c3aed" }}>
+                                    👑 {treeRoot.disciples.length} Leaders Delegated (Admin · Unlimited)
+                                </span>
+                            </div>
+                            <div style={{ marginTop: 8 }} onClick={(e) => e.stopPropagation()}>
+                                <button
+                                    type="button"
+                                    style={{
+                                        width: "100%",
+                                        fontSize: 11,
+                                        fontWeight: 700,
+                                        padding: "6px 8px",
+                                        borderRadius: 6,
+                                        border: "1px solid #7c3aed",
+                                        background: "#7c3aed",
+                                        color: "#ffffff",
+                                        cursor: "pointer",
+                                    }}
+                                    onClick={(e) => handleOpenAdoptModal(treeRoot, e)}
+                                >
+                                    + Delegate EPIC Pastor or Leader (Unlimited)
+                                </button>
+                            </div>
+                        </div>
+                        <div className="dt-branch-connector-down" style={{ height: 28 }} />
+                    </div>
+
+                    {/* 3 Flexible Department Columns */}
+                    <div className="dt-dept-grid-columns">
+                        {/* Column 1: Assistant Pastors */}
+                        <div className="dt-dept-column pastor-col">
+                            <div className="dt-dept-col-header">
+                                <div className="dt-dept-col-icon">⭐</div>
+                                <div>
+                                    <h3>EPIC Assistant Pastors</h3>
+                                    <span>{asstPastors.length} Delegated Pastors Shepherding Disciples</span>
+                                </div>
+                            </div>
+                            <div className="dt-dept-cards-stack">
+                                {asstPastors.length === 0 ? (
+                                    <div className="dt-dept-empty">No Assistant Pastors assigned yet.</div>
+                                ) : (
+                                    asstPastors.map((leader) => renderDepartmentLeaderBlock(leader))
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Column 2: Adult Leaders */}
+                        <div className="dt-dept-column adult-col">
+                            <div className="dt-dept-col-header">
+                                <div className="dt-dept-col-icon">🌟</div>
+                                <div>
+                                    <h3>EPIC Adult Leaders</h3>
+                                    <span>{adultLeaders.length} Delegated Leaders Shepherding Disciples</span>
+                                </div>
+                            </div>
+                            <div className="dt-dept-cards-stack">
+                                {adultLeaders.length === 0 ? (
+                                    <div className="dt-dept-empty">No Adult Leaders assigned yet.</div>
+                                ) : (
+                                    adultLeaders.map((leader) => renderDepartmentLeaderBlock(leader))
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Column 3: Youth Leaders */}
+                        <div className="dt-dept-column youth-col">
+                            <div className="dt-dept-col-header">
+                                <div className="dt-dept-col-icon">🔥</div>
+                                <div>
+                                    <h3>EPIC Youth Leaders</h3>
+                                    <span>{youthLeaders.length} Delegated Leaders Shepherding Disciples</span>
+                                </div>
+                            </div>
+                            <div className="dt-dept-cards-stack">
+                                {youthLeaders.length === 0 ? (
+                                    <div className="dt-dept-empty">No Youth Leaders assigned yet.</div>
+                                ) : (
+                                    youthLeaders.map((leader) => renderDepartmentLeaderBlock(leader))
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* VIEW MODE 3: GENERATIONS MATRIX */}
             {viewMode === "MATRIX" && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
                     {[1, 2, 3, 4, 5].map((gen) => {
@@ -665,13 +1060,13 @@ export default function DiscipleshipTree() {
                                 >
                                     <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: "#0f172a" }}>
                                         {gen === 1 && "👑 Generation 1: EPIC Senior Pastoral Oversight"}
-                                        {gen === 2 && "⭐ Generation 2: EPIC Assistant Pastors (1st Gen Disciples)"}
-                                        {gen === 3 && "🏛️ Generation 3: EPIC Leaders"}
+                                        {gen === 2 && "⭐ Generation 2: Assistant Pastors, Adult Leaders & Youth Leaders"}
+                                        {gen === 3 && "🏛️ Generation 3: Multiplying Cell Leaders & Accountable Disciples"}
                                         {gen === 4 && "🔥 Generation 4: EPIC Disciplers"}
-                                        {gen >= 5 && `🌱 Generation ${gen}: Multiplying Fruit & Disciples`}
+                                        {gen >= 5 && `🌱 Generation ${gen}: Multiplying Disciples`}
                                     </h3>
                                     <span style={{ fontSize: 12, fontWeight: 700, color: "#64748b" }}>
-                                        {genMembers.length} Real Disciples & Pastors
+                                        {genMembers.length} Real Members
                                     </span>
                                 </div>
 
@@ -696,7 +1091,7 @@ export default function DiscipleshipTree() {
                                             >
                                                 <div className="dt-node-header">
                                                     <span className="dt-gen-badge">
-                                                        {member.generation === 2 ? "GEN 2 · ASST. PASTOR" : `GEN ${member.generation}`}
+                                                        {member.generation === 2 ? "GEN 2 · LEADER" : `GEN ${member.generation}`}
                                                     </span>
                                                     <span className={`dt-health-badge ${member.health}`}>
                                                         {member.health}
@@ -713,9 +1108,7 @@ export default function DiscipleshipTree() {
                                                                 color: pos.badgeColor,
                                                             }}
                                                         >
-                                                            {member.generation === 2 && member.position !== "EPIC_ASSISTANT_PASTOR"
-                                                                ? "EPIC ASSISTANT PASTORS"
-                                                                : pos.label}
+                                                            {member.leaderCategoryLabel || pos.label}
                                                         </span>
                                                     </div>
                                                 </div>
@@ -733,7 +1126,7 @@ export default function DiscipleshipTree() {
                 </div>
             )}
 
-            {/* VIEW MODE 3: SHEPHERD CARE RADAR */}
+            {/* VIEW MODE 4: SHEPHERD CARE RADAR */}
             {viewMode === "RADAR" && (
                 <div style={{ background: "#ffffff", borderRadius: 16, border: "1px solid #e2e8f0", padding: 24 }}>
                     <div style={{ marginBottom: 18 }}>
@@ -741,7 +1134,7 @@ export default function DiscipleshipTree() {
                             Pastoral Shepherd Care Radar
                         </h2>
                         <div style={{ fontSize: 13, color: "#64748b" }}>
-                            Real-time intervention radar for assistant pastors and disciples across all generations.
+                            Real-time intervention radar for assistant pastors, adult leaders, youth leaders, and disciples.
                         </div>
                     </div>
 
@@ -765,32 +1158,31 @@ export default function DiscipleshipTree() {
                                         </span>
                                     </div>
 
-                                    <div style={{ fontSize: 13, color: "#475569", marginBottom: 10 }}>
-                                        <div><strong>Assigned Leader:</strong> {disciple.parentLeaderName || "Direct Pastoral Oversight"}</div>
-                                        <div><strong>Heart State:</strong> {disciple.pulse?.heartState || "PEACEFUL"}</div>
-                                        <div><strong>Last 1-on-1 Encounter:</strong> {disciple.lastEncounterDaysAgo} days ago</div>
+                                    <div style={{ fontSize: 12, color: "#475569", marginBottom: 12 }}>
+                                        <strong>Assigned Shepherd:</strong> {disciple.parentLeaderName || "Senior Pastoral Team"}
+                                    </div>
+
+                                    <div style={{ background: "#ffffff", borderRadius: 8, padding: 10, fontSize: 12, color: "#334155", marginBottom: 12 }}>
+                                        <strong>Prayer Request:</strong> "{disciple.pulse?.prayerNeed || "Seeking breakthrough and spiritual replenishment."}"
                                     </div>
 
                                     <div style={{ display: "flex", gap: 8 }}>
-                                        <a href={`tel:${disciple.phone}`} className="dt-contact-btn" style={{ flex: 1, justifyContent: "center" }}>
-                                            <Phone size={13} />
-                                            Call
-                                        </a>
-                                        <a href={`sms:${disciple.phone}`} className="dt-contact-btn" style={{ flex: 1, justifyContent: "center" }}>
-                                            <MessageCircle size={13} />
-                                            SMS
-                                        </a>
-                                        <button
-                                            type="button"
-                                            className="dt-contact-btn"
-                                            style={{ flex: 1, justifyContent: "center", background: "#2563eb", color: "white", borderColor: "#2563eb" }}
-                                            onClick={() => {
-                                                setSelectedMember(disciple);
-                                                setDrawerTab("ENCOUNTERS");
-                                            }}
+                                        <a
+                                            href={`tel:${disciple.phone}`}
+                                            className="dt-btn dt-btn-secondary"
+                                            style={{ flex: 1, textDecoration: "none", justifyContent: "center" }}
                                         >
-                                            Log Care
-                                        </button>
+                                            <Phone size={13} /> Call Disciple
+                                        </a>
+                                        <a
+                                            href={disciple.messengerUrl || "#"}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="dt-btn dt-btn-primary"
+                                            style={{ flex: 1, textDecoration: "none", justifyContent: "center" }}
+                                        >
+                                            <MessageCircle size={13} /> Messenger
+                                        </a>
                                     </div>
                                 </div>
                             ))}
@@ -799,67 +1191,55 @@ export default function DiscipleshipTree() {
             )}
 
             {/* =========================================================
-                AUDIT DRAWER: INSPECT REAL DISCIPLE'S WALK & DEVOTIONS
+                AUDIT DRAWER: MEMBER WALK & SHEPHERDING
                ========================================================= */}
             {selectedMember && (
                 <div className="dt-modal-backdrop" onClick={() => setSelectedMember(null)}>
                     <div className="dt-drawer" onClick={(e) => e.stopPropagation()}>
-                        {/* Header */}
+                        {/* Drawer Header */}
                         <div className="dt-drawer-header">
-                            <div className="dt-drawer-title-row">
-                                <div className="dt-drawer-avatar">{selectedMember.fullName.charAt(0)}</div>
+                            <div className="dt-drawer-profile">
+                                <div className="dt-drawer-avatar">
+                                    {selectedMember.fullName.charAt(0)}
+                                </div>
                                 <div>
-                                    <div style={{ fontSize: 18, fontWeight: 800 }}>{selectedMember.fullName}</div>
-                                    <div style={{ fontSize: 12, color: "#93c5fd", marginTop: 2 }}>
-                                        {selectedMember.generation === 2
-                                            ? "EPIC ASSISTANT PASTORS · 1st Gen Disciple"
-                                            : `${POSITION_DETAILS[selectedMember.position]?.label} · Gen ${selectedMember.generation}`}
-                                    </div>
-                                    <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>
-                                        Ministry: {selectedMember.ministry || "General Ministry"}
+                                    <h2>{selectedMember.fullName}</h2>
+                                    <div className="dt-drawer-subtitle">
+                                        {selectedMember.leaderCategoryLabel || POSITION_DETAILS[selectedMember.position]?.label} · Gen {selectedMember.generation}
                                     </div>
                                 </div>
                             </div>
+
                             <button
                                 type="button"
-                                className="dt-drawer-close"
+                                className="dt-close-btn"
                                 onClick={() => setSelectedMember(null)}
                             >
                                 ✕
                             </button>
                         </div>
 
-                        {/* Direct Pastoral Contact Channels */}
+                        {/* Pastoral Multi-Channel Direct Contact Bar */}
                         <div className="dt-drawer-contact-bar">
-                            <a href={`tel:${selectedMember.phone}`} className="dt-contact-btn">
-                                <Phone size={14} color="#16a34a" />
-                                Call ({selectedMember.phone || "No Mobile"})
-                            </a>
-                            <a href={`sms:${selectedMember.phone}`} className="dt-contact-btn">
-                                <MessageCircle size={14} color="#2563eb" />
-                                SMS Text
+                            <a
+                                href={`tel:${selectedMember.phone || "+639171234567"}`}
+                                className="dt-contact-btn phone"
+                                title="Call directly via Mobile"
+                            >
+                                <Phone size={14} /> Call Leader
                             </a>
                             <a
-                                href={selectedMember.messengerUrl}
+                                href={selectedMember.messengerUrl || "https://m.me"}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="dt-contact-btn messenger"
+                                title="Open FB Messenger chat"
                             >
-                                <ExternalLink size={14} />
-                                FB Messenger
+                                <MessageCircle size={14} /> FB Messenger
                             </a>
-                            <button
-                                type="button"
-                                className="dt-contact-btn"
-                                style={{ background: "#7c3aed", color: "white", borderColor: "#7c3aed" }}
-                                onClick={() => handleOpenRoleModal(selectedMember)}
-                            >
-                                <Award size={14} />
-                                Change Role
-                            </button>
                         </div>
 
-                        {/* Tabs */}
+                        {/* Drawer Tabs */}
                         <div className="dt-drawer-tabs">
                             <button
                                 type="button"
@@ -930,7 +1310,7 @@ export default function DiscipleshipTree() {
                                                 color: "#1e293b",
                                             }}
                                         >
-                                            "{selectedMember.pulse?.prayerNeed || "Trusting God for supernatural fruitfulness and team multiplication."}"
+                                            "{selectedMember.pulse?.prayerNeed || "Trusting God for supernatural fruitfulness and intentional discipleship multiplication."}"
                                         </div>
                                     </div>
 
@@ -1209,7 +1589,7 @@ export default function DiscipleshipTree() {
             )}
 
             {/* =========================================================
-                MODAL 2: ADOPT / REASSIGN REAL ASSISTANT PASTOR OR DISCIPLE
+                MODAL 2: ADOPT / DELEGATE REAL LEADER OR DISCIPLE
                ========================================================= */}
             {adoptModalOpen && (
                 <div className="dt-center-modal-backdrop" onClick={() => setAdoptModalOpen(false)}>
@@ -1217,7 +1597,7 @@ export default function DiscipleshipTree() {
                         <div className="dt-cm-header">
                             <h2>
                                 {targetLeaderId === 0 || (treeRoot && targetLeaderId === treeRoot.memberId)
-                                    ? "Assign Real Assistant Pastor to Overseer"
+                                    ? "👑 Delegate Real EPIC Leader (Admin Authority - Unlimited)"
                                     : "Adopt / Assign Accountable Disciple"}
                             </h2>
                             <button
@@ -1237,12 +1617,21 @@ export default function DiscipleshipTree() {
                                 </div>
                             )}
 
-                            <div className="dt-alert-box">
-                                <Users size={18} color="#b45309" />
-                                <div>
-                                    <strong>Strict 1:3 Multiplication Policy:</strong> Maximum 3 disciples per leader for deep intentional care and no duplicated members across branches.
+                            {targetLeaderId === 0 || (treeRoot && targetLeaderId === treeRoot.memberId) ? (
+                                <div className="dt-alert-box" style={{ background: "#f5f3ff", borderColor: "#d8b4fe", color: "#581c87" }}>
+                                    <ShieldCheck size={18} color="#7c3aed" />
+                                    <div>
+                                        <strong>👑 Apostolic Authority:</strong> As Church Overseer / Senior Pastor, you have full authority to delegate all Assistant Pastors, Adult Leaders, and Youth Leaders without limits. This rule applies to the Admin account only.
+                                    </div>
                                 </div>
-                            </div>
+                            ) : (
+                                <div className="dt-alert-box">
+                                    <Users size={18} color="#b45309" />
+                                    <div>
+                                        <strong>Strict 1:3 Multiplication Policy:</strong> Maximum 3 disciples per leader for deep intentional care and no duplicated members across branches.
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="dt-form-group">
                                 <label>Assigned Spiritual Leader</label>
@@ -1255,7 +1644,9 @@ export default function DiscipleshipTree() {
                                 >
                                     {flattenedNodes.map((leader) => (
                                         <option key={leader.memberId} value={leader.memberId}>
-                                            {leader.fullName} ({leader.disciples.length}/{MAX_DISCIPLES_PER_LEADER} Disciples) · {POSITION_DETAILS[leader.position]?.label}
+                                            {leader.memberId === (treeRoot?.memberId || 0)
+                                                ? `👑 ${leader.fullName} (Senior Pastor Overseer · Unlimited Delegation)`
+                                                : `${leader.fullName} (${leader.disciples.length}/${MAX_DISCIPLES_PER_LEADER} Disciples) · ${leader.leaderCategoryLabel || POSITION_DETAILS[leader.position]?.label}`}
                                         </option>
                                     ))}
                                 </select>
@@ -1264,7 +1655,7 @@ export default function DiscipleshipTree() {
                             <div className="dt-form-group">
                                 <label>
                                     {targetLeaderId === 0 || (treeRoot && targetLeaderId === treeRoot.memberId)
-                                        ? "Choose Real Assistant Pastor from Church Directory"
+                                        ? "Choose Real Church Member to Delegate as Leader"
                                         : "Choose Real Disciple from Church Directory"}
                                 </label>
                                 <select
@@ -1294,12 +1685,12 @@ export default function DiscipleshipTree() {
                             </button>
                             <button
                                 type="button"
-                                className="dt-btn dt-btn-primary"
+                                className={`dt-btn ${targetLeaderId === 0 || (treeRoot && targetLeaderId === treeRoot.memberId) ? "dt-btn-purple" : "dt-btn-primary"}`}
                                 onClick={handleSaveAdopt}
                                 disabled={targetLeaderId === null || !selectedDiscipleId}
                             >
                                 {targetLeaderId === 0 || (treeRoot && targetLeaderId === treeRoot.memberId)
-                                    ? "Assign Assistant Pastor"
+                                    ? "Confirm & Delegate EPIC Leader"
                                     : "Adopt Disciple to Branch"}
                             </button>
                         </div>
@@ -1323,27 +1714,32 @@ export default function DiscipleshipTree() {
                                 ✕
                             </button>
                         </div>
-
                         <div className="dt-cm-body">
-                            <div style={{ marginBottom: 14, fontSize: 13, color: "#475569" }}>
-                                Discipleship meeting with: <strong>{selectedMember.fullName}</strong>
+                            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+                                <div className="dt-drawer-avatar">{selectedMember.fullName.charAt(0)}</div>
+                                <div>
+                                    <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800 }}>{selectedMember.fullName}</h3>
+                                    <div style={{ fontSize: 12, color: "#64748b" }}>
+                                        {selectedMember.leaderCategoryLabel || POSITION_DETAILS[selectedMember.position]?.label}
+                                    </div>
+                                </div>
                             </div>
 
                             <div className="dt-form-group">
-                                <label>Meeting Format</label>
+                                <label>Meeting Fellowship Type</label>
                                 <select
                                     value={encounterMeetingType}
-                                    onChange={(e) => setEncounterMeetingType(e.target.value)}
+                                    onChange={(e) => setEncounterMeetingType(e.target.value as any)}
                                 >
-                                    <option value="COFFEE">☕ Coffee / Personal 1-on-1</option>
-                                    <option value="CHURCH_FELLOWSHIP">⛪ Church Fellowship</option>
-                                    <option value="CALL">📞 Phone / Video Shepherd Call</option>
-                                    <option value="HOME_VISIT">🏡 Home Pastoral Visitation</option>
+                                    <option value="COFFEE">☕ Coffee & Conversation</option>
+                                    <option value="CHURCH_FELLOWSHIP">⛪ After Sunday Service Fellowship</option>
+                                    <option value="CALL">📞 Voice / Video Call Shepherding</option>
+                                    <option value="HOME_VISIT">🏡 Home Visit & Family Prayer</option>
                                 </select>
                             </div>
 
                             <div className="dt-form-group">
-                                <label>Scripture Reference Focused</label>
+                                <label>Scripture Focus Reference</label>
                                 <input
                                     type="text"
                                     value={encounterScripture}
@@ -1353,22 +1749,22 @@ export default function DiscipleshipTree() {
                             </div>
 
                             <div className="dt-form-group">
-                                <label>Disciple's Action Commitment</label>
+                                <label>Action Step & Practical Commitment</label>
                                 <input
                                     type="text"
                                     value={encounterCommitment}
                                     onChange={(e) => setEncounterCommitment(e.target.value)}
-                                    placeholder="e.g. Read 1 chapter of Psalms daily before 8am"
+                                    placeholder="e.g. Commit to daily SOAP devotions and cell group attendance"
                                 />
                             </div>
 
                             <div className="dt-form-group">
-                                <label>Private Pastoral Care Note</label>
+                                <label>Private Pastoral Note (Confidential)</label>
                                 <textarea
                                     rows={3}
                                     value={encounterNote}
                                     onChange={(e) => setEncounterNote(e.target.value)}
-                                    placeholder="Confidential spiritual observations and prayer notes..."
+                                    placeholder="Confidential notes on disciple's heart, breakthroughs, or counsel..."
                                 />
                             </div>
                         </div>
@@ -1386,7 +1782,7 @@ export default function DiscipleshipTree() {
                                 className="dt-btn dt-btn-primary"
                                 onClick={handleSaveEncounter}
                             >
-                                Save Encounter
+                                Save Encounter Log
                             </button>
                         </div>
                     </div>
