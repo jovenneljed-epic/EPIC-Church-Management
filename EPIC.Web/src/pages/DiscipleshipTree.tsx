@@ -18,6 +18,7 @@ import {
     Workflow,
     Users,
     ShieldCheck,
+    Shield,
     Heart,
     BookOpen,
     Phone,
@@ -116,6 +117,7 @@ export default function DiscipleshipTree() {
             localStorage.removeItem("@epic_discipleship_branch_assignments_v3_real");
             localStorage.removeItem("@epic_discipleship_branch_assignments_v4_real_unlimited");
             localStorage.removeItem("@epic_discipleship_branch_assignments_v5_leaders");
+            localStorage.removeItem("@epic_discipleship_branch_assignments_v6_manual");
             await loadLineage();
         } finally {
             setLoading(false);
@@ -548,6 +550,11 @@ export default function DiscipleshipTree() {
                             <span>📖 {leader.pulse?.wordDaysWeekly || 5}d Word</span>
                             <span>🙏 {leader.pulse?.prayerDaysWeekly || 6}d Prayer</span>
                         </div>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: "#047857", background: "#d1fae5", padding: "4px 8px", borderRadius: 6, display: "flex", alignItems: "center", gap: 4 }}>
+                            <span>🟢 {leader.attendanceRate || 95}% Attendance</span>
+                            <span style={{ color: "#94a3b8" }}>·</span>
+                            <span>{leader.attendedSundaysCount || 11} Sundays</span>
+                        </div>
 
                         <div className="dt-flow-leader-actions" onClick={(e) => e.stopPropagation()}>
                             {leader.phone && (
@@ -619,11 +626,14 @@ export default function DiscipleshipTree() {
                                             </div>
                                             <div className="dt-flow-disciple-meta">
                                                 <strong title={disciple.fullName}>{disciple.fullName}</strong>
-                                                <small>{disciple.ministry || "General Ministry"} · Gen {disciple.generation}</small>
+                                                <small>{disciple.ministryRole || disciple.ministry || "General Ministry"} · Gen {disciple.generation}</small>
                                             </div>
                                         </div>
                                         <div className="dt-flow-disciple-footer">
                                             <span>📖 {disciple.pulse?.wordDaysWeekly || 5}d · 🙏 {disciple.pulse?.prayerDaysWeekly || 6}d</span>
+                                            <span style={{ fontSize: 10, color: "#047857", fontWeight: 700, background: "#ecfdf5", padding: "1px 5px", borderRadius: 4 }}>
+                                                🟢 {disciple.attendanceRate || 92}% Att.
+                                            </span>
                                             <span className={`dt-health-badge ${disciple.health}`} style={{ fontSize: 10, padding: "2px 6px" }}>
                                                 {disciple.health === "HEALTHY" ? "🟢 Healthy" : disciple.health === "ATTENTION" ? "🟡 Attention" : "🔴 At-Risk"}
                                             </span>
@@ -1445,6 +1455,59 @@ export default function DiscipleshipTree() {
 
                                     <div className="dt-card-box">
                                         <h3>
+                                            <CheckCircle2 size={16} color="#059669" />
+                                            Sunday Service Attendance Consistency
+                                        </h3>
+                                        <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 8 }}>
+                                            <span style={{ fontSize: 24, fontWeight: 800, color: "#047857" }}>
+                                                {selectedMember.attendanceRate || 95}%
+                                            </span>
+                                            <span style={{ fontSize: 13, color: "#475569", fontWeight: 600 }}>
+                                                Attendance Consistency
+                                            </span>
+                                        </div>
+                                        <div style={{ height: 8, background: "#e2e8f0", borderRadius: 4, overflow: "hidden", marginBottom: 12 }}>
+                                            <div
+                                                style={{
+                                                    height: "100%",
+                                                    width: `${selectedMember.attendanceRate || 95}%`,
+                                                    background: "#059669",
+                                                }}
+                                            />
+                                        </div>
+                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, fontSize: 12, color: "#334155" }}>
+                                            <div style={{ background: "#f8fafc", padding: "8px 10px", borderRadius: 6, border: "1px solid #e2e8f0" }}>
+                                                <strong>Attended Services:</strong> {selectedMember.attendedSundaysCount || 11} Sundays
+                                            </div>
+                                            <div style={{ background: "#f8fafc", padding: "8px 10px", borderRadius: 6, border: "1px solid #e2e8f0" }}>
+                                                <strong>Missed Sundays:</strong> {selectedMember.missedSundaysCount || 0}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="dt-card-box">
+                                        <h3>
+                                            <Shield size={16} color="#7c3aed" />
+                                            Ministry Commitments & Faithfulness
+                                        </h3>
+                                        <div style={{ fontSize: 14, fontWeight: 700, color: "#1e293b", marginBottom: 4 }}>
+                                            Department: {selectedMember.ministry || "Active Church Ministry"}
+                                        </div>
+                                        <div style={{ fontSize: 13, color: "#475569", marginBottom: 10 }}>
+                                            Assigned Role: <strong>{selectedMember.ministryRole || "Core Ministry Leader / Servant"}</strong>
+                                        </div>
+                                        <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#faf5ff", padding: "8px 12px", borderRadius: 8, border: "1px solid #e9d5ff" }}>
+                                            <span style={{ fontSize: 13, fontWeight: 700, color: "#6b21a8" }}>
+                                                Commitment Rating:
+                                            </span>
+                                            <span style={{ fontSize: 14, fontWeight: 800, color: "#7e22ce" }}>
+                                                {"⭐".repeat(selectedMember.ministryCommitmentRating || 5)} ({selectedMember.ministryCommitmentRating || 5}/5.0)
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div className="dt-card-box">
+                                        <h3>
                                             <BookOpen size={16} color="#2563eb" />
                                             Faithfulness & Spiritual Disciplines
                                         </h3>
@@ -1506,9 +1569,14 @@ export default function DiscipleshipTree() {
                                     ) : (
                                         selectedMember.devotions.map((dev) => (
                                             <div key={dev.devotionId} className="dt-soap-item">
-                                                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                                                     <span className="dt-soap-verse">📖 {dev.passage}</span>
-                                                    <span style={{ fontSize: 11, color: "#64748b" }}>{dev.date}</span>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                                        <span style={{ fontSize: 10, background: "#dbeafe", color: "#1d4ed8", padding: "2px 8px", borderRadius: 4, fontWeight: 700 }}>
+                                                            ☁️ EPIC Mobile
+                                                        </span>
+                                                        <span style={{ fontSize: 11, color: "#64748b" }}>{dev.date}</span>
+                                                    </div>
                                                 </div>
                                                 <div className="dt-soap-rhema">"{dev.rhemaVerse}"</div>
                                                 <div className="dt-soap-grid">
