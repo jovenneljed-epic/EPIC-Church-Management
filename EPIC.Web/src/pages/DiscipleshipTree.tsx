@@ -100,8 +100,13 @@ export default function DiscipleshipTree() {
     const handleFreshSync = async () => {
         setLoading(true);
         try {
-            localStorage.removeItem("@epic_discipleship_branch_assignments_v3_real");
+            if (typeof window !== "undefined") {
+                delete (window as any).__epicMembersCache;
+            }
             localStorage.removeItem("@epic_discipleship_branch_assignments_v1");
+            localStorage.removeItem("@epic_discipleship_branch_assignments_v2");
+            localStorage.removeItem("@epic_discipleship_branch_assignments_v3_real");
+            localStorage.removeItem("@epic_discipleship_branch_assignments_v4_real_unlimited");
             await loadLineage();
         } finally {
             setLoading(false);
@@ -173,7 +178,7 @@ export default function DiscipleshipTree() {
 
     const handleSaveAdopt = () => {
         if (targetLeaderId === null || !selectedDiscipleId) return;
-        const res = discipleshipWebService.assignDiscipleToLeader(targetLeaderId, selectedDiscipleId);
+        const res = discipleshipWebService.assignDiscipleToLeader(targetLeaderId, selectedDiscipleId, treeRoot?.memberId || 0);
         if (!res.success) {
             setAdoptError(res.message);
             return;
@@ -290,17 +295,79 @@ export default function DiscipleshipTree() {
 
                     {/* Footer Metrics */}
                     <div className="dt-node-footer">
-                        <div className={`dt-capacity-meter ${node.disciples.length >= MAX_DISCIPLES_PER_LEADER ? "full" : ""}`}>
-                            <Users size={12} />
-                            <span>
-                                {node.disciples.length}/{MAX_DISCIPLES_PER_LEADER} Disciples
-                            </span>
-                        </div>
+                        {isSeniorPastor ? (
+                            <div className="dt-capacity-meter admin-unlimited" style={{ background: "#f5f3ff", color: "#6b21a8", borderColor: "#d8b4fe" }}>
+                                <Users size={12} />
+                                <span>
+                                    👑 {node.disciples.length} Delegated Pastors (Admin · Unlimited)
+                                </span>
+                            </div>
+                        ) : (
+                            <div className={`dt-capacity-meter ${node.disciples.length >= MAX_DISCIPLES_PER_LEADER ? "full" : ""}`}>
+                                <Users size={12} />
+                                <span>
+                                    {node.disciples.length}/{MAX_DISCIPLES_PER_LEADER} Disciples
+                                </span>
+                            </div>
+                        )}
 
                         <div className="dt-spiritual-stat">
                             <span>📖 {node.pulse?.wordDaysWeekly || 5}d</span>
                             <span>🙏 {node.pulse?.prayerDaysWeekly || 6}d</span>
                         </div>
+                    </div>
+
+                    {/* Quick Delegate / Adopt Action Button */}
+                    <div style={{ marginTop: 8, display: "flex", gap: 6 }} onClick={(e) => e.stopPropagation()}>
+                        {isSeniorPastor ? (
+                            <button
+                                type="button"
+                                style={{
+                                    flex: 1,
+                                    fontSize: 11,
+                                    fontWeight: 700,
+                                    padding: "5px 8px",
+                                    borderRadius: 6,
+                                    border: "1px solid #7c3aed",
+                                    background: "#7c3aed",
+                                    color: "#ffffff",
+                                    cursor: "pointer",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    gap: 4,
+                                }}
+                                onClick={(e) => handleOpenAdoptModal(node, e)}
+                            >
+                                <Plus size={12} /> Delegate EPIC Pastor (Unlimited)
+                            </button>
+                        ) : node.disciples.length < MAX_DISCIPLES_PER_LEADER ? (
+                            <button
+                                type="button"
+                                style={{
+                                    flex: 1,
+                                    fontSize: 11,
+                                    fontWeight: 600,
+                                    padding: "4px 6px",
+                                    borderRadius: 6,
+                                    border: "1px solid #cbd5e1",
+                                    background: "#ffffff",
+                                    color: "#334155",
+                                    cursor: "pointer",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    gap: 4,
+                                }}
+                                onClick={(e) => handleOpenAdoptModal(node, e)}
+                            >
+                                <Plus size={11} /> Adopt Disciple ({node.disciples.length}/3)
+                            </button>
+                        ) : (
+                            <div style={{ fontSize: 10, color: "#94a3b8", textAlign: "center", width: "100%", padding: "2px 0" }}>
+                                Full Capacity (3/3 Disciples)
+                            </div>
+                        )}
                     </div>
 
                     {/* Collapse Button if has children */}
@@ -383,7 +450,7 @@ export default function DiscipleshipTree() {
                         }}
                     >
                         <UserPlus size={14} />
-                        Adopt / Move Disciple
+                        Delegate EPIC Pastor (Admin)
                     </button>
                 </div>
             </header>
@@ -407,8 +474,8 @@ export default function DiscipleshipTree() {
 
                 <div className="dt-banner-right">
                     <div className="dt-pill-rule">
-                        <strong>1 Leader : 3 Disciples Model</strong>
-                        <span>Deep Intentional Multiplication</span>
+                        <strong>Admin Apostolic Oversight</strong>
+                        <span>Delegates EPIC Pastors Without Limits</span>
                     </div>
                     <div className="dt-pill-rule">
                         <strong>Real Church Database</strong>

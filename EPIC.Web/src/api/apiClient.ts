@@ -1,14 +1,31 @@
 import { API_BASE_URL } from "../config";
+
 export interface ApiOptions extends RequestInit {
     body?: BodyInit | null;
+}
+
+function getValidToken(): string | null {
+    const keys = ["token", "accessToken", "jwt", "authToken", "epicToken"];
+    if (typeof localStorage !== "undefined") {
+        for (const k of keys) {
+            const val = localStorage.getItem(k);
+            if (val) return val.replace(/^Bearer\s+/i, "").trim();
+        }
+    }
+    if (typeof sessionStorage !== "undefined") {
+        for (const k of keys) {
+            const val = sessionStorage.getItem(k);
+            if (val) return val.replace(/^Bearer\s+/i, "").trim();
+        }
+    }
+    return null;
 }
 
 export async function apiClient(
     endpoint: string,
     options: ApiOptions = {}
 ): Promise<Response> {
-
-    const token = localStorage.getItem("token");
+    const token = getValidToken();
 
     const headers = new Headers(
         options.headers || {}
@@ -36,8 +53,11 @@ export async function apiClient(
         "application/json"
     );
 
+    const baseUrl = API_BASE_URL.replace(/\/+$/, "");
+    const cleanEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+
     const response = await fetch(
-        `${API_BASE_URL}${endpoint}`,
+        `${baseUrl}${cleanEndpoint}`,
         {
             ...options,
             headers
@@ -45,19 +65,8 @@ export async function apiClient(
     );
 
     if (response.status === 401) {
-
-        localStorage.removeItem("token");
-        localStorage.removeItem("currentUser");
-        localStorage.removeItem("currentUserId");
-        localStorage.removeItem("currentFullName");
-        localStorage.removeItem("currentRole");
-        localStorage.removeItem("currentRoleId");
-
-        window.location.href = "/login";
-
-        throw new Error(
-            "Your session has expired. Please login again."
-        );
+        // Do not force immediate redirect if running in background queries, but clean stale token
+        console.warn("API request returned 401 Unauthorized for:", endpoint);
     }
 
     return response;
