@@ -1293,3 +1293,593 @@
     border-color: #2563eb;
     color: #1d4ed8;
 }
+
+
+/* =========================================================
+   DISCIPLESHIP FLOW PIPELINE (VERTICAL STREAM FLOW)
+   ========================================================= */
+
+.dt-flow-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Overseer Hero Card at the top of the Flow */
+.dt-flow-overseer-card {
+    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%);
+    border-radius: 20px;
+    padding: 24px 28px;
+    width: 100%;
+    color: #ffffff;
+    box-shadow: 0 12px 32px rgba(49, 46, 129, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    position: relative;
+    overflow: hidden;
+}
+
+.dt-flow-overseer-card::before {
+    content: "";
+    position: absolute;
+    top: -50px;
+    right: -50px;
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(234, 179, 8, 0.2) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.dt-flow-overseer-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.dt-flow-overseer-profile {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.dt-flow-overseer-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    box-shadow: 0 4px 14px rgba(217, 119, 6, 0.4);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.dt-flow-overseer-info h2 {
+    margin: 0 0 4px;
+    font-size: 22px;
+    font-weight: 800;
+    color: #ffffff;
+    letter-spacing: -0.3px;
+}
+
+.dt-flow-overseer-badge {
+    display: inline-block;
+    background: rgba(234, 179, 8, 0.2);
+    color: #fef08a;
+    border: 1px solid rgba(234, 179, 8, 0.4);
+    font-size: 11px;
+    font-weight: 800;
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+}
+
+.dt-flow-overseer-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.dt-flow-btn-gold {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: #ffffff;
+    border: none;
+    font-size: 13px;
+    font-weight: 800;
+    padding: 10px 18px;
+    border-radius: 10px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 4px 12px rgba(217, 119, 6, 0.35);
+    transition: all 0.15s ease;
+}
+
+.dt-flow-btn-gold:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(217, 119, 6, 0.45);
+}
+
+.dt-flow-btn-trans {
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 9px 16px;
+    border-radius: 10px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+}
+
+.dt-flow-btn-trans:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.dt-flow-overseer-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.dt-flow-metric-item {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 10px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.dt-flow-metric-label {
+    font-size: 11px;
+    color: #cbd5e1;
+    font-weight: 600;
+}
+
+.dt-flow-metric-val {
+    font-size: 16px;
+    font-weight: 800;
+    color: #ffffff;
+    margin-top: 2px;
+}
+
+/* Flow Connector Pipe */
+.dt-flow-pipe {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    margin: 4px 0;
+}
+
+.dt-flow-pipe-line {
+    width: 3px;
+    height: 28px;
+    background: linear-gradient(180deg, #4338ca, #3b82f6);
+    border-radius: 2px;
+}
+
+.dt-flow-pipe-pill {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1d4ed8;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 4px 14px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
+}
+
+/* Stream Selector Bar */
+.dt-flow-stream-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+.dt-flow-stream-pill {
+    padding: 9px 18px;
+    font-size: 13px;
+    font-weight: 800;
+    border-radius: 24px;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #334155;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+}
+
+.dt-flow-stream-pill:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+}
+
+.dt-flow-stream-pill.active {
+    background: #0f172a;
+    color: #ffffff;
+    border-color: #0f172a;
+}
+
+.dt-flow-stream-pill.pastor.active {
+    background: #1d4ed8;
+    color: #ffffff;
+    border-color: #1d4ed8;
+}
+
+.dt-flow-stream-pill.adult.active {
+    background: #7e22ce;
+    color: #ffffff;
+    border-color: #7e22ce;
+}
+
+.dt-flow-stream-pill.youth.active {
+    background: #c2410c;
+    color: #ffffff;
+    border-color: #c2410c;
+}
+
+/* Stream Section Container */
+.dt-flow-stream-section {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.dt-flow-stream-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-radius: 14px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+}
+
+.dt-flow-stream-header.pastor { border-left: 6px solid #2563eb; }
+.dt-flow-stream-header.adult { border-left: 6px solid #7e22ce; }
+.dt-flow-stream-header.youth { border-left: 6px solid #ea580c; }
+
+.dt-flow-stream-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.dt-flow-stream-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    background: #f8fafc;
+}
+
+.dt-flow-stream-title h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.dt-flow-stream-title span {
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 600;
+}
+
+.dt-flow-stream-badge {
+    font-size: 12px;
+    font-weight: 800;
+    padding: 4px 12px;
+    border-radius: 20px;
+}
+
+.dt-flow-stream-badge.pastor { background: #eff6ff; color: #1d4ed8; }
+.dt-flow-stream-badge.adult { background: #faf5ff; color: #7e22ce; }
+.dt-flow-stream-badge.youth { background: #fff7ed; color: #c2410c; }
+
+/* Flow Leader Cards List */
+.dt-flow-leaders-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+}
+
+/* Individual Leader Card in the Flow */
+.dt-flow-leader-card {
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    padding: 20px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.dt-flow-leader-card:hover {
+    border-color: #93c5fd;
+    box-shadow: 0 8px 24px rgba(37, 99, 235, 0.06);
+}
+
+.dt-flow-leader-card.health-HEALTHY { border-left: 6px solid #10b981; }
+.dt-flow-leader-card.health-ATTENTION { border-left: 6px solid #f59e0b; }
+.dt-flow-leader-card.health-AT_RISK { border-left: 6px solid #ef4444; }
+
+.dt-flow-leader-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 14px;
+}
+
+.dt-flow-leader-profile {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+}
+
+.dt-flow-leader-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    color: white;
+    font-size: 20px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.dt-flow-leader-name-wrap h4 {
+    margin: 0 0 4px;
+    font-size: 16px;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.dt-flow-leader-tags {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.dt-flow-role-pill {
+    font-size: 11px;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 6px;
+    letter-spacing: 0.3px;
+}
+
+.dt-flow-role-pill.pastor { background: #eff6ff; color: #1d4ed8; }
+.dt-flow-role-pill.adult { background: #faf5ff; color: #7e22ce; }
+.dt-flow-role-pill.youth { background: #fff7ed; color: #c2410c; }
+.dt-flow-role-pill.other { background: #ecfdf5; color: #047857; }
+
+.dt-flow-leader-stats {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 600;
+    flex-wrap: wrap;
+}
+
+.dt-flow-leader-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.dt-flow-btn {
+    font-size: 12px;
+    font-weight: 700;
+    padding: 6px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.15s ease;
+    text-decoration: none;
+}
+
+.dt-flow-btn.primary {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+}
+.dt-flow-btn.primary:hover {
+    background: #dbeafe;
+}
+
+.dt-flow-btn.secondary {
+    background: #f8fafc;
+    color: #334155;
+    border: 1px solid #cbd5e1;
+}
+.dt-flow-btn.secondary:hover {
+    background: #f1f5f9;
+}
+
+.dt-flow-btn.purple {
+    background: #f5f3ff;
+    color: #7c3aed;
+    border: 1px solid #ddd6fe;
+}
+
+/* Disciples Flow Container Inside Leader Card */
+.dt-flow-disciples-box {
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 14px 16px;
+    border: 1px solid #f1f5f9;
+}
+
+.dt-flow-disciples-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.dt-flow-disciples-header span {
+    font-size: 11px;
+    font-weight: 800;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.dt-flow-disciples-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 12px;
+}
+
+.dt-flow-disciple-card {
+    background: #ffffff;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: relative;
+}
+
+.dt-flow-disciple-card:hover {
+    border-color: #3b82f6;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+.dt-flow-disciple-card.health-HEALTHY { border-top: 3px solid #10b981; }
+.dt-flow-disciple-card.health-ATTENTION { border-top: 3px solid #f59e0b; }
+.dt-flow-disciple-card.health-AT_RISK { border-top: 3px solid #ef4444; }
+
+.dt-flow-disciple-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.dt-flow-disciple-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #0284c7, #0369a1);
+    color: white;
+    font-size: 13px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dt-flow-disciple-meta {
+    flex: 1;
+    min-width: 0;
+}
+
+.dt-flow-disciple-meta strong {
+    display: block;
+    font-size: 13px;
+    font-weight: 800;
+    color: #0f172a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dt-flow-disciple-meta small {
+    display: block;
+    font-size: 11px;
+    color: #64748b;
+}
+
+.dt-flow-disciple-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    color: #64748b;
+    padding-top: 6px;
+    border-top: 1px dashed #f1f5f9;
+}
+
+.dt-flow-disciple-empty {
+    text-align: center;
+    padding: 24px 12px;
+    color: #94a3b8;
+    font-size: 12px;
+    font-style: italic;
+    background: #ffffff;
+    border-radius: 10px;
+    border: 1px dashed #cbd5e1;
+}
+
+.dt-flow-disciple-empty.clickable {
+    cursor: pointer;
+    border: 2px dashed #93c5fd;
+    background: #f8fafc;
+    color: #2563eb;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-weight: 700;
+    font-style: normal;
+    min-height: 80px;
+    transition: all 0.15s ease;
+}
+
+.dt-flow-disciple-empty.clickable:hover {
+    background: #eff6ff;
+    border-color: #2563eb;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
+}

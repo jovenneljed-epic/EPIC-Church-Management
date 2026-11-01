@@ -15,6 +15,7 @@ import type {
 } from "../services/discipleshipWebService";
 import {
     GitBranch,
+    Workflow,
     Users,
     ShieldCheck,
     Heart,
@@ -38,7 +39,6 @@ import {
     ZoomOut,
     Maximize2,
     RotateCcw,
-    LayoutGrid,
 } from "lucide-react";
 
 export default function DiscipleshipTree() {
@@ -50,7 +50,7 @@ export default function DiscipleshipTree() {
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
     const [healthFilter, setHealthFilter] = useState<string>("ALL");
-    const [viewMode, setViewMode] = useState<"TREE" | "COLUMNS" | "MATRIX" | "RADAR">("TREE");
+    const [viewMode, setViewMode] = useState<"FLOW" | "TREE" | "MATRIX" | "RADAR">("FLOW");
 
     // Canvas Zoom & Department Filter
     const [zoomLevel, setZoomLevel] = useState<number>(0.85);
@@ -484,102 +484,168 @@ export default function DiscipleshipTree() {
         );
     };
 
-    // Helper for Department Grid block
-    const renderDepartmentLeaderBlock = (leader: DiscipleshipMemberNode) => {
+    // Helper for Flow View: Leader Card with 3-Slot Discipleship Grid
+    const renderFlowLeaderCard = (leader: DiscipleshipMemberNode) => {
         const isSelected = selectedMember?.memberId === leader.memberId;
+        const cat = leader.leaderCategory || "OTHER";
+        const avatarGradient =
+            cat === "PASTOR"
+                ? "linear-gradient(135deg, #2563eb, #1d4ed8)"
+                : cat === "ADULT"
+                ? "linear-gradient(135deg, #7e22ce, #9333ea)"
+                : "linear-gradient(135deg, #ea580c, #c2410c)";
+        const icon = cat === "PASTOR" ? "⭐" : cat === "ADULT" ? "🌟" : "🔥";
+        const roleClass = cat === "PASTOR" ? "pastor" : cat === "ADULT" ? "adult" : cat === "YOUTH" ? "youth" : "other";
+
+        // Filter check
+        const matchesSearch =
+            !searchQuery ||
+            leader.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (leader.ministry || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+            leader.disciples.some((d) => d.fullName.toLowerCase().includes(searchQuery.toLowerCase()));
+
+        const matchesHealth = healthFilter === "ALL" || leader.health === healthFilter;
+        if (!matchesSearch || !matchesHealth) return null;
+
+        // Build array of 3 slots (1 leader for 3 persons only)
+        const slots = [0, 1, 2];
+
         return (
-            <div key={leader.memberId} className="dt-dept-leader-card-wrapper">
-                <div
-                    className={`dt-node-card health-${leader.health} ${isSelected ? "selected" : ""}`}
-                    style={{ width: "100%", maxWidth: "100%" }}
-                    onClick={() => {
-                        setSelectedMember(leader);
-                        setDrawerTab("PULSE");
-                    }}
-                >
-                    <div className="dt-node-header">
-                        <span className="dt-gen-badge">GEN 2 · LEADER</span>
-                        <span className={`dt-health-badge ${leader.health}`}>
-                            {leader.health === "HEALTHY" ? "🟢 Healthy" : leader.health === "ATTENTION" ? "🟡 Attention" : "🔴 At-Risk"}
-                        </span>
-                    </div>
-                    <div className="dt-node-body">
-                        <div
-                            className="dt-node-avatar"
-                            style={{
-                                background:
-                                    leader.leaderCategory === "PASTOR"
-                                        ? "linear-gradient(135deg, #2563eb, #1d4ed8)"
-                                        : leader.leaderCategory === "ADULT"
-                                        ? "linear-gradient(135deg, #7e22ce, #9333ea)"
-                                        : "linear-gradient(135deg, #ea580c, #c2410c)",
-                            }}
-                        >
-                            {leader.leaderCategory === "PASTOR" ? "⭐" : leader.leaderCategory === "ADULT" ? "🌟" : "🔥"}
+            <div key={leader.memberId} className={`dt-flow-leader-card health-${leader.health} ${isSelected ? "selected" : ""}`}>
+                {/* Top row: Leader profile & actions */}
+                <div className="dt-flow-leader-top">
+                    <div
+                        className="dt-flow-leader-profile"
+                        onClick={() => {
+                            setSelectedMember(leader);
+                            setDrawerTab("PULSE");
+                        }}
+                    >
+                        <div className="dt-flow-leader-avatar" style={{ background: avatarGradient }}>
+                            {icon}
                         </div>
-                        <div className="dt-node-info">
-                            <div className="dt-node-name" title={leader.fullName}>
-                                {leader.fullName}
+                        <div className="dt-flow-leader-name-wrap">
+                            <h4>{leader.fullName}</h4>
+                            <div className="dt-flow-leader-tags">
+                                <span className={`dt-flow-role-pill ${roleClass}`}>
+                                    {leader.leaderCategoryLabel || POSITION_DETAILS[leader.position]?.label}
+                                </span>
+                                <span className="dt-gen-badge">GEN 2 · LEADER</span>
+                                <span className={`dt-health-badge ${leader.health}`}>
+                                    {leader.health === "HEALTHY" ? "🟢 Healthy" : leader.health === "ATTENTION" ? "🟡 Attention" : "🔴 At-Risk"}
+                                </span>
                             </div>
-                            <span className="dt-node-role-badge" style={{ background: "#eff6ff", color: "#1d4ed8" }}>
-                                {leader.leaderCategoryLabel || POSITION_DETAILS[leader.position]?.label}
-                            </span>
                         </div>
                     </div>
-                    <div className="dt-node-footer">
+
+                    {/* Stats & Pastoral Controls */}
+                    <div className="dt-flow-leader-stats">
                         <div className={`dt-capacity-meter ${leader.disciples.length >= MAX_DISCIPLES_PER_LEADER ? "full" : ""}`}>
                             <Users size={12} />
                             <span>{leader.disciples.length}/{MAX_DISCIPLES_PER_LEADER} Disciples</span>
                         </div>
                         <div className="dt-spiritual-stat">
-                            <span>📖 {leader.pulse?.wordDaysWeekly || 5}d</span>
-                            <span>🙏 {leader.pulse?.prayerDaysWeekly || 6}d</span>
+                            <span>📖 {leader.pulse?.wordDaysWeekly || 5}d Word</span>
+                            <span>🙏 {leader.pulse?.prayerDaysWeekly || 6}d Prayer</span>
                         </div>
-                    </div>
-                    <div style={{ marginTop: 8, display: "flex", gap: 6 }} onClick={(e) => e.stopPropagation()}>
-                        {leader.disciples.length < MAX_DISCIPLES_PER_LEADER ? (
+
+                        <div className="dt-flow-leader-actions" onClick={(e) => e.stopPropagation()}>
+                            {leader.phone && (
+                                <a href={`tel:${leader.phone}`} className="dt-flow-btn secondary" title={`Call ${leader.fullName}`}>
+                                    <Phone size={12} /> Call
+                                </a>
+                            )}
+                            <a
+                                href="https://m.me/"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="dt-flow-btn primary"
+                                title="Chat via Facebook Messenger"
+                            >
+                                <MessageCircle size={12} /> Messenger
+                            </a>
                             <button
                                 type="button"
-                                className="dt-btn-adopt-mini"
-                                onClick={(e) => handleOpenAdoptModal(leader, e)}
+                                className="dt-flow-btn secondary"
+                                onClick={() => {
+                                    setSelectedMember(leader);
+                                    setEncounterModalOpen(true);
+                                }}
+                                title="Log 1-on-1 Discipleship Encounter"
                             >
-                                <Plus size={11} /> Adopt Disciple ({leader.disciples.length}/3)
+                                <Calendar size={12} /> Log Meeting
                             </button>
-                        ) : (
-                            <div style={{ fontSize: 10, color: "#94a3b8", textAlign: "center", width: "100%", padding: "2px 0" }}>
-                                Full Capacity (3/3 Disciples)
-                            </div>
-                        )}
+                            {leader.disciples.length < MAX_DISCIPLES_PER_LEADER && (
+                                <button
+                                    type="button"
+                                    className="dt-flow-btn purple"
+                                    onClick={(e) => handleOpenAdoptModal(leader, e)}
+                                >
+                                    <Plus size={12} /> Adopt Disciple
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
 
-                {/* Accountable Disciples directly below leader in column */}
-                {leader.disciples.length > 0 && (
-                    <div className="dt-dept-disciples-tray">
-                        <div className="dt-dept-tray-label">
-                            Accountable Disciples ({leader.disciples.length}/3):
-                        </div>
-                        <div className="dt-dept-disciples-grid">
-                            {leader.disciples.map((disciple) => (
-                                <div
-                                    key={disciple.memberId}
-                                    className={`dt-disciple-chip health-${disciple.health}`}
-                                    onClick={() => {
-                                        setSelectedMember(disciple);
-                                        setDrawerTab("PULSE");
-                                    }}
-                                >
-                                    <div className="dt-chip-avatar">{disciple.fullName.charAt(0)}</div>
-                                    <div className="dt-chip-info">
-                                        <strong title={disciple.fullName}>{disciple.fullName}</strong>
-                                        <small>{disciple.ministry || "Disciple"}</small>
-                                    </div>
-                                    <span className={`dt-health-dot ${disciple.health}`} />
-                                </div>
-                            ))}
-                        </div>
+                {/* Accountable Disciples Box (Strict 1:3 model) */}
+                <div className="dt-flow-disciples-box">
+                    <div className="dt-flow-disciples-header">
+                        <span>
+                            <Users size={12} /> Accountable Disciples ({leader.disciples.length}/{MAX_DISCIPLES_PER_LEADER} Limit · No Duplication)
+                        </span>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: leader.disciples.length === 3 ? "#059669" : "#64748b" }}>
+                            {leader.disciples.length === 3 ? "✅ Full 1:3 Multiplication Capacity" : `🌱 ${3 - leader.disciples.length} Available Discipleship Slot(s)`}
+                        </span>
                     </div>
-                )}
+
+                    <div className="dt-flow-disciples-grid">
+                        {slots.map((idx) => {
+                            const disciple = leader.disciples[idx];
+                            if (disciple) {
+                                return (
+                                    <div
+                                        key={disciple.memberId}
+                                        className={`dt-flow-disciple-card health-${disciple.health}`}
+                                        onClick={() => {
+                                            setSelectedMember(disciple);
+                                            setDrawerTab("PULSE");
+                                        }}
+                                        title="Click to view disciple pulse & devotions"
+                                    >
+                                        <div className="dt-flow-disciple-top">
+                                            <div className="dt-flow-disciple-avatar">
+                                                {disciple.fullName.charAt(0)}
+                                            </div>
+                                            <div className="dt-flow-disciple-meta">
+                                                <strong title={disciple.fullName}>{disciple.fullName}</strong>
+                                                <small>{disciple.ministry || "General Ministry"} · Gen {disciple.generation}</small>
+                                            </div>
+                                        </div>
+                                        <div className="dt-flow-disciple-footer">
+                                            <span>📖 {disciple.pulse?.wordDaysWeekly || 5}d · 🙏 {disciple.pulse?.prayerDaysWeekly || 6}d</span>
+                                            <span className={`dt-health-badge ${disciple.health}`} style={{ fontSize: 10, padding: "2px 6px" }}>
+                                                {disciple.health === "HEALTHY" ? "🟢 Healthy" : disciple.health === "ATTENTION" ? "🟡 Attention" : "🔴 At-Risk"}
+                                            </span>
+                                        </div>
+                                    </div>
+                                );
+                            } else {
+                                return (
+                                    <div
+                                        key={`slot-${idx}`}
+                                        className="dt-flow-disciple-empty clickable"
+                                        onClick={(e) => handleOpenAdoptModal(leader, e)}
+                                        title="Assign real church member to this disciple slot"
+                                    >
+                                        <Plus size={16} />
+                                        <span>+ Assign Disciple (Slot {idx + 1}/3)</span>
+                                    </div>
+                                );
+                            }
+                        })}
+                    </div>
+                </div>
             </div>
         );
     };
@@ -772,21 +838,21 @@ export default function DiscipleshipTree() {
                 <div className="dt-view-toggle">
                     <button
                         type="button"
+                        className={`dt-toggle-btn ${viewMode === "FLOW" ? "active" : ""}`}
+                        onClick={() => setViewMode("FLOW")}
+                        title="Vertical Discipleship Lineage Flow (Recommended - Natural vertical scrolling)"
+                    >
+                        <Workflow size={14} />
+                        Discipleship Flow
+                    </button>
+                    <button
+                        type="button"
                         className={`dt-toggle-btn ${viewMode === "TREE" ? "active" : ""}`}
                         onClick={() => setViewMode("TREE")}
                         title="Interactive visual branch tree with full zoom & pan"
                     >
                         <GitBranch size={14} />
-                        Tree Flow
-                    </button>
-                    <button
-                        type="button"
-                        className={`dt-toggle-btn ${viewMode === "COLUMNS" ? "active" : ""}`}
-                        onClick={() => setViewMode("COLUMNS")}
-                        title="Flexible department columns (Assistant Pastors, Adult Leaders, Youth Leaders)"
-                    >
-                        <LayoutGrid size={14} />
-                        Flexible Department Grid
+                        Branch Tree
                     </button>
                     <button
                         type="button"
@@ -914,120 +980,183 @@ export default function DiscipleshipTree() {
                 </div>
             )}
 
-            {/* VIEW MODE 2: FLEXIBLE DEPARTMENT GRID */}
-            {viewMode === "COLUMNS" && treeRoot && (
-                <div className="dt-dept-view-container">
-                    {/* Top: Senior Pastor Root Card */}
-                    <div className="dt-dept-root-wrapper">
-                        <div
-                            className={`dt-node-card health-${treeRoot.health} ${selectedMember?.memberId === treeRoot.memberId ? "selected" : ""}`}
-                            style={{ margin: "0 auto", width: 340 }}
-                            onClick={() => {
-                                setSelectedMember(treeRoot);
-                                setDrawerTab("PULSE");
-                            }}
-                        >
-                            <div className="dt-node-header">
-                                <span className="dt-gen-badge">GEN 1 · OVERSEER</span>
-                                <span className="dt-health-badge HEALTHY">🟢 Active Overseer</span>
-                            </div>
-                            <div className="dt-node-body">
-                                <div className="dt-node-avatar" style={{ background: "linear-gradient(135deg, #7c3aed, #9333ea)" }}>
-                                    👑
-                                </div>
-                                <div className="dt-node-info">
-                                    <div className="dt-node-name" style={{ fontSize: 15, fontWeight: 800 }}>
-                                        {treeRoot.fullName}
+            {/* VIEW MODE: VERTICAL DISCIPLESHIP FLOW PIPELINE */}
+            {viewMode === "FLOW" && treeRoot && (
+                <div className="dt-flow-container">
+                    {/* Overseer Hero Card */}
+                    <div className="dt-flow-overseer-card">
+                        <div className="dt-flow-overseer-top">
+                            <div className="dt-flow-overseer-profile">
+                                <div className="dt-flow-overseer-avatar">👑</div>
+                                <div className="dt-flow-overseer-info">
+                                    <span className="dt-flow-overseer-badge">GEN 1 · APOSTOLIC OVERSEER</span>
+                                    <h2>{treeRoot.fullName}</h2>
+                                    <div style={{ color: "rgba(255,255,255,0.85)", fontSize: 13, fontWeight: 600 }}>
+                                        EPIC Senior Pastor & Head of Lineage
                                     </div>
-                                    <span className="dt-node-role-badge" style={{ background: "#f5f3ff", color: "#7c3aed" }}>
-                                        EPIC SENIOR PASTOR
-                                    </span>
                                 </div>
                             </div>
-                            <div className="dt-node-footer">
-                                <span style={{ fontWeight: 700, color: "#7c3aed" }}>
-                                    👑 {treeRoot.disciples.length} Leaders Delegated (Admin · Unlimited)
-                                </span>
-                            </div>
-                            <div style={{ marginTop: 8 }} onClick={(e) => e.stopPropagation()}>
+
+                            <div className="dt-flow-overseer-actions">
                                 <button
                                     type="button"
-                                    style={{
-                                        width: "100%",
-                                        fontSize: 11,
-                                        fontWeight: 700,
-                                        padding: "6px 8px",
-                                        borderRadius: 6,
-                                        border: "1px solid #7c3aed",
-                                        background: "#7c3aed",
-                                        color: "#ffffff",
-                                        cursor: "pointer",
-                                    }}
+                                    className="dt-flow-btn-gold"
                                     onClick={(e) => handleOpenAdoptModal(treeRoot, e)}
+                                    title="Senior Pastor / Admin can delegate any leader without 1:3 limit"
                                 >
-                                    + Delegate EPIC Pastor or Leader (Unlimited)
+                                    <Plus size={15} />
+                                    + Delegate Real EPIC Leader (Admin · Unlimited)
+                                </button>
+                                <button
+                                    type="button"
+                                    className="dt-flow-btn-trans"
+                                    onClick={() => {
+                                        setSelectedMember(treeRoot);
+                                        setDrawerTab("PULSE");
+                                    }}
+                                >
+                                    <ShieldCheck size={14} />
+                                    Overseer Profile
+                                </button>
+                                <button
+                                    type="button"
+                                    className="dt-flow-btn-trans"
+                                    onClick={handleFreshSync}
+                                >
+                                    <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
+                                    Pastoral Sync
                                 </button>
                             </div>
                         </div>
-                        <div className="dt-branch-connector-down" style={{ height: 28 }} />
-                    </div>
 
-                    {/* 3 Flexible Department Columns */}
-                    <div className="dt-dept-grid-columns">
-                        {/* Column 1: Assistant Pastors */}
-                        <div className="dt-dept-column pastor-col">
-                            <div className="dt-dept-col-header">
-                                <div className="dt-dept-col-icon">⭐</div>
-                                <div>
-                                    <h3>EPIC Assistant Pastors</h3>
-                                    <span>{asstPastors.length} Delegated Pastors Shepherding Disciples</span>
+                        <div className="dt-flow-overseer-metrics">
+                            <div className="dt-flow-metric-item">
+                                <div className="dt-flow-metric-label">Delegated Branch Leaders</div>
+                                <div className="dt-flow-metric-val">👑 {treeRoot.disciples.length} Active Leaders</div>
+                            </div>
+                            <div className="dt-flow-metric-item">
+                                <div className="dt-flow-metric-label">Assistant Pastors Stream</div>
+                                <div className="dt-flow-metric-val">⭐ {asstPastors.length} Pastors</div>
+                            </div>
+                            <div className="dt-flow-metric-item">
+                                <div className="dt-flow-metric-label">Adult Leaders Stream</div>
+                                <div className="dt-flow-metric-val">🌟 {adultLeaders.length} Leaders</div>
+                            </div>
+                            <div className="dt-flow-metric-item">
+                                <div className="dt-flow-metric-label">Youth Leaders Stream</div>
+                                <div className="dt-flow-metric-val">🔥 {youthLeaders.length} Leaders</div>
+                            </div>
+                            <div className="dt-flow-metric-item">
+                                <div className="dt-flow-metric-label">Discipleship Lineage Health</div>
+                                <div className="dt-flow-metric-val">
+                                    🟢 {stats.total > 0 ? Math.round((stats.healthy / stats.total) * 100) : 100}% Active
                                 </div>
-                            </div>
-                            <div className="dt-dept-cards-stack">
-                                {asstPastors.length === 0 ? (
-                                    <div className="dt-dept-empty">No Assistant Pastors assigned yet.</div>
-                                ) : (
-                                    asstPastors.map((leader) => renderDepartmentLeaderBlock(leader))
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Column 2: Adult Leaders */}
-                        <div className="dt-dept-column adult-col">
-                            <div className="dt-dept-col-header">
-                                <div className="dt-dept-col-icon">🌟</div>
-                                <div>
-                                    <h3>EPIC Adult Leaders</h3>
-                                    <span>{adultLeaders.length} Delegated Leaders Shepherding Disciples</span>
-                                </div>
-                            </div>
-                            <div className="dt-dept-cards-stack">
-                                {adultLeaders.length === 0 ? (
-                                    <div className="dt-dept-empty">No Adult Leaders assigned yet.</div>
-                                ) : (
-                                    adultLeaders.map((leader) => renderDepartmentLeaderBlock(leader))
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Column 3: Youth Leaders */}
-                        <div className="dt-dept-column youth-col">
-                            <div className="dt-dept-col-header">
-                                <div className="dt-dept-col-icon">🔥</div>
-                                <div>
-                                    <h3>EPIC Youth Leaders</h3>
-                                    <span>{youthLeaders.length} Delegated Leaders Shepherding Disciples</span>
-                                </div>
-                            </div>
-                            <div className="dt-dept-cards-stack">
-                                {youthLeaders.length === 0 ? (
-                                    <div className="dt-dept-empty">No Youth Leaders assigned yet.</div>
-                                ) : (
-                                    youthLeaders.map((leader) => renderDepartmentLeaderBlock(leader))
-                                )}
                             </div>
                         </div>
                     </div>
+
+                    {/* Downward Flow Connector Pipe */}
+                    <div className="dt-flow-pipe">
+                        <div className="dt-flow-pipe-line" />
+                        <div className="dt-flow-pipe-pill">
+                            <Workflow size={13} />
+                            ↓ Lineage Discipleship Multiplication Stream (1 Leader : 3 Accountable Disciples)
+                        </div>
+                        <div className="dt-flow-pipe-line" />
+                    </div>
+
+                    {/* Stream Selector Bar */}
+                    <div className="dt-flow-stream-bar">
+                        <button
+                            type="button"
+                            className={`dt-flow-stream-pill ${selectedCategory === "ALL" ? "active" : ""}`}
+                            onClick={() => setSelectedCategory("ALL")}
+                        >
+                            🌊 All Lineage Streams ({treeRoot.disciples.length} Leaders)
+                        </button>
+                        <button
+                            type="button"
+                            className={`dt-flow-stream-pill pastor ${selectedCategory === "PASTOR" ? "active" : ""}`}
+                            onClick={() => setSelectedCategory("PASTOR")}
+                        >
+                            ⭐ EPIC Assistant Pastors ({asstPastors.length})
+                        </button>
+                        <button
+                            type="button"
+                            className={`dt-flow-stream-pill adult ${selectedCategory === "ADULT" ? "active" : ""}`}
+                            onClick={() => setSelectedCategory("ADULT")}
+                        >
+                            🌟 EPIC Adult Leaders ({adultLeaders.length})
+                        </button>
+                        <button
+                            type="button"
+                            className={`dt-flow-stream-pill youth ${selectedCategory === "YOUTH" ? "active" : ""}`}
+                            onClick={() => setSelectedCategory("YOUTH")}
+                        >
+                            🔥 EPIC Youth Leaders ({youthLeaders.length})
+                        </button>
+                    </div>
+
+                    {/* Streams Rendering */}
+                    {(selectedCategory === "ALL" || selectedCategory === "PASTOR") && asstPastors.length > 0 && (
+                        <div className="dt-flow-stream-section">
+                            <div className="dt-flow-stream-header pastor">
+                                <div className="dt-flow-stream-title">
+                                    <div className="dt-flow-stream-icon">⭐</div>
+                                    <div>
+                                        <h3>EPIC Assistant Pastors Stream ({asstPastors.length} Delegated Pastors)</h3>
+                                        <span style={{ fontSize: 12, color: "#64748b" }}>
+                                            Direct pastoral delegation under Senior Pastor Ronnel M. Aviguetero · Shepherding accountable disciples
+                                        </span>
+                                    </div>
+                                </div>
+                                <span className="dt-flow-role-pill pastor">1st Gen Pastoral Overseers</span>
+                            </div>
+                            <div className="dt-flow-leaders-list">
+                                {asstPastors.map((leader) => renderFlowLeaderCard(leader))}
+                            </div>
+                        </div>
+                    )}
+
+                    {(selectedCategory === "ALL" || selectedCategory === "ADULT") && adultLeaders.length > 0 && (
+                        <div className="dt-flow-stream-section">
+                            <div className="dt-flow-stream-header adult">
+                                <div className="dt-flow-stream-title">
+                                    <div className="dt-flow-stream-icon">🌟</div>
+                                    <div>
+                                        <h3>EPIC Adult Leaders Stream ({adultLeaders.length} Delegated Leaders)</h3>
+                                        <span style={{ fontSize: 12, color: "#64748b" }}>
+                                            Adult cell group & family life discipleship streams · Intentional 1:3 multiplication
+                                        </span>
+                                    </div>
+                                </div>
+                                <span className="dt-flow-role-pill adult">Adult Ministries</span>
+                            </div>
+                            <div className="dt-flow-leaders-list">
+                                {adultLeaders.map((leader) => renderFlowLeaderCard(leader))}
+                            </div>
+                        </div>
+                    )}
+
+                    {(selectedCategory === "ALL" || selectedCategory === "YOUTH") && youthLeaders.length > 0 && (
+                        <div className="dt-flow-stream-section">
+                            <div className="dt-flow-stream-header youth">
+                                <div className="dt-flow-stream-title">
+                                    <div className="dt-flow-stream-icon">🔥</div>
+                                    <div>
+                                        <h3>EPIC Youth Leaders Stream ({youthLeaders.length} Delegated Leaders)</h3>
+                                        <span style={{ fontSize: 12, color: "#64748b" }}>
+                                            Campus, youth & young adults generation discipleship movement
+                                        </span>
+                                    </div>
+                                </div>
+                                <span className="dt-flow-role-pill youth">Youth Ministries</span>
+                            </div>
+                            <div className="dt-flow-leaders-list">
+                                {youthLeaders.map((leader) => renderFlowLeaderCard(leader))}
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
