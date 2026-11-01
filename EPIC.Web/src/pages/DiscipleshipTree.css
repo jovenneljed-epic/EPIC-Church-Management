@@ -1,0 +1,948 @@
+/* =========================================================
+   EPIC DISCIPLESHIP TREE & MONITORING SYSTEM
+   Official Pastoral Oversight & Multiplication Control UI
+   ========================================================= */
+
+.discipleship-page {
+    min-height: 100%;
+    width: 100%;
+    padding: 28px 32px 48px;
+    box-sizing: border-box;
+    background: linear-gradient(180deg, #f8fafc 0%, #edf2f7 100%);
+    color: #1e293b;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.dt-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+
+.dt-header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.dt-header-icon {
+    width: 60px;
+    height: 60px;
+    min-width: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+    color: white;
+    box-shadow: 0 10px 25px rgba(37, 99, 235, 0.25);
+}
+
+.dt-eyebrow {
+    margin-bottom: 4px;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+}
+
+.dt-header h1 {
+    margin: 0;
+    color: #0f172a;
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.dt-subtitle {
+    margin-top: 4px;
+    color: #64748b;
+    font-size: 14px;
+}
+
+.dt-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.dt-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+}
+
+.dt-btn-primary {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: #ffffff;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
+}
+
+.dt-btn-primary:hover {
+    background: linear-gradient(135deg, #1d4ed8, #1e40af);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35);
+}
+
+.dt-btn-secondary {
+    background: #ffffff;
+    color: #334155;
+    border: 1px solid #cbd5e1;
+}
+
+.dt-btn-secondary:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+}
+
+.dt-btn-purple {
+    background: linear-gradient(135deg, #7c3aed, #6d28d9);
+    color: white;
+    box-shadow: 0 4px 14px rgba(124, 58, 237, 0.25);
+}
+
+.dt-btn-purple:hover {
+    background: linear-gradient(135deg, #6d28d9, #5b21b6);
+    transform: translateY(-1px);
+}
+
+/* =========================================================
+   OVERSEER BANNER & SCRIPTURE
+   ========================================================= */
+
+.dt-banner {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 60%, #1e3a8a 100%);
+    border-radius: 16px;
+    padding: 22px 28px;
+    color: white;
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.15);
+    flex-wrap: wrap;
+    gap: 20px;
+    position: relative;
+    overflow: hidden;
+}
+
+.dt-banner::before {
+    content: "";
+    position: absolute;
+    top: -50px;
+    right: -50px;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.2) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.dt-banner-left {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+}
+
+.dt-pastor-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #7c3aed, #9333ea);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    font-weight: 800;
+    color: white;
+    border: 3px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 6px 16px rgba(147, 51, 234, 0.4);
+}
+
+.dt-banner-text h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -0.3px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.dt-role-tag-gold {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+}
+
+.dt-banner-scripture {
+    margin-top: 6px;
+    font-size: 13px;
+    color: #93c5fd;
+    font-style: italic;
+    max-width: 600px;
+    line-height: 1.4;
+}
+
+.dt-banner-right {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+.dt-pill-rule {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 8px 16px;
+    border-radius: 12px;
+    text-align: right;
+}
+
+.dt-pill-rule strong {
+    display: block;
+    font-size: 13px;
+    color: #38bdf8;
+}
+
+.dt-pill-rule span {
+    font-size: 11px;
+    color: #cbd5e1;
+}
+
+/* =========================================================
+   STATISTICS / MONITORING METRICS CARDS
+   ========================================================= */
+
+.dt-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.dt-metric-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dt-metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+}
+
+.dt-metric-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+}
+
+.dt-metric-val {
+    font-size: 24px;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1;
+}
+
+.dt-metric-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    margin-top: 4px;
+}
+
+/* Color variations */
+.dt-icon-blue { background: #eff6ff; color: #2563eb; }
+.dt-icon-purple { background: #f5f3ff; color: #7c3aed; }
+.dt-icon-green { background: #ecfdf5; color: #059669; }
+.dt-icon-amber { background: #fffbeb; color: #d97706; }
+.dt-icon-rose { background: #fff1f2; color: #e11d48; }
+
+/* =========================================================
+   CONTROLS BAR (Search, Filters, View Toggles)
+   ========================================================= */
+
+.dt-controls-bar {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 14px 20px;
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.dt-search-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 8px 14px;
+    width: 320px;
+    max-width: 100%;
+}
+
+.dt-search-box input {
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 13px;
+    width: 100%;
+    color: #1e293b;
+}
+
+.dt-filters-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.dt-view-toggle {
+    display: flex;
+    background: #f1f5f9;
+    border-radius: 10px;
+    padding: 3px;
+    border: 1px solid #e2e8f0;
+}
+
+.dt-toggle-btn {
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+}
+
+.dt-toggle-btn.active {
+    background: #ffffff;
+    color: #0f172a;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.dt-filter-pill {
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 20px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #475569;
+    transition: all 0.15s ease;
+}
+
+.dt-filter-pill.active {
+    background: #1e293b;
+    color: #ffffff;
+    border-color: #1e293b;
+}
+
+/* =========================================================
+   ORGANIC BRANCH TREE VISUAL CANVAS
+   ========================================================= */
+
+.dt-tree-container {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 36px 24px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02);
+    min-height: 540px;
+    overflow-x: auto;
+    position: relative;
+}
+
+.dt-tree-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 900px;
+}
+
+/* Node layout */
+.dt-tree-node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    margin: 0 16px;
+}
+
+.dt-node-card {
+    background: #ffffff;
+    border: 2px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 16px;
+    width: 280px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    position: relative;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    cursor: pointer;
+    z-index: 2;
+}
+
+.dt-node-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+    border-color: #3b82f6;
+}
+
+.dt-node-card.selected {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
+}
+
+/* Health border accents */
+.dt-node-card.health-HEALTHY {
+    border-top: 4px solid #10b981;
+}
+.dt-node-card.health-ATTENTION {
+    border-top: 4px solid #f59e0b;
+}
+.dt-node-card.health-AT_RISK {
+    border-top: 4px solid #ef4444;
+}
+
+.dt-node-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.dt-gen-badge {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 6px;
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.dt-health-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 20px;
+}
+
+.dt-health-badge.HEALTHY { background: #dcfce7; color: #15803d; }
+.dt-health-badge.ATTENTION { background: #fef3c7; color: #b45309; }
+.dt-health-badge.AT_RISK { background: #fee2e2; color: #b91c1c; }
+
+.dt-node-body {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.dt-node-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+    color: white;
+    font-weight: 800;
+    font-size: 17px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.dt-node-info {
+    overflow: hidden;
+}
+
+.dt-node-name {
+    font-size: 14px;
+    font-weight: 800;
+    color: #0f172a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+}
+
+.dt-node-role-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 5px;
+    letter-spacing: 0.4px;
+    white-space: nowrap;
+}
+
+/* Node Footer & Metrics */
+.dt-node-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 10px;
+    border-top: 1px dashed #e2e8f0;
+    font-size: 11px;
+    color: #64748b;
+}
+
+.dt-capacity-meter {
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.dt-capacity-meter.full {
+    color: #d97706;
+}
+
+.dt-spiritual-stat {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+}
+
+/* Branch Lines Connecting Generations */
+.dt-branch-connector-down {
+    width: 2px;
+    height: 36px;
+    background: #cbd5e1;
+    margin: 0 auto;
+}
+
+.dt-children-container {
+    display: flex;
+    justify-content: center;
+    position: relative;
+    padding-top: 24px;
+}
+
+/* Horizontal connecting bar between siblings */
+.dt-children-container::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: calc(140px + 16px);
+    right: calc(140px + 16px);
+    height: 2px;
+    background: #cbd5e1;
+}
+
+/* When only 1 child, don't show horizontal spread line */
+.dt-children-container.single-child::before {
+    display: none;
+}
+
+.dt-child-connector-up {
+    width: 2px;
+    height: 24px;
+    background: #cbd5e1;
+    position: absolute;
+    top: -24px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.dt-collapse-toggle {
+    position: absolute;
+    bottom: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 2px solid #94a3b8;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    z-index: 5;
+    transition: all 0.15s ease;
+}
+
+.dt-collapse-toggle:hover {
+    background: #2563eb;
+    border-color: #2563eb;
+    color: white;
+}
+
+/* =========================================================
+   AUDIT DRAWER / MODAL (Inspect Walk)
+   ========================================================= */
+
+.dt-modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    justify-content: flex-end;
+    z-index: 9999;
+    animation: fadeIn 0.2s ease;
+}
+
+.dt-drawer {
+    width: 580px;
+    max-width: 90vw;
+    height: 100%;
+    background: #ffffff;
+    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow: hidden;
+}
+
+.dt-drawer-header {
+    padding: 24px 28px;
+    background: linear-gradient(135deg, #0f172a, #1e293b);
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.dt-drawer-title-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.dt-drawer-avatar {
+    width: 54px;
+    height: 54px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #2563eb, #3b82f6);
+    color: white;
+    font-size: 20px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dt-drawer-close {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 24px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 4px;
+}
+
+.dt-drawer-close:hover {
+    color: white;
+}
+
+/* Drawer Contact Bar */
+.dt-drawer-contact-bar {
+    padding: 14px 28px;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.dt-contact-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #334155;
+    transition: all 0.15s ease;
+}
+
+.dt-contact-btn:hover {
+    background: #f1f5f9;
+}
+
+.dt-contact-btn.messenger {
+    background: #0084ff;
+    color: white;
+    border-color: #0084ff;
+}
+
+.dt-contact-btn.messenger:hover {
+    background: #0073e6;
+}
+
+/* Drawer Tabs */
+.dt-drawer-tabs {
+    display: flex;
+    border-bottom: 1px solid #e2e8f0;
+    background: #ffffff;
+    padding: 0 28px;
+}
+
+.dt-dtab-btn {
+    padding: 14px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s ease;
+}
+
+.dt-dtab-btn.active {
+    color: #2563eb;
+    border-bottom-color: #2563eb;
+}
+
+.dt-drawer-content {
+    flex: 1;
+    padding: 24px 28px;
+    overflow-y: auto;
+    background: #f8fafc;
+}
+
+/* Card inside drawer */
+.dt-card-box {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 18px 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.dt-card-box h3 {
+    margin: 0 0 12px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* SOAP Devotion box */
+.dt-soap-item {
+    border-left: 3px solid #2563eb;
+    background: #f8fafc;
+    border-radius: 0 10px 10px 0;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+}
+
+.dt-soap-verse {
+    font-weight: 700;
+    font-size: 13px;
+    color: #1e3a8a;
+    margin-bottom: 4px;
+}
+
+.dt-soap-rhema {
+    font-style: italic;
+    font-size: 13px;
+    color: #334155;
+    margin-bottom: 8px;
+}
+
+.dt-soap-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    font-size: 12px;
+}
+
+.dt-soap-label {
+    font-weight: 800;
+    color: #64748b;
+    text-transform: uppercase;
+    font-size: 10px;
+}
+
+/* =========================================================
+   CENTERED CONTROL MODALS (Role Assignment, Adopt Branch)
+   ========================================================= */
+
+.dt-center-modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    padding: 20px;
+}
+
+.dt-center-modal {
+    background: #ffffff;
+    border-radius: 18px;
+    width: 520px;
+    max-width: 100%;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+    animation: scaleUp 0.25s ease;
+}
+
+.dt-cm-header {
+    padding: 20px 24px;
+    background: linear-gradient(135deg, #0f172a, #1e293b);
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dt-cm-header h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 800;
+}
+
+.dt-cm-body {
+    padding: 24px;
+}
+
+.dt-form-group {
+    margin-bottom: 18px;
+}
+
+.dt-form-group label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    color: #475569;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.dt-form-group select,
+.dt-form-group input,
+.dt-form-group textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid #cbd5e1;
+    font-size: 13px;
+    box-sizing: border-box;
+    color: #1e293b;
+    outline: none;
+}
+
+.dt-form-group select:focus,
+.dt-form-group input:focus,
+.dt-form-group textarea:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.dt-cm-footer {
+    padding: 16px 24px;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+/* Warning alert box */
+.dt-alert-box {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    font-size: 12px;
+    color: #92400e;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideInRight {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+}
+
+@keyframes scaleUp {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+}

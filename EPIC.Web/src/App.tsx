@@ -62,6 +62,7 @@ import EpicSmileScanner from "./EpicSmileScanner";
 import ChurchServicesPage from "./pages/ChurchServicesPage";
 import EventManagementPage from "./pages/EventManagementPage";
 import MemberAttendanceReport from "./pages/MemberAttendanceReport";
+import DiscipleshipTree from "./pages/DiscipleshipTree";
 
 import Visitors from "./pages/Visitors";
 import ChurchInActionPage from "./pages/action/ChurchInActionPage";
@@ -117,6 +118,7 @@ import PermissionFilter from "./PermissionFilter";
 // =========================================================
 
 type Page =
+  | "discipleship-tree"
   | "dashboard"
   | "reports"
   | "attendance-report"
@@ -197,6 +199,7 @@ interface DynamicPublicRoute {
 // =========================================================
 const PAGE_ROUTES: Record<Page, string> = {
     dashboard: "/dashboard",
+    "discipleship-tree": "/discipleship-tree",
 
     reports: "/reports",
     "attendance-report": "/reports/attendance",
@@ -276,6 +279,7 @@ const CLIENT_PORTAL_ROUTE = "/client-portal";
 
 const PAGE_TITLES: Record<Page, string> = {
     dashboard: "Dashboard",
+    "discipleship-tree": "EPIC Discipleship Tree",
 
     reports: "Reports & Documents",
 
@@ -359,6 +363,9 @@ const PAGE_TITLES: Record<Page, string> = {
 const PAGE_SUBTITLES: Record<Page, string> = {
     dashboard:
         "Church management overview",
+
+    "discipleship-tree":
+        "Continuous lineage growth, pastoral monitoring & intentional multiplication control",
 
     reports:
         "Generate reports, forms and printable church documents",
@@ -1169,6 +1176,19 @@ const NAVIGATION_SECTIONS:
                 icon: "😊",
                 permission:
                     "Attendance",
+            },
+        ],
+    },
+
+    {
+        title: "DISCIPLESHIP & CARE",
+
+        items: [
+            {
+                page: "discipleship-tree",
+                label: "Discipleship Tree",
+                icon: "🌿",
+                permission: "Members",
             },
         ],
     },
@@ -3373,6 +3393,14 @@ case "website-analytics":
     return renderProtectedPage(
         "Website Analytics",
         <WebsiteAnalyticsDashboard />
+    );
+
+
+case "discipleship-tree":
+
+    return renderProtectedPage(
+        "Members",
+        <DiscipleshipTree />
     );
 
 
