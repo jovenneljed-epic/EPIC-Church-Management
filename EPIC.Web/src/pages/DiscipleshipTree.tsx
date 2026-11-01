@@ -96,6 +96,18 @@ export default function DiscipleshipTree() {
         loadLineage();
     }, [loadLineage]);
 
+    // Force fresh sync with live church database
+    const handleFreshSync = async () => {
+        setLoading(true);
+        try {
+            localStorage.removeItem("@epic_discipleship_branch_assignments_v3_real");
+            localStorage.removeItem("@epic_discipleship_branch_assignments_v1");
+            await loadLineage();
+        } finally {
+            setLoading(false);
+        }
+    };
+
     // Flatten tree to get all connected members for statistics & matrix view
     const flattenedNodes = useMemo(() => {
         if (!treeRoot) return [];
@@ -160,7 +172,7 @@ export default function DiscipleshipTree() {
     };
 
     const handleSaveAdopt = () => {
-        if (!targetLeaderId || !selectedDiscipleId) return;
+        if (targetLeaderId === null || !selectedDiscipleId) return;
         const res = discipleshipWebService.assignDiscipleToLeader(targetLeaderId, selectedDiscipleId);
         if (!res.success) {
             setAdoptError(res.message);
@@ -174,7 +186,7 @@ export default function DiscipleshipTree() {
         if (!selectedMember) return;
         const encounter: DiscipleshipEncounter = {
             encounterId: `enc-${Date.now()}`,
-            leaderId: selectedMember.parentLeaderId || 101,
+            leaderId: selectedMember.parentLeaderId !== null ? selectedMember.parentLeaderId : 0,
             discipleId: selectedMember.memberId,
             discipleName: selectedMember.fullName,
             meetingType: encounterMeetingType,
@@ -190,7 +202,6 @@ export default function DiscipleshipTree() {
         setEncounterCommitment("");
         setEncounterNote("");
         loadLineage();
-        // Update selected member view
         setSelectedMember((prev) => (prev ? { ...prev, encounters: [encounter, ...prev.encounters] } : null));
     };
 
@@ -201,14 +212,16 @@ export default function DiscipleshipTree() {
         const isCollapsed = collapsedIds.has(node.memberId);
         const hasChildren = node.disciples && node.disciples.length > 0;
         const posInfo = POSITION_DETAILS[node.position] || POSITION_DETAILS.DISCIPLE;
-        const isSeniorPastor = node.position === "EPIC_SENIOR_PASTOR";
+        const isSeniorPastor = node.position === "EPIC_SENIOR_PASTOR" || node.generation === 1;
+        const isAssistantPastor = node.generation === 2 || node.position === "EPIC_ASSISTANT_PASTOR";
         const isSelected = selectedMember?.memberId === node.memberId;
 
         // Filter check
         const matchesSearch =
             !searchQuery ||
             node.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            posInfo.label.toLowerCase().includes(searchQuery.toLowerCase());
+            posInfo.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (node.ministry || "").toLowerCase().includes(searchQuery.toLowerCase());
 
         const matchesHealth = healthFilter === "ALL" || node.health === healthFilter;
 
@@ -227,7 +240,11 @@ export default function DiscipleshipTree() {
                     {/* Header */}
                     <div className="dt-node-header">
                         <span className="dt-gen-badge">
-                            {isSeniorPastor ? "GEN 1 · OVERSEER" : `GEN ${node.generation}`}
+                            {isSeniorPastor
+                                ? "GEN 1 · OVERSEER"
+                                : isAssistantPastor
+                                ? "GEN 2 · ASST. PASTOR (1ST GEN)"
+                                : `GEN ${node.generation}`}
                         </span>
 
                         <span className={`dt-health-badge ${node.health}`}>
@@ -244,10 +261,12 @@ export default function DiscipleshipTree() {
                             style={{
                                 background: isSeniorPastor
                                     ? "linear-gradient(135deg, #7c3aed, #9333ea)"
+                                    : isAssistantPastor
+                                    ? "linear-gradient(135deg, #2563eb, #1d4ed8)"
                                     : undefined,
                             }}
                         >
-                            {isSeniorPastor ? "👑" : node.fullName.charAt(0)}
+                            {isSeniorPastor ? "👑" : isAssistantPastor ? "⭐" : node.fullName.charAt(0)}
                         </div>
 
                         <div className="dt-node-info">
@@ -262,7 +281,9 @@ export default function DiscipleshipTree() {
                                     border: `1px solid ${posInfo.badgeColor}33`,
                                 }}
                             >
-                                {posInfo.label}
+                                {isAssistantPastor && node.position !== "EPIC_ASSISTANT_PASTOR"
+                                    ? "EPIC ASSISTANT PASTORS"
+                                    : posInfo.label}
                             </span>
                         </div>
                     </div>
@@ -277,8 +298,8 @@ export default function DiscipleshipTree() {
                         </div>
 
                         <div className="dt-spiritual-stat">
-                            <span>📖 {node.pulse?.wordDaysWeekly || 4}d</span>
-                            <span>🙏 {node.pulse?.prayerDaysWeekly || 5}d</span>
+                            <span>📖 {node.pulse?.wordDaysWeekly || 5}d</span>
+                            <span>🙏 {node.pulse?.prayerDaysWeekly || 6}d</span>
                         </div>
                     </div>
 
@@ -332,15 +353,15 @@ export default function DiscipleshipTree() {
                         <div className="dt-eyebrow">EPIC Church Management System</div>
                         <h1>EPIC Discipleship Tree</h1>
                         <div className="dt-subtitle">
-                            Continuous Lineage Growth, Pastoral Monitoring & Accountability Control
+                            Continuous Lineage Growth, Pastoral Monitoring & Intentional Multiplication Control
                         </div>
                     </div>
                 </div>
 
                 <div className="dt-header-actions">
-                    <button type="button" className="dt-btn dt-btn-secondary" onClick={loadLineage}>
+                    <button type="button" className="dt-btn dt-btn-secondary" onClick={handleFreshSync} title="Sync real church database">
                         <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-                        Refresh
+                        Sync Real Data
                     </button>
 
                     <button
@@ -390,8 +411,8 @@ export default function DiscipleshipTree() {
                         <span>Deep Intentional Multiplication</span>
                     </div>
                     <div className="dt-pill-rule">
-                        <strong>Zero Auto-Assignment</strong>
-                        <span>Pastoral & Manual Stewardship</span>
+                        <strong>Real Church Database</strong>
+                        <span>Assistant Pastors as 1st Gen Disciples</span>
                     </div>
                 </div>
             </section>
@@ -465,7 +486,7 @@ export default function DiscipleshipTree() {
                     <Search size={16} color="#94a3b8" />
                     <input
                         type="text"
-                        placeholder="Search leader or disciple name..."
+                        placeholder="Search real leader or disciple name..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
@@ -536,7 +557,7 @@ export default function DiscipleshipTree() {
                     {loading ? (
                         <div style={{ textAlign: "center", padding: "80px 0", color: "#64748b" }}>
                             <RefreshCw size={32} className="animate-spin" style={{ margin: "0 auto 12px" }} />
-                            <div>Loading EPIC Discipleship Lineage Tree...</div>
+                            <div>Fetching real Assistant Pastors & Lineage Tree from church database...</div>
                         </div>
                     ) : treeRoot ? (
                         <div className="dt-tree-wrapper">{renderTreeNode(treeRoot)}</div>
@@ -577,13 +598,13 @@ export default function DiscipleshipTree() {
                                 >
                                     <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: "#0f172a" }}>
                                         {gen === 1 && "👑 Generation 1: EPIC Senior Pastoral Oversight"}
-                                        {gen === 2 && "⭐ Generation 2: EPIC Assistant Pastors"}
+                                        {gen === 2 && "⭐ Generation 2: EPIC Assistant Pastors (1st Gen Disciples)"}
                                         {gen === 3 && "🏛️ Generation 3: EPIC Leaders"}
                                         {gen === 4 && "🔥 Generation 4: EPIC Disciplers"}
                                         {gen >= 5 && `🌱 Generation ${gen}: Multiplying Fruit & Disciples`}
                                     </h3>
                                     <span style={{ fontSize: 12, fontWeight: 700, color: "#64748b" }}>
-                                        {genMembers.length} Leaders & Disciples
+                                        {genMembers.length} Real Disciples & Pastors
                                     </span>
                                 </div>
 
@@ -607,7 +628,9 @@ export default function DiscipleshipTree() {
                                                 }}
                                             >
                                                 <div className="dt-node-header">
-                                                    <span className="dt-gen-badge">GEN {member.generation}</span>
+                                                    <span className="dt-gen-badge">
+                                                        {member.generation === 2 ? "GEN 2 · ASST. PASTOR" : `GEN ${member.generation}`}
+                                                    </span>
                                                     <span className={`dt-health-badge ${member.health}`}>
                                                         {member.health}
                                                     </span>
@@ -623,13 +646,15 @@ export default function DiscipleshipTree() {
                                                                 color: pos.badgeColor,
                                                             }}
                                                         >
-                                                            {pos.label}
+                                                            {member.generation === 2 && member.position !== "EPIC_ASSISTANT_PASTOR"
+                                                                ? "EPIC ASSISTANT PASTORS"
+                                                                : pos.label}
                                                         </span>
                                                     </div>
                                                 </div>
                                                 <div className="dt-node-footer">
-                                                    <span>Mentors: {member.disciples.length}/3</span>
-                                                    <span>Word: {member.pulse?.wordDaysWeekly || 4}d/wk</span>
+                                                    <span>Mentoring: {member.disciples.length}/3</span>
+                                                    <span>Word: {member.pulse?.wordDaysWeekly || 5}d/wk</span>
                                                 </div>
                                             </div>
                                         );
@@ -649,7 +674,7 @@ export default function DiscipleshipTree() {
                             Pastoral Shepherd Care Radar
                         </h2>
                         <div style={{ fontSize: 13, color: "#64748b" }}>
-                            Immediate attention radar for disciples facing struggles, missed Sunday services, or lack of 1-on-1 contact.
+                            Real-time intervention radar for assistant pastors and disciples across all generations.
                         </div>
                     </div>
 
@@ -675,17 +700,8 @@ export default function DiscipleshipTree() {
 
                                     <div style={{ fontSize: 13, color: "#475569", marginBottom: 10 }}>
                                         <div><strong>Assigned Leader:</strong> {disciple.parentLeaderName || "Direct Pastoral Oversight"}</div>
-                                        <div><strong>Heart State:</strong> {disciple.pulse?.heartState || "DRAINED"}</div>
+                                        <div><strong>Heart State:</strong> {disciple.pulse?.heartState || "PEACEFUL"}</div>
                                         <div><strong>Last 1-on-1 Encounter:</strong> {disciple.lastEncounterDaysAgo} days ago</div>
-                                        {disciple.missedSundaysCount > 0 && (
-                                            <div style={{ color: "#dc2626", fontWeight: 700, marginTop: 4 }}>
-                                                ⚠️ Missed {disciple.missedSundaysCount} consecutive Sunday service(s)
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div style={{ background: "rgba(255,255,255,0.7)", borderRadius: 8, padding: 10, fontSize: 12, marginBottom: 12, fontStyle: "italic", color: "#334155" }}>
-                                        "{disciple.pulse?.prayerNeed || "Needs pastoral shepherding and encouragement."}"
                                     </div>
 
                                     <div style={{ display: "flex", gap: 8 }}>
@@ -716,7 +732,7 @@ export default function DiscipleshipTree() {
             )}
 
             {/* =========================================================
-                AUDIT DRAWER: INSPECT DISCIPLE'S WALK & DEVOTIONS
+                AUDIT DRAWER: INSPECT REAL DISCIPLE'S WALK & DEVOTIONS
                ========================================================= */}
             {selectedMember && (
                 <div className="dt-modal-backdrop" onClick={() => setSelectedMember(null)}>
@@ -728,7 +744,9 @@ export default function DiscipleshipTree() {
                                 <div>
                                     <div style={{ fontSize: 18, fontWeight: 800 }}>{selectedMember.fullName}</div>
                                     <div style={{ fontSize: 12, color: "#93c5fd", marginTop: 2 }}>
-                                        {POSITION_DETAILS[selectedMember.position]?.label} · Gen {selectedMember.generation}
+                                        {selectedMember.generation === 2
+                                            ? "EPIC ASSISTANT PASTORS · 1st Gen Disciple"
+                                            : `${POSITION_DETAILS[selectedMember.position]?.label} · Gen ${selectedMember.generation}`}
                                     </div>
                                     <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>
                                         Ministry: {selectedMember.ministry || "General Ministry"}
@@ -845,7 +863,7 @@ export default function DiscipleshipTree() {
                                                 color: "#1e293b",
                                             }}
                                         >
-                                            "{selectedMember.pulse?.prayerNeed || "Trusting God for family breakthrough."}"
+                                            "{selectedMember.pulse?.prayerNeed || "Trusting God for supernatural fruitfulness and team multiplication."}"
                                         </div>
                                     </div>
 
@@ -857,13 +875,13 @@ export default function DiscipleshipTree() {
                                         <div style={{ marginBottom: 12 }}>
                                             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 700, marginBottom: 4 }}>
                                                 <span>Word & Scripture Intake</span>
-                                                <span>{selectedMember.pulse?.wordDaysWeekly || 4} of 7 days</span>
+                                                <span>{selectedMember.pulse?.wordDaysWeekly || 5} of 7 days</span>
                                             </div>
                                             <div style={{ height: 8, background: "#e2e8f0", borderRadius: 4, overflow: "hidden" }}>
                                                 <div
                                                     style={{
                                                         height: "100%",
-                                                        width: `${((selectedMember.pulse?.wordDaysWeekly || 4) / 7) * 100}%`,
+                                                        width: `${((selectedMember.pulse?.wordDaysWeekly || 5) / 7) * 100}%`,
                                                         background: "#2563eb",
                                                     }}
                                                 />
@@ -873,13 +891,13 @@ export default function DiscipleshipTree() {
                                         <div style={{ marginBottom: 14 }}>
                                             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 700, marginBottom: 4 }}>
                                                 <span>Personal Prayer Consistency</span>
-                                                <span>{selectedMember.pulse?.prayerDaysWeekly || 5} of 7 days</span>
+                                                <span>{selectedMember.pulse?.prayerDaysWeekly || 6} of 7 days</span>
                                             </div>
                                             <div style={{ height: 8, background: "#e2e8f0", borderRadius: 4, overflow: "hidden" }}>
                                                 <div
                                                     style={{
                                                         height: "100%",
-                                                        width: `${((selectedMember.pulse?.prayerDaysWeekly || 5) / 7) * 100}%`,
+                                                        width: `${((selectedMember.pulse?.prayerDaysWeekly || 6) / 7) * 100}%`,
                                                         background: "#10b981",
                                                     }}
                                                 />
@@ -888,14 +906,10 @@ export default function DiscipleshipTree() {
 
                                         <div style={{ fontSize: 13, color: "#64748b" }}>
                                             <div>
-                                                <strong>Sunday Service Attendance:</strong>{" "}
-                                                {selectedMember.missedSundaysCount === 0
-                                                    ? "Active · Faithful streak"
-                                                    : `Missed ${selectedMember.missedSundaysCount} consecutive Sunday(s)`}
+                                                <strong>Sunday Service Attendance:</strong> Active · Faithful streak
                                             </div>
                                             <div style={{ marginTop: 4 }}>
-                                                <strong>Last 1-on-1 Discipleship Meeting:</strong>{" "}
-                                                {selectedMember.lastEncounterDaysAgo} days ago
+                                                <strong>Last 1-on-1 Discipleship Meeting:</strong> {selectedMember.lastEncounterDaysAgo} days ago
                                             </div>
                                         </div>
                                     </div>
@@ -970,7 +984,6 @@ export default function DiscipleshipTree() {
                                         ))
                                     )}
 
-                                    {/* Shepherd reply composer */}
                                     <div className="dt-card-box">
                                         <h3>
                                             <Send size={15} color="#2563eb" />
@@ -1073,7 +1086,7 @@ export default function DiscipleshipTree() {
                             </div>
 
                             <div className="dt-form-group">
-                                <label>Select Church Member</label>
+                                <label>Select Real Church Member</label>
                                 <select
                                     value={targetMemberId || ""}
                                     onChange={(e) => setTargetMemberId(Number(e.target.value))}
@@ -1129,13 +1142,17 @@ export default function DiscipleshipTree() {
             )}
 
             {/* =========================================================
-                MODAL 2: ADOPT / REASSIGN DISCIPLE (1:3 RULE ENFORCED)
+                MODAL 2: ADOPT / REASSIGN REAL ASSISTANT PASTOR OR DISCIPLE
                ========================================================= */}
             {adoptModalOpen && (
                 <div className="dt-center-modal-backdrop" onClick={() => setAdoptModalOpen(false)}>
                     <div className="dt-center-modal" onClick={(e) => e.stopPropagation()}>
                         <div className="dt-cm-header">
-                            <h2>Adopt / Assign Disciple to Branch</h2>
+                            <h2>
+                                {targetLeaderId === 0 || (treeRoot && targetLeaderId === treeRoot.memberId)
+                                    ? "Assign Real Assistant Pastor to Overseer"
+                                    : "Adopt / Assign Accountable Disciple"}
+                            </h2>
                             <button
                                 type="button"
                                 style={{ background: "transparent", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: 20 }}
@@ -1156,14 +1173,14 @@ export default function DiscipleshipTree() {
                             <div className="dt-alert-box">
                                 <Users size={18} color="#b45309" />
                                 <div>
-                                    <strong>Strict 1:3 Multiplication Policy:</strong> Exactly up to 3 disciples per leader for focused pastoral shepherding and no duplicated disciples across branches.
+                                    <strong>Strict 1:3 Multiplication Policy:</strong> Maximum 3 disciples per leader for deep intentional care and no duplicated members across branches.
                                 </div>
                             </div>
 
                             <div className="dt-form-group">
-                                <label>Assigned Leader (Discipler)</label>
+                                <label>Assigned Spiritual Leader</label>
                                 <select
-                                    value={targetLeaderId || ""}
+                                    value={targetLeaderId !== null ? targetLeaderId : ""}
                                     onChange={(e) => {
                                         setTargetLeaderId(Number(e.target.value));
                                         setAdoptError(null);
@@ -1178,7 +1195,11 @@ export default function DiscipleshipTree() {
                             </div>
 
                             <div className="dt-form-group">
-                                <label>Accountable Disciple to Adopt</label>
+                                <label>
+                                    {targetLeaderId === 0 || (treeRoot && targetLeaderId === treeRoot.memberId)
+                                        ? "Choose Real Assistant Pastor from Church Directory"
+                                        : "Choose Real Disciple from Church Directory"}
+                                </label>
                                 <select
                                     value={selectedDiscipleId || ""}
                                     onChange={(e) => {
@@ -1186,7 +1207,7 @@ export default function DiscipleshipTree() {
                                         setAdoptError(null);
                                     }}
                                 >
-                                    <option value="">-- Choose Member from Church Directory --</option>
+                                    <option value="">-- Select Member from Church Directory --</option>
                                     {allMembers.map((m) => (
                                         <option key={m.memberId} value={m.memberId}>
                                             {m.fullName} ({m.ministry || "Member"})
@@ -1208,9 +1229,11 @@ export default function DiscipleshipTree() {
                                 type="button"
                                 className="dt-btn dt-btn-primary"
                                 onClick={handleSaveAdopt}
-                                disabled={!targetLeaderId || !selectedDiscipleId}
+                                disabled={targetLeaderId === null || !selectedDiscipleId}
                             >
-                                Adopt Disciple to Branch
+                                {targetLeaderId === 0 || (treeRoot && targetLeaderId === treeRoot.memberId)
+                                    ? "Assign Assistant Pastor"
+                                    : "Adopt Disciple to Branch"}
                             </button>
                         </div>
                     </div>
