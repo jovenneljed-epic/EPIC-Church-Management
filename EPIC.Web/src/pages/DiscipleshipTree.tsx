@@ -339,6 +339,15 @@ export default function DiscipleshipTree() {
         setSelectedMember((prev) => (prev ? { ...prev, encounters: [encounter, ...prev.encounters] } : null));
     };
 
+    // Multiplication: Pastoral leader adds another branch cohort upon maturity
+    const handleAddBranchCohort = (node: DiscipleshipMemberNode, e?: React.MouseEvent) => {
+        if (e) e.stopPropagation();
+        const res = discipleshipWebService.addBranchCohort(node.memberId, node.fullName);
+        if (res.success) {
+            loadLineage();
+        }
+    };
+
     // =========================================================
     // RECURSIVE TREE NODE COMPONENT
     // =========================================================
@@ -347,17 +356,25 @@ export default function DiscipleshipTree() {
         const hasChildren = node.disciples && node.disciples.length > 0;
         const posInfo = POSITION_DETAILS[node.position] || POSITION_DETAILS.DISCIPLE;
         const isSeniorPastor = node.position === "EPIC_SENIOR_PASTOR" || node.generation === 1;
-        const isAssistantPastor = node.generation === 2 && (node.leaderCategory === "PASTOR" || node.position === "EPIC_ASSISTANT_PASTOR");
-        const isAdultLeader = node.generation === 2 && node.leaderCategory === "ADULT";
-        const isYouthLeader = node.generation === 2 && node.leaderCategory === "YOUTH";
+        const isLeader = node.generation === 2;
+        const isDisciple = node.generation >= 3;
+        const isAssistantPastor = isLeader && (node.leaderCategory === "PASTOR" || node.position === "EPIC_ASSISTANT_PASTOR");
+        const isAdultLeader = isLeader && node.leaderCategory === "ADULT";
+        const isYouthLeader = isLeader && node.leaderCategory === "YOUTH";
         const isSelected = selectedMember?.memberId === node.memberId;
+        const theme = node.colorTheme;
+
+        const cohortsCount = node.branchCohortsCount || 1;
+        const maxCapacity = node.maxCapacity || (isSeniorPastor ? 9999 : cohortsCount * MAX_DISCIPLES_PER_LEADER);
+        const isMatured = node.isBranchMatured || (isLeader && node.disciples.length >= maxCapacity);
 
         // Filter check
         const matchesSearch =
             !searchQuery ||
             node.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
             posInfo.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (node.ministry || "").toLowerCase().includes(searchQuery.toLowerCase());
+            (node.ministry || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (theme?.name || "").toLowerCase().includes(searchQuery.toLowerCase());
 
         const matchesHealth = healthFilter === "ALL" || node.health === healthFilter;
 
@@ -376,6 +393,10 @@ export default function DiscipleshipTree() {
                     className={`dt-node-card ${cardDensity === "COMPACT" ? "compact" : ""} health-${node.health} ${isSelected ? "selected" : ""} ${
                         !matchesSearch || !matchesHealth ? "opacity-40" : ""
                     }`}
+                    style={{
+                        borderTop: theme ? `5px solid ${theme.primary}` : undefined,
+                        boxShadow: isSelected && theme ? `0 0 0 4px ${theme.glow}` : undefined,
+                    }}
                     onClick={() => {
                         setSelectedMember(node);
                         setDrawerTab("PULSE");
@@ -395,6 +416,36 @@ export default function DiscipleshipTree() {
                                 : `GEN ${node.generation}`}
                         </span>
 
+                        {/* Leader Unique Branch Color Badge */}
+                        {isLeader && theme && (
+                            <span
+                                className="dt-branch-color-pill"
+                                style={{
+                                    backgroundColor: theme.pillBg,
+                                    color: theme.pillText,
+                                    borderColor: theme.border,
+                                }}
+                                title={`${theme.name} Pastoral Code`}
+                            >
+                                🎨 {theme.name}
+                            </span>
+                        )}
+
+                        {/* Disciple Inherited Shepherd Color Badge */}
+                        {isDisciple && theme && (
+                            <span
+                                className="dt-branch-shepherd-pill"
+                                style={{
+                                    backgroundColor: theme.pillBg,
+                                    color: theme.pillText,
+                                    borderColor: theme.border,
+                                }}
+                                title={`Accountable to ${node.parentLeaderName}`}
+                            >
+                                🌿 {node.parentLeaderName ? `${node.parentLeaderName.split(" ")[0]}'s Flock` : theme.name}
+                            </span>
+                        )}
+
                         <span className={`dt-health-badge ${node.health}`}>
                             {node.health === "HEALTHY" && "🟢 Healthy"}
                             {node.health === "ATTENTION" && "🟡 Attention"}
@@ -407,15 +458,18 @@ export default function DiscipleshipTree() {
                         <div
                             className="dt-node-avatar"
                             style={{
-                                background: isSeniorPastor
-                                    ? "linear-gradient(135deg, #7c3aed, #9333ea)"
-                                    : isAssistantPastor
-                                    ? "linear-gradient(135deg, #2563eb, #1d4ed8)"
-                                    : isAdultLeader
-                                    ? "linear-gradient(135deg, #7e22ce, #a855f7)"
-                                    : isYouthLeader
-                                    ? "linear-gradient(135deg, #ea580c, #f97316)"
-                                    : undefined,
+                                background: theme?.avatarGradient || (
+                                    isSeniorPastor
+                                        ? "linear-gradient(135deg, #7c3aed, #9333ea)"
+                                        : isAssistantPastor
+                                        ? "linear-gradient(135deg, #2563eb, #1d4ed8)"
+                                        : isAdultLeader
+                                        ? "linear-gradient(135deg, #7e22ce, #a855f7)"
+                                        : isYouthLeader
+                                        ? "linear-gradient(135deg, #ea580c, #f97316)"
+                                        : undefined
+                                ),
+                                border: isDisciple && theme ? `2px solid ${theme.primary}` : undefined,
                             }}
                         >
                             {isSeniorPastor ? "👑" : isAssistantPastor ? "⭐" : isAdultLeader ? "🌟" : isYouthLeader ? "🔥" : node.fullName.charAt(0)}
@@ -460,11 +514,19 @@ export default function DiscipleshipTree() {
                                 </span>
                             </div>
                         ) : (
-                            <div className={`dt-capacity-meter ${node.disciples.length >= MAX_DISCIPLES_PER_LEADER ? "full" : ""}`}>
+                            <div className={`dt-capacity-meter ${node.disciples.length >= maxCapacity ? "full" : ""}`}>
                                 <Users size={12} />
                                 <span>
-                                    {node.disciples.length}/{MAX_DISCIPLES_PER_LEADER} Disciples
+                                    {node.disciples.length}/{maxCapacity} Disciples
                                 </span>
+                                {cohortsCount > 1 && (
+                                    <span
+                                        className="dt-cohort-pill"
+                                        style={{ backgroundColor: theme?.pillBg, color: theme?.pillText }}
+                                    >
+                                        Cohort #{cohortsCount}
+                                    </span>
+                                )}
                             </div>
                         )}
 
@@ -474,7 +536,7 @@ export default function DiscipleshipTree() {
                         </div>
                     </div>
 
-                    {/* Quick Delegate / Adopt Action Button */}
+                    {/* Quick Delegate / Adopt / Multiply Action Button */}
                     <div style={{ marginTop: 8, display: "flex", gap: 6 }} onClick={(e) => e.stopPropagation()}>
                         {isSeniorPastor ? (
                             <button
@@ -498,7 +560,32 @@ export default function DiscipleshipTree() {
                             >
                                 <Plus size={12} /> Delegate EPIC Leader (Unlimited)
                             </button>
-                        ) : node.disciples.length < MAX_DISCIPLES_PER_LEADER ? (
+                        ) : isLeader && isMatured ? (
+                            <button
+                                type="button"
+                                className="dt-btn-add-cohort"
+                                style={{
+                                    flex: 1,
+                                    fontSize: 11,
+                                    fontWeight: 700,
+                                    padding: "5px 8px",
+                                    borderRadius: 6,
+                                    border: `1px solid ${theme?.primary || "#059669"}`,
+                                    background: theme?.primary || "#059669",
+                                    color: "#ffffff",
+                                    cursor: "pointer",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    gap: 4,
+                                    boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                                }}
+                                onClick={(e) => handleAddBranchCohort(node, e)}
+                                title="Branch is fully matured! Click to add another branch cohort to multiply."
+                            >
+                                <Sparkles size={11} /> 🌿 + Add Another Branch (Cohort #{cohortsCount + 1})
+                            </button>
+                        ) : node.disciples.length < maxCapacity ? (
                             <button
                                 type="button"
                                 style={{
@@ -518,11 +605,11 @@ export default function DiscipleshipTree() {
                                 }}
                                 onClick={(e) => handleOpenAdoptModal(node, e)}
                             >
-                                <Plus size={11} /> Adopt Disciple ({node.disciples.length}/3)
+                                <Plus size={11} /> Adopt Disciple ({node.disciples.length}/{maxCapacity})
                             </button>
                         ) : (
-                            <div style={{ fontSize: 10, color: "#94a3b8", textAlign: "center", width: "100%", padding: "2px 0" }}>
-                                Full Capacity (3/3 Disciples)
+                            <div style={{ fontSize: 10, color: "#059669", fontWeight: 700, textAlign: "center", width: "100%", padding: "2px 0" }}>
+                                🌿 Triad Matured ({maxCapacity}/{maxCapacity} Disciples)
                             </div>
                         )}
                     </div>
@@ -543,7 +630,10 @@ export default function DiscipleshipTree() {
                 {/* Branch Line Downward */}
                 {hasDisplayedChildren && !isCollapsed && (
                     <>
-                        <div className="dt-branch-connector-down" />
+                        <div
+                            className="dt-branch-connector-down"
+                            style={{ backgroundColor: theme?.primary || "#cbd5e1" }}
+                        />
                         <div
                             className={`dt-children-container ${
                                 isSeniorPastor && treeLayoutMode === "FIT_GRID" ? "fit-grid-mode" : ""
@@ -551,7 +641,10 @@ export default function DiscipleshipTree() {
                         >
                             {displayedChildren.map((child) => (
                                 <div key={child.memberId} style={{ position: "relative" }}>
-                                    <div className="dt-child-connector-up" />
+                                    <div
+                                        className="dt-child-connector-up"
+                                        style={{ backgroundColor: child.colorTheme?.primary || "#cbd5e1" }}
+                                    />
                                     {renderTreeNode(child)}
                                 </div>
                             ))}
@@ -562,16 +655,18 @@ export default function DiscipleshipTree() {
         );
     };
 
-    // Helper for Flow View: Leader Card with 3-Slot Discipleship Grid
+    // Helper for Flow View: Leader Card with Triad Discipleship Cohorts & Color Themes
     const renderFlowLeaderCard = (leader: DiscipleshipMemberNode) => {
         const isSelected = selectedMember?.memberId === leader.memberId;
+        const theme = leader.colorTheme;
         const cat = leader.leaderCategory || "OTHER";
         const avatarGradient =
-            cat === "PASTOR"
+            theme?.avatarGradient ||
+            (cat === "PASTOR"
                 ? "linear-gradient(135deg, #2563eb, #1d4ed8)"
                 : cat === "ADULT"
                 ? "linear-gradient(135deg, #7e22ce, #9333ea)"
-                : "linear-gradient(135deg, #ea580c, #c2410c)";
+                : "linear-gradient(135deg, #ea580c, #c2410c)");
         const icon = cat === "PASTOR" ? "⭐" : cat === "ADULT" ? "🌟" : "🔥";
         const roleClass = cat === "PASTOR" ? "pastor" : cat === "ADULT" ? "adult" : cat === "YOUTH" ? "youth" : "other";
 
@@ -580,16 +675,25 @@ export default function DiscipleshipTree() {
             !searchQuery ||
             leader.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
             (leader.ministry || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (theme?.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
             leader.disciples.some((d) => d.fullName.toLowerCase().includes(searchQuery.toLowerCase()));
 
         const matchesHealth = healthFilter === "ALL" || leader.health === healthFilter;
         if (!matchesSearch || !matchesHealth) return null;
 
-        // Build array of 3 slots (1 leader for 3 persons only)
-        const slots = [0, 1, 2];
+        const cohortsCount = leader.branchCohortsCount || 1;
+        const maxCapacity = leader.maxCapacity || cohortsCount * MAX_DISCIPLES_PER_LEADER;
+        const isMatured = leader.isBranchMatured || leader.disciples.length >= maxCapacity;
 
         return (
-            <div key={leader.memberId} className={`dt-flow-leader-card health-${leader.health} ${isSelected ? "selected" : ""}`}>
+            <div
+                key={leader.memberId}
+                className={`dt-flow-leader-card health-${leader.health} ${isSelected ? "selected" : ""}`}
+                style={{
+                    borderLeft: `6px solid ${theme?.primary || "#2563eb"}`,
+                    boxShadow: isSelected && theme ? `0 0 0 4px ${theme.glow}` : undefined,
+                }}
+            >
                 {/* Top row: Leader profile & actions */}
                 <div className="dt-flow-leader-top">
                     <div
@@ -603,7 +707,21 @@ export default function DiscipleshipTree() {
                             {icon}
                         </div>
                         <div className="dt-flow-leader-name-wrap">
-                            <h4>{leader.fullName}</h4>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                                <h4>{leader.fullName}</h4>
+                                {theme && (
+                                    <span
+                                        className="dt-branch-color-pill"
+                                        style={{
+                                            backgroundColor: theme.pillBg,
+                                            color: theme.pillText,
+                                            borderColor: theme.border,
+                                        }}
+                                    >
+                                        🎨 {theme.name} Branch
+                                    </span>
+                                )}
+                            </div>
                             <div className="dt-flow-leader-tags">
                                 <span className={`dt-flow-role-pill ${roleClass}`}>
                                     {leader.leaderCategoryLabel || POSITION_DETAILS[leader.position]?.label}
@@ -612,15 +730,48 @@ export default function DiscipleshipTree() {
                                 <span className={`dt-health-badge ${leader.health}`}>
                                     {leader.health === "HEALTHY" ? "🟢 Healthy" : leader.health === "ATTENTION" ? "🟡 Attention" : "🔴 At-Risk"}
                                 </span>
+                                {isMatured && (
+                                    <span
+                                        style={{
+                                            fontSize: 11,
+                                            fontWeight: 800,
+                                            color: "#059669",
+                                            background: "#d1fae5",
+                                            padding: "2px 8px",
+                                            borderRadius: 6,
+                                            display: "inline-flex",
+                                            alignItems: "center",
+                                            gap: 4,
+                                        }}
+                                    >
+                                        🏆 Branch Matured
+                                    </span>
+                                )}
                             </div>
                         </div>
                     </div>
 
                     {/* Stats & Pastoral Controls */}
                     <div className="dt-flow-leader-stats">
-                        <div className={`dt-capacity-meter ${leader.disciples.length >= MAX_DISCIPLES_PER_LEADER ? "full" : ""}`}>
+                        <div className={`dt-capacity-meter ${leader.disciples.length >= maxCapacity ? "full" : ""}`}>
                             <Users size={12} />
-                            <span>{leader.disciples.length}/{MAX_DISCIPLES_PER_LEADER} Disciples</span>
+                            <span>{leader.disciples.length}/{maxCapacity} Disciples</span>
+                            {cohortsCount > 1 && (
+                                <span
+                                    className="dt-cohort-tag"
+                                    style={{
+                                        backgroundColor: theme?.pillBg,
+                                        color: theme?.pillText,
+                                        marginLeft: 4,
+                                        padding: "1px 6px",
+                                        borderRadius: 4,
+                                        fontSize: 10,
+                                        fontWeight: 800,
+                                    }}
+                                >
+                                    {cohortsCount} Branches
+                                </span>
+                            )}
                         </div>
                         <div className="dt-spiritual-stat">
                             <span>📖 {leader.pulse?.wordDaysWeekly || 5}d Word</span>
@@ -658,7 +809,24 @@ export default function DiscipleshipTree() {
                             >
                                 <Calendar size={12} /> Log Meeting
                             </button>
-                            {leader.disciples.length < MAX_DISCIPLES_PER_LEADER && (
+
+                            {/* + Add Another Branch when branch matured */}
+                            {isMatured ? (
+                                <button
+                                    type="button"
+                                    className="dt-flow-btn green-multiply"
+                                    style={{
+                                        background: theme?.primary || "#059669",
+                                        color: "#ffffff",
+                                        border: "none",
+                                        fontWeight: 700,
+                                    }}
+                                    onClick={(e) => handleAddBranchCohort(leader, e)}
+                                    title="Current branch triad is fully matured! Add another branch cohort to multiply."
+                                >
+                                    <Sparkles size={12} /> + Add Another Branch (Cohort #{cohortsCount + 1})
+                                </button>
+                            ) : leader.disciples.length < maxCapacity && (
                                 <button
                                     type="button"
                                     className="dt-flow-btn purple"
@@ -671,66 +839,162 @@ export default function DiscipleshipTree() {
                     </div>
                 </div>
 
-                {/* Accountable Disciples Box (Strict 1:3 model) */}
+                {/* Accountable Disciples Box (Strict 1:3 model per branch cohort) */}
                 <div className="dt-flow-disciples-box">
                     <div className="dt-flow-disciples-header">
-                        <span>
-                            <Users size={12} /> Accountable Disciples ({leader.disciples.length}/{MAX_DISCIPLES_PER_LEADER} Limit · No Duplication)
-                        </span>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: leader.disciples.length === 3 ? "#059669" : "#64748b" }}>
-                            {leader.disciples.length === 3 ? "✅ Full 1:3 Multiplication Capacity" : `🌱 ${3 - leader.disciples.length} Available Discipleship Slot(s)`}
-                        </span>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span>
+                                <Users size={12} /> Accountable Disciples ({leader.disciples.length}/{maxCapacity} · 1:3 Triad Multiplication)
+                            </span>
+                            {theme && (
+                                <span style={{ fontSize: 11, fontWeight: 700, color: theme.primary }}>
+                                    ● {theme.name} Code
+                                </span>
+                            )}
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: isMatured ? "#059669" : "#64748b" }}>
+                                {isMatured
+                                    ? `🏆 Full Multiplication (${leader.disciples.length}/${maxCapacity})`
+                                    : `🌱 ${maxCapacity - leader.disciples.length} Slot(s) Available in Cohort #${cohortsCount}`}
+                            </span>
+                            {isMatured && (
+                                <button
+                                    type="button"
+                                    style={{
+                                        fontSize: 11,
+                                        fontWeight: 700,
+                                        color: "#ffffff",
+                                        background: theme?.primary || "#059669",
+                                        border: "none",
+                                        padding: "3px 8px",
+                                        borderRadius: 6,
+                                        cursor: "pointer",
+                                    }}
+                                    onClick={(e) => handleAddBranchCohort(leader, e)}
+                                >
+                                    + Add Branch #{cohortsCount + 1}
+                                </button>
+                            )}
+                        </div>
                     </div>
 
-                    <div className="dt-flow-disciples-grid">
-                        {slots.map((idx) => {
-                            const disciple = leader.disciples[idx];
-                            if (disciple) {
-                                return (
+                    {/* Render Cohorts */}
+                    {Array.from({ length: cohortsCount }, (_, cohortIdx) => {
+                        const cohortNum = cohortIdx + 1;
+                        const startIndex = cohortIdx * MAX_DISCIPLES_PER_LEADER;
+                        const slotIndices = [startIndex, startIndex + 1, startIndex + 2];
+                        const cohortDisciples = leader.disciples.slice(startIndex, startIndex + MAX_DISCIPLES_PER_LEADER);
+                        const isCohortFull = cohortDisciples.length === MAX_DISCIPLES_PER_LEADER;
+
+                        return (
+                            <div key={`cohort-${cohortNum}`} style={{ marginBottom: cohortsCount > 1 ? 16 : 0 }}>
+                                {cohortsCount > 1 && (
                                     <div
-                                        key={disciple.memberId}
-                                        className={`dt-flow-disciple-card health-${disciple.health}`}
-                                        onClick={() => {
-                                            setSelectedMember(disciple);
-                                            setDrawerTab("PULSE");
+                                        style={{
+                                            display: "flex",
+                                            justifyContent: "space-between",
+                                            alignItems: "center",
+                                            marginBottom: 8,
+                                            padding: "4px 8px",
+                                            background: "#f8fafc",
+                                            borderRadius: 6,
+                                            border: "1px solid #e2e8f0",
                                         }}
-                                        title="Click to view disciple pulse & devotions"
                                     >
-                                        <div className="dt-flow-disciple-top">
-                                            <div className="dt-flow-disciple-avatar">
-                                                {disciple.fullName.charAt(0)}
-                                            </div>
-                                            <div className="dt-flow-disciple-meta">
-                                                <strong title={disciple.fullName}>{disciple.fullName}</strong>
-                                                <small>{disciple.ministryRole || disciple.ministry || "General Ministry"} · Gen {disciple.generation}</small>
-                                            </div>
-                                        </div>
-                                        <div className="dt-flow-disciple-footer">
-                                            <span>📖 {disciple.pulse?.wordDaysWeekly || 5}d · 🙏 {disciple.pulse?.prayerDaysWeekly || 6}d</span>
-                                            <span style={{ fontSize: 10, color: "#047857", fontWeight: 700, background: "#ecfdf5", padding: "1px 5px", borderRadius: 4 }}>
-                                                🟢 {disciple.attendanceRate || 92}% Att.
-                                            </span>
-                                            <span className={`dt-health-badge ${disciple.health}`} style={{ fontSize: 10, padding: "2px 6px" }}>
-                                                {disciple.health === "HEALTHY" ? "🟢 Healthy" : disciple.health === "ATTENTION" ? "🟡 Attention" : "🔴 At-Risk"}
-                                            </span>
-                                        </div>
+                                        <span style={{ fontSize: 11, fontWeight: 800, color: "#334155" }}>
+                                            🌿 Branch Cohort #{cohortNum} {isCohortFull ? "(3/3 Matured Triad)" : `(${cohortDisciples.length}/3 Active)`}
+                                        </span>
+                                        <span style={{ fontSize: 10, fontWeight: 700, color: isCohortFull ? "#059669" : "#64748b" }}>
+                                            {isCohortFull ? "✅ Matured" : "🌱 Multiplying"}
+                                        </span>
                                     </div>
-                                );
-                            } else {
-                                return (
-                                    <div
-                                        key={`slot-${idx}`}
-                                        className="dt-flow-disciple-empty clickable"
-                                        onClick={(e) => handleOpenAdoptModal(leader, e)}
-                                        title="Assign real church member to this disciple slot"
-                                    >
-                                        <Plus size={16} />
-                                        <span>+ Assign Disciple (Slot {idx + 1}/3)</span>
-                                    </div>
-                                );
-                            }
-                        })}
-                    </div>
+                                )}
+
+                                <div className="dt-flow-disciples-grid">
+                                    {slotIndices.map((absIdx, relIdx) => {
+                                        const disciple = leader.disciples[absIdx];
+                                        if (disciple) {
+                                            return (
+                                                <div
+                                                    key={disciple.memberId}
+                                                    className={`dt-flow-disciple-card health-${disciple.health}`}
+                                                    style={{
+                                                        borderTop: `3px solid ${theme?.primary || "#2563eb"}`,
+                                                        borderColor: theme?.border || "#cbd5e1",
+                                                    }}
+                                                    onClick={() => {
+                                                        setSelectedMember(disciple);
+                                                        setDrawerTab("PULSE");
+                                                    }}
+                                                    title={`Accountable Disciple of ${leader.fullName} (Click to inspect spiritual walk)`}
+                                                >
+                                                    <div className="dt-flow-disciple-top">
+                                                        <div
+                                                            className="dt-flow-disciple-avatar"
+                                                            style={{
+                                                                background: theme?.avatarGradient || "linear-gradient(135deg, #1e3a8a, #3b82f6)",
+                                                                border: `2px solid ${theme?.primary || "#2563eb"}`,
+                                                            }}
+                                                        >
+                                                            {disciple.fullName.charAt(0)}
+                                                        </div>
+                                                        <div className="dt-flow-disciple-meta">
+                                                            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                                                                <strong title={disciple.fullName}>{disciple.fullName}</strong>
+                                                                {theme && (
+                                                                    <span
+                                                                        style={{
+                                                                            fontSize: 9,
+                                                                            fontWeight: 800,
+                                                                            padding: "1px 5px",
+                                                                            borderRadius: 4,
+                                                                            backgroundColor: theme.pillBg,
+                                                                            color: theme.pillText,
+                                                                            border: `1px solid ${theme.border}`,
+                                                                        }}
+                                                                    >
+                                                                        🌿 {leader.fullName.split(" ")[0]}&apos;s Flock
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <small>{disciple.ministryRole || disciple.ministry || "General Ministry"} · Gen {disciple.generation}</small>
+                                                        </div>
+                                                    </div>
+                                                    <div className="dt-flow-disciple-footer">
+                                                        <span>📖 {disciple.pulse?.wordDaysWeekly || 5}d · 🙏 {disciple.pulse?.prayerDaysWeekly || 6}d</span>
+                                                        <span style={{ fontSize: 10, color: "#047857", fontWeight: 700, background: "#ecfdf5", padding: "1px 5px", borderRadius: 4 }}>
+                                                            🟢 {disciple.attendanceRate || 92}% Att.
+                                                        </span>
+                                                        <span className={`dt-health-badge ${disciple.health}`} style={{ fontSize: 10, padding: "2px 6px" }}>
+                                                            {disciple.health === "HEALTHY" ? "🟢 Healthy" : disciple.health === "ATTENTION" ? "🟡 Attention" : "🔴 At-Risk"}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        } else {
+                                            return (
+                                                <div
+                                                    key={`slot-${absIdx}`}
+                                                    className="dt-flow-disciple-empty clickable"
+                                                    style={{
+                                                        borderColor: theme?.border || "#93c5fd",
+                                                    }}
+                                                    onClick={(e) => handleOpenAdoptModal(leader, e)}
+                                                    title={`Assign real church member to Slot ${relIdx + 1} of Branch #${cohortNum}`}
+                                                >
+                                                    <Plus size={16} color={theme?.primary || "#2563eb"} />
+                                                    <span style={{ color: theme?.primary || "#2563eb", fontWeight: 700 }}>
+                                                        + Assign Disciple (Branch #{cohortNum} · Slot {relIdx + 1}/3)
+                                                    </span>
+                                                </div>
+                                            );
+                                        }
+                                    })}
+                                </div>
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
         );

@@ -29,6 +29,344 @@ export const SENIOR_PASTOR_TITLE = "EPIC SENIOR PASTOR";
  */
 export const MAX_DISCIPLES_PER_LEADER = 3;
 
+export interface LeaderColorTheme {
+    id: string;
+    name: string;
+    primary: string;
+    secondary: string;
+    bgSoft: string;
+    border: string;
+    avatarGradient: string;
+    pillBg: string;
+    pillText: string;
+    dotColor: string;
+    glow: string;
+}
+
+/**
+ * 22 Rich, Distinct Pastoral Themes for Leaders & Their Flock.
+ * Every Assistant Pastor and Church Leader has their own unique color code.
+ * Disciples inherit and wear their assigned leader's exact theme.
+ */
+export const LEADER_COLOR_PALETTE: LeaderColorTheme[] = [
+    {
+        id: "royal-sapphire",
+        name: "Royal Sapphire",
+        primary: "#2563EB",
+        secondary: "#1D4ED8",
+        bgSoft: "#EFF6FF",
+        border: "#93C5FD",
+        avatarGradient: "linear-gradient(135deg, #2563eb, #1d4ed8)",
+        pillBg: "#DBEAFE",
+        pillText: "#1E40AF",
+        dotColor: "#3B82F6",
+        glow: "rgba(37, 99, 235, 0.28)",
+    },
+    {
+        id: "emerald-grace",
+        name: "Emerald Grace",
+        primary: "#059669",
+        secondary: "#047857",
+        bgSoft: "#ECFDF5",
+        border: "#6EE7B7",
+        avatarGradient: "linear-gradient(135deg, #059669, #047857)",
+        pillBg: "#D1FAE5",
+        pillText: "#065F46",
+        dotColor: "#10B981",
+        glow: "rgba(5, 150, 105, 0.28)",
+    },
+    {
+        id: "amethyst-honor",
+        name: "Amethyst Honor",
+        primary: "#7C3AED",
+        secondary: "#6D28D9",
+        bgSoft: "#F5F3FF",
+        border: "#C4B5FD",
+        avatarGradient: "linear-gradient(135deg, #7c3aed, #6d28d9)",
+        pillBg: "#EDE9FE",
+        pillText: "#5B21B6",
+        dotColor: "#8B5CF6",
+        glow: "rgba(124, 58, 237, 0.28)",
+    },
+    {
+        id: "crimson-covenant",
+        name: "Crimson Covenant",
+        primary: "#DC2626",
+        secondary: "#B91C1C",
+        bgSoft: "#FEF2F2",
+        border: "#FCA5A5",
+        avatarGradient: "linear-gradient(135deg, #dc2626, #b91c1c)",
+        pillBg: "#FEE2E2",
+        pillText: "#991B1B",
+        dotColor: "#EF4444",
+        glow: "rgba(220, 38, 38, 0.28)",
+    },
+    {
+        id: "golden-topaz",
+        name: "Golden Topaz",
+        primary: "#D97706",
+        secondary: "#B45309",
+        bgSoft: "#FFFBEB",
+        border: "#FCD34D",
+        avatarGradient: "linear-gradient(135deg, #d97706, #b45309)",
+        pillBg: "#FEF3C7",
+        pillText: "#92400E",
+        dotColor: "#F59E0B",
+        glow: "rgba(217, 119, 6, 0.28)",
+    },
+    {
+        id: "cyan-breeze",
+        name: "Cyan Breeze",
+        primary: "#0891B2",
+        secondary: "#0E7490",
+        bgSoft: "#ECFEFF",
+        border: "#67E8F9",
+        avatarGradient: "linear-gradient(135deg, #0891b2, #0e7490)",
+        pillBg: "#CFFAFE",
+        pillText: "#155E75",
+        dotColor: "#06B6D4",
+        glow: "rgba(8, 145, 178, 0.28)",
+    },
+    {
+        id: "rose-sharon",
+        name: "Rose Sharon",
+        primary: "#E11D48",
+        secondary: "#BE123C",
+        bgSoft: "#FFF1F2",
+        border: "#FDA4AF",
+        avatarGradient: "linear-gradient(135deg, #e11d48, #be123c)",
+        pillBg: "#FFE4E6",
+        pillText: "#9F1239",
+        dotColor: "#F43F5E",
+        glow: "rgba(225, 29, 72, 0.28)",
+    },
+    {
+        id: "teal-harmony",
+        name: "Teal Living Water",
+        primary: "#0D9488",
+        secondary: "#0F766E",
+        bgSoft: "#F0FDFA",
+        border: "#5EEAD4",
+        avatarGradient: "linear-gradient(135deg, #0d9488, #0f766e)",
+        pillBg: "#CCFBF1",
+        pillText: "#115E59",
+        dotColor: "#14B8A6",
+        glow: "rgba(13, 148, 136, 0.28)",
+    },
+    {
+        id: "coral-harvest",
+        name: "Coral Harvest",
+        primary: "#EA580C",
+        secondary: "#C2410C",
+        bgSoft: "#FFF7ED",
+        border: "#FDBA74",
+        avatarGradient: "linear-gradient(135deg, #ea580c, #c2410c)",
+        pillBg: "#FFEDD5",
+        pillText: "#9A3412",
+        dotColor: "#F97316",
+        glow: "rgba(234, 88, 12, 0.28)",
+    },
+    {
+        id: "indigo-majesty",
+        name: "Indigo Majesty",
+        primary: "#4F46E5",
+        secondary: "#4338CA",
+        bgSoft: "#EEF2FF",
+        border: "#A5B4FC",
+        avatarGradient: "linear-gradient(135deg, #4f46e5, #4338ca)",
+        pillBg: "#E0E7FF",
+        pillText: "#3730A3",
+        dotColor: "#6366F1",
+        glow: "rgba(79, 70, 229, 0.28)",
+    },
+    {
+        id: "tanzanite-spirit",
+        name: "Tanzanite Spirit",
+        primary: "#6366F1",
+        secondary: "#4F46E5",
+        bgSoft: "#EEF2FF",
+        border: "#C7D2FE",
+        avatarGradient: "linear-gradient(135deg, #6366f1, #4f46e5)",
+        pillBg: "#E0E7FF",
+        pillText: "#312E81",
+        dotColor: "#818CF8",
+        glow: "rgba(99, 102, 241, 0.28)",
+    },
+    {
+        id: "ruby-fire",
+        name: "Ruby Fire",
+        primary: "#B91C1C",
+        secondary: "#991B1B",
+        bgSoft: "#FEF2F2",
+        border: "#FCA5A5",
+        avatarGradient: "linear-gradient(135deg, #b91c1c, #991b1b)",
+        pillBg: "#FEE2E2",
+        pillText: "#7F1D1D",
+        dotColor: "#DC2626",
+        glow: "rgba(185, 28, 28, 0.28)",
+    },
+    {
+        id: "forest-jade",
+        name: "Forest Jade",
+        primary: "#15803D",
+        secondary: "#166534",
+        bgSoft: "#F0FDF4",
+        border: "#86EFAC",
+        avatarGradient: "linear-gradient(135deg, #15803d, #166534)",
+        pillBg: "#DCFCE7",
+        pillText: "#14532D",
+        dotColor: "#22C55E",
+        glow: "rgba(21, 128, 61, 0.28)",
+    },
+    {
+        id: "sky-azure",
+        name: "Sky Azure",
+        primary: "#0284C7",
+        secondary: "#0369A1",
+        bgSoft: "#F0F9FF",
+        border: "#7DD3FC",
+        avatarGradient: "linear-gradient(135deg, #0284c7, #0369a1)",
+        pillBg: "#E0F2FE",
+        pillText: "#075985",
+        dotColor: "#38BDF8",
+        glow: "rgba(2, 132, 199, 0.28)",
+    },
+    {
+        id: "fuchsia-joy",
+        name: "Fuchsia Joy",
+        primary: "#C026D3",
+        secondary: "#A21CAF",
+        bgSoft: "#FDF4FF",
+        border: "#F0ABFC",
+        avatarGradient: "linear-gradient(135deg, #c026d3, #a21caf)",
+        pillBg: "#FAE8FF",
+        pillText: "#86198F",
+        dotColor: "#E879F9",
+        glow: "rgba(192, 38, 211, 0.28)",
+    },
+    {
+        id: "warm-bronze",
+        name: "Warm Bronze",
+        primary: "#B45309",
+        secondary: "#92400E",
+        bgSoft: "#FFFBEB",
+        border: "#FDE68A",
+        avatarGradient: "linear-gradient(135deg, #b45309, #92400e)",
+        pillBg: "#FEF3C7",
+        pillText: "#78350F",
+        dotColor: "#F59E0B",
+        glow: "rgba(180, 83, 9, 0.28)",
+    },
+    {
+        id: "deep-violet",
+        name: "Deep Violet",
+        primary: "#9333EA",
+        secondary: "#7E22CE",
+        bgSoft: "#FAF5FF",
+        border: "#E9D5FF",
+        avatarGradient: "linear-gradient(135deg, #9333ea, #7e22ce)",
+        pillBg: "#F3E8FF",
+        pillText: "#6B21A8",
+        dotColor: "#A855F7",
+        glow: "rgba(147, 51, 234, 0.28)",
+    },
+    {
+        id: "mountain-olive",
+        name: "Mountain Olive",
+        primary: "#65A30D",
+        secondary: "#4D7C0F",
+        bgSoft: "#F7FEE7",
+        border: "#BEF264",
+        avatarGradient: "linear-gradient(135deg, #65a30d, #4d7c0f)",
+        pillBg: "#ECFCCB",
+        pillText: "#365314",
+        dotColor: "#84CC16",
+        glow: "rgba(101, 163, 13, 0.28)",
+    },
+    {
+        id: "garnet-cornerstone",
+        name: "Garnet Cornerstone",
+        primary: "#991B1B",
+        secondary: "#7F1D1D",
+        bgSoft: "#FEF2F2",
+        border: "#FECACA",
+        avatarGradient: "linear-gradient(135deg, #991b1b, #7f1d1d)",
+        pillBg: "#FEE2E2",
+        pillText: "#450A0A",
+        dotColor: "#EF4444",
+        glow: "rgba(153, 27, 27, 0.28)",
+    },
+    {
+        id: "turquoise-spirit",
+        name: "Turquoise Revival",
+        primary: "#0F766E",
+        secondary: "#115E59",
+        bgSoft: "#F0FDFA",
+        border: "#99F6E4",
+        avatarGradient: "linear-gradient(135deg, #0f766e, #115e59)",
+        pillBg: "#CCFBF1",
+        pillText: "#134E4A",
+        dotColor: "#14B8A6",
+        glow: "rgba(15, 118, 110, 0.28)",
+    },
+    {
+        id: "sun-amber",
+        name: "Sun Amber",
+        primary: "#CA8A04",
+        secondary: "#A16207",
+        bgSoft: "#FEFCE8",
+        border: "#FEF08A",
+        avatarGradient: "linear-gradient(135deg, #ca8a04, #a16207)",
+        pillBg: "#FEF9C3",
+        pillText: "#713F12",
+        dotColor: "#EAB308",
+        glow: "rgba(202, 138, 4, 0.28)",
+    },
+    {
+        id: "cobalt-shield",
+        name: "Cobalt Shield",
+        primary: "#1E40AF",
+        secondary: "#1E3A8A",
+        bgSoft: "#EFF6FF",
+        border: "#BFDBFE",
+        avatarGradient: "linear-gradient(135deg, #1e40af, #1e3a8a)",
+        pillBg: "#DBEAFE",
+        pillText: "#172554",
+        dotColor: "#2563EB",
+        glow: "rgba(30, 64, 175, 0.28)",
+    },
+];
+
+export function getLeaderColorTheme(leaderId: number, leaderName = "", index = -1): LeaderColorTheme {
+    // Overseer Gen 1 theme
+    if (leaderId === 0 || leaderName.toLowerCase().includes("aviguetero")) {
+        return {
+            id: "royal-overseer",
+            name: "Royal Overseer",
+            primary: "#7C3AED",
+            secondary: "#6D28D9",
+            bgSoft: "#F5F3FF",
+            border: "#C4B5FD",
+            avatarGradient: "linear-gradient(135deg, #7c3aed, #9333ea)",
+            pillBg: "#EDE9FE",
+            pillText: "#5B21B6",
+            dotColor: "#8B5CF6",
+            glow: "rgba(124, 58, 237, 0.35)",
+        };
+    }
+
+    if (index >= 0) {
+        return LEADER_COLOR_PALETTE[index % LEADER_COLOR_PALETTE.length];
+    }
+
+    let hash = Math.abs(leaderId || 1);
+    for (let i = 0; i < leaderName.length; i++) {
+        hash = (hash * 31 + leaderName.charCodeAt(i)) & 0xffffffff;
+    }
+    const idx = Math.abs(hash) % LEADER_COLOR_PALETTE.length;
+    return LEADER_COLOR_PALETTE[idx];
+}
+
 export const POSITION_DETAILS: Record<
     ChurchPosition,
     { label: string; tier: number; badgeColor: string; bgSoft: string; icon: string; shortTitle: string; description: string }
@@ -179,6 +517,11 @@ export interface DiscipleshipMemberNode {
     attendedSundaysCount?: number;
     ministryRole?: string;
     ministryCommitmentRating?: number;
+    colorTheme?: LeaderColorTheme;
+    branchCohortsCount?: number;
+    isBranchMatured?: boolean;
+    maxCapacity?: number;
+    cohortIndex?: number;
 }
 
 export interface RealChurchMember {
@@ -203,6 +546,7 @@ const STORAGE_KEYS = {
     DEVOTIONS: "@epic_discipleship_devotions_v6",
     THOUGHTS: "@epic_discipleship_thoughts_v6",
     PULSE: "@epic_discipleship_pulse_v6",
+    LEADER_COHORTS: "@epic_leader_branch_cohorts_v1",
 };
 
 const CLOUD_SYNC_ENDPOINT = "https://epic-api-m2av.onrender.com/api/public-community";
@@ -213,6 +557,7 @@ export interface CloudDiscipleshipPayload {
     pulses: Record<string, SpiritualPulse>;
     thoughts: Record<string, DiscipleThought[]>;
     encounters: DiscipleshipEncounter[];
+    leaderCohorts: Record<string, number>;
 }
 
 /**
@@ -225,6 +570,7 @@ export async function pullDiscipleshipCloudSync(): Promise<CloudDiscipleshipPayl
         pulses: {},
         thoughts: {},
         encounters: [],
+        leaderCohorts: {},
     };
 
     try {
@@ -251,6 +597,20 @@ export async function pullDiscipleshipCloudSync(): Promise<CloudDiscipleshipPayl
                             const nameKey = content.leaderName.toLowerCase().trim();
                             result.leaderBranches[nameKey] = content.branches;
                             result.leaderBranches[nameKey.replace(/[^a-z0-9]/g, "_")] = content.branches;
+                        }
+                    }
+                } else if (title.startsWith("LEADER_COHORTS_")) {
+                    const rawKey = title.replace("LEADER_COHORTS_", "").trim();
+                    if (content?.cohortsCount) {
+                        const count = Number(content.cohortsCount);
+                        result.leaderCohorts[rawKey] = count;
+                        if (content.leaderId) {
+                            result.leaderCohorts[String(content.leaderId)] = count;
+                        }
+                        if (content.leaderName) {
+                            const nameKey = content.leaderName.toLowerCase().trim();
+                            result.leaderCohorts[nameKey] = count;
+                            result.leaderCohorts[nameKey.replace(/[^a-z0-9]/g, "_")] = count;
                         }
                     }
                 } else if (title.startsWith("MEMBER_DEVOTION_")) {
@@ -561,11 +921,81 @@ export const discipleshipWebService = {
     },
 
     /**
+     * Get branch cohorts per leader (Multiplication: 1 branch cohort = 3 disciples)
+     */
+    getLeaderBranchCohorts(): Record<number, number> {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEYS.LEADER_COHORTS);
+            if (raw) return JSON.parse(raw);
+        } catch {}
+        return {};
+    },
+
+    /**
+     * Save branch cohorts
+     */
+    saveLeaderBranchCohorts(cohorts: Record<number, number>): void {
+        try {
+            localStorage.setItem(STORAGE_KEYS.LEADER_COHORTS, JSON.stringify(cohorts));
+        } catch {}
+    },
+
+    /**
+     * Multiplication: Add another branch cohort when current branch has matured
+     * Unlocks the next 3 disciple slots while preserving the sacred 1:3 triad relationship.
+     */
+    addBranchCohort(leaderId: number, leaderName = ""): { success: boolean; cohortsCount: number; message: string } {
+        const cohorts = this.getLeaderBranchCohorts();
+        const currentCount = cohorts[leaderId] || 1;
+        const newCount = currentCount + 1;
+        cohorts[leaderId] = newCount;
+        this.saveLeaderBranchCohorts(cohorts);
+
+        const leaderObj = this.getCachedMemberById(leaderId);
+        const effectiveName = leaderName || leaderObj?.fullName || `Leader #${leaderId}`;
+
+        // Sync to Render cloud database so EPIC Mobile receives the new branch cohort immediately
+        void pushDiscipleshipCloudSync({
+            authorName: "Ptr. Ronnel M. Aviguetero",
+            authorRole: "EPIC_SENIOR_PASTOR",
+            title: `LEADER_COHORTS_${leaderId}`,
+            content: {
+                leaderId,
+                leaderName: effectiveName,
+                cohortsCount: newCount,
+                updatedAt: new Date().toISOString(),
+            },
+        });
+
+        if (leaderObj?.fullName) {
+            const slug = leaderObj.fullName.toLowerCase().trim().replace(/[^a-z0-9]/g, "_");
+            void pushDiscipleshipCloudSync({
+                authorName: "Ptr. Ronnel M. Aviguetero",
+                authorRole: "EPIC_SENIOR_PASTOR",
+                title: `LEADER_COHORTS_${slug}`,
+                content: {
+                    leaderId,
+                    leaderName: leaderObj.fullName,
+                    cohortsCount: newCount,
+                    updatedAt: new Date().toISOString(),
+                },
+            });
+        }
+
+        return {
+            success: true,
+            cohortsCount: newCount,
+            message: `🌿 Discipleship Multiplication: Branch #${newCount} added for ${effectiveName}! Capacity expanded to ${newCount * MAX_DISCIPLES_PER_LEADER} disciples.`,
+        };
+    },
+
+    /**
      * Pastoral Control: Assign or adopt an accountable disciple to a leader.
      * 
      * IMPORTANT RULE:
      * - The Admin / Senior Pastor account has the authority to delegate their leaders and pastors WITHOUT LIMITS.
-     * - For ordinary leaders, the strict 1:3 limit (MAX_DISCIPLES_PER_LEADER = 3) is strictly enforced.
+     * - For ordinary leaders, each branch cohort has exactly 3 disciples (MAX_DISCIPLES_PER_LEADER = 3).
+     *   Capacity expands to 6, 9, etc. when additional branches are added upon maturity.
      * - Zero duplication: A disciple belongs to one leader at a time.
      */
     assignDiscipleToLeader(leaderId: number, discipleId: number, rootId = 0): { success: boolean; message: string } {
@@ -582,12 +1012,15 @@ export const discipleshipWebService = {
 
         const isAdminLeader = leaderId === rootId || leaderId === 0;
 
-        // Strictly enforce 3-disciple limit for ordinary leaders only.
-        // Admin account is EXEMPT from this limit and can delegate without limits.
-        if (!isAdminLeader && currentList.length >= MAX_DISCIPLES_PER_LEADER) {
+        // Enforce cohort capacity: 3 disciples per cohort (or unlimited for Admin)
+        const cohorts = this.getLeaderBranchCohorts();
+        const cohortsCount = cohorts[leaderId] || 1;
+        const maxAllowed = isAdminLeader ? 9999 : MAX_DISCIPLES_PER_LEADER * cohortsCount;
+
+        if (!isAdminLeader && currentList.length >= maxAllowed) {
             return {
                 success: false,
-                message: `Capacity limit reached! 1 Leader is restricted to maximum ${MAX_DISCIPLES_PER_LEADER} disciples for deep, intentional multiplication.`,
+                message: `Branch capacity reached (${currentList.length}/${maxAllowed})! When this discipleship branch is fully matured, click "+ Add Another Branch" to multiply and mentor your next cohort!`,
             };
         }
 
@@ -986,7 +1419,9 @@ export const discipleshipWebService = {
             }
         });
 
-        // 6. TWO-WAY CLOUD SYNCHRONIZATION WITH EPIC MOBILE (Subject to 1:3 limit)
+        const leaderCohorts = this.getLeaderBranchCohorts();
+
+        // 6. TWO-WAY CLOUD SYNCHRONIZATION WITH EPIC MOBILE (Subject to 1:3 limit per cohort)
         // Disciples MUST be explicitly chosen by the leader in EPIC Mobile (or manually delegated by Senior Pastor).
         // ZERO FAKE DATA. NO AUTOMATIC RANDOM FILLING OF MEMBERS.
         const [cloudSync, attendanceMap] = await Promise.all([
@@ -1004,6 +1439,9 @@ export const discipleshipWebService = {
                 cloudSync.leaderBranches[leaderName] ||
                 cloudSync.leaderBranches[leaderSlug];
 
+            const cohortsCount = leaderCohorts[leaderId] || (cloudSync.leaderCohorts[String(leaderId)] || 1);
+            const maxAllowed = MAX_DISCIPLES_PER_LEADER * cohortsCount;
+
             if (cloudBranches && Array.isArray(cloudBranches)) {
                 // Leader explicitly chose these accountable disciples in EPIC Mobile!
                 const chosenIds: number[] = [];
@@ -1019,7 +1457,7 @@ export const discipleshipWebService = {
                         chosenIds.push(mId);
                     }
                 }
-                branchAssignments[leaderId] = chosenIds.slice(0, MAX_DISCIPLES_PER_LEADER);
+                branchAssignments[leaderId] = chosenIds.slice(0, maxAllowed);
             } else if (!branchAssignments[leaderId]) {
                 // If not chosen in EPIC Mobile and not manually assigned by admin on Web:
                 // Leave EMPTY ([]). Do NOT fabricate or auto-fill fake disciples!
@@ -1028,6 +1466,12 @@ export const discipleshipWebService = {
         }
 
         this.saveBranchAssignments(branchAssignments);
+
+        // Assign deterministic, unique color themes to each Gen 2 leader so no two leaders clash
+        const leaderIndexMap = new Map<number, number>();
+        rootDisciples.forEach((lId, idx) => {
+            leaderIndexMap.set(lId, idx);
+        });
 
         // Helper to determine exact EPIC position
         const getPositionForMember = (memberId: number, member: RealChurchMember, gen: number): ChurchPosition => {
@@ -1058,6 +1502,8 @@ export const discipleshipWebService = {
             memberId: number,
             gen: number,
             parentLeaderId: number | null,
+            parentLeaderTheme?: LeaderColorTheme,
+            cohortIdx?: number,
             visited = new Set<number>()
         ): DiscipleshipMemberNode | null => {
             visited.add(memberId);
@@ -1065,6 +1511,25 @@ export const discipleshipWebService = {
             if (!m) return null; // NO FAKE MEMBERS ALLOWED
 
             const position = getPositionForMember(memberId, m, gen);
+            const parentLeader = parentLeaderId !== null ? memberMap.get(parentLeaderId) : undefined;
+
+            // Determine unique color code for leader & inherit for their disciples
+            let nodeTheme: LeaderColorTheme;
+            if (gen === 1) {
+                nodeTheme = getLeaderColorTheme(0, SENIOR_PASTOR_NAME, 0);
+            } else if (gen === 2) {
+                const lIdx = leaderIndexMap.get(memberId) ?? (memberId % LEADER_COLOR_PALETTE.length);
+                nodeTheme = getLeaderColorTheme(memberId, m.fullName, lIdx);
+            } else {
+                // Disciples strictly inherit their shepherd leader's exact theme!
+                nodeTheme = parentLeaderTheme || getLeaderColorTheme(parentLeaderId || memberId, parentLeader?.fullName || m.fullName);
+            }
+
+            // Calculate cohort capacity & maturity for Gen 2 leaders
+            const leaderCohortsCount = gen === 2
+                ? (leaderCohorts[memberId] || (cloudSync.leaderCohorts[String(memberId)] || 1))
+                : 1;
+            const maxCapacity = gen === 1 ? 9999 : (leaderCohortsCount * MAX_DISCIPLES_PER_LEADER);
 
             // 1. SOAP Devotions: merge cloud-synced devotions from EPIC Mobile with local devotions
             const idKey = String(memberId);
@@ -1138,17 +1603,19 @@ export const discipleshipWebService = {
             const childIds = branchAssignments[memberId] || [];
             const children: DiscipleshipMemberNode[] = [];
 
-            for (const cId of childIds) {
+            for (let i = 0; i < childIds.length; i++) {
+                const cId = childIds[i];
                 if (!visited.has(cId) && memberMap.has(cId)) {
-                    const childNode = buildNode(cId, gen + 1, memberId, new Set(visited));
+                    const cCohort = Math.floor(i / MAX_DISCIPLES_PER_LEADER) + 1;
+                    const childNode = buildNode(cId, gen + 1, memberId, nodeTheme, cCohort, new Set(visited));
                     if (childNode) {
                         children.push(childNode);
                     }
                 }
             }
 
-            const parentLeader = parentLeaderId !== null ? memberMap.get(parentLeaderId) : undefined;
             const leaderCat = gen === 2 ? detectLeaderCategory(m.ministry, position) : undefined;
+            const isBranchMatured = gen === 2 && children.length >= maxCapacity;
 
             return {
                 memberId,
@@ -1176,6 +1643,11 @@ export const discipleshipWebService = {
                 attendedSundaysCount,
                 ministryRole,
                 ministryCommitmentRating,
+                colorTheme: nodeTheme,
+                branchCohortsCount: leaderCohortsCount,
+                isBranchMatured,
+                maxCapacity,
+                cohortIndex: cohortIdx,
             };
         };
 
@@ -1195,6 +1667,10 @@ export const discipleshipWebService = {
             lastEncounterDaysAgo: 0,
             missedSundaysCount: 0,
             ministry: "Senior Pastoral Oversight & Vision",
+            colorTheme: getLeaderColorTheme(0, SENIOR_PASTOR_NAME, 0),
+            branchCohortsCount: 1,
+            isBranchMatured: false,
+            maxCapacity: 9999,
         };
 
         return {
