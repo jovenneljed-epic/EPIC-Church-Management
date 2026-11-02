@@ -6,12 +6,15 @@ import {
     AVAILABLE_EPIC_POSITIONS,
     SENIOR_PASTOR_NAME,
     MAX_DISCIPLES_PER_LEADER,
+    pushDiscipleshipCloudSync,
 } from "../services/discipleshipWebService";
 import type {
     DiscipleshipMemberNode,
     RealChurchMember,
     ChurchPosition,
     DiscipleshipEncounter,
+    SpiritualPulse,
+    HeartState,
 } from "../services/discipleshipWebService";
 import {
     GitBranch,
@@ -91,6 +94,14 @@ export default function DiscipleshipTree() {
     const [encounterScripture, setEncounterScripture] = useState("Proverbs 3:5-6");
     const [encounterCommitment, setEncounterCommitment] = useState("");
     const [encounterNote, setEncounterNote] = useState("");
+
+    // Pastoral Control: Record / Edit Spiritual Pulse Modal
+    const [pulseModalOpen, setPulseModalOpen] = useState(false);
+    const [pulseHeartState, setPulseHeartState] = useState<HeartState>("PEACEFUL");
+    const [pulseStruggle, setPulseStruggle] = useState("");
+    const [pulsePrayerNeed, setPulsePrayerNeed] = useState("");
+    const [pulseWordDays, setPulseWordDays] = useState(5);
+    const [pulsePrayerDays, setPulsePrayerDays] = useState(5);
 
     // Pastoral reply to disciple thought
     const [thoughtReplyText, setThoughtReplyText] = useState("");
@@ -348,6 +359,51 @@ export default function DiscipleshipTree() {
         }
     };
 
+    // Pastoral Control: Record / Edit Spiritual Pulse Modal
+    const handleOpenPulseModal = (member: DiscipleshipMemberNode, e?: React.MouseEvent) => {
+        if (e) e.stopPropagation();
+        setPulseHeartState(member.pulse?.heartState || "PEACEFUL");
+        setPulseStruggle(member.pulse?.struggleCategory || "");
+        setPulsePrayerNeed(member.pulse?.prayerNeed || "");
+        setPulseWordDays(member.pulse?.wordDaysWeekly ?? 5);
+        setPulsePrayerDays(member.pulse?.prayerDaysWeekly ?? 5);
+        setPulseModalOpen(true);
+    };
+
+    const handleSavePulse = () => {
+        if (!selectedMember) return;
+        const newPulse: SpiritualPulse = {
+            heartState: pulseHeartState,
+            struggleCategory: pulseStruggle.trim() || "None recorded",
+            prayerNeed: pulsePrayerNeed.trim() || "Personal prayer focus",
+            wordDaysWeekly: pulseWordDays,
+            prayerDaysWeekly: pulsePrayerDays,
+            submittedAt: new Date().toISOString(),
+        };
+        discipleshipWebService.saveMemberPulse(selectedMember.memberId, newPulse);
+        void pushDiscipleshipCloudSync({
+            authorName: "Ptr. Ronnel M. Aviguetero",
+            authorRole: "EPIC_SENIOR_PASTOR",
+            title: `PULSE_${selectedMember.memberId}`,
+            content: newPulse,
+        });
+        setSelectedMember((prev) =>
+            prev
+                ? {
+                      ...prev,
+                      pulse: newPulse,
+                      health: discipleshipWebService.calculateHealth(
+                          newPulse,
+                          prev.lastEncounterDaysAgo,
+                          prev.missedSundaysCount || 0
+                      ),
+                  }
+                : null
+        );
+        loadLineage();
+        setPulseModalOpen(false);
+    };
+
     // =========================================================
     // RECURSIVE TREE NODE COMPONENT
     // =========================================================
@@ -531,8 +587,18 @@ export default function DiscipleshipTree() {
                         )}
 
                         <div className="dt-spiritual-stat">
-                            <span>📖 {node.pulse?.wordDaysWeekly || 5}d</span>
-                            <span>🙏 {node.pulse?.prayerDaysWeekly || 6}d</span>
+                            {node.pulse ? (
+                                <>
+                                    <span>📖 {node.pulse.wordDaysWeekly ?? 0}d</span>
+                                    <span>🙏 {node.pulse.prayerDaysWeekly ?? 0}d</span>
+                                </>
+                            ) : node.attendedSundaysCount && node.attendedSundaysCount > 0 ? (
+                                <span style={{ fontSize: 10, color: "#047857", fontWeight: 700 }}>
+                                    ⭐ {node.attendanceRate}% Att.
+                                </span>
+                            ) : (
+                                <span style={{ color: "#94a3b8", fontSize: 10, fontStyle: "italic" }}>No pulse</span>
+                            )}
                         </div>
                     </div>
 
@@ -774,14 +840,26 @@ export default function DiscipleshipTree() {
                             )}
                         </div>
                         <div className="dt-spiritual-stat">
-                            <span>📖 {leader.pulse?.wordDaysWeekly || 5}d Word</span>
-                            <span>🙏 {leader.pulse?.prayerDaysWeekly || 6}d Prayer</span>
+                            {leader.pulse ? (
+                                <>
+                                    <span>📖 {leader.pulse.wordDaysWeekly ?? 0}d Word</span>
+                                    <span>🙏 {leader.pulse.prayerDaysWeekly ?? 0}d Prayer</span>
+                                </>
+                            ) : (
+                                <span style={{ color: "#94a3b8", fontSize: 11, fontStyle: "italic" }}>No pulse logged</span>
+                            )}
                         </div>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: "#047857", background: "#d1fae5", padding: "4px 8px", borderRadius: 6, display: "flex", alignItems: "center", gap: 4 }}>
-                            <span>🟢 {leader.attendanceRate || 95}% Attendance</span>
-                            <span style={{ color: "#94a3b8" }}>·</span>
-                            <span>{leader.attendedSundaysCount || 11} Sundays</span>
-                        </div>
+                        {leader.attendedSundaysCount && leader.attendedSundaysCount > 0 ? (
+                            <div style={{ fontSize: 11, fontWeight: 700, color: "#047857", background: "#d1fae5", padding: "4px 8px", borderRadius: 6, display: "flex", alignItems: "center", gap: 4 }}>
+                                <span>🟢 {leader.attendanceRate}% Attendance</span>
+                                <span style={{ color: "#94a3b8" }}>·</span>
+                                <span>{leader.attendedSundaysCount} Sundays</span>
+                            </div>
+                        ) : (
+                            <div style={{ fontSize: 11, fontWeight: 600, color: "#64748b", background: "#f1f5f9", padding: "4px 8px", borderRadius: 6, display: "inline-flex", alignItems: "center" }}>
+                                <span>No attendance logged yet</span>
+                            </div>
+                        )}
 
                         <div className="dt-flow-leader-actions" onClick={(e) => e.stopPropagation()}>
                             {leader.phone && (
@@ -962,10 +1040,16 @@ export default function DiscipleshipTree() {
                                                         </div>
                                                     </div>
                                                     <div className="dt-flow-disciple-footer">
-                                                        <span>📖 {disciple.pulse?.wordDaysWeekly || 5}d · 🙏 {disciple.pulse?.prayerDaysWeekly || 6}d</span>
-                                                        <span style={{ fontSize: 10, color: "#047857", fontWeight: 700, background: "#ecfdf5", padding: "1px 5px", borderRadius: 4 }}>
-                                                            🟢 {disciple.attendanceRate || 92}% Att.
-                                                        </span>
+                                                        {disciple.pulse ? (
+                                                            <span>📖 {disciple.pulse.wordDaysWeekly ?? 0}d · 🙏 {disciple.pulse.prayerDaysWeekly ?? 0}d</span>
+                                                        ) : (
+                                                            <span style={{ color: "#94a3b8", fontStyle: "italic", fontSize: 10 }}>No pulse logged</span>
+                                                        )}
+                                                        {disciple.attendedSundaysCount && disciple.attendedSundaysCount > 0 ? (
+                                                            <span style={{ fontSize: 10, color: "#047857", fontWeight: 700, background: "#ecfdf5", padding: "1px 5px", borderRadius: 4 }}>
+                                                                🟢 {disciple.attendanceRate}% Att.
+                                                            </span>
+                                                        ) : null}
                                                         <span className={`dt-health-badge ${disciple.health}`} style={{ fontSize: 10, padding: "2px 6px" }}>
                                                             {disciple.health === "HEALTHY" ? "🟢 Healthy" : disciple.health === "ATTENTION" ? "🟡 Attention" : "🔴 At-Risk"}
                                                         </span>
@@ -1643,7 +1727,7 @@ export default function DiscipleshipTree() {
                                                 </div>
                                                 <div className="dt-node-footer">
                                                     <span>Mentoring: {member.disciples.length}/3</span>
-                                                    <span>Word: {member.pulse?.wordDaysWeekly || 5}d/wk</span>
+                                                    <span>Word: {member.pulse?.wordDaysWeekly !== undefined ? `${member.pulse.wordDaysWeekly}d/wk` : "Unrecorded"}</span>
                                                 </div>
                                             </div>
                                         );
@@ -1692,7 +1776,7 @@ export default function DiscipleshipTree() {
                                     </div>
 
                                     <div style={{ background: "#ffffff", borderRadius: 8, padding: 10, fontSize: 12, color: "#334155", marginBottom: 12 }}>
-                                        <strong>Prayer Request:</strong> "{disciple.pulse?.prayerNeed || "Seeking breakthrough and spiritual replenishment."}"
+                                        <strong>Prayer Request:</strong> {disciple.pulse?.prayerNeed ? `"${disciple.pulse.prayerNeed}"` : "None submitted yet"}
                                     </div>
 
                                     <div style={{ display: "flex", gap: 8 }}>
@@ -1732,8 +1816,10 @@ export default function DiscipleshipTree() {
                                     {selectedMember.fullName.charAt(0)}
                                 </div>
                                 <div>
-                                    <h2>{selectedMember.fullName}</h2>
-                                    <div className="dt-drawer-subtitle">
+                                    <h2 style={{ color: "#ffffff", margin: "0 0 4px", fontSize: 20, fontWeight: 800 }}>
+                                        {selectedMember.fullName}
+                                    </h2>
+                                    <div className="dt-drawer-subtitle" style={{ color: "#cbd5e1", fontSize: 13, fontWeight: 600 }}>
                                         {selectedMember.leaderCategoryLabel || POSITION_DETAILS[selectedMember.position]?.label} · Gen {selectedMember.generation}
                                     </div>
                                 </div>
@@ -1743,6 +1829,7 @@ export default function DiscipleshipTree() {
                                 type="button"
                                 className="dt-close-btn"
                                 onClick={() => setSelectedMember(null)}
+                                title="Close Drawer"
                             >
                                 ✕
                             </button>
@@ -1750,13 +1837,23 @@ export default function DiscipleshipTree() {
 
                         {/* Pastoral Multi-Channel Direct Contact Bar */}
                         <div className="dt-drawer-contact-bar">
-                            <a
-                                href={`tel:${selectedMember.phone || "+639171234567"}`}
-                                className="dt-contact-btn phone"
-                                title="Call directly via Mobile"
-                            >
-                                <Phone size={14} /> Call Leader
-                            </a>
+                            {selectedMember.phone ? (
+                                <a
+                                    href={`tel:${selectedMember.phone}`}
+                                    className="dt-contact-btn phone"
+                                    title={`Call ${selectedMember.fullName} directly via Mobile`}
+                                >
+                                    <Phone size={14} /> Call: {selectedMember.phone}
+                                </a>
+                            ) : (
+                                <span
+                                    className="dt-contact-btn"
+                                    style={{ color: "#94a3b8", cursor: "default" }}
+                                    title="No phone number recorded in database"
+                                >
+                                    <Phone size={14} /> No Phone in DB
+                                </span>
+                            )}
                             <a
                                 href={selectedMember.messengerUrl || "https://m.me"}
                                 target="_blank"
@@ -1810,37 +1907,80 @@ export default function DiscipleshipTree() {
                             {drawerTab === "PULSE" && (
                                 <>
                                     <div className="dt-card-box">
-                                        <h3>
-                                            <Heart size={16} color="#ef4444" />
-                                            Weekly Spiritual Heart State
-                                        </h3>
-                                        <div
-                                            style={{
-                                                fontSize: 18,
-                                                fontWeight: 800,
-                                                color: selectedMember.health === "AT_RISK" ? "#b91c1c" : "#0f172a",
-                                                marginBottom: 8,
-                                            }}
-                                        >
-                                            State: {selectedMember.pulse?.heartState || "PEACEFUL"}
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                                            <h3 style={{ margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
+                                                <Heart size={16} color="#ef4444" />
+                                                Weekly Spiritual Heart State
+                                            </h3>
+                                            {selectedMember.pulse ? (
+                                                <span style={{ fontSize: 11, background: "#ecfdf5", color: "#065f46", padding: "3px 8px", borderRadius: 6, fontWeight: 700 }}>
+                                                    Live Sync
+                                                </span>
+                                            ) : (
+                                                <span style={{ fontSize: 11, background: "#fef3c7", color: "#92400e", padding: "3px 8px", borderRadius: 6, fontWeight: 700 }}>
+                                                    No Pulse Yet
+                                                </span>
+                                            )}
                                         </div>
-                                        <div style={{ fontSize: 13, color: "#475569", lineHeight: 1.5 }}>
-                                            <strong>Struggle Category:</strong>{" "}
-                                            {selectedMember.pulse?.struggleCategory || "None recorded"}
-                                        </div>
-                                        <div
-                                            style={{
-                                                marginTop: 10,
-                                                padding: 12,
-                                                background: "#f1f5f9",
-                                                borderRadius: 8,
-                                                fontSize: 13,
-                                                fontStyle: "italic",
-                                                color: "#1e293b",
-                                            }}
-                                        >
-                                            "{selectedMember.pulse?.prayerNeed || "Trusting God for supernatural fruitfulness and intentional discipleship multiplication."}"
-                                        </div>
+
+                                        {selectedMember.pulse ? (
+                                            <>
+                                                <div
+                                                    style={{
+                                                        fontSize: 18,
+                                                        fontWeight: 800,
+                                                        color: selectedMember.health === "AT_RISK" ? "#b91c1c" : selectedMember.health === "ATTENTION" ? "#b45309" : "#0f172a",
+                                                        marginBottom: 8,
+                                                    }}
+                                                >
+                                                    State: {selectedMember.pulse.heartState}
+                                                </div>
+                                                <div style={{ fontSize: 13, color: "#475569", lineHeight: 1.5 }}>
+                                                    <strong>Struggle Category:</strong>{" "}
+                                                    {selectedMember.pulse.struggleCategory || "None recorded"}
+                                                </div>
+                                                {selectedMember.pulse.prayerNeed && (
+                                                    <div
+                                                        style={{
+                                                            marginTop: 10,
+                                                            padding: 12,
+                                                            background: "#f1f5f9",
+                                                            borderRadius: 8,
+                                                            fontSize: 13,
+                                                            fontStyle: "italic",
+                                                            color: "#1e293b",
+                                                        }}
+                                                    >
+                                                        "{selectedMember.pulse.prayerNeed}"
+                                                    </div>
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    className="dt-btn dt-btn-secondary"
+                                                    style={{ marginTop: 12, fontSize: 12, padding: "5px 10px" }}
+                                                    onClick={() => handleOpenPulseModal(selectedMember)}
+                                                >
+                                                    Update Pulse Record
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <div style={{ padding: "14px 16px", background: "#f8fafc", borderRadius: 10, border: "1px dashed #cbd5e1" }}>
+                                                <div style={{ fontSize: 14, fontWeight: 700, color: "#334155", marginBottom: 4 }}>
+                                                    No Weekly Spiritual Pulse Logged Yet
+                                                </div>
+                                                <div style={{ fontSize: 12, color: "#64748b", lineHeight: 1.5, marginBottom: 10 }}>
+                                                    This disciple has not yet submitted their spiritual pulse in EPIC Mobile. You can record a pastoral pulse check-in directly below.
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    className="dt-btn dt-btn-primary"
+                                                    style={{ fontSize: 12, padding: "7px 12px" }}
+                                                    onClick={() => handleOpenPulseModal(selectedMember)}
+                                                >
+                                                    + Log Spiritual Pulse for Disciple
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
 
                                     <div className="dt-card-box">
@@ -1848,31 +1988,49 @@ export default function DiscipleshipTree() {
                                             <CheckCircle2 size={16} color="#059669" />
                                             Sunday Service Attendance Consistency
                                         </h3>
-                                        <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 8 }}>
-                                            <span style={{ fontSize: 24, fontWeight: 800, color: "#047857" }}>
-                                                {selectedMember.attendanceRate || 95}%
-                                            </span>
-                                            <span style={{ fontSize: 13, color: "#475569", fontWeight: 600 }}>
-                                                Attendance Consistency
-                                            </span>
-                                        </div>
-                                        <div style={{ height: 8, background: "#e2e8f0", borderRadius: 4, overflow: "hidden", marginBottom: 12 }}>
-                                            <div
-                                                style={{
-                                                    height: "100%",
-                                                    width: `${selectedMember.attendanceRate || 95}%`,
-                                                    background: "#059669",
-                                                }}
-                                            />
-                                        </div>
-                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, fontSize: 12, color: "#334155" }}>
-                                            <div style={{ background: "#f8fafc", padding: "8px 10px", borderRadius: 6, border: "1px solid #e2e8f0" }}>
-                                                <strong>Attended Services:</strong> {selectedMember.attendedSundaysCount || 11} Sundays
+                                        {selectedMember.attendedSundaysCount !== undefined && selectedMember.attendedSundaysCount > 0 ? (
+                                            <>
+                                                <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 8 }}>
+                                                    <span style={{ fontSize: 24, fontWeight: 800, color: "#047857" }}>
+                                                        {selectedMember.attendanceRate}%
+                                                    </span>
+                                                    <span style={{ fontSize: 13, color: "#475569", fontWeight: 600 }}>
+                                                        Attendance Consistency
+                                                    </span>
+                                                </div>
+                                                <div style={{ height: 8, background: "#e2e8f0", borderRadius: 4, overflow: "hidden", marginBottom: 12 }}>
+                                                    <div
+                                                        style={{
+                                                            height: "100%",
+                                                            width: `${selectedMember.attendanceRate}%`,
+                                                            background: "#059669",
+                                                        }}
+                                                    />
+                                                </div>
+                                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, fontSize: 12, color: "#334155" }}>
+                                                    <div style={{ background: "#f8fafc", padding: "8px 10px", borderRadius: 6, border: "1px solid #e2e8f0" }}>
+                                                        <strong>Attended Services:</strong> {selectedMember.attendedSundaysCount} Sundays
+                                                    </div>
+                                                    <div style={{ background: "#f8fafc", padding: "8px 10px", borderRadius: 6, border: "1px solid #e2e8f0" }}>
+                                                        <strong>Missed Sundays:</strong> {selectedMember.missedSundaysCount || 0}
+                                                    </div>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div style={{ padding: "14px 16px", background: "#f8fafc", borderRadius: 8, border: "1px solid #e2e8f0" }}>
+                                                <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 6 }}>
+                                                    <span style={{ fontSize: 22, fontWeight: 800, color: "#64748b" }}>
+                                                        0%
+                                                    </span>
+                                                    <span style={{ fontSize: 12, color: "#64748b", fontWeight: 600 }}>
+                                                        No Recorded Sunday Services
+                                                    </span>
+                                                </div>
+                                                <div style={{ fontSize: 12, color: "#64748b", lineHeight: 1.4 }}>
+                                                    No church service attendance check-in records found in the database for this member yet.
+                                                </div>
                                             </div>
-                                            <div style={{ background: "#f8fafc", padding: "8px 10px", borderRadius: 6, border: "1px solid #e2e8f0" }}>
-                                                <strong>Missed Sundays:</strong> {selectedMember.missedSundaysCount || 0}
-                                            </div>
-                                        </div>
+                                        )}
                                     </div>
 
                                     <div className="dt-card-box">
@@ -1881,17 +2039,21 @@ export default function DiscipleshipTree() {
                                             Ministry Commitments & Faithfulness
                                         </h3>
                                         <div style={{ fontSize: 14, fontWeight: 700, color: "#1e293b", marginBottom: 4 }}>
-                                            Department: {selectedMember.ministry || "Active Church Ministry"}
+                                            Department: {selectedMember.ministry || "No Assigned Ministry"}
                                         </div>
                                         <div style={{ fontSize: 13, color: "#475569", marginBottom: 10 }}>
-                                            Assigned Role: <strong>{selectedMember.ministryRole || "Core Ministry Leader / Servant"}</strong>
+                                            Assigned Role: <strong>{selectedMember.ministryRole || (selectedMember.ministry ? "Department Member" : "General Congregation")}</strong>
                                         </div>
                                         <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#faf5ff", padding: "8px 12px", borderRadius: 8, border: "1px solid #e9d5ff" }}>
                                             <span style={{ fontSize: 13, fontWeight: 700, color: "#6b21a8" }}>
                                                 Commitment Rating:
                                             </span>
                                             <span style={{ fontSize: 14, fontWeight: 800, color: "#7e22ce" }}>
-                                                {"⭐".repeat(selectedMember.ministryCommitmentRating || 5)} ({selectedMember.ministryCommitmentRating || 5}/5.0)
+                                                {selectedMember.ministryCommitmentRating && selectedMember.ministryCommitmentRating > 0 ? (
+                                                    <>{"⭐".repeat(selectedMember.ministryCommitmentRating)} ({selectedMember.ministryCommitmentRating}/5.0)</>
+                                                ) : (
+                                                    <span style={{ color: "#7e22ce", fontSize: 12, fontWeight: 600 }}>Pending Attendance Data</span>
+                                                )}
                                             </span>
                                         </div>
                                     </div>
@@ -1904,13 +2066,17 @@ export default function DiscipleshipTree() {
                                         <div style={{ marginBottom: 12 }}>
                                             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 700, marginBottom: 4 }}>
                                                 <span>Word & Scripture Intake</span>
-                                                <span>{selectedMember.pulse?.wordDaysWeekly || 5} of 7 days</span>
+                                                <span>
+                                                    {selectedMember.pulse?.wordDaysWeekly !== undefined
+                                                        ? `${selectedMember.pulse.wordDaysWeekly} of 7 days`
+                                                        : "0 of 7 days (Unrecorded)"}
+                                                </span>
                                             </div>
                                             <div style={{ height: 8, background: "#e2e8f0", borderRadius: 4, overflow: "hidden" }}>
                                                 <div
                                                     style={{
                                                         height: "100%",
-                                                        width: `${((selectedMember.pulse?.wordDaysWeekly || 5) / 7) * 100}%`,
+                                                        width: `${selectedMember.pulse?.wordDaysWeekly ? ((selectedMember.pulse.wordDaysWeekly) / 7) * 100 : 0}%`,
                                                         background: "#2563eb",
                                                     }}
                                                 />
@@ -1920,13 +2086,17 @@ export default function DiscipleshipTree() {
                                         <div style={{ marginBottom: 14 }}>
                                             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, fontWeight: 700, marginBottom: 4 }}>
                                                 <span>Personal Prayer Consistency</span>
-                                                <span>{selectedMember.pulse?.prayerDaysWeekly || 6} of 7 days</span>
+                                                <span>
+                                                    {selectedMember.pulse?.prayerDaysWeekly !== undefined
+                                                        ? `${selectedMember.pulse.prayerDaysWeekly} of 7 days`
+                                                        : "0 of 7 days (Unrecorded)"}
+                                                </span>
                                             </div>
                                             <div style={{ height: 8, background: "#e2e8f0", borderRadius: 4, overflow: "hidden" }}>
                                                 <div
                                                     style={{
                                                         height: "100%",
-                                                        width: `${((selectedMember.pulse?.prayerDaysWeekly || 6) / 7) * 100}%`,
+                                                        width: `${selectedMember.pulse?.prayerDaysWeekly ? ((selectedMember.pulse.prayerDaysWeekly) / 7) * 100 : 0}%`,
                                                         background: "#10b981",
                                                     }}
                                                 />
@@ -1935,10 +2105,16 @@ export default function DiscipleshipTree() {
 
                                         <div style={{ fontSize: 13, color: "#64748b" }}>
                                             <div>
-                                                <strong>Sunday Service Attendance:</strong> Active · Faithful streak
+                                                <strong>Sunday Service Attendance:</strong>{" "}
+                                                {selectedMember.attendedSundaysCount && selectedMember.attendedSundaysCount > 0
+                                                    ? `Active · ${selectedMember.attendedSundaysCount} Sundays recorded`
+                                                    : "No attendance check-ins yet"}
                                             </div>
                                             <div style={{ marginTop: 4 }}>
-                                                <strong>Last 1-on-1 Discipleship Meeting:</strong> {selectedMember.lastEncounterDaysAgo} days ago
+                                                <strong>Last 1-on-1 Discipleship Meeting:</strong>{" "}
+                                                {selectedMember.encounters.length > 0
+                                                    ? `${selectedMember.encounters[0].date}`
+                                                    : "No 1-on-1 meeting logged yet"}
                                             </div>
                                         </div>
                                     </div>
@@ -2370,6 +2546,111 @@ export default function DiscipleshipTree() {
                                 onClick={handleSaveEncounter}
                             >
                                 Save Encounter Log
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* =========================================================
+                MODAL 4: RECORD / EDIT SPIRITUAL PULSE
+               ========================================================= */}
+            {pulseModalOpen && selectedMember && (
+                <div className="dt-center-modal-backdrop" onClick={() => setPulseModalOpen(false)}>
+                    <div className="dt-center-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="dt-cm-header">
+                            <h2 style={{ color: "#ffffff" }}>Record Weekly Spiritual Pulse</h2>
+                            <button
+                                type="button"
+                                style={{ background: "transparent", border: "none", color: "#ffffff", cursor: "pointer", fontSize: 20 }}
+                                onClick={() => setPulseModalOpen(false)}
+                            >
+                                ✕
+                            </button>
+                        </div>
+                        <div className="dt-cm-body">
+                            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+                                <div className="dt-drawer-avatar">{selectedMember.fullName.charAt(0)}</div>
+                                <div>
+                                    <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: "#0f172a" }}>{selectedMember.fullName}</h3>
+                                    <div style={{ fontSize: 12, color: "#64748b" }}>
+                                        {selectedMember.leaderCategoryLabel || POSITION_DETAILS[selectedMember.position]?.label} · Gen {selectedMember.generation}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="dt-form-group">
+                                <label>Spiritual Heart State</label>
+                                <select
+                                    value={pulseHeartState}
+                                    onChange={(e) => setPulseHeartState(e.target.value as HeartState)}
+                                >
+                                    <option value="THRIVING">🟢 THRIVING - Walking closely with God</option>
+                                    <option value="PEACEFUL">🔵 PEACEFUL - Steady and faithful</option>
+                                    <option value="BATTLING">🟡 BATTLING - Facing spiritual / life trials</option>
+                                    <option value="DRAINED">🟠 DRAINED - Weary, needs spiritual renewal</option>
+                                    <option value="CRISIS">🔴 CRISIS - Urgent pastoral shepherding required</option>
+                                </select>
+                            </div>
+
+                            <div className="dt-form-group">
+                                <label>Struggle / Life Category (Optional)</label>
+                                <input
+                                    type="text"
+                                    value={pulseStruggle}
+                                    onChange={(e) => setPulseStruggle(e.target.value)}
+                                    placeholder="e.g. Work Stress, Family, Health, Financial, Spiritual"
+                                />
+                            </div>
+
+                            <div className="dt-form-group">
+                                <label>Prayer Request / Pastoral Burden</label>
+                                <textarea
+                                    rows={3}
+                                    value={pulsePrayerNeed}
+                                    onChange={(e) => setPulsePrayerNeed(e.target.value)}
+                                    placeholder="Specific prayer request, burden, or focus for pastoral intercession..."
+                                />
+                            </div>
+
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                                <div className="dt-form-group">
+                                    <label>Word Intake: {pulseWordDays} of 7 days</label>
+                                    <input
+                                        type="range"
+                                        min={0}
+                                        max={7}
+                                        value={pulseWordDays}
+                                        onChange={(e) => setPulseWordDays(Number(e.target.value))}
+                                    />
+                                </div>
+                                <div className="dt-form-group">
+                                    <label>Prayer Habit: {pulsePrayerDays} of 7 days</label>
+                                    <input
+                                        type="range"
+                                        min={0}
+                                        max={7}
+                                        value={pulsePrayerDays}
+                                        onChange={(e) => setPulsePrayerDays(Number(e.target.value))}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="dt-cm-footer">
+                            <button
+                                type="button"
+                                className="dt-btn dt-btn-secondary"
+                                onClick={() => setPulseModalOpen(false)}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                className="dt-btn dt-btn-primary"
+                                onClick={handleSavePulse}
+                            >
+                                Save & Sync Pulse
                             </button>
                         </div>
                     </div>

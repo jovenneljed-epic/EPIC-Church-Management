@@ -1147,33 +1147,75 @@ export const discipleshipWebService = {
         const headers: Record<string, string> = { Accept: "application/json" };
         if (token) headers["Authorization"] = `Bearer ${token}`;
 
-        try {
-            const res = await fetch(`${API_BASE_URL.replace(/\/+$/, "")}/Attendance`, { headers });
-            if (res.ok) {
-                const data = await res.json();
-                const list = Array.isArray(data) ? data : data?.data || [];
-                const counts: Record<number, { present: number; total: number }> = {};
-                for (const row of list) {
-                    const mId = Number(row.memberId || row.id || 0);
-                    if (!mId) continue;
-                    if (!counts[mId]) counts[mId] = { present: 0, total: 0 };
-                    counts[mId].total++;
-                    const st = (row.status || "").toUpperCase();
-                    if (st === "PRESENT" || st === "EARLY" || st === "LATE") {
-                        counts[mId].present++;
+        const baseUrl = API_BASE_URL.replace(/\/+$/, "");
+        const endpoints = [
+            "/api/proxy/Attendance",
+            `${baseUrl}/Attendance`,
+            "/Attendance",
+            "/api/Attendance",
+            "https://epic-api-m2av.onrender.com/api/Attendance",
+        ];
+
+        let list: any[] = [];
+        for (const url of endpoints) {
+            try {
+                const res = await fetch(url, { headers });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (Array.isArray(data) && data.length > 0) {
+                        list = data;
+                        break;
+                    } else if (Array.isArray(data?.data) && data.data.length > 0) {
+                        list = data.data;
+                        break;
+                    } else if (Array.isArray(data?.attendance) && data.attendance.length > 0) {
+                        list = data.attendance;
+                        break;
                     }
                 }
-                for (const [mIdStr, stat] of Object.entries(counts)) {
-                    const mId = Number(mIdStr);
-                    const rate = stat.total > 0 ? Math.round((stat.present / stat.total) * 100) : 100;
-                    result.set(mId, {
-                        attended: stat.present,
-                        missed: Math.max(0, stat.total - stat.present),
-                        rate,
-                    });
+            } catch {}
+        }
+
+        if (list.length === 0) {
+            const cacheKeys = ["epic_attendance", "attendance", "allAttendance", "attendance_records"];
+            for (const ck of cacheKeys) {
+                try {
+                    const cached = localStorage.getItem(ck) || (typeof sessionStorage !== "undefined" ? sessionStorage.getItem(ck) : null);
+                    if (cached) {
+                        const parsed = JSON.parse(cached);
+                        if (Array.isArray(parsed) && parsed.length > 0) {
+                            list = parsed;
+                            break;
+                        }
+                    }
+                } catch {}
+            }
+        }
+
+        if (list.length > 0) {
+            const counts: Record<number, { present: number; total: number; absent: number }> = {};
+            for (const row of list) {
+                const mId = Number(row.memberId || row.id || 0);
+                if (!mId) continue;
+                if (!counts[mId]) counts[mId] = { present: 0, total: 0, absent: 0 };
+                counts[mId].total++;
+                const st = (row.status || "").toUpperCase();
+                if (st === "PRESENT" || st === "EARLY" || st === "LATE") {
+                    counts[mId].present++;
+                } else if (st === "ABSENT") {
+                    counts[mId].absent++;
                 }
             }
-        } catch {}
+            for (const [mIdStr, stat] of Object.entries(counts)) {
+                const mId = Number(mIdStr);
+                const rate = stat.total > 0 ? Math.round((stat.present / stat.total) * 100) : 0;
+                result.set(mId, {
+                    attended: stat.present,
+                    missed: stat.absent || Math.max(0, stat.total - stat.present),
+                    rate,
+                });
+            }
+        }
         return result;
     },
 
@@ -1229,17 +1271,21 @@ export const discipleshipWebService = {
     /**
      * Calculate health status
      */
-    calculateHealth(pulse?: SpiritualPulse, lastEncounterDays = 3, missedSundays = 0): BranchHealth {
-        if (!pulse) return "HEALTHY";
-        if (pulse.heartState === "CRISIS" || missedSundays >= 2 || lastEncounterDays > 18) {
+    calculateHealth(pulse?: SpiritualPulse, lastEncounterDays = 0, missedSundays = 0): BranchHealth {
+        if (!pulse) {
+            if (missedSundays >= 2) return "AT_RISK";
+            if (missedSundays === 1) return "ATTENTION";
+            return "HEALTHY";
+        }
+        if (pulse.heartState === "CRISIS" || missedSundays >= 2 || (lastEncounterDays > 18 && lastEncounterDays !== 0)) {
             return "AT_RISK";
         }
         if (
             pulse.heartState === "DRAINED" ||
             pulse.heartState === "BATTLING" ||
             missedSundays === 1 ||
-            lastEncounterDays >= 10 ||
-            pulse.wordDaysWeekly < 3
+            (lastEncounterDays >= 10 && lastEncounterDays !== 0) ||
+            (pulse.wordDaysWeekly !== undefined && pulse.wordDaysWeekly < 3)
         ) {
             return "ATTENTION";
         }
@@ -1575,10 +1621,10 @@ export const discipleshipWebService = {
             const localEncounters = this.getEncounters(memberId);
             const encounters = [...memberEncounters, ...localEncounters];
 
-            // 5. Attendance consistency & Sunday service faithfulness
+            // 5. Attendance consistency & Sunday service faithfulness (REAL DB DATA)
             const att = attendanceMap.get(memberId);
-            const attendanceRate = att ? att.rate : (memberId % 7 === 0 ? 88 : 95);
-            const attendedSundaysCount = att ? att.attended : (gen === 1 ? 12 : 11);
+            const attendanceRate = att ? att.rate : 0;
+            const attendedSundaysCount = att ? att.attended : 0;
             const missedSundays = att ? att.missed : 0;
 
             // 6. Ministry commitments
@@ -1588,9 +1634,13 @@ export const discipleshipWebService = {
                     : gen === 2
                     ? "Ministry Core Leader"
                     : "Active Ministry Servant";
-            const ministryCommitmentRating = att ? (att.rate >= 90 ? 5 : 4) : 5;
+            const ministryCommitmentRating = att ? (att.rate >= 90 ? 5 : att.rate >= 75 ? 4 : att.rate >= 50 ? 3 : 2) : 0;
 
-            const lastEncounterDays = gen === 2 ? 3 : 5;
+            let lastEncounterDays = 0;
+            if (encounters.length > 0 && encounters[0].date) {
+                const diffMs = Date.now() - new Date(encounters[0].date).getTime();
+                lastEncounterDays = isNaN(diffMs) ? 0 : Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+            }
             const health = this.calculateHealth(pulse, lastEncounterDays, missedSundays);
 
             let stage: GrowthStage = "BRANCH";
