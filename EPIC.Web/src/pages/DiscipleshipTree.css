@@ -2606,3 +2606,180 @@
     }
 }
 
+
+/* =========================================================
+   ACCOUNTABLE DISCIPLE MULTIPLICATION BRANCH (1:3 TRIAD)
+   ========================================================= */
+
+.dt-disciple-branch-box {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed #cbd5e1;
+}
+
+.dt-disciple-branch-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.dt-disciple-branch-title {
+    font-size: 11px;
+    font-weight: 800;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.dt-disciple-branch-pill {
+    font-size: 10px;
+    font-weight: 800;
+    padding: 1px 6px;
+    border-radius: 4px;
+}
+
+.dt-disciple-branch-pill.has-disciples {
+    background: #dcfce7;
+    color: #15803d;
+    border: 1px solid #86efac;
+}
+
+.dt-disciple-branch-pill.empty {
+    background: #f1f5f9;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+}
+
+.dt-disciple-mult-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    color: #334155;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.dt-disciple-mult-btn:hover {
+    background: #059669;
+    border-color: #059669;
+    color: #ffffff;
+    box-shadow: 0 2px 6px rgba(5, 150, 105, 0.25);
+}
+
+.dt-disciple-mini-slots {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+}
+
+.dt-subdisciple-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 6px 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.dt-subdisciple-card:hover {
+    border-color: #94a3b8;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+}
+
+.dt-subdisciple-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2px;
+}
+
+.dt-subdisciple-gen-badge {
+    font-size: 9px;
+    font-weight: 800;
+    color: #6d28d9;
+    background: #ede9fe;
+    padding: 1px 4px;
+    border-radius: 3px;
+    letter-spacing: 0.3px;
+}
+
+.dt-subdisciple-health-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #10b981;
+}
+
+.dt-subdisciple-card.health-ATTENTION .dt-subdisciple-health-dot {
+    background: #f59e0b;
+}
+
+.dt-subdisciple-card.health-AT_RISK .dt-subdisciple-health-dot {
+    background: #ef4444;
+}
+
+.dt-subdisciple-name {
+    font-size: 11px;
+    font-weight: 700;
+    color: #0f172a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+}
+
+.dt-subdisciple-stats {
+    font-size: 9px;
+    color: #64748b;
+    margin-top: 2px;
+}
+
+.dt-subdisciple-empty {
+    border: 1px dashed #cbd5e1;
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 8px 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: center;
+}
+
+.dt-subdisciple-empty:hover {
+    background: #f0fdf4;
+    border-color: #86efac;
+}
+
+.dt-subdisciple-empty span {
+    font-size: 9px;
+    font-weight: 700;
+    color: #64748b;
+    white-space: nowrap;
+}
+
+.dt-subdisciple-empty:hover span {
+    color: #059669;
+}
+
+.dt-mult-heritage-card {
+    background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
+    border-radius: 14px;
+    padding: 18px 20px;
+    color: #ffffff;
+    margin-bottom: 18px;
+    box-shadow: 0 4px 14px rgba(6, 78, 59, 0.25);
+}

@@ -2023,6 +2023,37 @@ export const discipleshipWebService = {
             }
         }
 
+        // Process cloud branches for ALL members (Gen 2 leaders AND Gen 3 multiplying disciples)
+        for (const [rawKey, branches] of Object.entries(cloudSync.leaderBranches)) {
+            if (!Array.isArray(branches) || branches.length === 0) continue;
+            let leaderId = Number(rawKey);
+            if (!leaderId || isNaN(leaderId)) {
+                const found = members.find(
+                    (m) => m.fullName.toLowerCase().trim() === rawKey.toLowerCase().trim() ||
+                           m.fullName.toLowerCase().trim().replace(/[^a-z0-9]/g, "_") === rawKey
+                );
+                if (found) leaderId = found.memberId;
+            }
+            if (leaderId && memberMap.has(leaderId) && !rootDisciples.includes(leaderId)) {
+                const cohortsCount = leaderCohorts[leaderId] || (cloudSync.leaderCohorts[String(leaderId)] || 1);
+                const maxAllowed = MAX_DISCIPLES_PER_LEADER * cohortsCount;
+                const chosenIds: number[] = [];
+                for (const b of branches) {
+                    let mId = Number(b.memberId || b.id || 0);
+                    if (!mId && b.fullName) {
+                        const found = members.find(
+                            (m) => m.fullName.toLowerCase().trim() === String(b.fullName).toLowerCase().trim()
+                        );
+                        if (found) mId = found.memberId;
+                    }
+                    if (mId && memberMap.has(mId) && mId !== leaderId && !chosenIds.includes(mId)) {
+                        chosenIds.push(mId);
+                    }
+                }
+                branchAssignments[leaderId] = chosenIds.slice(0, maxAllowed);
+            }
+        }
+
         this.saveBranchAssignments(branchAssignments);
 
         // Assign deterministic, unique color themes to each Gen 2 leader so no two leaders clash
@@ -2049,7 +2080,7 @@ export const discipleshipWebService = {
             if (minLower.includes("leader") || minLower.includes("head") || minLower.includes("director")) {
                 return "EPIC_LEADER";
             }
-            if (minLower.includes("cell") || minLower.includes("discipler") || minLower.includes("youth")) {
+            if (minLower.includes("cell") || minLower.includes("discipler") || minLower.includes("youth") || (branchAssignments[memberId] && branchAssignments[memberId].length > 0)) {
                 return "EPIC_DISCIPLER";
             }
             return "DISCIPLE";
@@ -2155,13 +2186,6 @@ export const discipleshipWebService = {
             }
             const health = this.calculateHealth(pulse, lastEncounterDays, missedSundays);
 
-            let stage: GrowthStage = "BRANCH";
-            if (gen === 1) stage = "FRUIT_MULTIPLIER";
-            else if (gen === 2) stage = "FRUIT_MULTIPLIER";
-            else if (gen === 3) stage = "BRANCH";
-            else if (gen === 4) stage = "TRUNK";
-            else if (gen >= 5) stage = "ROOT";
-
             const childIds = branchAssignments[memberId] || [];
             const children: DiscipleshipMemberNode[] = [];
 
@@ -2175,6 +2199,14 @@ export const discipleshipWebService = {
                     }
                 }
             }
+
+            let stage: GrowthStage = "BRANCH";
+            if (gen === 1) stage = "FRUIT_MULTIPLIER";
+            else if (gen === 2) stage = "FRUIT_MULTIPLIER";
+            else if (children.length > 0) stage = "FRUIT_MULTIPLIER";
+            else if (gen === 3) stage = "BRANCH";
+            else if (gen === 4) stage = "TRUNK";
+            else if (gen >= 5) stage = "ROOT";
 
             const leaderCat = gen === 2 ? detectLeaderCategory(m.ministry, position) : undefined;
             const isBranchMatured = gen === 2 && children.length >= maxCapacity;

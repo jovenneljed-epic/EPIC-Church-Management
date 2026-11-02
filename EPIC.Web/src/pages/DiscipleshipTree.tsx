@@ -78,7 +78,7 @@ export default function DiscipleshipTree() {
 
     // Modals & Drawers
     const [selectedMember, setSelectedMember] = useState<DiscipleshipMemberNode | null>(null);
-    const [drawerTab, setDrawerTab] = useState<"PULSE" | "DEVOTIONS" | "THOUGHTS" | "ENCOUNTERS" | "LEARNING">("PULSE");
+    const [drawerTab, setDrawerTab] = useState<"PULSE" | "DEVOTIONS" | "THOUGHTS" | "ENCOUNTERS" | "LEARNING" | "MULTIPLICATION">("PULSE");
 
     // EPIC Learning & Curriculum Tracking State
     const [enrollModalOpen, setEnrollModalOpen] = useState(false);
@@ -480,6 +480,18 @@ export default function DiscipleshipTree() {
         }));
     };
 
+    const handleRemoveDisciple = (leaderId: number, discipleId: number, discipleName: string) => {
+        if (!confirm(`Are you sure you want to unassign ${discipleName} from this discipleship branch?`)) return;
+        discipleshipWebService.removeDiscipleFromLeader(leaderId, discipleId);
+        showToast(`Unassigned ${discipleName} from branch.`);
+        loadLineage();
+        if (selectedMember && selectedMember.memberId === leaderId) {
+            setSelectedMember((prev) =>
+                prev ? { ...prev, disciples: prev.disciples.filter((d) => d.memberId !== discipleId) } : null
+            );
+        }
+    };
+
     // =========================================================
     // RECURSIVE TREE NODE COMPONENT
     // =========================================================
@@ -691,9 +703,7 @@ export default function DiscipleshipTree() {
                             style={{ cursor: "pointer" }}
                         >
                             <GraduationCap size={11} />
-                            <span>
-                                ${node.learning.primaryTrack.courseTitle.split(" ")[0]}: ${node.learning.primaryTrack.progressPercentage}%
-                            </span>
+                            <span>{node.learning.primaryTrack.courseTitle.split(" ")[0]}: {node.learning.primaryTrack.progressPercentage}%</span>
                         </div>
                     )}
 
@@ -968,7 +978,7 @@ export default function DiscipleshipTree() {
                                 }}
                             >
                                 <GraduationCap size={11} />
-                                <span>${leader.learning.primaryTrack.courseTitle.split(" ")[0]}: ${leader.learning.primaryTrack.progressPercentage}%</span>
+                                <span>{leader.learning.primaryTrack.courseTitle.split(" ")[0]}: {leader.learning.primaryTrack.progressPercentage}%</span>
                             </div>
                         )}
 
@@ -1183,12 +1193,86 @@ export default function DiscipleshipTree() {
                                                                     setDrawerTab("LEARNING");
                                                                 }}
                                                             >
-                                                                🎓 ${disciple.learning.primaryTrack.courseTitle.split(" ")[0]}: ${disciple.learning.primaryTrack.progressPercentage}%
+                                                                🎓 {disciple.learning.primaryTrack.courseTitle.split(" ")[0]}: {disciple.learning.primaryTrack.progressPercentage}%
                                                             </span>
                                                         )}
                                                         <span className={`dt-health-badge ${disciple.health}`} style={{ fontSize: 10, padding: "2px 6px" }}>
                                                             {disciple.health === "HEALTHY" ? "🟢 Healthy" : disciple.health === "ATTENTION" ? "🟡 Attention" : "🔴 At-Risk"}
                                                         </span>
+                                                    </div>
+
+                                                    {/* Disciple's Own Multiplication Branch (Discipling Gen 4 while being discipled) */}
+                                                    <div className="dt-disciple-branch-box" onClick={(e) => e.stopPropagation()}>
+                                                        <div className="dt-disciple-branch-header">
+                                                            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                                                <span className="dt-disciple-branch-title">
+                                                                    🌱 {disciple.fullName.split(" ")[0]}&apos;s Multiplication Branch
+                                                                </span>
+                                                                <span className={`dt-disciple-branch-pill ${disciple.disciples.length > 0 ? "has-disciples" : "empty"}`}>
+                                                                    {disciple.disciples.length}/3 Disciples
+                                                                </span>
+                                                            </div>
+                                                            <button
+                                                                type="button"
+                                                                className="dt-disciple-mult-btn"
+                                                                onClick={(e) => handleOpenAdoptModal(disciple, e)}
+                                                                title={`Assign accountable disciple under ${disciple.fullName} (Gen 4)`}
+                                                            >
+                                                                <Plus size={11} /> + Disciple
+                                                            </button>
+                                                        </div>
+
+                                                        {/* 3 Multiplication Slots (1:3 Triad Grid) */}
+                                                        <div className="dt-disciple-mini-slots">
+                                                            {[0, 1, 2].map((slotIdx) => {
+                                                                const subDisciple = disciple.disciples[slotIdx];
+                                                                if (subDisciple) {
+                                                                    return (
+                                                                        <div
+                                                                            key={subDisciple.memberId}
+                                                                            className={`dt-subdisciple-card health-${subDisciple.health}`}
+                                                                            style={{ borderLeft: `3px solid ${theme?.primary || "#2563eb"}` }}
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                setSelectedMember(subDisciple);
+                                                                                setDrawerTab("PULSE");
+                                                                            }}
+                                                                            title={`Gen 4 Accountable Disciple: ${subDisciple.fullName} (Click to inspect spiritual walk)`}
+                                                                        >
+                                                                            <div className="dt-subdisciple-top">
+                                                                                <span className="dt-subdisciple-gen-badge">GEN 4</span>
+                                                                                <span className={`dt-subdisciple-health-dot ${subDisciple.health}`} />
+                                                                            </div>
+                                                                            <div className="dt-subdisciple-name" title={subDisciple.fullName}>
+                                                                                {subDisciple.fullName}
+                                                                            </div>
+                                                                            <div className="dt-subdisciple-stats">
+                                                                                {subDisciple.attendedSundaysCount && subDisciple.attendedSundaysCount > 0 ? (
+                                                                                    <span>🟢 {subDisciple.attendanceRate}% Att.</span>
+                                                                                ) : (
+                                                                                    <span>🌱 Disciple</span>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                } else {
+                                                                    return (
+                                                                        <div
+                                                                            key={`sub-slot-${slotIdx}`}
+                                                                            className="dt-subdisciple-empty"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                handleOpenAdoptModal(disciple, e);
+                                                                            }}
+                                                                            title={`Assign real church member to Slot ${slotIdx + 1}/3 under ${disciple.fullName}`}
+                                                                        >
+                                                                            <Plus size={11} color={theme?.primary || "#2563eb"} />
+                                                                            <span>Slot {slotIdx + 1}/3</span>
+                                                                        </div>
+                                                                    );
+                                                                }
+                                                            })}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             );
@@ -2059,6 +2143,14 @@ export default function DiscipleshipTree() {
                                 <GraduationCap size={14} style={{ display: "inline", marginRight: 6 }} />
                                 EPIC Learning ({selectedMember.learning?.enrolledTracks?.length || 0})
                             </button>
+                            <button
+                                type="button"
+                                className={`dt-dtab-btn ${drawerTab === "MULTIPLICATION" ? "active" : ""}`}
+                                onClick={() => setDrawerTab("MULTIPLICATION")}
+                            >
+                                <Users size={14} style={{ display: "inline", marginRight: 6 }} />
+                                Multiplication ({selectedMember.disciples.length}/3)
+                            </button>
                         </div>
 
                         {/* Drawer Content */}
@@ -2631,6 +2723,156 @@ export default function DiscipleshipTree() {
                                                 </div>
                                             );
                                         })
+                                    )}
+                                </div>
+                            )}
+
+                            {/* TAB 6: DISCIPLESHIP MULTIPLICATION (2 TIMOTHY 2:2) */}
+                            {drawerTab === "MULTIPLICATION" && (
+                                <div>
+                                    {/* Biblical Commission Banner */}
+                                    <div className="dt-mult-heritage-card">
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 12 }}>
+                                            <div>
+                                                <div style={{ fontSize: 16, fontWeight: 800, color: "#ffffff", display: "flex", alignItems: "center", gap: 8 }}>
+                                                    🌱 Discipleship Multiplication Ministry
+                                                </div>
+                                                <div style={{ fontSize: 12, color: "#cbd5e1", marginTop: 4, lineHeight: 1.4 }}>
+                                                    &ldquo;And the things you have heard me say in the presence of many witnesses entrust to reliable people who will also be qualified to teach others.&rdquo; — 2 Timothy 2:2
+                                                </div>
+                                            </div>
+                                            <span style={{ background: "#10b981", color: "#ffffff", fontSize: 11, fontWeight: 800, padding: "4px 10px", borderRadius: 8, whiteSpace: "nowrap" }}>
+                                                {selectedMember.disciples.length}/3 Disciples
+                                            </span>
+                                        </div>
+
+                                        <div style={{ borderTop: "1px solid rgba(255,255,255,0.15)", paddingTop: 10, display: "flex", justifyContent: "space-between", fontSize: 12 }}>
+                                            <span>
+                                                Spiritual Shepherd: <strong>{selectedMember.parentLeaderName || "Senior Pastor"}</strong>
+                                            </span>
+                                            <span>
+                                                Multiplication Calling: <strong>1:3 Triad</strong>
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Action Bar */}
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                                        <div style={{ fontSize: 13, fontWeight: 700, color: "#1e293b" }}>
+                                            Accountable Disciples ({selectedMember.disciples.length}/3 · 1:3 Multiplication Triad)
+                                        </div>
+                                        {selectedMember.disciples.length < 3 && (
+                                            <button
+                                                type="button"
+                                                className="dt-btn dt-btn-primary"
+                                                style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, padding: "6px 12px" }}
+                                                onClick={() => handleOpenAdoptModal(selectedMember)}
+                                            >
+                                                <Plus size={13} />
+                                                + Assign Disciple
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {/* Disciples List */}
+                                    {selectedMember.disciples.length === 0 ? (
+                                        <div className="dt-learning-empty">
+                                            <div className="dt-learning-empty-icon" style={{ background: "#ecfdf5", color: "#059669" }}>
+                                                <Users size={28} />
+                                            </div>
+                                            <h4>Ready to Multiply &amp; Disciple</h4>
+                                            <p>
+                                                While {selectedMember.fullName} is being discipled by {selectedMember.parentLeaderName || "their shepherd"}, they are empowered to shepherd their own 3 accountable disciples.
+                                            </p>
+                                            <button
+                                                type="button"
+                                                className="dt-btn dt-btn-primary"
+                                                onClick={() => handleOpenAdoptModal(selectedMember)}
+                                            >
+                                                <Plus size={14} />
+                                                + Assign 1st Disciple under {selectedMember.fullName.split(" ")[0]} (Slot 1/3)
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                                            {selectedMember.disciples.map((disciple, idx) => (
+                                                <div key={disciple.memberId} className="dt-card-box" style={{ margin: 0 }}>
+                                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                                                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                                            <div className="dt-flow-disciple-avatar" style={{ width: 40, height: 40, fontSize: 16 }}>
+                                                                {disciple.fullName.charAt(0)}
+                                                            </div>
+                                                            <div>
+                                                                <div style={{ fontWeight: 800, fontSize: 14, color: "#0f172a" }}>
+                                                                    {disciple.fullName}
+                                                                </div>
+                                                                <div style={{ fontSize: 11, color: "#64748b" }}>
+                                                                    Gen {disciple.generation} Disciple · Slot {idx + 1}/3
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <span className={`dt-health-badge ${disciple.health}`} style={{ fontSize: 10 }}>
+                                                            {disciple.health === "HEALTHY" ? "🟢 Healthy" : disciple.health === "ATTENTION" ? "🟡 Attention" : "🔴 At-Risk"}
+                                                        </span>
+                                                    </div>
+
+                                                    <div style={{ display: "flex", gap: 8, fontSize: 11, flexWrap: "wrap", margin: "8px 0" }}>
+                                                        {disciple.attendedSundaysCount && disciple.attendedSundaysCount > 0 ? (
+                                                            <span style={{ background: "#ecfdf5", color: "#047857", fontWeight: 700, padding: "2px 7px", borderRadius: 4 }}>
+                                                                🟢 {disciple.attendanceRate}% Attendance
+                                                            </span>
+                                                        ) : (
+                                                            <span style={{ color: "#94a3b8" }}>No attendance logged</span>
+                                                        )}
+                                                        {disciple.pulse ? (
+                                                            <span style={{ background: "#f8fafc", color: "#334155", fontWeight: 700, padding: "2px 7px", borderRadius: 4 }}>
+                                                                📖 {disciple.pulse.wordDaysWeekly || 0}d · 🙏 {disciple.pulse.prayerDaysWeekly || 0}d
+                                                            </span>
+                                                        ) : null}
+                                                        {disciple.learning?.primaryTrack ? (
+                                                            <span style={{ background: "#f5f3ff", color: "#6d28d9", fontWeight: 700, padding: "2px 7px", borderRadius: 4 }}>
+                                                                🎓 {disciple.learning.primaryTrack.courseTitle.split(" ")[0]}: {disciple.learning.primaryTrack.progressPercentage}%
+                                                            </span>
+                                                        ) : null}
+                                                    </div>
+
+                                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #f1f5f9", paddingTop: 8, marginTop: 6 }}>
+                                                        <button
+                                                            type="button"
+                                                            style={{ fontSize: 11, color: "#2563eb", background: "none", border: "none", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
+                                                            onClick={() => {
+                                                                setSelectedMember(disciple);
+                                                                setDrawerTab("PULSE");
+                                                            }}
+                                                        >
+                                                            Inspect Disciple Walk →
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            style={{ fontSize: 11, color: "#ef4444", background: "none", border: "none", fontWeight: 600, cursor: "pointer" }}
+                                                            onClick={() => handleRemoveDisciple(selectedMember.memberId, disciple.memberId, disciple.fullName)}
+                                                        >
+                                                            Remove
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+
+                                            {/* Open slots */}
+                                            {selectedMember.disciples.length < 3 && (
+                                                <button
+                                                    type="button"
+                                                    className="dt-flow-disciple-empty clickable"
+                                                    style={{ borderStyle: "dashed", padding: "12px", borderRadius: 10 }}
+                                                    onClick={() => handleOpenAdoptModal(selectedMember)}
+                                                >
+                                                    <Plus size={16} color="#059669" />
+                                                    <span style={{ color: "#059669", fontWeight: 700, fontSize: 12 }}>
+                                                        + Assign Disciple (Slot {selectedMember.disciples.length + 1}/3 Available)
+                                                    </span>
+                                                </button>
+                                            )}
+                                        </div>
                                     )}
                                 </div>
                             )}
