@@ -7,6 +7,7 @@ import {
     SENIOR_PASTOR_NAME,
     MAX_DISCIPLES_PER_LEADER,
     pushDiscipleshipCloudSync,
+    DISCIPLESHIP_OFFICIAL_COURSES,
 } from "../services/discipleshipWebService";
 import type {
     DiscipleshipMemberNode,
@@ -45,6 +46,8 @@ import {
     RotateCcw,
     LayoutGrid,
     MoveHorizontal,
+    GraduationCap,
+    ExternalLink,
 } from "lucide-react";
 
 export default function DiscipleshipTree() {
@@ -75,7 +78,22 @@ export default function DiscipleshipTree() {
 
     // Modals & Drawers
     const [selectedMember, setSelectedMember] = useState<DiscipleshipMemberNode | null>(null);
-    const [drawerTab, setDrawerTab] = useState<"PULSE" | "DEVOTIONS" | "THOUGHTS" | "ENCOUNTERS">("PULSE");
+    const [drawerTab, setDrawerTab] = useState<"PULSE" | "DEVOTIONS" | "THOUGHTS" | "ENCOUNTERS" | "LEARNING">("PULSE");
+
+    // EPIC Learning & Curriculum Tracking State
+    const [enrollModalOpen, setEnrollModalOpen] = useState(false);
+    const [enrollCourseTitle, setEnrollCourseTitle] = useState("Foundations of Faith");
+    const [enrollPace, setEnrollPace] = useState(0);
+    const [learningActionLoading, setLearningActionLoading] = useState(false);
+    const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>({});
+    const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+    const showToast = useCallback((msg: string) => {
+        setToastMessage(msg);
+        setTimeout(() => {
+            setToastMessage((cur) => (cur === msg ? null : cur));
+        }, 3500);
+    }, []);
 
     // Pastoral Control: Assign Role Modal
     const [roleModalOpen, setRoleModalOpen] = useState(false);
@@ -405,6 +423,64 @@ export default function DiscipleshipTree() {
     };
 
     // =========================================================
+    // EPIC LEARNING ACTION HANDLERS
+    // =========================================================
+    const handleAdvanceLesson = async (node: DiscipleshipMemberNode, courseTitle: string) => {
+        setLearningActionLoading(true);
+        try {
+            const updatedProfile = await discipleshipWebService.advanceDiscipleLesson(
+                node.memberId,
+                node.fullName,
+                courseTitle
+            );
+            if (updatedProfile) {
+                setSelectedMember((prev) => (prev ? { ...prev, learning: updatedProfile } : null));
+                showToast(`🎓 Advanced lesson in ${courseTitle} for ${node.fullName}! Overall progress: ${updatedProfile.overallProgressPercentage}%.`);
+                loadLineage();
+            }
+        } catch (e) {
+            console.error("Failed to advance lesson", e);
+            showToast("Failed to advance lesson. Please try again.");
+        } finally {
+            setLearningActionLoading(false);
+        }
+    };
+
+    const handleEnrollDisciple = async (node: DiscipleshipMemberNode) => {
+        setLearningActionLoading(true);
+        try {
+            const mentor = node.parentLeaderName
+                ? `${node.parentLeaderName}`
+                : "Pastor Ronnel M. Aviguetero";
+            const updatedProfile = await discipleshipWebService.enrollDiscipleInTrack(
+                node.memberId,
+                node.fullName,
+                enrollCourseTitle,
+                enrollPace,
+                mentor
+            );
+            if (updatedProfile) {
+                setSelectedMember((prev) => (prev ? { ...prev, learning: updatedProfile } : null));
+                showToast(`✓ Enrolled ${node.fullName} in ${enrollCourseTitle}!`);
+                setEnrollModalOpen(false);
+                loadLineage();
+            }
+        } catch (e) {
+            console.error("Failed to enroll disciple", e);
+            showToast("Failed to enroll disciple. Please try again.");
+        } finally {
+            setLearningActionLoading(false);
+        }
+    };
+
+    const toggleModuleExpand = (courseTitle: string) => {
+        setExpandedModules((prev) => ({
+            ...prev,
+            [courseTitle]: !prev[courseTitle],
+        }));
+    };
+
+    // =========================================================
     // RECURSIVE TREE NODE COMPONENT
     // =========================================================
     const renderTreeNode = (node: DiscipleshipMemberNode): React.ReactNode => {
@@ -601,6 +677,25 @@ export default function DiscipleshipTree() {
                             )}
                         </div>
                     </div>
+
+                    {/* EPIC Learning Curriculum Badge on Tree Card */}
+                    {node.learning && node.learning.primaryTrack && (
+                        <div
+                            className="dt-node-learning-badge"
+                            title={`EPIC Learning: ${node.learning.primaryTrack.courseTitle} (${node.learning.primaryTrack.progressPercentage}% - ${node.learning.primaryTrack.completedLessons}/${node.learning.primaryTrack.totalLessons} Lessons Completed)`}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedMember(node);
+                                setDrawerTab("LEARNING");
+                            }}
+                            style={{ cursor: "pointer" }}
+                        >
+                            <GraduationCap size={11} />
+                            <span>
+                                ${node.learning.primaryTrack.courseTitle.split(" ")[0]}: ${node.learning.primaryTrack.progressPercentage}%
+                            </span>
+                        </div>
+                    )}
 
                     {/* Quick Delegate / Adopt / Multiply Action Button */}
                     <div style={{ marginTop: 8, display: "flex", gap: 6 }} onClick={(e) => e.stopPropagation()}>
@@ -861,6 +956,22 @@ export default function DiscipleshipTree() {
                             </div>
                         )}
 
+                        {leader.learning && leader.learning.primaryTrack && (
+                            <div
+                                className="dt-node-learning-badge"
+                                style={{ margin: "2px 0 0 0", cursor: "pointer", background: "#f5f3ff", borderColor: "#ddd6fe" }}
+                                title={`EPIC Learning: ${leader.learning.primaryTrack.courseTitle} (${leader.learning.primaryTrack.progressPercentage}%)`}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedMember(leader);
+                                    setDrawerTab("LEARNING");
+                                }}
+                            >
+                                <GraduationCap size={11} />
+                                <span>${leader.learning.primaryTrack.courseTitle.split(" ")[0]}: ${leader.learning.primaryTrack.progressPercentage}%</span>
+                            </div>
+                        )}
+
                         <div className="dt-flow-leader-actions" onClick={(e) => e.stopPropagation()}>
                             {leader.phone && (
                                 <a href={`tel:${leader.phone}`} className="dt-flow-btn secondary" title={`Call ${leader.fullName}`}>
@@ -1050,6 +1161,31 @@ export default function DiscipleshipTree() {
                                                                 🟢 {disciple.attendanceRate}% Att.
                                                             </span>
                                                         ) : null}
+                                                        {disciple.learning?.primaryTrack && (
+                                                            <span
+                                                                style={{
+                                                                    fontSize: 10,
+                                                                    color: "#6d28d9",
+                                                                    fontWeight: 700,
+                                                                    background: "#f5f3ff",
+                                                                    border: "1px solid #ddd6fe",
+                                                                    padding: "1px 6px",
+                                                                    borderRadius: 4,
+                                                                    display: "inline-flex",
+                                                                    alignItems: "center",
+                                                                    gap: 3,
+                                                                    cursor: "pointer",
+                                                                }}
+                                                                title={`EPIC Learning: ${disciple.learning.primaryTrack.courseTitle} (${disciple.learning.primaryTrack.progressPercentage}%)`}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setSelectedMember(disciple);
+                                                                    setDrawerTab("LEARNING");
+                                                                }}
+                                                            >
+                                                                🎓 ${disciple.learning.primaryTrack.courseTitle.split(" ")[0]}: ${disciple.learning.primaryTrack.progressPercentage}%
+                                                            </span>
+                                                        )}
                                                         <span className={`dt-health-badge ${disciple.health}`} style={{ fontSize: 10, padding: "2px 6px" }}>
                                                             {disciple.health === "HEALTHY" ? "🟢 Healthy" : disciple.health === "ATTENTION" ? "🟡 Attention" : "🔴 At-Risk"}
                                                         </span>
@@ -1435,6 +1571,13 @@ export default function DiscipleshipTree() {
                                 >
                                     {areAllDisciplesCollapsed ? "📂 Expand Disciples" : "📁 Collapse Disciples (Leaders Only)"}
                                 </button>
+                                <a
+                                    href="/cms/learning"
+                                    className="dt-zoom-btn dt-learning-nav-btn"
+                                    title="Open EPIC Learning Curriculum Studio & Classroom"
+                                >
+                                    <GraduationCap size={13} /> EPIC Learning Studio
+                                </a>
                             </div>
                         </div>
                     )}
@@ -1510,6 +1653,15 @@ export default function DiscipleshipTree() {
                                     <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
                                     Pastoral Sync
                                 </button>
+                                <a
+                                    href="/cms/learning"
+                                    className="dt-flow-btn-trans"
+                                    style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}
+                                    title="Open EPIC Learning Curriculum Studio & Classroom"
+                                >
+                                    <GraduationCap size={14} />
+                                    EPIC Learning Studio
+                                </a>
                             </div>
                         </div>
 
@@ -1899,6 +2051,14 @@ export default function DiscipleshipTree() {
                                 <Calendar size={14} style={{ display: "inline", marginRight: 6 }} />
                                 1-on-1 Meetings
                             </button>
+                            <button
+                                type="button"
+                                className={`dt-dtab-btn ${drawerTab === "LEARNING" ? "active" : ""}`}
+                                onClick={() => setDrawerTab("LEARNING")}
+                            >
+                                <GraduationCap size={14} style={{ display: "inline", marginRight: 6 }} />
+                                EPIC Learning ({selectedMember.learning?.enrolledTracks?.length || 0})
+                            </button>
                         </div>
 
                         {/* Drawer Content */}
@@ -2263,6 +2423,214 @@ export default function DiscipleshipTree() {
                                                 </div>
                                             </div>
                                         ))
+                                    )}
+                                </div>
+                            )}
+
+                            {/* TAB 5: EPIC LEARNING CURRICULUM */}
+                            {drawerTab === "LEARNING" && (
+                                <div>
+                                    {/* Mastery Overview Banner */}
+                                    <div className="dt-learning-mastery-card">
+                                        <div className="dt-learning-mastery-header">
+                                            <div>
+                                                <div className="dt-learning-mastery-title">
+                                                    <GraduationCap size={22} color="#a78bfa" />
+                                                    <span>EPIC Curriculum Mastery</span>
+                                                </div>
+                                                <div className="dt-learning-mastery-sub">
+                                                    Pastoral tracking of course progress, discipleship curriculum completion, and biblical mastery.
+                                                </div>
+                                            </div>
+                                            <div className="dt-learning-pct-badge">
+                                                {selectedMember.learning?.overallProgressPercentage || 0}%
+                                                <span>Mastery</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="dt-learning-progress-bar-bg">
+                                            <div
+                                                className="dt-learning-progress-bar-fill"
+                                                style={{ width: `${selectedMember.learning?.overallProgressPercentage || 0}%` }}
+                                            />
+                                        </div>
+
+                                        <div className="dt-learning-stats-grid">
+                                            <div className="dt-learning-stat-cell">
+                                                <strong>{selectedMember.learning?.enrolledTracksCount || 0}</strong>
+                                                <span>Courses Enrolled</span>
+                                            </div>
+                                            <div className="dt-learning-stat-cell">
+                                                <strong>
+                                                    {selectedMember.learning?.totalLessonsCompleted || 0} / {selectedMember.learning?.totalLessonsRequired || 0}
+                                                </strong>
+                                                <span>Lessons Done</span>
+                                            </div>
+                                            <div className="dt-learning-stat-cell">
+                                                <strong>
+                                                    {selectedMember.learning?.completedTracksCount || 0} Courses
+                                                </strong>
+                                                <span>Graduated</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Action Bar */}
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                                        <div style={{ fontSize: 13, fontWeight: 700, color: "#1e293b" }}>
+                                            Enrolled Learning Tracks ({selectedMember.learning?.enrolledTracks?.length || 0})
+                                        </div>
+                                        <button
+                                            type="button"
+                                            className="dt-btn dt-btn-primary"
+                                            style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, padding: "6px 12px" }}
+                                            onClick={() => setEnrollModalOpen(true)}
+                                        >
+                                            <Plus size={13} />
+                                            + Enroll in Track
+                                        </button>
+                                    </div>
+
+                                    {/* Tracks List */}
+                                    {!selectedMember.learning || selectedMember.learning.enrolledTracks.length === 0 ? (
+                                        <div className="dt-learning-empty">
+                                            <div className="dt-learning-empty-icon">
+                                                <GraduationCap size={28} />
+                                            </div>
+                                            <h4>No Discipleship Curricula Enrolled</h4>
+                                            <p>
+                                                Enroll {selectedMember.fullName} in Foundations of Faith or Leadership Mastery to begin tracking their lesson completions and biblical faithfulness.
+                                            </p>
+                                            <button
+                                                type="button"
+                                                className="dt-btn dt-btn-primary"
+                                                onClick={() => setEnrollModalOpen(true)}
+                                            >
+                                                <Plus size={14} />
+                                                + Enroll in Learning Track
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        selectedMember.learning.enrolledTracks.map((track) => {
+                                            const isExpanded = !!expandedModules[track.courseTitle];
+                                            const isComplete = track.progressPercentage >= 100;
+
+                                            return (
+                                                <div key={track.id || track.courseTitle} className="dt-track-card">
+                                                    <div className="dt-track-card-top">
+                                                        <div className="dt-track-card-title-group">
+                                                            <div className="dt-track-card-title">
+                                                                <BookOpen size={16} color="#4f46e5" />
+                                                                <span>{track.courseTitle}</span>
+                                                            </div>
+                                                            <div className="dt-track-card-instructor">
+                                                                <span>Mentor: <strong>{track.instructor}</strong></span>
+                                                                <span>·</span>
+                                                                <span>Enrolled: {track.enrolledDate}</span>
+                                                            </div>
+                                                        </div>
+                                                        <span
+                                                            className={`dt-track-status-pill ${
+                                                                isComplete
+                                                                    ? "completed"
+                                                                    : track.progressPercentage > 0
+                                                                    ? "in-progress"
+                                                                    : "enrolled"
+                                                            }`}
+                                                        >
+                                                            {isComplete ? "✓ Completed" : track.progressPercentage > 0 ? "⚡ In Progress" : "Enrolled"}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="dt-track-progress-info">
+                                                        <span>
+                                                            {track.completedLessons} of {track.totalLessons} Lessons Completed ({track.progressPercentage}%)
+                                                        </span>
+                                                        {track.gradeScore && (
+                                                            <span className="grade">
+                                                                Grade: {track.gradeScore}%
+                                                            </span>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="dt-learning-progress-bar-bg" style={{ height: 8, background: "#e2e8f0" }}>
+                                                        <div
+                                                            className="dt-learning-progress-bar-fill"
+                                                            style={{
+                                                                width: `${track.progressPercentage}%`,
+                                                                background: isComplete
+                                                                    ? "#10b981"
+                                                                    : "linear-gradient(90deg, #2563eb, #7c3aed)",
+                                                            }}
+                                                        />
+                                                    </div>
+
+                                                    {/* Curriculum Modules Checklist Toggle */}
+                                                    <button
+                                                        type="button"
+                                                        className="dt-track-modules-toggle"
+                                                        onClick={() => toggleModuleExpand(track.courseTitle)}
+                                                    >
+                                                        <span>
+                                                            📚 {track.modules.length} Curriculum Modules ({track.modules.filter((m) => m.completed).length} Completed)
+                                                        </span>
+                                                        <span>{isExpanded ? "▲ Hide Modules" : "▼ View Modules Checklist"}</span>
+                                                    </button>
+
+                                                    {/* Modules List */}
+                                                    {isExpanded && (
+                                                        <div className="dt-track-modules-list">
+                                                            {track.modules.map((mod) => (
+                                                                <div
+                                                                    key={mod.id}
+                                                                    className={`dt-track-module-row ${mod.completed ? "completed" : ""}`}
+                                                                >
+                                                                    <div className="dt-module-row-left">
+                                                                        <div className={`dt-module-num-badge ${mod.completed ? "completed" : ""}`}>
+                                                                            {mod.completed ? "✓" : mod.id}
+                                                                        </div>
+                                                                        <span className="dt-module-title-text" title={mod.title}>
+                                                                            {mod.title}
+                                                                        </span>
+                                                                    </div>
+                                                                    <span className="dt-module-lessons-chip">
+                                                                        {mod.completed ? "Completed" : `${mod.lessonsCount} Lessons`}
+                                                                    </span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+
+                                                    {/* Pastoral Actions */}
+                                                    <div className="dt-track-actions">
+                                                        <button
+                                                            type="button"
+                                                            className="dt-btn-advance-lesson"
+                                                            disabled={isComplete || learningActionLoading}
+                                                            onClick={() => handleAdvanceLesson(selectedMember, track.courseTitle)}
+                                                            title={isComplete ? "Curriculum fully completed!" : "Advance next lesson during 1-on-1 mentorship"}
+                                                        >
+                                                            {learningActionLoading ? (
+                                                                <RefreshCw size={14} className="animate-spin" />
+                                                            ) : isComplete ? (
+                                                                <CheckCircle2 size={14} />
+                                                            ) : (
+                                                                <Plus size={14} />
+                                                            )}
+                                                            {isComplete ? "🎉 Curriculum Completed!" : "+ Advance Next Lesson (1-on-1)"}
+                                                        </button>
+                                                        <a
+                                                            href={`/cms/learning/course/${track.courseId || 1}`}
+                                                            className="dt-btn-open-classroom"
+                                                            title="Open this course in EPIC Learning Studio"
+                                                        >
+                                                            <ExternalLink size={13} />
+                                                            Open Classroom
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })
                                     )}
                                 </div>
                             )}
@@ -2654,6 +3022,136 @@ export default function DiscipleshipTree() {
                             </button>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {/* =========================================================
+                MODAL 5: ENROLL DISCIPLE IN LEARNING TRACK
+               ========================================================= */}
+            {enrollModalOpen && selectedMember && (
+                <div className="dt-center-modal-backdrop" onClick={() => setEnrollModalOpen(false)}>
+                    <div className="dt-center-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="dt-cm-header">
+                            <h2 style={{ color: "#ffffff", display: "flex", alignItems: "center", gap: 8 }}>
+                                <GraduationCap size={20} color="#a78bfa" />
+                                Enroll in Discipleship Curriculum
+                            </h2>
+                            <button
+                                type="button"
+                                style={{ background: "transparent", border: "none", color: "#ffffff", cursor: "pointer", fontSize: 20 }}
+                                onClick={() => setEnrollModalOpen(false)}
+                            >
+                                ✕
+                            </button>
+                        </div>
+                        <div className="dt-cm-body">
+                            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+                                <div className="dt-drawer-avatar">{selectedMember.fullName.charAt(0)}</div>
+                                <div>
+                                    <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: "#0f172a" }}>{selectedMember.fullName}</h3>
+                                    <div style={{ fontSize: 12, color: "#64748b" }}>
+                                        {selectedMember.leaderCategoryLabel || POSITION_DETAILS[selectedMember.position]?.label} · Gen {selectedMember.generation}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="dt-form-group">
+                                <label>Select Discipleship Course</label>
+                                <select
+                                    value={enrollCourseTitle}
+                                    onChange={(e) => setEnrollCourseTitle(e.target.value)}
+                                    style={{ width: "100%", padding: "10px", borderRadius: 8, border: "1px solid #cbd5e1", fontSize: 13, fontWeight: 600 }}
+                                >
+                                    {DISCIPLESHIP_OFFICIAL_COURSES.map((c) => (
+                                        <option key={c.courseId} value={c.title}>
+                                            {c.icon} {c.title} ({c.totalLessons} Lessons · {c.category})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Course Overview Card */}
+                            {(() => {
+                                const matched = DISCIPLESHIP_OFFICIAL_COURSES.find((c) => c.title === enrollCourseTitle);
+                                if (!matched) return null;
+                                return (
+                                    <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 10, padding: "12px 14px", marginBottom: 16 }}>
+                                        <div style={{ fontWeight: 800, fontSize: 13, color: "#1e293b", marginBottom: 4 }}>
+                                            {matched.icon} {matched.title}
+                                        </div>
+                                        <div style={{ fontSize: 12, color: "#64748b", lineHeight: 1.4, marginBottom: 8 }}>
+                                            {matched.description}
+                                        </div>
+                                        <div style={{ display: "flex", gap: 8, fontSize: 11, fontWeight: 700, color: "#475569" }}>
+                                            <span>📚 {matched.modulesCount} Modules</span>
+                                            <span>·</span>
+                                            <span>📝 {matched.totalLessons} Lessons</span>
+                                            <span>·</span>
+                                            <span style={{ color: "#7c3aed" }}>🎓 Certificate upon completion</span>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+
+                            <div className="dt-form-group">
+                                <label>Initial Progress / Starting Pace</label>
+                                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginTop: 6 }}>
+                                    {[
+                                        { label: "Fresh Start (0%)", pace: 0 },
+                                        { label: "Module 1-2 (25%)", pace: 25 },
+                                        { label: "Midway (50%)", pace: 50 },
+                                        { label: "Advanced (75%)", pace: 75 },
+                                    ].map((p) => (
+                                        <button
+                                            key={p.pace}
+                                            type="button"
+                                            onClick={() => setEnrollPace(p.pace)}
+                                            style={{
+                                                padding: "8px 6px",
+                                                borderRadius: 8,
+                                                border: `2px solid ${enrollPace === p.pace ? "#7c3aed" : "#e2e8f0"}`,
+                                                background: enrollPace === p.pace ? "#f5f3ff" : "#ffffff",
+                                                color: enrollPace === p.pace ? "#7c3aed" : "#475569",
+                                                fontWeight: 800,
+                                                fontSize: 11,
+                                                cursor: "pointer",
+                                                textAlign: "center",
+                                            }}
+                                        >
+                                            {p.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="dt-cm-footer">
+                            <button
+                                type="button"
+                                className="dt-btn dt-btn-secondary"
+                                onClick={() => setEnrollModalOpen(false)}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                className="dt-btn dt-btn-primary"
+                                disabled={learningActionLoading}
+                                onClick={() => handleEnrollDisciple(selectedMember)}
+                                style={{ background: "linear-gradient(135deg, #7c3aed, #6366f1)" }}
+                            >
+                                {learningActionLoading ? "Enrolling..." : "✓ Confirm Enrollment"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Floating Toast Notification */}
+            {toastMessage && (
+                <div className="dt-floating-toast">
+                    <CheckCircle2 size={18} color="#10b981" />
+                    <span>{toastMessage}</span>
                 </div>
             )}
         </div>

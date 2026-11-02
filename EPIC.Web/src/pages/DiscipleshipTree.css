@@ -2123,3 +2123,486 @@
     align-items: center;
     gap: 4px;
 }
+
+/* =========================================================
+   EPIC LEARNING & DISCIPLESHIP TREE UNIFICATION
+   ========================================================= */
+
+.dt-learning-nav-btn {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+    color: #ffffff !important;
+    border-color: #7c3aed !important;
+    font-weight: 700 !important;
+    text-decoration: none !important;
+}
+
+.dt-learning-nav-btn:hover {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);
+}
+
+.dt-node-learning-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    color: #6d28d9;
+    background: #f5f3ff;
+    border: 1px solid #ddd6fe;
+    padding: 2px 7px;
+    border-radius: 6px;
+    margin-top: 6px;
+    white-space: nowrap;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: all 0.2s ease;
+}
+
+.dt-node-learning-badge:hover {
+    background: #ede9fe;
+    border-color: #c4b5fd;
+    transform: translateY(-1px);
+}
+
+/* Learning Overview Banner in Drawer */
+.dt-learning-mastery-card {
+    background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+    border-radius: 16px;
+    padding: 22px 24px;
+    color: #ffffff;
+    margin-bottom: 20px;
+    box-shadow: 0 10px 25px -5px rgba(30, 27, 75, 0.4);
+    position: relative;
+    overflow: hidden;
+}
+
+.dt-learning-mastery-card::before {
+    content: "";
+    position: absolute;
+    top: -40px;
+    right: -40px;
+    width: 140px;
+    height: 140px;
+    background: radial-gradient(circle, rgba(139, 92, 246, 0.3) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.dt-learning-mastery-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.dt-learning-mastery-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 17px;
+    font-weight: 800;
+    color: #ffffff;
+}
+
+.dt-learning-mastery-sub {
+    font-size: 12px;
+    color: #cbd5e1;
+    margin-top: 4px;
+    line-height: 1.4;
+}
+
+.dt-learning-pct-badge {
+    background: linear-gradient(135deg, #8b5cf6, #6366f1);
+    color: #ffffff;
+    font-size: 20px;
+    font-weight: 900;
+    padding: 8px 16px;
+    border-radius: 12px;
+    box-shadow: 0 4px 14px rgba(139, 92, 246, 0.4);
+    white-space: nowrap;
+    text-align: center;
+}
+
+.dt-learning-pct-badge span {
+    display: block;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.85;
+}
+
+.dt-learning-progress-bar-bg {
+    height: 10px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-bottom: 16px;
+}
+
+.dt-learning-progress-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #10b981 0%, #06b6d4 50%, #8b5cf6 100%);
+    transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dt-learning-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.dt-learning-stat-cell {
+    text-align: center;
+}
+
+.dt-learning-stat-cell strong {
+    display: block;
+    font-size: 16px;
+    font-weight: 800;
+    color: #ffffff;
+}
+
+.dt-learning-stat-cell span {
+    font-size: 11px;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    font-weight: 600;
+}
+
+/* Course Track Cards */
+.dt-track-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+    transition: all 0.2s ease;
+}
+
+.dt-track-card:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+}
+
+.dt-track-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.dt-track-card-title-group {
+    flex: 1;
+}
+
+.dt-track-card-title {
+    font-size: 16px;
+    font-weight: 800;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 4px;
+}
+
+.dt-track-card-instructor {
+    font-size: 12px;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.dt-track-status-pill {
+    font-size: 11px;
+    font-weight: 800;
+    padding: 3px 10px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+
+.dt-track-status-pill.completed {
+    background: #d1fae5;
+    color: #047857;
+    border: 1px solid #a7f3d0;
+}
+
+.dt-track-status-pill.in-progress {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+}
+
+.dt-track-status-pill.enrolled {
+    background: #fef3c7;
+    color: #b45309;
+    border: 1px solid #fde68a;
+}
+
+.dt-track-progress-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: #334155;
+    margin-bottom: 6px;
+}
+
+.dt-track-progress-info span.grade {
+    color: #7c3aed;
+    font-weight: 800;
+}
+
+/* Module Checklist */
+.dt-track-modules-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #475569;
+    cursor: pointer;
+    margin: 14px 0 10px;
+    transition: all 0.15s ease;
+}
+
+.dt-track-modules-toggle:hover {
+    background: #f1f5f9;
+    color: #1e293b;
+}
+
+.dt-track-modules-list {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 10px;
+    margin-bottom: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.dt-track-module-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: #ffffff;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    font-size: 12px;
+    transition: all 0.15s ease;
+}
+
+.dt-track-module-row.completed {
+    border-color: #a7f3d0;
+    background: #f0fdf4;
+}
+
+.dt-module-row-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+}
+
+.dt-module-num-badge {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 800;
+    background: #e2e8f0;
+    color: #475569;
+    flex-shrink: 0;
+}
+
+.dt-module-num-badge.completed {
+    background: #10b981;
+    color: #ffffff;
+}
+
+.dt-module-title-text {
+    font-weight: 600;
+    color: #1e293b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dt-track-module-row.completed .dt-module-title-text {
+    color: #065f46;
+}
+
+.dt-module-lessons-chip {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: #f1f5f9;
+    color: #64748b;
+    flex-shrink: 0;
+}
+
+.dt-track-module-row.completed .dt-module-lessons-chip {
+    background: #d1fae5;
+    color: #047857;
+}
+
+/* Track Actions */
+.dt-track-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid #f1f5f9;
+}
+
+.dt-btn-advance-lesson {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 10px 14px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+    transition: all 0.15s ease;
+}
+
+.dt-btn-advance-lesson:hover:not(:disabled) {
+    background: linear-gradient(135deg, #047857 0%, #059669 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+}
+
+.dt-btn-advance-lesson:disabled {
+    background: #94a3b8;
+    cursor: not-allowed;
+    opacity: 0.7;
+    box-shadow: none;
+}
+
+.dt-btn-open-classroom {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: #ffffff;
+    color: #4338ca;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 10px 14px;
+    border: 1px solid #c7d2fe;
+    border-radius: 8px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.dt-btn-open-classroom:hover {
+    background: #eef2ff;
+    border-color: #a5b4fc;
+    color: #3730a3;
+}
+
+/* Empty Learning State in Drawer */
+.dt-learning-empty {
+    text-align: center;
+    padding: 40px 20px;
+    background: #ffffff;
+    border: 1px dashed #cbd5e1;
+    border-radius: 14px;
+    margin-bottom: 20px;
+}
+
+.dt-learning-empty-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 16px;
+    background: #ede9fe;
+    color: #7c3aed;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 14px;
+}
+
+.dt-learning-empty h4 {
+    margin: 0 0 6px;
+    font-size: 16px;
+    font-weight: 800;
+    color: #1e293b;
+}
+
+.dt-learning-empty p {
+    font-size: 13px;
+    color: #64748b;
+    max-width: 380px;
+    margin: 0 auto 16px;
+    line-height: 1.5;
+}
+
+/* Toast Floating Notification */
+.dt-floating-toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: #0f172a;
+    color: #ffffff;
+    padding: 12px 20px;
+    border-radius: 10px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    z-index: 99999;
+    border-left: 4px solid #10b981;
+    animation: dtToastSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes dtToastSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
