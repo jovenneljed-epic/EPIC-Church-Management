@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+import React, { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import "./DiscipleshipTree.css";
 import {
     discipleshipWebService,
@@ -40,6 +40,8 @@ import {
     ZoomOut,
     Maximize2,
     RotateCcw,
+    LayoutGrid,
+    MoveHorizontal,
 } from "lucide-react";
 
 export default function DiscipleshipTree() {
@@ -53,9 +55,17 @@ export default function DiscipleshipTree() {
     const [healthFilter, setHealthFilter] = useState<string>("ALL");
     const [viewMode, setViewMode] = useState<"FLOW" | "TREE" | "MATRIX" | "RADAR">("FLOW");
 
-    // Canvas Zoom & Department Filter
-    const [zoomLevel, setZoomLevel] = useState<number>(0.85);
+    // Canvas Zoom, Layout Mode & Drag-to-Pan Controls
+    const [zoomLevel, setZoomLevel] = useState<number>(0.9);
     const [selectedCategory, setSelectedCategory] = useState<"ALL" | "PASTOR" | "ADULT" | "YOUTH">("ALL");
+    const [treeLayoutMode, setTreeLayoutMode] = useState<"FIT_GRID" | "LINEAR">("FIT_GRID");
+    const [cardDensity, setCardDensity] = useState<"NORMAL" | "COMPACT">("NORMAL");
+    const [panPosition, setPanPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+    const [isPanning, setIsPanning] = useState(false);
+    const panStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+
+    const treeContainerRef = useRef<HTMLDivElement>(null);
+    const treeWrapperRef = useRef<HTMLDivElement>(null);
 
     // Collapsed nodes state (Set of memberIds whose children are hidden)
     const [collapsedIds, setCollapsedIds] = useState<Set<number>>(new Set());
@@ -204,6 +214,72 @@ export default function DiscipleshipTree() {
         }
     };
 
+    // True Dynamic Fit Screen: Measures actual visible container width and content width
+    const handleFitScreen = useCallback(() => {
+        setPanPosition({ x: 0, y: 0 });
+        if (!treeContainerRef.current || !treeWrapperRef.current) {
+            setZoomLevel(treeLayoutMode === "FIT_GRID" ? 0.95 : 0.25);
+            return;
+        }
+        const container = treeContainerRef.current;
+        const wrapper = treeWrapperRef.current;
+
+        // Container client width minus padding
+        const containerWidth = container.clientWidth - 48;
+
+        // Calculate unscaled content width
+        const currentScale = zoomLevel > 0 ? zoomLevel : 1;
+        const unscaledWidth = wrapper.scrollWidth / currentScale;
+
+        if (containerWidth > 0 && unscaledWidth > 0) {
+            const calculatedScale = Math.min(1.0, Math.max(0.18, Number((containerWidth / unscaledWidth).toFixed(2))));
+            setZoomLevel(calculatedScale);
+        } else {
+            setZoomLevel(treeLayoutMode === "FIT_GRID" ? 0.95 : 0.25);
+        }
+    }, [zoomLevel, treeLayoutMode]);
+
+    // Auto-fit on department filter, layout mode, or density change
+    useEffect(() => {
+        if (viewMode === "TREE" && treeRoot) {
+            const t = setTimeout(() => {
+                handleFitScreen();
+            }, 120);
+            return () => clearTimeout(t);
+        }
+    }, [viewMode, selectedCategory, treeLayoutMode, cardDensity, areAllDisciplesCollapsed]);
+
+    // Canvas Drag-to-Pan Handlers
+    const handleCanvasMouseDown = (e: React.MouseEvent) => {
+        const target = e.target as HTMLElement;
+        if (
+            target.closest(".dt-node-card") ||
+            target.closest("button") ||
+            target.closest("a") ||
+            target.closest("input") ||
+            target.closest(".dt-canvas-toolbar")
+        ) {
+            return;
+        }
+        setIsPanning(true);
+        panStartRef.current = {
+            x: e.clientX - panPosition.x,
+            y: e.clientY - panPosition.y,
+        };
+    };
+
+    const handleCanvasMouseMove = (e: React.MouseEvent) => {
+        if (!isPanning) return;
+        setPanPosition({
+            x: e.clientX - panStartRef.current.x,
+            y: e.clientY - panStartRef.current.y,
+        });
+    };
+
+    const handleCanvasMouseUp = () => {
+        setIsPanning(false);
+    };
+
     // =========================================================
     // HANDLERS: PASTORAL CONTROL
     // =========================================================
@@ -297,7 +373,7 @@ export default function DiscipleshipTree() {
             <div key={node.memberId} className="dt-tree-node">
                 {/* Node Card */}
                 <div
-                    className={`dt-node-card health-${node.health} ${isSelected ? "selected" : ""} ${
+                    className={`dt-node-card ${cardDensity === "COMPACT" ? "compact" : ""} health-${node.health} ${isSelected ? "selected" : ""} ${
                         !matchesSearch || !matchesHealth ? "opacity-40" : ""
                     }`}
                     onClick={() => {
@@ -470,8 +546,8 @@ export default function DiscipleshipTree() {
                         <div className="dt-branch-connector-down" />
                         <div
                             className={`dt-children-container ${
-                                displayedChildren.length === 1 ? "single-child" : ""
-                            }`}
+                                isSeniorPastor && treeLayoutMode === "FIT_GRID" ? "fit-grid-mode" : ""
+                            } ${displayedChildren.length === 1 ? "single-child" : ""}`}
                         >
                             {displayedChildren.map((child) => (
                                 <div key={child.memberId} style={{ position: "relative" }}>
@@ -885,10 +961,17 @@ export default function DiscipleshipTree() {
 
             {/* VIEW MODE 1: ORGANIC BRANCH TREE */}
             {viewMode === "TREE" && (
-                <div className="dt-tree-container">
+                <div
+                    ref={treeContainerRef}
+                    className={`dt-tree-container ${isPanning ? "is-panning" : ""}`}
+                    onMouseDown={handleCanvasMouseDown}
+                    onMouseMove={handleCanvasMouseMove}
+                    onMouseUp={handleCanvasMouseUp}
+                    onMouseLeave={handleCanvasMouseUp}
+                >
                     {/* Canvas Toolbar: Department Pills & Zoom Controls */}
                     {treeRoot && (
-                        <div className="dt-canvas-toolbar">
+                        <div className="dt-canvas-toolbar" onClick={(e) => e.stopPropagation()}>
                             <div className="dt-canvas-pills">
                                 <button
                                     type="button"
@@ -921,10 +1004,49 @@ export default function DiscipleshipTree() {
                             </div>
 
                             <div className="dt-zoom-controls">
+                                {/* Layout Switcher */}
+                                <div className="dt-layout-mode-group">
+                                    <button
+                                        type="button"
+                                        className={`dt-layout-btn ${treeLayoutMode === "FIT_GRID" ? "active" : ""}`}
+                                        onClick={() => {
+                                            setTreeLayoutMode("FIT_GRID");
+                                            setPanPosition({ x: 0, y: 0 });
+                                            setZoomLevel(0.95);
+                                        }}
+                                        title="Fit to View All: Multi-row responsive layout so all 17 leaders fit on your screen"
+                                    >
+                                        <LayoutGrid size={13} /> Fit All (Multi-Row)
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`dt-layout-btn ${treeLayoutMode === "LINEAR" ? "active" : ""}`}
+                                        onClick={() => {
+                                            setTreeLayoutMode("LINEAR");
+                                            setPanPosition({ x: 0, y: 0 });
+                                            setTimeout(handleFitScreen, 60);
+                                        }}
+                                        title="Linear Branch: Single horizontal branch line with pan and zoom"
+                                    >
+                                        <MoveHorizontal size={13} /> Linear Branch
+                                    </button>
+                                </div>
+
+                                {/* Compact Toggle */}
+                                <button
+                                    type="button"
+                                    className={`dt-zoom-btn ${cardDensity === "COMPACT" ? "active" : ""}`}
+                                    onClick={() => setCardDensity((d) => (d === "NORMAL" ? "COMPACT" : "NORMAL"))}
+                                    title={cardDensity === "NORMAL" ? "Switch to Compact Cards (230px)" : "Switch to Full Cards (280px)"}
+                                >
+                                    {cardDensity === "NORMAL" ? "🗜 Compact" : "🗖 Full Size"}
+                                </button>
+
+                                {/* Zoom Controls */}
                                 <button
                                     type="button"
                                     className="dt-zoom-btn"
-                                    onClick={() => setZoomLevel((z) => Math.max(0.4, Number((z - 0.1).toFixed(2))))}
+                                    onClick={() => setZoomLevel((z) => Math.max(0.18, Number((z - 0.1).toFixed(2))))}
                                     title="Zoom Out"
                                 >
                                     <ZoomOut size={14} />
@@ -933,7 +1055,7 @@ export default function DiscipleshipTree() {
                                 <button
                                     type="button"
                                     className="dt-zoom-btn"
-                                    onClick={() => setZoomLevel((z) => Math.min(1.4, Number((z + 0.1).toFixed(2))))}
+                                    onClick={() => setZoomLevel((z) => Math.min(1.5, Number((z + 0.1).toFixed(2))))}
                                     title="Zoom In"
                                 >
                                     <ZoomIn size={14} />
@@ -941,15 +1063,18 @@ export default function DiscipleshipTree() {
                                 <button
                                     type="button"
                                     className="dt-zoom-btn dt-zoom-fit"
-                                    onClick={() => setZoomLevel(0.65)}
-                                    title="Fit Screen (65% Scale)"
+                                    onClick={handleFitScreen}
+                                    title="Auto-calculate zoom scale so all leaders fit on screen with 0 clipping"
                                 >
                                     <Maximize2 size={13} /> Fit Screen
                                 </button>
                                 <button
                                     type="button"
                                     className="dt-zoom-btn"
-                                    onClick={() => setZoomLevel(1)}
+                                    onClick={() => {
+                                        setZoomLevel(1);
+                                        setPanPosition({ x: 0, y: 0 });
+                                    }}
                                     title="Reset 100%"
                                 >
                                     <RotateCcw size={13} />
@@ -973,11 +1098,12 @@ export default function DiscipleshipTree() {
                         </div>
                     ) : treeRoot ? (
                         <div
-                            className="dt-tree-wrapper"
+                            ref={treeWrapperRef}
+                            className={`dt-tree-wrapper ${cardDensity === "COMPACT" ? "compact-density" : ""}`}
                             style={{
-                                transform: `scale(${zoomLevel})`,
+                                transform: `translate(${panPosition.x}px, ${panPosition.y}px) scale(${zoomLevel})`,
                                 transformOrigin: "top center",
-                                transition: "transform 0.2s ease",
+                                transition: isPanning ? "none" : "transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
                             }}
                         >
                             {renderTreeNode(treeRoot)}
