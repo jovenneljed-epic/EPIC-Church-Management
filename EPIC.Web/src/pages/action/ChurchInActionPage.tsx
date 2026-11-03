@@ -43,6 +43,7 @@ import {
     Eye,
     X,
     MessageCircle,
+    Target,
 } from "lucide-react";
 
 import "./ChurchInAction.css";
@@ -58,6 +59,7 @@ import DiscipleshipTree from "../DiscipleshipTree";
 import epicGenerationsCurriculumService, {
     EPIC_GENERATIONS_CURRICULUM,
 } from "../../services/epicGenerationsCurriculum";
+import IndividualDiscipleTrackingHub from "./IndividualDiscipleTrackingHub";
 
 type ActiveTab =
     | "dashboard"
@@ -68,6 +70,7 @@ type ActiveTab =
     | "groups"
     | "care"
     | "multiplication"
+    | "individual"
     | "members"
     | "visitors-lifecycle"
     | "members-lifecycle"
@@ -291,6 +294,7 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
     // Separate Lifecycle Monitoring State
     const [activeLifecycleTab, setActiveLifecycleTab] = useState<"visitors" | "members">("visitors");
     const [curriculumUpdateTrigger, setCurriculumUpdateTrigger] = useState<number>(0);
+    const [selectedIndividualMemberId, setSelectedIndividualMemberId] = useState<number | undefined>(undefined);
 
     const handleNavigatePage = useCallback((page: string) => {
         if (onNavigate) {
@@ -1431,6 +1435,15 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                 >
                     <TrendingUp size={16} />
                     <span>8. Leadership Pipeline & Roadmap</span>
+                </button>
+
+                <button
+                    type="button"
+                    className={`cia-tab-btn ${activeTab === "individual" ? "active" : ""}`}
+                    onClick={() => setActiveTab("individual")}
+                >
+                    <Target size={16} />
+                    <span>9. Individual 360° Tracking Hub</span>
                 </button>
             </nav>
 
@@ -3002,6 +3015,19 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                                                         <Eye size={13} />
                                                         <span>Profile</span>
                                                     </button>
+                                                    <button
+                                                        type="button"
+                                                        className="cia-btn-primary small"
+                                                        style={{ background: "#0d9488", color: "#ffffff", display: "inline-flex", alignItems: "center", gap: "4px", padding: "4px 8px", fontSize: "11px" }}
+                                                        onClick={() => {
+                                                            setSelectedIndividualMemberId(m.memberId);
+                                                            setActiveTab("individual");
+                                                        }}
+                                                        title="Open Dedicated 360° Individual Discipleship Tracking Hub"
+                                                    >
+                                                        <Target size={13} />
+                                                        <span>360° Hub</span>
+                                                    </button>
                                                     {isLeader ? (
                                                         <button
                                                             type="button"
@@ -3886,6 +3912,32 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                             </tbody>
                         </table>
                     </div>
+                </div>
+            )}
+
+            {/* ============================================================ */}
+            {/* VIEW 9: DEDICATED INDIVIDUAL 360° DISCIPLESHIP TRACKING HUB   */}
+            {/* ============================================================ */}
+            {activeTab === "individual" && (
+                <div className="cia-tab-content">
+                    <IndividualDiscipleTrackingHub
+                        members={realMembers}
+                        visitors={realVisitors}
+                        delegations={delegations}
+                        followUpLogs={followUpLogs}
+                        initialMemberId={selectedIndividualMemberId}
+                        onClose={() => setActiveTab("registry")}
+                        onNavigateToLearning={() => handleNavigatePage("learning")}
+                        onLogCheckIn={(m) => {
+                            setFollowUpForm((prev) => ({
+                                ...prev,
+                                ministerName: m.fullName,
+                                notes: `1-on-1 check-in for ${m.fullName}`,
+                            }));
+                            setShowFollowUpModal(true);
+                        }}
+                        onCurriculumUpdated={() => setCurriculumUpdateTrigger((p) => p + 1)}
+                    />
                 </div>
             )}
 
@@ -4942,6 +4994,19 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                                     Close Profile
                                 </button>
                                 <div style={{ display: "flex", gap: "8px" }}>
+                                    <button
+                                        type="button"
+                                        className="cia-btn-primary"
+                                        style={{ background: "#0f766e", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                                        onClick={() => {
+                                            setShowMemberProfileModal(false);
+                                            setSelectedIndividualMemberId(m.memberId);
+                                            setActiveTab("individual");
+                                        }}
+                                    >
+                                        <Target size={15} />
+                                        <span>360° Tracking Hub</span>
+                                    </button>
                                     <button
                                         type="button"
                                         className="cia-btn-primary"
