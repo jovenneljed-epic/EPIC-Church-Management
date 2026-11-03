@@ -1181,19 +1181,6 @@ const NAVIGATION_SECTIONS:
     },
 
     {
-        title: "DISCIPLESHIP & CARE",
-
-        items: [
-            {
-                page: "discipleship-tree",
-                label: "Discipleship Tree",
-                icon: "🌿",
-                permission: "Members",
-            },
-        ],
-    },
-
-    {
         title: "MANAGEMENT",
 
         items: [
