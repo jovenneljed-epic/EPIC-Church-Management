@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { API_BASE_URL } from "../../config";
 import { READY_MADE_LESSON_TEMPLATES } from "./learningTemplates";
+import { EPIC_GENERATIONS_CURRICULUM } from "../../services/epicGenerationsCurriculum";
 import { LessonEditorModal } from "./LessonEditorModal";
 import "./CurriculumStudio.css";
 
@@ -28,7 +29,7 @@ interface CurriculumStudioProps {
     onViewCourse: (courseId: number) => void;
 }
 
-type StudioTab = "courses" | "templates" | "assessments" | "enrollments";
+type StudioTab = "courses" | "generations" | "templates" | "assessments" | "enrollments";
 
 export const CurriculumStudio: React.FC<CurriculumStudioProps> = ({
     onSwitchToLearnerView,
@@ -457,6 +458,14 @@ export const CurriculumStudio: React.FC<CurriculumStudioProps> = ({
                 </button>
                 <button
                     type="button"
+                    className={`studio-tab-btn ${activeTab === "generations" ? "active" : ""}`}
+                    onClick={() => setActiveTab("generations")}
+                    style={activeTab === "generations" ? { background: "rgba(13, 148, 136, 0.25)", borderColor: "#14b8a6", color: "#5eead4" } : {}}
+                >
+                    <span>🌱</span> EPIC Generations Tracks (5 Stages • 90 Lessons)
+                </button>
+                <button
+                    type="button"
                     className={`studio-tab-btn ${activeTab === "templates" ? "active" : ""}`}
                     onClick={() => setActiveTab("templates")}
                 >
@@ -591,6 +600,100 @@ export const CurriculumStudio: React.FC<CurriculumStudioProps> = ({
                             ))}
                         </div>
                     )}
+                </div>
+            )}
+
+            {/* TAB: EPIC GENERATIONS 5-STAGE CURRICULUM */}
+            {activeTab === "generations" && (
+                <div>
+                    <div style={{ background: "linear-gradient(135deg, #042f2e, #0f766e)", borderRadius: "14px", padding: "20px 24px", color: "#ffffff", marginBottom: "24px", border: "1px solid #14b8a6" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
+                            <div>
+                                <span style={{ fontSize: "11px", fontWeight: "800", color: "#99f6e4", textTransform: "uppercase", letterSpacing: "0.8px", background: "rgba(20, 184, 166, 0.25)", padding: "3px 10px", borderRadius: "999px" }}>
+                                    EPIC GENERATIONS • 2 TIMOTHY 2:2 FRAMEWORK
+                                </span>
+                                <h2 style={{ margin: "8px 0 4px", fontSize: "22px", color: "#ffffff", fontWeight: "800" }}>
+                                    Systematic Discipleship Curriculum Program (5 Stages • 90 Structured Lessons)
+                                </h2>
+                                <p style={{ margin: 0, fontSize: "13px", color: "#ccfbf1", maxWidth: "720px" }}>
+                                    Directly connected to Church in Action: tracks every disciple's spiritual growth from New Believer (Gen 1) to Movement Leader (Gen 5).
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                className="btn-primary"
+                                style={{ background: "#ffffff", color: "#0f766e", fontWeight: "700" }}
+                                onClick={() => {
+                                    window.location.href = "/cms/church-in-action";
+                                }}
+                            >
+                                ↗ Monitor Disciples in Church in Action
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "20px" }}>
+                        {EPIC_GENERATIONS_CURRICULUM.map((prog) => (
+                            <div key={prog.stage} style={{ background: "rgba(15, 23, 42, 0.6)", borderRadius: "14px", border: `1.5px solid ${prog.themeColor}`, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+                                <div style={{ background: prog.bannerGradient, padding: "16px 20px", color: "#ffffff" }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                                        <span style={{ fontSize: "11px", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px", background: "rgba(255,255,255,0.2)", padding: "2px 8px", borderRadius: "4px" }}>
+                                            Stage {prog.stage} • {prog.generationLevel}
+                                        </span>
+                                        <span style={{ fontSize: "12px", fontWeight: "800" }}>{prog.courseCode}</span>
+                                    </div>
+                                    <h3 style={{ margin: "4px 0", fontSize: "17px", color: "#ffffff" }}>{prog.courseTitle}</h3>
+                                    <p style={{ margin: 0, fontSize: "12px", color: "rgba(255,255,255,0.85)", fontStyle: "italic" }}>
+                                        {prog.subtitle}
+                                    </p>
+                                </div>
+
+                                <div style={{ padding: "18px 20px", flex: 1, display: "flex", flexDirection: "column" }}>
+                                    <div style={{ display: "flex", gap: "12px", fontSize: "12px", color: "#94a3b8", marginBottom: "12px", paddingBottom: "10px", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+                                        <span>⏱ <strong>{prog.totalWeeks} Weeks</strong></span>
+                                        <span>📚 <strong>{prog.totalLessons} Lessons</strong></span>
+                                        <span>📁 <strong>{prog.modulesCount} Modules</strong></span>
+                                    </div>
+
+                                    <div style={{ fontSize: "12px", fontWeight: "700", color: "#f8fafc", marginBottom: "8px", textTransform: "uppercase" }}>
+                                        Course Modules & Lessons:
+                                    </div>
+
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "16px", flex: 1 }}>
+                                        {prog.modules.map((mod) => (
+                                            <details key={mod.moduleNumber} style={{ background: "rgba(255,255,255,0.04)", borderRadius: "8px", padding: "8px 12px", border: "1px solid rgba(255,255,255,0.06)" }}>
+                                                <summary style={{ cursor: "pointer", fontSize: "12px", fontWeight: "700", color: "#cbd5e1" }}>
+                                                    M{mod.moduleNumber}: {mod.title} ({mod.lessons.length} lessons)
+                                                </summary>
+                                                <ul style={{ margin: "8px 0 0", paddingLeft: "18px", fontSize: "11px", color: "#94a3b8" }}>
+                                                    {mod.lessons.map((les) => (
+                                                        <li key={les.lessonNumber} style={{ margin: "4px 0" }}>
+                                                            <strong style={{ color: "#e2e8f0" }}>Lesson {les.lessonNumber}:</strong> {les.title}
+                                                            <div style={{ fontSize: "10px", color: "#64748b" }}>📖 {les.scriptureAnchor}</div>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </details>
+                                        ))}
+                                    </div>
+
+                                    <div style={{ marginTop: "auto", paddingTop: "12px", borderTop: "1px solid rgba(255,255,255,0.08)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                        <span style={{ fontSize: "11px", color: "#94a3b8" }}>Target: <strong>{prog.generationTitle}</strong></span>
+                                        <button
+                                            type="button"
+                                            className="btn-secondary"
+                                            style={{ fontSize: "11px", padding: "4px 10px" }}
+                                            onClick={() => {
+                                                window.location.href = "/cms/church-in-action";
+                                            }}
+                                        >
+                                            View Active Disciples ↗
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             )}
 

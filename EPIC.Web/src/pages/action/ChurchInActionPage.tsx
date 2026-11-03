@@ -39,7 +39,6 @@ import {
     Compass,
     Heart,
     Activity,
-    Target,
     LayoutGrid,
     Eye,
     X,
@@ -56,6 +55,9 @@ import type {
     Prospect,
 } from "../../services/churchInActionService";
 import DiscipleshipTree from "../DiscipleshipTree";
+import epicGenerationsCurriculumService, {
+    EPIC_GENERATIONS_CURRICULUM,
+} from "../../services/epicGenerationsCurriculum";
 
 type ActiveTab =
     | "dashboard"
@@ -288,6 +290,7 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
 
     // Separate Lifecycle Monitoring State
     const [activeLifecycleTab, setActiveLifecycleTab] = useState<"visitors" | "members">("visitors");
+    const [curriculumUpdateTrigger, setCurriculumUpdateTrigger] = useState<number>(0);
 
     const handleNavigatePage = useCallback((page: string) => {
         if (onNavigate) {
@@ -697,6 +700,11 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
             return matchesSearch && matchesDept && matchesRole && matchesGen && matchesStage;
         });
     }, [realMembers, memberSearchTerm, memberDeptFilter, memberRoleFilter, generationFilter, stageFilter]);
+
+    // Church-wide EPIC Learning systematic metrics
+    const churchLearning = useMemo(() => {
+        return epicGenerationsCurriculumService.getChurchWideMetrics(realMembers);
+    }, [realMembers, curriculumUpdateTrigger]);
 
     // ============================================================
     // SEPARATED LIFECYCLE 1: VISITORS ONLY (100% Visitors Pipeline)
@@ -1746,6 +1754,103 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                             </div>
                         </div>
                     </div>
+
+                    {/* EPIC LEARNING & SYSTEMATIC PROGRESS HUB */}
+                    <div className="cia-card-frame" style={{ marginTop: "24px", background: "linear-gradient(135deg, #042f2e, #0f766e)", color: "#ffffff", padding: "24px", borderRadius: "14px", border: "1px solid #14b8a6" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px", marginBottom: "20px" }}>
+                            <div>
+                                <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "11px", fontWeight: "800", color: "#99f6e4", textTransform: "uppercase", letterSpacing: "0.8px", background: "rgba(20, 184, 166, 0.25)", padding: "3px 10px", borderRadius: "999px", marginBottom: "8px" }}>
+                                    <BookOpen size={12} />
+                                    <span>EPIC LEARNING • SYSTEMATIC PROGRESS MONITORING</span>
+                                </div>
+                                <h3 style={{ margin: "0 0 6px 0", fontSize: "22px", fontWeight: "800", color: "#ffffff" }}>
+                                    Discipleship Academy Church-Wide Progress
+                                </h3>
+                                <p style={{ margin: 0, fontSize: "13px", color: "#ccfbf1", maxWidth: "680px" }}>
+                                    Synchronizing every believer's spiritual growth through 5 systematic equipping courses (90 structured lessons, memory verses, and assessments).
+                                </p>
+                            </div>
+                            <div style={{ display: "flex", gap: "10px" }}>
+                                <button
+                                    type="button"
+                                    className="cia-btn-action-banner"
+                                    style={{ background: "#ffffff", color: "#0f766e", fontWeight: "700" }}
+                                    onClick={() => handleNavigatePage("learning")}
+                                >
+                                    <GraduationCap size={15} />
+                                    <span>Open EPIC Learning Studio ↗</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    className="cia-btn-outline"
+                                    style={{ background: "rgba(255,255,255,0.15)", color: "#ffffff", borderColor: "rgba(255,255,255,0.3)" }}
+                                    onClick={() => setActiveTab("equipping")}
+                                >
+                                    <Layers size={15} />
+                                    <span>View 5-Stage Tracks</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* ACADEMIC METRICS GRID */}
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "14px", marginBottom: "20px" }}>
+                            <div style={{ background: "rgba(255,255,255,0.1)", borderRadius: "10px", padding: "14px 16px", border: "1px solid rgba(255,255,255,0.15)" }}>
+                                <div style={{ fontSize: "11px", color: "#99f6e4", textTransform: "uppercase", fontWeight: "700" }}>Total Disciples Enrolled</div>
+                                <div style={{ fontSize: "24px", fontWeight: "800", color: "#ffffff", margin: "4px 0" }}>{churchLearning.totalEnrolled}</div>
+                                <small style={{ fontSize: "11px", color: "#ccfbf1" }}>Active across 5 Stages</small>
+                            </div>
+                            <div style={{ background: "rgba(255,255,255,0.1)", borderRadius: "10px", padding: "14px 16px", border: "1px solid rgba(255,255,255,0.15)" }}>
+                                <div style={{ fontSize: "11px", color: "#99f6e4", textTransform: "uppercase", fontWeight: "700" }}>Total Lessons Completed</div>
+                                <div style={{ fontSize: "24px", fontWeight: "800", color: "#5eead4", margin: "4px 0" }}>{churchLearning.totalLessonsFinished}</div>
+                                <small style={{ fontSize: "11px", color: "#ccfbf1" }}>Recorded across curriculum</small>
+                            </div>
+                            <div style={{ background: "rgba(255,255,255,0.1)", borderRadius: "10px", padding: "14px 16px", border: "1px solid rgba(255,255,255,0.15)" }}>
+                                <div style={{ fontSize: "11px", color: "#99f6e4", textTransform: "uppercase", fontWeight: "700" }}>Average Progress Rate</div>
+                                <div style={{ fontSize: "24px", fontWeight: "800", color: "#ffffff", margin: "4px 0" }}>{churchLearning.averageProgressPct}%</div>
+                                <small style={{ fontSize: "11px", color: "#ccfbf1" }}>Overall curriculum mastery</small>
+                            </div>
+                            <div style={{ background: "rgba(255,255,255,0.1)", borderRadius: "10px", padding: "14px 16px", border: "1px solid rgba(255,255,255,0.15)" }}>
+                                <div style={{ fontSize: "11px", color: "#99f6e4", textTransform: "uppercase", fontWeight: "700" }}>Certified Disciples</div>
+                                <div style={{ fontSize: "24px", fontWeight: "800", color: "#fef08a", margin: "4px 0" }}>{churchLearning.totalCompleted}</div>
+                                <small style={{ fontSize: "11px", color: "#ccfbf1" }}>Graduated to next generation</small>
+                            </div>
+                        </div>
+
+                        {/* 5-STAGE PIPELINE FUNNEL */}
+                        <div style={{ background: "rgba(0,0,0,0.25)", borderRadius: "10px", padding: "16px", border: "1px solid rgba(255,255,255,0.1)" }}>
+                            <div style={{ fontSize: "12px", fontWeight: "800", textTransform: "uppercase", color: "#99f6e4", marginBottom: "10px", display: "flex", justifyContent: "space-between" }}>
+                                <span>5-Stage Equipping Funnel</span>
+                                <span>{realMembers.length} Congregation Disciples Monitored</span>
+                            </div>
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "10px" }}>
+                                <div style={{ background: "rgba(255,255,255,0.08)", padding: "10px", borderRadius: "8px", textAlign: "center" }}>
+                                    <div style={{ fontSize: "11px", color: "#38bdf8", fontWeight: "700" }}>Stage 1 Foundation</div>
+                                    <div style={{ fontSize: "18px", fontWeight: "800", color: "#ffffff", margin: "3px 0" }}>{churchLearning.stage1Count}</div>
+                                    <small style={{ fontSize: "10px", color: "#cbd5e1" }}>GEN-101 (Gen 1)</small>
+                                </div>
+                                <div style={{ background: "rgba(255,255,255,0.08)", padding: "10px", borderRadius: "8px", textAlign: "center" }}>
+                                    <div style={{ fontSize: "11px", color: "#4ade80", fontWeight: "700" }}>Stage 2 Formation</div>
+                                    <div style={{ fontSize: "18px", fontWeight: "800", color: "#ffffff", margin: "3px 0" }}>{churchLearning.stage2Count}</div>
+                                    <small style={{ fontSize: "10px", color: "#cbd5e1" }}>GEN-201 (Gen 2)</small>
+                                </div>
+                                <div style={{ background: "rgba(255,255,255,0.08)", padding: "10px", borderRadius: "8px", textAlign: "center" }}>
+                                    <div style={{ fontSize: "11px", color: "#fb923c", fontWeight: "700" }}>Stage 3 Equipping</div>
+                                    <div style={{ fontSize: "18px", fontWeight: "800", color: "#ffffff", margin: "3px 0" }}>{churchLearning.stage3Count}</div>
+                                    <small style={{ fontSize: "10px", color: "#cbd5e1" }}>GEN-301 (Gen 3)</small>
+                                </div>
+                                <div style={{ background: "rgba(255,255,255,0.08)", padding: "10px", borderRadius: "8px", textAlign: "center" }}>
+                                    <div style={{ fontSize: "11px", color: "#c084fc", fontWeight: "700" }}>Stage 4 Leadership</div>
+                                    <div style={{ fontSize: "18px", fontWeight: "800", color: "#ffffff", margin: "3px 0" }}>{churchLearning.stage4Count}</div>
+                                    <small style={{ fontSize: "10px", color: "#cbd5e1" }}>GEN-401 (Gen 4)</small>
+                                </div>
+                                <div style={{ background: "rgba(255,255,255,0.08)", padding: "10px", borderRadius: "8px", textAlign: "center" }}>
+                                    <div style={{ fontSize: "11px", color: "#facc15", fontWeight: "700" }}>Stage 5 Multipliers</div>
+                                    <div style={{ fontSize: "18px", fontWeight: "800", color: "#ffffff", margin: "3px 0" }}>{churchLearning.stage5Count}</div>
+                                    <small style={{ fontSize: "10px", color: "#cbd5e1" }}>GEN-501 (Gen 5)</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -1828,107 +1933,90 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                         </div>
                     </div>
 
-                    {/* 5-STAGE PATHWAY CARDS */}
+                    {/* 5-STAGE PATHWAY CARDS - DYNAMIC FROM EPIC_GENERATIONS_CURRICULUM */}
                     <div className="epic-pathway-grid">
-                        {/* STAGE 1 */}
-                        <div className="epic-pathway-card" style={{ borderTop: "4px solid #0284c7" }}>
-                            <div className="epic-pathway-number" style={{ color: "#0284c7" }}>Stage 1</div>
-                            <h4 className="epic-pathway-name">FOUNDATION</h4>
-                            <p className="epic-pathway-desc">
-                                Assurance of salvation; prayer and Bible reading; identity in Christ; church connection and commitment.
-                            </p>
-                            <ul className="epic-pathway-topics">
-                                <li>Assurance of Salvation & Lordship</li>
-                                <li>Word of God & Daily Devotions</li>
-                                <li>The Holy Spirit & Life in Christ</li>
-                                <li>Water Baptism & Obedience</li>
-                                <li>Church Life & Fellowship</li>
-                            </ul>
-                            <div style={{ marginTop: "16px", paddingTop: "12px", borderTop: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                <span className="stage-badge stage-1">Level 1 • Foundation</span>
-                                <span style={{ fontSize: "12px", fontWeight: "700", color: "#0284c7" }}>{disciples.filter(d => d.stage === "New Believer" || d.stage === "Foundation Track").length} Enrolled</span>
-                            </div>
-                        </div>
+                        {EPIC_GENERATIONS_CURRICULUM.map((prog) => {
+                            const enrolledInStage = realMembers.filter((m) => {
+                                const st = epicGenerationsCurriculumService.getDiscipleStatus(m);
+                                return st.stage === prog.stage;
+                            });
 
-                        {/* STAGE 2 */}
-                        <div className="epic-pathway-card" style={{ borderTop: "4px solid #16a34a" }}>
-                            <div className="epic-pathway-number" style={{ color: "#16a34a" }}>Stage 2</div>
-                            <h4 className="epic-pathway-name">FORMATION</h4>
-                            <p className="epic-pathway-desc">
-                                Spiritual disciplines; biblical foundations; character development; obedience and Christian community.
-                            </p>
-                            <ul className="epic-pathway-topics">
-                                <li>Spiritual Disciplines & Fasting</li>
-                                <li>Biblical Worldview & Obedience</li>
-                                <li>Character & Fruit of the Spirit</li>
-                                <li>Life Group Participation</li>
-                                <li>Principles of Biblical Stewardship</li>
-                            </ul>
-                            <div style={{ marginTop: "16px", paddingTop: "12px", borderTop: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                <span className="stage-badge stage-2">Level 2 • Formation</span>
-                                <span style={{ fontSize: "12px", fontWeight: "700", color: "#16a34a" }}>{disciples.filter(d => d.stage === "Baptized Disciple").length} Enrolled</span>
-                            </div>
-                        </div>
+                            return (
+                                <div key={prog.stage} className="epic-pathway-card" style={{ borderTop: `4px solid ${prog.themeColor}` }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                                        <div className="epic-pathway-number" style={{ color: prog.themeColor }}>
+                                            Stage {prog.stage} • {prog.generationLevel}
+                                        </div>
+                                        <span style={{ fontSize: "11px", fontWeight: "800", color: prog.themeColor, background: "#f8fafc", padding: "2px 6px", borderRadius: "4px", border: "1px solid #e2e8f0" }}>
+                                            {prog.courseCode}
+                                        </span>
+                                    </div>
 
-                        {/* STAGE 3 */}
-                        <div className="epic-pathway-card" style={{ borderTop: "4px solid #ea580c" }}>
-                            <div className="epic-pathway-number" style={{ color: "#ea580c" }}>Stage 3</div>
-                            <h4 className="epic-pathway-name">EQUIPPING</h4>
-                            <p className="epic-pathway-desc">
-                                Discovering spiritual gifts; ministry skills; evangelism; teamwork; accountability and practical service.
-                            </p>
-                            <ul className="epic-pathway-topics">
-                                <li>Spiritual Gifts Discovery (Romans 12)</li>
-                                <li>Personal Testimony & Gospel Sharing</li>
-                                <li>Teamwork & Volunteer Ministry</li>
-                                <li>Accountability & Mutual Care</li>
-                                <li>Department Serving Experience</li>
-                            </ul>
-                            <div style={{ marginTop: "16px", paddingTop: "12px", borderTop: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                <span className="stage-badge stage-3">Level 3 • Equipping</span>
-                                <span style={{ fontSize: "12px", fontWeight: "700", color: "#ea580c" }}>{disciples.filter(d => d.stage === "Cell Member").length} Enrolled</span>
-                            </div>
-                        </div>
+                                    <h4 className="epic-pathway-name" style={{ fontSize: "15px", marginBottom: "4px" }}>
+                                        {prog.courseTitle}
+                                    </h4>
+                                    <p style={{ fontSize: "11px", color: "#64748b", margin: "0 0 10px 0", fontStyle: "italic" }}>
+                                        {prog.subtitle}
+                                    </p>
 
-                        {/* STAGE 4 */}
-                        <div className="epic-pathway-card" style={{ borderTop: "4px solid #9333ea" }}>
-                            <div className="epic-pathway-number" style={{ color: "#9333ea" }}>Stage 4</div>
-                            <h4 className="epic-pathway-name">LEADERSHIP</h4>
-                            <p className="epic-pathway-desc">
-                                Leading a group; mentoring; servant leadership; communication; conflict resolution and pastoral care boundaries.
-                            </p>
-                            <ul className="epic-pathway-topics">
-                                <li>Leading a Discipleship Group</li>
-                                <li>1-on-1 Mentoring Dynamics</li>
-                                <li>Servant Leadership & Christlike Character</li>
-                                <li>Conflict Resolution & Peacemaking</li>
-                                <li>Pastoral Care & Confidentiality</li>
-                            </ul>
-                            <div style={{ marginTop: "16px", paddingTop: "12px", borderTop: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                <span className="stage-badge stage-4">Level 4 • Leadership</span>
-                                <span style={{ fontSize: "12px", fontWeight: "700", color: "#9333ea" }}>{disciples.filter(d => d.stage === "Leader in Training").length} Enrolled</span>
-                            </div>
-                        </div>
+                                    <div style={{ background: "#f8fafc", borderRadius: "6px", padding: "8px 10px", marginBottom: "12px", border: "1px solid #e2e8f0", fontSize: "11px" }}>
+                                        <div style={{ display: "flex", justifyContent: "space-between", color: "#475569", fontWeight: "600" }}>
+                                            <span>⏱ {prog.totalWeeks} Weeks</span>
+                                            <span>📚 {prog.totalLessons} Lessons</span>
+                                            <span>📁 {prog.modulesCount} Modules</span>
+                                        </div>
+                                    </div>
 
-                        {/* STAGE 5 */}
-                        <div className="epic-pathway-card" style={{ borderTop: "4px solid #d97706" }}>
-                            <div className="epic-pathway-number" style={{ color: "#d97706" }}>Stage 5</div>
-                            <h4 className="epic-pathway-name">MULTIPLICATION</h4>
-                            <p className="epic-pathway-desc">
-                                Developing new leaders; reproducing disciples; raising ministry leaders; starting and sustaining healthy groups.
-                            </p>
-                            <ul className="epic-pathway-topics">
-                                <li>Multiplying Generations (2 Tim 2:2)</li>
-                                <li>Reproducing Disciple-Makers</li>
-                                <li>Planting & Nurturing New Groups</li>
-                                <li>Cluster Leadership & Coaching</li>
-                                <li>Commissioning & Sending Out</li>
-                            </ul>
-                            <div style={{ marginTop: "16px", paddingTop: "12px", borderTop: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                <span className="stage-badge stage-5">Level 5 • Multiplication</span>
-                                <span style={{ fontSize: "12px", fontWeight: "700", color: "#d97706" }}>{sentLeaders.length} Commissioned</span>
-                            </div>
-                        </div>
+                                    <div style={{ fontSize: "11px", fontWeight: "700", color: "#475569", textTransform: "uppercase", marginBottom: "6px" }}>
+                                        Curriculum Modules (Syllabus):
+                                    </div>
+                                    <ul className="epic-pathway-topics" style={{ marginBottom: "14px" }}>
+                                        {prog.modules.map((mod) => (
+                                            <li key={mod.moduleNumber}>
+                                                <strong>M{mod.moduleNumber}:</strong> {mod.title} ({mod.lessons.length} lessons)
+                                            </li>
+                                        ))}
+                                    </ul>
+
+                                    <div style={{ marginTop: "auto", paddingTop: "12px", borderTop: "1px solid #f1f5f9" }}>
+                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                                            <span className={`stage-badge ${prog.badgeClass}`}>
+                                                {prog.generationTitle}
+                                            </span>
+                                            <span style={{ fontSize: "12px", fontWeight: "800", color: prog.themeColor }}>
+                                                {enrolledInStage.length} Disciples Active
+                                            </span>
+                                        </div>
+
+                                        <div style={{ display: "flex", gap: "6px" }}>
+                                            <button
+                                                type="button"
+                                                className="cia-btn-outline small"
+                                                style={{ width: "100%", justifyContent: "center" }}
+                                                onClick={() => {
+                                                    setStageFilter(String(prog.stage));
+                                                    setActiveTab("registry");
+                                                }}
+                                                title="Filter Disciple Registry by this stage"
+                                            >
+                                                <Users size={12} />
+                                                <span>View Disciples ({enrolledInStage.length})</span>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className="cia-btn-outline small"
+                                                style={{ width: "100%", justifyContent: "center", borderColor: prog.themeColor, color: prog.themeColor }}
+                                                onClick={() => handleNavigatePage("learning")}
+                                                title="Open course in EPIC Learning Studio"
+                                            >
+                                                <GraduationCap size={12} />
+                                                <span>Studio ↗</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
 
                     <div style={{ marginTop: "20px", padding: "14px 18px", background: "#f8fafc", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "13px", color: "#475569" }}>
@@ -2803,6 +2891,7 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                                     <th>Disciple Name / Code</th>
                                     <th>Generation Level</th>
                                     <th>Equipping Stage</th>
+                                    <th>Curriculum Progress (EPIC Learning)</th>
                                     <th>Department & Ministry</th>
                                     <th>Role / Ministry Call</th>
                                     <th>Contact & Barangay</th>
@@ -2846,6 +2935,32 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                                                 <span className={`stage-badge ${stageInfo.badgeClass}`}>
                                                     {stageInfo.stageName}
                                                 </span>
+                                            </td>
+                                            <td>
+                                                {(() => {
+                                                    const curStatus = epicGenerationsCurriculumService.getDiscipleStatus(m);
+                                                    return (
+                                                        <div style={{ minWidth: "150px" }}>
+                                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "11px", marginBottom: "3px" }}>
+                                                                <strong style={{ color: "#0f172a" }}>{curStatus.currentCourseCode}</strong>
+                                                                <span style={{ fontWeight: "700", color: curStatus.isCertified ? "#059669" : "#0d9488" }}>
+                                                                    {curStatus.progressPercentage}%
+                                                                </span>
+                                                            </div>
+                                                            <div style={{ width: "100%", height: "6px", background: "#e2e8f0", borderRadius: "999px", overflow: "hidden", marginBottom: "3px" }}>
+                                                                <div style={{ width: `${curStatus.progressPercentage}%`, height: "100%", background: curStatus.isCertified ? "linear-gradient(90deg, #10b981, #059669)" : "linear-gradient(90deg, #0d9488, #2563eb)", borderRadius: "999px", transition: "width 0.3s ease" }} />
+                                                            </div>
+                                                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10px", color: "#64748b" }}>
+                                                                <span>{curStatus.completedLessonsCount}/{curStatus.totalLessonsCount} Lessons</span>
+                                                                {curStatus.isCertified ? (
+                                                                    <span style={{ color: "#059669", fontWeight: "700" }}>🎓 Certified</span>
+                                                                ) : (
+                                                                    <span>L{curStatus.currentLessonNumber} Next</span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })()}
                                             </td>
                                             <td>
                                                 <span className={`cia-dept-pill ${dept.badgeClass}`}>
@@ -4646,54 +4761,122 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                                     </div>
                                 </div>
 
-                                {/* SECTION 2: 5-Stage Equipping Pathway Progress */}
+                                {/* SECTION 2: 5-Stage Equipping Pathway Progress & EPIC Learning Transcript */}
                                 <div style={{ marginTop: "20px" }}>
-                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                                        <h4 style={{ fontSize: "13px", textTransform: "uppercase", letterSpacing: "0.5px", color: "#475569", margin: 0, display: "flex", alignItems: "center", gap: "6px" }}>
-                                            <Target size={15} /> 2. Five-Stage Equipping Pathway Progress
-                                        </h4>
-                                        <span style={{ fontSize: "12px", fontWeight: "700", color: "#0d9488" }}>
-                                            {stageInfo.progressPercent}% Completed
-                                        </span>
-                                    </div>
-
-                                    {/* Progress Track */}
-                                    <div style={{ width: "100%", height: "8px", background: "#e2e8f0", borderRadius: "999px", overflow: "hidden", marginBottom: "12px" }}>
-                                        <div style={{ width: `${stageInfo.progressPercent}%`, height: "100%", background: "linear-gradient(90deg, #0d9488, #2563eb)", borderRadius: "999px", transition: "width 0.3s ease" }} />
-                                    </div>
-
-                                    {/* Pathway Stages Overview */}
-                                    <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "8px", fontSize: "11px" }}>
-                                        {[
-                                            { num: 1, name: "Foundation", desc: "Salvation & Baptism" },
-                                            { num: 2, name: "Formation", desc: "Spiritual Disciplines" },
-                                            { num: 3, name: "Equipping", desc: "Ministry Skills" },
-                                            { num: 4, name: "Leadership", desc: "Leading Small Group" },
-                                            { num: 5, name: "Multiplication", desc: "Raising Leaders" },
-                                        ].map((s) => {
-                                            const isDone = stageInfo.stage >= s.num;
-                                            const isCurrent = stageInfo.stage === s.num;
-                                            return (
-                                                <div
-                                                    key={s.num}
-                                                    style={{
-                                                        padding: "8px",
-                                                        borderRadius: "6px",
-                                                        background: isCurrent ? "#ecfdf5" : isDone ? "#f8fafc" : "#f1f5f9",
-                                                        border: isCurrent ? "1.5px solid #059669" : isDone ? "1px solid #cbd5e1" : "1px solid #e2e8f0",
-                                                        textAlign: "center",
-                                                    }}
-                                                >
-                                                    <div style={{ fontWeight: "700", color: isCurrent ? "#059669" : isDone ? "#334155" : "#94a3b8" }}>
-                                                        {isDone ? "✓ " : ""}{s.num}. {s.name}
-                                                    </div>
-                                                    <div style={{ fontSize: "10px", color: isCurrent ? "#047857" : "#64748b", marginTop: "2px" }}>
-                                                        {s.desc}
+                                    {(() => {
+                                        const curStatus = epicGenerationsCurriculumService.getDiscipleStatus(m);
+                                        return (
+                                            <div>
+                                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "8px" }}>
+                                                    <h4 style={{ fontSize: "13px", textTransform: "uppercase", letterSpacing: "0.5px", color: "#475569", margin: 0, display: "flex", alignItems: "center", gap: "6px" }}>
+                                                        <GraduationCap size={16} style={{ color: "#0d9488" }} />
+                                                        2. EPIC Learning Academic Transcript ({curStatus.currentCourseCode})
+                                                    </h4>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                                        <span style={{ fontSize: "12px", fontWeight: "800", color: curStatus.isCertified ? "#059669" : "#0d9488" }}>
+                                                            {curStatus.progressPercentage}% Completed ({curStatus.completedLessonsCount}/{curStatus.totalLessonsCount} Lessons)
+                                                        </span>
+                                                        {curStatus.isCertified && (
+                                                            <span style={{ fontSize: "11px", fontWeight: "800", background: "#dcfce7", color: "#15803d", padding: "2px 8px", borderRadius: "4px" }}>
+                                                                🎓 CERTIFIED
+                                                            </span>
+                                                        )}
                                                     </div>
                                                 </div>
-                                            );
-                                        })}
-                                    </div>
+
+                                                {/* Current Course Card */}
+                                                <div style={{ background: "#f0fdfa", border: "1px solid #99f6e4", borderRadius: "8px", padding: "12px 16px", marginBottom: "12px" }}>
+                                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                                                        <div>
+                                                            <span style={{ fontSize: "10px", fontWeight: "800", color: "#0d9488", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                                                                ACTIVE CURRICULUM TRACK:
+                                                            </span>
+                                                            <div style={{ fontSize: "14px", fontWeight: "800", color: "#134e4a" }}>
+                                                                {curStatus.currentCourseTitle}
+                                                            </div>
+                                                        </div>
+                                                        <div style={{ textAlign: "right" }}>
+                                                            <span style={{ fontSize: "11px", color: "#64748b" }}>Mentor: <strong>{curStatus.mentorName}</strong></span>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Progress Bar */}
+                                                    <div style={{ width: "100%", height: "8px", background: "#ccfbf1", borderRadius: "999px", overflow: "hidden", margin: "8px 0" }}>
+                                                        <div style={{ width: `${curStatus.progressPercentage}%`, height: "100%", background: curStatus.isCertified ? "linear-gradient(90deg, #10b981, #059669)" : "linear-gradient(90deg, #0d9488, #2563eb)", borderRadius: "999px", transition: "width 0.3s ease" }} />
+                                                    </div>
+
+                                                    {/* Current Lesson Indicator */}
+                                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12px", color: "#0f766e" }}>
+                                                        <span>
+                                                            <strong>Next Step:</strong> Lesson {curStatus.currentLessonNumber} — {curStatus.currentLessonTitle}
+                                                        </span>
+                                                        <div style={{ display: "flex", gap: "6px" }}>
+                                                            <button
+                                                                type="button"
+                                                                className="cia-btn-outline small"
+                                                                style={{ background: "#ffffff", borderColor: "#0d9488", color: "#0d9488", fontWeight: "700" }}
+                                                                onClick={() => {
+                                                                    epicGenerationsCurriculumService.advanceLesson(m.memberId, mName);
+                                                                    setCurriculumUpdateTrigger((prev) => prev + 1);
+                                                                }}
+                                                                title="Mark current lesson complete and advance disciple by 1 lesson"
+                                                            >
+                                                                ＋ Advance Lesson (+1)
+                                                            </button>
+                                                            {curStatus.isCertified && curStatus.stage < 5 && (
+                                                                <button
+                                                                    type="button"
+                                                                    className="cia-btn-primary small"
+                                                                    style={{ background: "#059669", fontSize: "11px" }}
+                                                                    onClick={() => {
+                                                                        const nextStage = Math.min(5, curStatus.stage + 1) as any;
+                                                                        epicGenerationsCurriculumService.enrollInStage(m.memberId, mName, nextStage);
+                                                                        setCurriculumUpdateTrigger((prev) => prev + 1);
+                                                                    }}
+                                                                    title="Enroll disciple into next equipping stage course"
+                                                                >
+                                                                    🎓 Advance to Stage {curStatus.stage + 1} Track
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Pathway Stages Overview */}
+                                                <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "8px", fontSize: "11px" }}>
+                                                    {[
+                                                        { num: 1, code: "GEN-101", name: "Foundation", desc: "Salvation & Baptism" },
+                                                        { num: 2, code: "GEN-201", name: "Formation", desc: "Habits & Character" },
+                                                        { num: 3, code: "GEN-301", name: "Equipping", desc: "Ministry Skills" },
+                                                        { num: 4, code: "GEN-401", name: "Leadership", desc: "Leading Small Group" },
+                                                        { num: 5, code: "GEN-501", name: "Multiplication", desc: "Raising Leaders" },
+                                                    ].map((s) => {
+                                                        const isDone = curStatus.stage > s.num || (curStatus.stage === s.num && curStatus.isCertified);
+                                                        const isCurrent = curStatus.stage === s.num && !curStatus.isCertified;
+                                                        return (
+                                                            <div
+                                                                key={s.num}
+                                                                style={{
+                                                                    padding: "8px",
+                                                                    borderRadius: "6px",
+                                                                    background: isCurrent ? "#ecfdf5" : isDone ? "#f8fafc" : "#f1f5f9",
+                                                                    border: isCurrent ? "1.5px solid #059669" : isDone ? "1px solid #cbd5e1" : "1px solid #e2e8f0",
+                                                                    textAlign: "center",
+                                                                }}
+                                                            >
+                                                                <div style={{ fontWeight: "700", color: isCurrent ? "#059669" : isDone ? "#334155" : "#94a3b8" }}>
+                                                                    {isDone ? "✓ " : ""}{s.code}
+                                                                </div>
+                                                                <div style={{ fontSize: "10px", color: isCurrent ? "#047857" : "#64748b", marginTop: "2px" }}>
+                                                                    {s.name}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
 
                                 {/* SECTION 3: Spiritual Children & Discipleship Multipliers */}
