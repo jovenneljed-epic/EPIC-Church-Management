@@ -353,7 +353,7 @@ const PAGE_TITLES: Record<Page, string> = {
     "blog-detail": "Blog Detail",
     "whats-new": "What's New",
     "resources": "Resources",
-    "church-in-action": "Church in Action",
+    "church-in-action": "EPIC Generations",
 };
 
 // =========================================================
@@ -440,7 +440,7 @@ const PAGE_SUBTITLES: Record<Page, string> = {
   "blog-detail": "View blog post details",
   "whats-new": "Latest updates and announcements",
   "resources": "Church resources and materials",
-  "church-in-action": "Spiritual lifecycle and Great Commission engine (Win -> Consolidate -> Disciple -> Send)",
+  "church-in-action": "Discipleship Tree & Generational Leadership Framework (Discipling Today. Equipping Tomorrow. Multiplying Generations.)",
 };
 
 // =========================================================

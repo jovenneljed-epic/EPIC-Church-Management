@@ -86,7 +86,7 @@ id: "expenses", label: "Expenses", icon: "▤", moduleName: "Expenses",
 id: "visitors", label: "Visitors", icon: "▤", moduleName: "Visitors",
 },
 {
-id: "church-in-action", label: "Church in Action", icon: "⚡", moduleName: "Church in Action",
+id: "church-in-action", label: "EPIC Generations", icon: "🌱", moduleName: "Church in Action",
 },
 {
 id: "ministries", label: "Ministries", icon: "▤", moduleName: "Ministries",

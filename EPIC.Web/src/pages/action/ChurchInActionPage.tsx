@@ -9,7 +9,6 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
-    Flame,
     Users,
     UserPlus,
     UserCheck,
@@ -34,6 +33,17 @@ import {
     AlertCircle,
     Calendar,
     Crown,
+    GitBranch,
+    Layers,
+    TrendingUp,
+    Compass,
+    Heart,
+    Activity,
+    Target,
+    LayoutGrid,
+    Eye,
+    X,
+    MessageCircle,
 } from "lucide-react";
 
 import "./ChurchInAction.css";
@@ -45,9 +55,17 @@ import type {
     SendingDeployment,
     Prospect,
 } from "../../services/churchInActionService";
+import DiscipleshipTree from "../DiscipleshipTree";
 
 type ActiveTab =
+    | "dashboard"
+    | "tree"
+    | "registry"
     | "delegation"
+    | "equipping"
+    | "groups"
+    | "care"
+    | "multiplication"
     | "members"
     | "visitors-lifecycle"
     | "members-lifecycle"
@@ -119,6 +137,128 @@ function getMemberDepartment(ministry: string = ""): {
     return { deptKey: "general", name: ministry?.trim() || "General Congregation", icon: "👥", badgeClass: "general" };
 }
 
+// ------------------------------------------------------------
+// GENERATIONAL LEADERSHIP LADDER CLASSIFIER (Section 2)
+// Levels 1-5 from EPIC Generations Framework
+// ------------------------------------------------------------
+function getMemberGenerationLevel(member: any): {
+    generation: 1 | 2 | 3 | 4 | 5;
+    label: string;
+    levelName: string;
+    focus: string;
+    badgeClass: string;
+    icon: string;
+} {
+    const min = ((member.ministry || "") + " " + (member.position || "")).toUpperCase();
+    const name = (member.fullName || member.firstName || "").toUpperCase();
+
+    if (name.includes("BALDOMARO") || name.includes("AVIGUETERO") || min.includes("SENIOR PASTOR")) {
+        return {
+            generation: 5,
+            label: "GEN 5",
+            levelName: "Movement Leader",
+            focus: "Develops multiple leaders, provides oversight, sustains church-wide multiplication",
+            badgeClass: "gen-5",
+            icon: "👑"
+        };
+    }
+    if (min.includes("PASTOR") || min.includes("DIRECTOR") || min.includes("COORDINATOR") || min.includes("OVERSEER")) {
+        return {
+            generation: 4,
+            label: "GEN 4",
+            levelName: "Ministry Leader",
+            focus: "Leads a discipleship group or cluster and equips disciple-makers",
+            badgeClass: "gen-4",
+            icon: "🌟"
+        };
+    }
+    if (min.includes("LEADER") || min.includes("DISCIPLER") || min.includes("MENTOR") || (member.disciplesCount && member.disciplesCount > 0)) {
+        return {
+            generation: 3,
+            label: "GEN 3",
+            levelName: "Disciple-Maker",
+            focus: "Mentors others, models Christian maturity, and develops new disciples",
+            badgeClass: "gen-3",
+            icon: "🔥"
+        };
+    }
+    if (member.isBaptized || member.membershipDate || min.includes("WORKER") || min.includes("MUSIC") || min.includes("WORSHIP")) {
+        return {
+            generation: 2,
+            label: "GEN 2",
+            levelName: "Growing Disciple",
+            focus: "Builds foundational faith, participates in community, and begins serving",
+            badgeClass: "gen-2",
+            icon: "🌱"
+        };
+    }
+    return {
+        generation: 1,
+        label: "GEN 1",
+        levelName: "New Believer",
+        focus: "Connects with a mentor, learns foundational practices, begins growing in Christ",
+        badgeClass: "gen-1",
+        icon: "✨"
+    };
+}
+
+// ------------------------------------------------------------
+// FIVE-STAGE EQUIPPING PATHWAY CLASSIFIER (Section 5)
+// Stages 1-5 from EPIC Generations Framework
+// ------------------------------------------------------------
+function getMemberEquippingStage(member: any, discipleProfile?: any): {
+    stage: 1 | 2 | 3 | 4 | 5;
+    stageName: string;
+    focus: string;
+    badgeClass: string;
+    progressPercent: number;
+} {
+    const gen = getMemberGenerationLevel(member).generation;
+    if (gen === 5 || gen === 4) {
+        return {
+            stage: 5,
+            stageName: "Stage 5 — Multiplication",
+            focus: "Developing new leaders, reproducing disciples, raising ministry leaders",
+            badgeClass: "stage-5",
+            progressPercent: 100
+        };
+    }
+    if (gen === 3) {
+        return {
+            stage: 4,
+            stageName: "Stage 4 — Leadership",
+            focus: "Leading a group, mentoring, servant leadership, pastoral care",
+            badgeClass: "stage-4",
+            progressPercent: 80
+        };
+    }
+    if (gen === 2) {
+        return {
+            stage: 3,
+            stageName: "Stage 3 — Equipping",
+            focus: "Discovering gifts, ministry skills, evangelism, practical service",
+            badgeClass: "stage-3",
+            progressPercent: 60
+        };
+    }
+    if (discipleProfile?.foundations?.lesson1Salvation) {
+        return {
+            stage: 2,
+            stageName: "Stage 2 — Formation",
+            focus: "Spiritual disciplines, biblical foundations, character development",
+            badgeClass: "stage-2",
+            progressPercent: 40
+        };
+    }
+    return {
+        stage: 1,
+        stageName: "Stage 1 — Foundation",
+        focus: "Assurance of salvation, prayer and Bible reading, identity in Christ",
+        badgeClass: "stage-1",
+        progressPercent: 20
+    };
+}
+
 const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
     onBack,
     canManage = true,
@@ -128,7 +268,7 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
     // STATE
     // ============================================================
 
-    const [activeTab, setActiveTab] = useState<ActiveTab>("delegation");
+    const [activeTab, setActiveTab] = useState<ActiveTab>("dashboard");
     const [loading, setLoading] = useState<boolean>(true);
     const [searchTerm, setSearchTerm] = useState<string>("");
     const [statusFilter, setStatusFilter] = useState<string>("ALL");
@@ -139,6 +279,12 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
     const [memberSearchTerm, setMemberSearchTerm] = useState<string>("");
     const [memberDeptFilter, setMemberDeptFilter] = useState<string>("ALL");
     const [memberRoleFilter, setMemberRoleFilter] = useState<"ALL" | "LEADERS" | "MEMBERS">("ALL");
+    const [generationFilter, setGenerationFilter] = useState<string>("ALL");
+    const [stageFilter, setStageFilter] = useState<string>("ALL");
+
+    // Discipleship Monitoring Profile Modal State
+    const [selectedMemberForProfile, setSelectedMemberForProfile] = useState<any | null>(null);
+    const [showMemberProfileModal, setShowMemberProfileModal] = useState<boolean>(false);
 
     // Separate Lifecycle Monitoring State
     const [activeLifecycleTab, setActiveLifecycleTab] = useState<"visitors" | "members">("visitors");
@@ -536,9 +682,21 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                 matchesRole = roleTag.tag === "member";
             }
 
-            return matchesSearch && matchesDept && matchesRole;
+            const genInfo = getMemberGenerationLevel(m);
+            let matchesGen = true;
+            if (generationFilter !== "ALL") {
+                matchesGen = String(genInfo.generation) === String(generationFilter);
+            }
+
+            const stageInfo = getMemberEquippingStage(m);
+            let matchesStage = true;
+            if (stageFilter !== "ALL") {
+                matchesStage = String(stageInfo.stage) === String(stageFilter);
+            }
+
+            return matchesSearch && matchesDept && matchesRole && matchesGen && matchesStage;
         });
-    }, [realMembers, memberSearchTerm, memberDeptFilter, memberRoleFilter]);
+    }, [realMembers, memberSearchTerm, memberDeptFilter, memberRoleFilter, generationFilter, stageFilter]);
 
     // ============================================================
     // SEPARATED LIFECYCLE 1: VISITORS ONLY (100% Visitors Pipeline)
@@ -1008,20 +1166,31 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                 </div>
             )}
 
-            {/* HEADER SECTION */}
+            {/* HEADER SECTION - EPIC GENERATIONS */}
             <header className="cia-header">
                 <div className="cia-header-brand">
-                    <div className="cia-header-icon-box">
-                        <Flame className="cia-flame-icon" />
+                    <div className="cia-header-icon-box epic-gen-icon-box">
+                        <GitBranch className="cia-flame-icon" />
                     </div>
                     <div>
-                        <div className="cia-ministry-badge">
+                        <div className="cia-ministry-badge" style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
                             <span>LUKE 4:18 MINISTRIES • SAN VICENTE CHURCH</span>
+                            <span className="epic-gen-badge">EPIC GENERATIONS FRAMEWORK</span>
                         </div>
-                        <h1 className="cia-title">Church in Action: Monitoring & Delegation System</h1>
-                        <p className="cia-subtitle">
-                            Empowering leaders to follow up newcomers and nurture them into real church members and disciples of Christ.
+                        <h1 className="cia-title" style={{ fontSize: "28px" }}>
+                            EPIC GENERATIONS: Discipleship Tree & Leadership Framework
+                        </h1>
+                        <p className="cia-subtitle" style={{ fontSize: "14px", fontWeight: "500", color: "#334155" }}>
+                            <strong>Discipling Today. Equipping Tomorrow. Multiplying Generations.</strong>
+                            <span style={{ margin: "0 8px", color: "#94a3b8" }}>•</span>
+                            <em style={{ color: "#0d9488" }}>Every Disciple a Disciple-Maker. Every Generation a Leadership Legacy.</em>
                         </p>
+                        <div className="epic-gen-scriptures">
+                            <span>📜 2 Timothy 2:2</span>
+                            <span>📖 Matthew 28:19–20</span>
+                            <span>🛡️ Ephesians 4:11–13</span>
+                            <span>👑 Exodus 18:21</span>
+                        </div>
                     </div>
                 </div>
 
@@ -1039,20 +1208,20 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                     <button
                         type="button"
                         className="cia-btn-outline"
-                        onClick={() => handleNavigatePage("members")}
-                        title="Open full Church Members module"
+                        onClick={() => setActiveTab("registry")}
+                        title="View Disciple Registry"
                     >
                         <Users size={15} />
-                        <span>Members Module ({realMembers.length})</span>
+                        <span>Disciple Registry ({realMembers.length})</span>
                     </button>
                     <button
                         type="button"
                         className="cia-btn-outline"
-                        onClick={() => handleNavigatePage("visitors")}
-                        title="Open full Visitors module"
+                        onClick={() => setActiveTab("tree")}
+                        title="View Visual Family Tree"
                     >
-                        <UserCheck size={15} />
-                        <span>Visitors Module ({realVisitors.length})</span>
+                        <GitBranch size={15} />
+                        <span>Generational Tree</span>
                     </button>
                     <button
                         type="button"
@@ -1070,113 +1239,144 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                         title="Print clean report"
                     >
                         <Printer size={15} />
-                        <span>Print</span>
+                        <span>Print Framework</span>
                     </button>
                     {canManage && (
                         <button
                             type="button"
                             className="cia-btn-primary"
+                            style={{ background: "linear-gradient(135deg, #0d9488, #0f766e)" }}
                             onClick={() => setShowRegisterVisitorModal(true)}
                         >
                             <UserPlus size={16} />
-                            <span>Register Newcomer</span>
+                            <span>Register New Disciple</span>
                         </button>
                     )}
                 </div>
             </header>
 
-            {/* MONITORING METRICS BAR (FROM REAL DATABASE) */}
+            {/* MONITORING METRICS BAR - 6 CORE INDICATORS */}
             <section className="cia-metrics-grid">
                 <div
-                    className="cia-metric-card clickable"
-                    onClick={() => {
-                        setActiveTab("visitors-lifecycle");
-                        setActiveLifecycleTab("visitors");
-                    }}
-                    title="Click to view dedicated Visitors Lifecycle Funnel"
+                    className="cia-metric-card cia-highlight-metric clickable"
+                    onClick={() => setActiveTab("registry")}
+                    title="Click to view full Disciple Registry"
                 >
-                    <div className="cia-metric-icon-wrap cia-icon-blue">
+                    <div className="cia-metric-icon-wrap cia-icon-gold">
                         <Users size={20} />
                     </div>
                     <div className="cia-metric-data">
-                        <span className="cia-metric-label">Total Newcomers in DB</span>
-                        <strong className="cia-metric-val">{metrics.totalNewcomers}</strong>
-                        <span className="cia-metric-hint">Official Visitors Table</span>
+                        <span className="cia-metric-label">Total Disciples & Members</span>
+                        <strong className="cia-metric-val text-gold">{realMembers.length}</strong>
+                        <span className="cia-metric-hint">Official Church Registry</span>
+                    </div>
+                </div>
+
+                <div
+                    className="cia-metric-card clickable"
+                    onClick={() => setActiveTab("tree")}
+                    title="Click to view Generational Family Tree"
+                >
+                    <div className="cia-metric-icon-wrap cia-icon-emerald">
+                        <GitBranch size={20} />
+                    </div>
+                    <div className="cia-metric-data">
+                        <span className="cia-metric-label">Generational Ladder</span>
+                        <strong className="cia-metric-val" style={{ color: "#0d9488" }}>5 Levels Active</strong>
+                        <span className="cia-metric-hint">Gen 1 New Believer → Gen 5 Movement</span>
+                    </div>
+                </div>
+
+                <div
+                    className="cia-metric-card clickable"
+                    onClick={() => setActiveTab("delegation")}
+                    title="Click to view Authorized Mentors & Leaders"
+                >
+                    <div className="cia-metric-icon-wrap cia-icon-purple">
+                        <ShieldCheck size={20} />
+                    </div>
+                    <div className="cia-metric-data">
+                        <span className="cia-metric-label">Mentors & Disciple-Makers</span>
+                        <strong className="cia-metric-val">{realLeaders.length}</strong>
+                        <span className="cia-metric-hint">{assistantPastors.length} Pastors • {adultLeaders.length + youthLeaders.length} Group Leaders</span>
                     </div>
                 </div>
 
                 <div
                     className={`cia-metric-card clickable ${metrics.unassignedCount > 0 ? "cia-metric-card-warn" : ""}`}
-                    onClick={() => {
-                        setActiveTab("visitors-lifecycle");
-                        setActiveLifecycleTab("visitors");
-                    }}
-                    title="Click to view unassigned newcomers in Visitors Lifecycle"
+                    onClick={() => setActiveTab("delegation")}
+                    title="Click to assign spiritual parents in Delegation Center"
                 >
                     <div className="cia-metric-icon-wrap cia-icon-amber">
                         <AlertCircle size={20} />
                     </div>
                     <div className="cia-metric-data">
-                        <span className="cia-metric-label">Unassigned (Need Leader)</span>
+                        <span className="cia-metric-label">Needs Spiritual Parent</span>
                         <strong className="cia-metric-val text-amber">{metrics.unassignedCount}</strong>
-                        <span className="cia-metric-hint">Requires Delegation</span>
+                        <span className="cia-metric-hint">Requires Mentor Assignment</span>
                     </div>
                 </div>
 
                 <div
                     className="cia-metric-card clickable"
-                    onClick={() => {
-                        setActiveTab("visitors-lifecycle");
-                        setActiveLifecycleTab("visitors");
-                    }}
-                    title="Click to view newcomers assigned to leaders in Visitors Lifecycle"
+                    onClick={() => setActiveTab("care")}
+                    title="Click to view Pastoral Care & 1-on-1 Check-ins"
                 >
-                    <div className="cia-metric-icon-wrap cia-icon-purple">
-                        <UserCog size={20} />
+                    <div className="cia-metric-icon-wrap cia-icon-blue">
+                        <HeartHandshake size={20} />
                     </div>
                     <div className="cia-metric-data">
-                        <span className="cia-metric-label">In Active Follow-Up</span>
+                        <span className="cia-metric-label">Active 1-on-1 Follow-Up</span>
                         <strong className="cia-metric-val">{metrics.activeDelegationsCount}</strong>
-                        <span className="cia-metric-hint">Assigned to Leaders</span>
-                    </div>
-                </div>
-
-                <div
-                    className="cia-metric-card cia-highlight-metric clickable"
-                    onClick={() => {
-                        setActiveTab("members-lifecycle");
-                        setActiveLifecycleTab("members");
-                    }}
-                    title="Click to view dedicated Members Lifecycle Pipeline"
-                >
-                    <div className="cia-metric-icon-wrap cia-icon-gold">
-                        <Crown size={20} />
-                    </div>
-                    <div className="cia-metric-data">
-                        <span className="cia-metric-label">Total Church Members</span>
-                        <strong className="cia-metric-val text-gold">{realMembers.length}</strong>
-                        <span className="cia-metric-hint">{realLeaders.length} Authorized Leaders • {realMembers.length - realLeaders.length} Members</span>
+                        <span className="cia-metric-hint">Weekly Pastoral Rhythm</span>
                     </div>
                 </div>
 
                 <div
                     className="cia-metric-card clickable"
-                    onClick={() => setActiveTab("discipleship")}
-                    title="Click to view Discipleship & Foundations"
+                    onClick={() => setActiveTab("equipping")}
+                    title="Click to view 5-Stage Equipping Pathway"
                 >
-                    <div className="cia-metric-icon-wrap cia-icon-emerald">
-                        <BookOpen size={20} />
+                    <div className="cia-metric-icon-wrap" style={{ background: "#ccfbf1", color: "#0f766e" }}>
+                        <GraduationCap size={20} />
                     </div>
                     <div className="cia-metric-data">
-                        <span className="cia-metric-label">Disciples & Sent</span>
-                        <strong className="cia-metric-val">{metrics.totalDisciples + metrics.totalSent}</strong>
-                        <span className="cia-metric-hint">Foundations & Workers</span>
+                        <span className="cia-metric-label">Equipping Pathway</span>
+                        <strong className="cia-metric-val" style={{ color: "#0f766e" }}>5 Stages</strong>
+                        <span className="cia-metric-hint">Foundation → Multiplication</span>
                     </div>
                 </div>
             </section>
 
-            {/* TAB NAVIGATION */}
-            <nav className="cia-tabs-nav" aria-label="Monitoring Subsystems">
+            {/* TAB NAVIGATION - 8 PILLARS OF EPIC GENERATIONS */}
+            <nav className="cia-tabs-nav" aria-label="EPIC Generations Framework Pillars">
+                <button
+                    type="button"
+                    className={`cia-tab-btn ${activeTab === "dashboard" ? "active" : ""}`}
+                    onClick={() => setActiveTab("dashboard")}
+                >
+                    <LayoutGrid size={16} />
+                    <span>1. Discipleship Dashboard</span>
+                </button>
+
+                <button
+                    type="button"
+                    className={`cia-tab-btn ${activeTab === "tree" ? "active" : ""}`}
+                    onClick={() => setActiveTab("tree")}
+                >
+                    <GitBranch size={16} />
+                    <span>2. Generational Family Tree</span>
+                </button>
+
+                <button
+                    type="button"
+                    className={`cia-tab-btn ${activeTab === "registry" || activeTab === "members" ? "active" : ""}`}
+                    onClick={() => setActiveTab("registry")}
+                >
+                    <Users size={16} />
+                    <span>3. Disciple Registry ({realMembers.length})</span>
+                </button>
+
                 <button
                     type="button"
                     className={`cia-tab-btn ${activeTab === "delegation" ? "active" : ""}`}
@@ -1185,87 +1385,797 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                         setStatusFilter("ALL");
                     }}
                 >
-                    <UserCog size={16} />
-                    <span>1. Leaders Delegation Center</span>
-                    <span className="cia-badge-pill">{metrics.totalNewcomers}</span>
-                </button>
-
-                <button
-                    type="button"
-                    className={`cia-tab-btn ${activeTab === "members" ? "active" : ""}`}
-                    onClick={() => setActiveTab("members")}
-                >
-                    <Users size={16} />
-                    <span>2. Church Members & Departments</span>
-                    <span className="cia-badge-pill">{realMembers.length}</span>
-                </button>
-
-                <button
-                    type="button"
-                    className={`cia-tab-btn ${activeTab === "visitors-lifecycle" || (activeTab === "pipeline" && activeLifecycleTab === "visitors") ? "active" : ""}`}
-                    onClick={() => {
-                        setActiveTab("visitors-lifecycle");
-                        setActiveLifecycleTab("visitors");
-                    }}
-                >
-                    <UserCheck size={16} />
-                    <span>3. Visitors Lifecycle</span>
-                    <span className="cia-badge-pill">{realVisitors.length}</span>
-                </button>
-
-                <button
-                    type="button"
-                    className={`cia-tab-btn ${activeTab === "members-lifecycle" || (activeTab === "pipeline" && activeLifecycleTab === "members") ? "active" : ""}`}
-                    onClick={() => {
-                        setActiveTab("members-lifecycle");
-                        setActiveLifecycleTab("members");
-                    }}
-                >
-                    <Crown size={16} />
-                    <span>4. Members Lifecycle</span>
-                    <span className="cia-badge-pill">{realMembers.length}</span>
-                </button>
-
-                <button
-                    type="button"
-                    className={`cia-tab-btn ${activeTab === "followup" ? "active" : ""}`}
-                    onClick={() => setActiveTab("followup")}
-                >
                     <HeartHandshake size={16} />
-                    <span>5. Touchpoints & Logs</span>
-                    <span className="cia-badge-pill">{followUpLogs.length}</span>
+                    <span>4. Mentor Assignment ({metrics.totalNewcomers})</span>
                 </button>
 
                 <button
                     type="button"
-                    className={`cia-tab-btn ${activeTab === "discipleship" ? "active" : ""}`}
-                    onClick={() => setActiveTab("discipleship")}
+                    className={`cia-tab-btn ${activeTab === "equipping" || activeTab === "discipleship" ? "active" : ""}`}
+                    onClick={() => setActiveTab("equipping")}
                 >
-                    <BookOpen size={16} />
-                    <span>6. Discipleship & Foundations</span>
-                    <span className="cia-badge-pill">{disciples.length}</span>
+                    <GraduationCap size={16} />
+                    <span>5. 5-Stage Equipping Pathway</span>
                 </button>
 
                 <button
                     type="button"
-                    className={`cia-tab-btn ${activeTab === "sending" ? "active" : ""}`}
-                    onClick={() => setActiveTab("sending")}
+                    className={`cia-tab-btn ${activeTab === "groups" ? "active" : ""}`}
+                    onClick={() => setActiveTab("groups")}
                 >
-                    <Send size={16} />
-                    <span>7. Sending & Mobilization</span>
-                    <span className="cia-badge-pill">{sentLeaders.length}</span>
+                    <Layers size={16} />
+                    <span>6. Groups & Clusters</span>
                 </button>
 
                 <button
                     type="button"
-                    className={`cia-tab-btn ${activeTab === "evangelism" ? "active" : ""}`}
-                    onClick={() => setActiveTab("evangelism")}
+                    className={`cia-tab-btn ${activeTab === "care" || activeTab === "followup" ? "active" : ""}`}
+                    onClick={() => setActiveTab("care")}
                 >
-                    <Sparkles size={16} />
-                    <span>8. Outreach & Prospects</span>
-                    <span className="cia-badge-pill">{prospects.length}</span>
+                    <Heart size={16} />
+                    <span>7. Pastoral Care & 1-on-1 ({followUpLogs.length})</span>
+                </button>
+
+                <button
+                    type="button"
+                    className={`cia-tab-btn ${activeTab === "multiplication" || activeTab === "sending" ? "active" : ""}`}
+                    onClick={() => setActiveTab("multiplication")}
+                >
+                    <TrendingUp size={16} />
+                    <span>8. Leadership Pipeline & Roadmap</span>
                 </button>
             </nav>
+
+            {/* ============================================================ */}
+            {/* VIEW 0: DISCIPLESHIP DASHBOARD & LEADERSHIP LADDER           */}
+            {/* ============================================================ */}
+            {activeTab === "dashboard" && (
+                <div className="cia-tab-content">
+                    {/* CORE VISION BANNER */}
+                    <div className="epic-vision-banner">
+                        <div className="epic-vision-header">
+                            <Compass size={24} style={{ color: "#2dd4bf" }} />
+                            <h2 className="epic-vision-title">
+                                EPIC GENERATIONS: Discipleship Tree & Generational Leadership
+                            </h2>
+                        </div>
+                        <p className="epic-vision-tagline">
+                            "Build a church where every disciple is being discipled, every disciple is being equipped, and every equipped disciple is becoming a disciple-maker. The goal is not merely to count attendance or organize groups. It is to cultivate spiritual growth, faithful service, leadership development, and intentional multiplication."
+                        </p>
+
+                        <div className="epic-vision-grid">
+                            <div className="epic-vision-card">
+                                <h4>📜 Biblical Foundation (2 Tim 2:2)</h4>
+                                <p>
+                                    "And the things that thou hast heard of me among many witnesses, the same commit thou to faithful men, who shall be able to teach others also."
+                                </p>
+                            </div>
+                            <div className="epic-vision-card">
+                                <h4>👑 Generational Legacy</h4>
+                                <p>
+                                    Paul → Timothy → Faithful People → Others. Four biblical generations of intentional, Christ-centered reproduction.
+                                </p>
+                            </div>
+                            <div className="epic-vision-card">
+                                <h4>🌱 Closing Principle</h4>
+                                <p>
+                                    "Don't build a church that only gathers people. Build a church that develops people who can develop other people."
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 4-GENERATION MULTIPLICATION FLOW */}
+                    <div className="epic-ladder-container">
+                        <div className="epic-ladder-header">
+                            <h3>The 2 Timothy 2:2 Four-Generation Pattern</h3>
+                            <p>Intentional spiritual reproduction from apostolic vision to the next generations of faithful followers of Christ.</p>
+                        </div>
+                        <div className="epic-4gen-flow">
+                            <div className="epic-4gen-step active">
+                                <div style={{ fontSize: "11px", fontWeight: "800", color: "#0f766e", textTransform: "uppercase" }}>Generation 1</div>
+                                <div style={{ fontSize: "16px", fontWeight: "800", color: "#0f172a", margin: "4px 0" }}>Paul (Apostolic Overseer)</div>
+                                <div style={{ fontSize: "12px", color: "#64748b" }}>Imparts vision, sound doctrine & foundational truth</div>
+                            </div>
+                            <div className="epic-4gen-arrow">→</div>
+                            <div className="epic-4gen-step active">
+                                <div style={{ fontSize: "11px", fontWeight: "800", color: "#6d28d9", textTransform: "uppercase" }}>Generation 2</div>
+                                <div style={{ fontSize: "16px", fontWeight: "800", color: "#0f172a", margin: "4px 0" }}>Timothy (Ministry Leader)</div>
+                                <div style={{ fontSize: "12px", color: "#64748b" }}>Pastors, equips leaders & shepherds clusters</div>
+                            </div>
+                            <div className="epic-4gen-arrow">→</div>
+                            <div className="epic-4gen-step active">
+                                <div style={{ fontSize: "11px", fontWeight: "800", color: "#1d4ed8", textTransform: "uppercase" }}>Generation 3</div>
+                                <div style={{ fontSize: "16px", fontWeight: "800", color: "#0f172a", margin: "4px 0" }}>Faithful People (Disciple-Makers)</div>
+                                <div style={{ fontSize: "12px", color: "#64748b" }}>Leads life groups & actively mentors 1-on-1</div>
+                            </div>
+                            <div className="epic-4gen-arrow">→</div>
+                            <div className="epic-4gen-step active">
+                                <div style={{ fontSize: "11px", fontWeight: "800", color: "#047857", textTransform: "uppercase" }}>Generation 4</div>
+                                <div style={{ fontSize: "16px", fontWeight: "800", color: "#0f172a", margin: "4px 0" }}>Others (New Disciples)</div>
+                                <div style={{ fontSize: "12px", color: "#64748b" }}>Growing believers entering the equipping pathway</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* THE GENERATIONAL LEADERSHIP LADDER (SECTION 2) */}
+                    <div className="epic-ladder-container">
+                        <div className="epic-ladder-header">
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "10px" }}>
+                                <div>
+                                    <h3>The Generational Leadership Ladder</h3>
+                                    <p>Development stages describing responsibility and readiness to serve (not spiritual status or worth).</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    className="cia-btn-outline"
+                                    onClick={() => setActiveTab("registry")}
+                                >
+                                    <Users size={14} />
+                                    <span>View Member Roster by Generation</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="epic-ladder-stack">
+                            {/* LEVEL 5 */}
+                            <div className="epic-ladder-item gen-5">
+                                <div className="epic-ladder-level-badge">👑</div>
+                                <div className="epic-ladder-content">
+                                    <div className="epic-ladder-title-row">
+                                        <h4 className="epic-ladder-title">GENERATION 5 — MOVEMENT LEADER</h4>
+                                        <span className="gen-badge gen-5">Level 5 Oversight</span>
+                                    </div>
+                                    <p className="epic-ladder-focus">
+                                        <strong>Development Focus:</strong> Develops multiple leaders, provides oversight, maintains doctrinal purity, and helps sustain multiplication across the church.
+                                    </p>
+                                    <div style={{ marginTop: "6px", fontSize: "12px", color: "#b45309", fontWeight: "600" }}>
+                                        Senior Pastor Ronnel M. Aviguetero • Church Council • Apostolic Overseers
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* LEVEL 4 */}
+                            <div className="epic-ladder-item gen-4">
+                                <div className="epic-ladder-level-badge">🌟</div>
+                                <div className="epic-ladder-content">
+                                    <div className="epic-ladder-title-row">
+                                        <h4 className="epic-ladder-title">GENERATION 4 — MINISTRY LEADER</h4>
+                                        <span className="gen-badge gen-4">Level 4 Leadership</span>
+                                    </div>
+                                    <p className="epic-ladder-focus">
+                                        <strong>Development Focus:</strong> Leads a discipleship group or cluster and equips disciple-makers. Coordinates ministry operations and supports group facilitators.
+                                    </p>
+                                    <div style={{ marginTop: "6px", fontSize: "12px", color: "#6d28d9", fontWeight: "600" }}>
+                                        Assistant Pastors • Department Directors (Adult, Youth, Music, Children)
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* LEVEL 3 */}
+                            <div className="epic-ladder-item gen-3">
+                                <div className="epic-ladder-level-badge">🔥</div>
+                                <div className="epic-ladder-content">
+                                    <div className="epic-ladder-title-row">
+                                        <h4 className="epic-ladder-title">GENERATION 3 — DISCIPLE-MAKER</h4>
+                                        <span className="gen-badge gen-3">Level 3 Reproduction</span>
+                                    </div>
+                                    <p className="epic-ladder-focus">
+                                        <strong>Development Focus:</strong> Mentors others, models Christian maturity, and develops new disciples through intentional 1-on-1 relationships and life groups.
+                                    </p>
+                                    <div style={{ marginTop: "6px", fontSize: "12px", color: "#0f766e", fontWeight: "600" }}>
+                                        Life Group Leaders • Certified Mentors • Spiritual Parents
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* LEVEL 2 */}
+                            <div className="epic-ladder-item gen-2">
+                                <div className="epic-ladder-level-badge">🌱</div>
+                                <div className="epic-ladder-content">
+                                    <div className="epic-ladder-title-row">
+                                        <h4 className="epic-ladder-title">GENERATION 2 — GROWING DISCIPLE</h4>
+                                        <span className="gen-badge gen-2">Level 2 Formation</span>
+                                    </div>
+                                    <p className="epic-ladder-focus">
+                                        <strong>Development Focus:</strong> Builds foundational faith, participates faithfully in community, practices spiritual disciplines, and begins serving in ministry.
+                                    </p>
+                                    <div style={{ marginTop: "6px", fontSize: "12px", color: "#1d4ed8", fontWeight: "600" }}>
+                                        Baptized Believers • Ministry Volunteers • Active Church Members
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* LEVEL 1 */}
+                            <div className="epic-ladder-item gen-1">
+                                <div className="epic-ladder-level-badge">✨</div>
+                                <div className="epic-ladder-content">
+                                    <div className="epic-ladder-title-row">
+                                        <h4 className="epic-ladder-title">GENERATION 1 — NEW BELIEVER</h4>
+                                        <span className="gen-badge gen-1">Level 1 Foundation</span>
+                                    </div>
+                                    <p className="epic-ladder-focus">
+                                        <strong>Development Focus:</strong> Connects with a spiritual parent/mentor, learns foundational Christian practices (Word, prayer, assurance), and begins growing in Christ.
+                                    </p>
+                                    <div style={{ marginTop: "6px", fontSize: "12px", color: "#047857", fontWeight: "600" }}>
+                                        New Converts • First-Time Guests • Foundations of Faith Students
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style={{ marginTop: "16px", padding: "12px 16px", background: "#f8fafc", borderRadius: "8px", border: "1px dashed #cbd5e1", fontSize: "12px", color: "#64748b" }}>
+                            💡 <strong>Core Principle:</strong> The ladder is not about giving people titles. It is about developing spiritual maturity, Christlike character, responsibility, and the ability to help others grow.
+                        </div>
+                    </div>
+
+                    {/* WEEKLY & MONTHLY MONITORING RHYTHM (SECTION 6) */}
+                    <div className="epic-rhythm-container">
+                        <div className="epic-ladder-header">
+                            <h3>Weekly & Monthly Discipleship Rhythm</h3>
+                            <p>Structured cadence ensuring consistent care, intentional follow-up, and sustainable leadership coaching.</p>
+                        </div>
+
+                        <table className="epic-rhythm-table">
+                            <thead>
+                                <tr>
+                                    <th>Frequency</th>
+                                    <th>Ministry Activity</th>
+                                    <th>Responsible Leader</th>
+                                    <th>Focus & Deliverable</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><span className="epic-freq-badge weekly">Weekly</span></td>
+                                    <td><strong>1-on-1 Discipleship Check-In</strong></td>
+                                    <td>Disciple-Maker / Spiritual Parent</td>
+                                    <td>Personal prayer, accountability, Scripture study & pastoral care</td>
+                                </tr>
+                                <tr>
+                                    <td><span className="epic-freq-badge weekly">Weekly</span></td>
+                                    <td><strong>Discipleship Life Group Meeting</strong></td>
+                                    <td>Group Leader / Facilitator</td>
+                                    <td>Community fellowship, Bible application, discussion & mutual encouragement</td>
+                                </tr>
+                                <tr>
+                                    <td><span className="epic-freq-badge monthly">Monthly</span></td>
+                                    <td><strong>Group Progress & Care Report</strong></td>
+                                    <td>Group Leader</td>
+                                    <td>Submit spiritual growth observations, prayer requests & next-step reviews</td>
+                                </tr>
+                                <tr>
+                                    <td><span className="epic-freq-badge monthly">Monthly</span></td>
+                                    <td><strong>Leaders' Equipping & Coaching</strong></td>
+                                    <td>Pastors / Equipping Coordinator</td>
+                                    <td>Leadership training, doctrine alignment & ministry skill sharpening</td>
+                                </tr>
+                                <tr>
+                                    <td><span className="epic-freq-badge quarterly">Quarterly</span></td>
+                                    <td><strong>Leadership Readiness & Health Review</strong></td>
+                                    <td>Senior Pastoral Team</td>
+                                    <td>Evaluate emerging leaders, affirm new disciple-makers & group multiplication readiness</td>
+                                </tr>
+                                <tr>
+                                    <td><span className="epic-freq-badge biannual">Every 6 Mos</span></td>
+                                    <td><strong>Generational Growth & Vision Direction</strong></td>
+                                    <td>Church Leadership Council</td>
+                                    <td>Review church-wide spiritual family tree, branch health & overall mission fruitfulness</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* 90-DAY IMPLEMENTATION ROADMAP (SECTION 9) */}
+                    <div className="epic-roadmap-container">
+                        <div className="epic-ladder-header">
+                            <h3>90-Day Implementation Roadmap</h3>
+                            <p>Phased rollout strategy for establishing a healthy, sustainable discipleship culture in the local church.</p>
+                        </div>
+
+                        <div className="epic-roadmap-grid">
+                            <div className="epic-roadmap-card">
+                                <div className="epic-roadmap-days">Days 1 – 30</div>
+                                <h4 className="epic-roadmap-title">Establish the Culture</h4>
+                                <ul className="epic-roadmap-list">
+                                    <li>Identify existing spiritual leaders and potential mentors.</li>
+                                    <li>Organize members into initial discipleship groups.</li>
+                                    <li>Assign a mentor or spiritual parent where appropriate.</li>
+                                    <li>Introduce the five-stage equipping pathway.</li>
+                                    <li>Explain the biblical vision and expectations to the church.</li>
+                                </ul>
+                            </div>
+
+                            <div className="epic-roadmap-card">
+                                <div className="epic-roadmap-days">Days 31 – 60</div>
+                                <h4 className="epic-roadmap-title">Establish Monitoring</h4>
+                                <ul className="epic-roadmap-list">
+                                    <li>Create the discipleship registry and group structure.</li>
+                                    <li>Map the initial generational relationships in the tree.</li>
+                                    <li>Track participation, training, and follow-up needs.</li>
+                                    <li>Begin monthly leader reporting and coaching sessions.</li>
+                                    <li>Set privacy rules and access responsibilities for care notes.</li>
+                                </ul>
+                            </div>
+
+                            <div className="epic-roadmap-card">
+                                <div className="epic-roadmap-days">Days 61 – 90</div>
+                                <h4 className="epic-roadmap-title">Launch Multiplication</h4>
+                                <ul className="epic-roadmap-list">
+                                    <li>Review and affirm qualified disciple-makers.</li>
+                                    <li>Prepare emerging leaders to start or co-lead groups.</li>
+                                    <li>Identify the next generation of spiritual mentors.</li>
+                                    <li>Review the health and growth of each discipleship branch.</li>
+                                    <li>Celebrate faithfulness, maturity, service, and healthy multiplication.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* MEASURING WHAT MATTERS (SECTION 10) */}
+                    <div className="epic-ladder-container">
+                        <div className="epic-ladder-header">
+                            <h3>Measuring What Matters (Section 10)</h3>
+                            <p>Look beyond attendance and group counts. A healthy discipleship movement evaluates spiritual transformation.</p>
+                        </div>
+
+                        <div className="epic-vision-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))" }}>
+                            <div style={{ background: "#f8fafc", padding: "16px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                                <div style={{ fontSize: "14px", fontWeight: "700", color: "#0f172a", marginBottom: "6px" }}>1. Spiritual Growth</div>
+                                <p style={{ fontSize: "12px", color: "#64748b", margin: 0 }}>Are disciples genuinely growing in their personal relationship with Christ, prayer, and the Word?</p>
+                            </div>
+                            <div style={{ background: "#f8fafc", padding: "16px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                                <div style={{ fontSize: "14px", fontWeight: "700", color: "#0f172a", marginBottom: "6px" }}>2. Faithful Service</div>
+                                <p style={{ fontSize: "12px", color: "#64748b", margin: 0 }}>Are members being equipped and actively serving the body of Christ with humility and faithfulness?</p>
+                            </div>
+                            <div style={{ background: "#f8fafc", padding: "16px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                                <div style={{ fontSize: "14px", fontWeight: "700", color: "#0f172a", marginBottom: "6px" }}>3. Emerging Disciple-Makers</div>
+                                <p style={{ fontSize: "12px", color: "#64748b", margin: 0 }}>Are new disciple-makers emerging with appropriate pastoral guidance, coaching, and support?</p>
+                            </div>
+                            <div style={{ background: "#f8fafc", padding: "16px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                                <div style={{ fontSize: "14px", fontWeight: "700", color: "#0f172a", marginBottom: "6px" }}>4. Developing Other Leaders</div>
+                                <p style={{ fontSize: "12px", color: "#64748b", margin: 0 }}>Are existing leaders intentionally investing in and multiplying other leaders (Exodus 18:21)?</p>
+                            </div>
+                            <div style={{ background: "#f8fafc", padding: "16px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                                <div style={{ fontSize: "14px", fontWeight: "700", color: "#0f172a", marginBottom: "6px" }}>5. Sustainable Life Groups</div>
+                                <p style={{ fontSize: "12px", color: "#64748b", margin: 0 }}>Are small groups caring, biblically grounded, emotionally safe, and relationally healthy?</p>
+                            </div>
+                            <div style={{ background: "#f8fafc", padding: "16px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                                <div style={{ fontSize: "14px", fontWeight: "700", color: "#0f172a", marginBottom: "6px" }}>6. Pastoral Care Coverage</div>
+                                <p style={{ fontSize: "12px", color: "#64748b", margin: 0 }}>Are all church members and newcomers receiving timely follow-up and pastoral care when facing life trials?</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ============================================================ */}
+            {/* VIEW 2: GENERATIONAL FAMILY TREE (VISUAL TREE)               */}
+            {/* ============================================================ */}
+            {activeTab === "tree" && (
+                <div className="cia-tab-content">
+                    <div className="cia-section-banner" style={{ background: "linear-gradient(135deg, #0f766e, #0d9488)", color: "#ffffff", padding: "20px 24px", borderRadius: "10px", marginBottom: "20px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+                            <div>
+                                <div style={{ fontSize: "11px", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.8px", color: "#99f6e4", marginBottom: "4px" }}>
+                                    VISUAL SPIRITUAL FAMILY TREE
+                                </div>
+                                <h3 style={{ margin: "0 0 6px 0", fontSize: "20px", fontWeight: "800", color: "#ffffff" }}>
+                                    Generational Discipleship Tree & Lineage
+                                </h3>
+                                <p style={{ margin: 0, fontSize: "13px", color: "#ccfbf1" }}>
+                                    Visualizing spiritual fathers/mothers, disciples, and succeeding generations across the congregation (Paul → Timothy → Faithful People → Others).
+                                </p>
+                            </div>
+                            <div style={{ display: "flex", gap: "8px" }}>
+                                <button
+                                    type="button"
+                                    className="cia-btn-outline"
+                                    style={{ background: "rgba(255,255,255,0.15)", color: "#ffffff", borderColor: "rgba(255,255,255,0.3)" }}
+                                    onClick={() => setActiveTab("registry")}
+                                >
+                                    <Users size={15} />
+                                    <span>View Registry Roster</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    className="cia-btn-outline"
+                                    style={{ background: "rgba(255,255,255,0.15)", color: "#ffffff", borderColor: "rgba(255,255,255,0.3)" }}
+                                    onClick={() => setActiveTab("delegation")}
+                                >
+                                    <HeartHandshake size={15} />
+                                    <span>Assign Mentors</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style={{ borderRadius: "12px", overflow: "hidden", border: "1px solid #e2e8f0", background: "#ffffff", minHeight: "650px" }}>
+                        <DiscipleshipTree />
+                    </div>
+                </div>
+            )}
+
+            {/* ============================================================ */}
+            {/* VIEW 5: THE FIVE-STAGE EQUIPPING PATHWAY                     */}
+            {/* ============================================================ */}
+            {activeTab === "equipping" && (
+                <div className="cia-tab-content">
+                    <div className="cia-section-banner" style={{ background: "linear-gradient(135deg, #0d9488, #115e59)", color: "#ffffff", padding: "20px 24px", borderRadius: "10px", marginBottom: "20px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+                            <div>
+                                <div style={{ fontSize: "11px", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.8px", color: "#99f6e4", marginBottom: "4px" }}>
+                                    THE FIVE-STAGE EQUIPPING PATHWAY (SECTION 5)
+                                </div>
+                                <h3 style={{ margin: "0 0 6px 0", fontSize: "20px", fontWeight: "800", color: "#ffffff" }}>
+                                    Spiritual Growth & Leadership Curriculum
+                                </h3>
+                                <p style={{ margin: 0, fontSize: "13px", color: "#ccfbf1" }}>
+                                    Connecting the disciple's development to structured lessons, mentoring, practical service, and next-step readiness reviews.
+                                </p>
+                            </div>
+                            <div>
+                                <button
+                                    type="button"
+                                    className="cia-btn-outline"
+                                    style={{ background: "rgba(255,255,255,0.15)", color: "#ffffff", borderColor: "rgba(255,255,255,0.3)" }}
+                                    onClick={() => setShowDiscipleshipModal(true)}
+                                >
+                                    <Plus size={15} />
+                                    <span>Enroll Disciple in Pathway</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 5-STAGE PATHWAY CARDS */}
+                    <div className="epic-pathway-grid">
+                        {/* STAGE 1 */}
+                        <div className="epic-pathway-card" style={{ borderTop: "4px solid #0284c7" }}>
+                            <div className="epic-pathway-number" style={{ color: "#0284c7" }}>Stage 1</div>
+                            <h4 className="epic-pathway-name">FOUNDATION</h4>
+                            <p className="epic-pathway-desc">
+                                Assurance of salvation; prayer and Bible reading; identity in Christ; church connection and commitment.
+                            </p>
+                            <ul className="epic-pathway-topics">
+                                <li>Assurance of Salvation & Lordship</li>
+                                <li>Word of God & Daily Devotions</li>
+                                <li>The Holy Spirit & Life in Christ</li>
+                                <li>Water Baptism & Obedience</li>
+                                <li>Church Life & Fellowship</li>
+                            </ul>
+                            <div style={{ marginTop: "16px", paddingTop: "12px", borderTop: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <span className="stage-badge stage-1">Level 1 • Foundation</span>
+                                <span style={{ fontSize: "12px", fontWeight: "700", color: "#0284c7" }}>{disciples.filter(d => d.stage === "New Believer" || d.stage === "Foundation Track").length} Enrolled</span>
+                            </div>
+                        </div>
+
+                        {/* STAGE 2 */}
+                        <div className="epic-pathway-card" style={{ borderTop: "4px solid #16a34a" }}>
+                            <div className="epic-pathway-number" style={{ color: "#16a34a" }}>Stage 2</div>
+                            <h4 className="epic-pathway-name">FORMATION</h4>
+                            <p className="epic-pathway-desc">
+                                Spiritual disciplines; biblical foundations; character development; obedience and Christian community.
+                            </p>
+                            <ul className="epic-pathway-topics">
+                                <li>Spiritual Disciplines & Fasting</li>
+                                <li>Biblical Worldview & Obedience</li>
+                                <li>Character & Fruit of the Spirit</li>
+                                <li>Life Group Participation</li>
+                                <li>Principles of Biblical Stewardship</li>
+                            </ul>
+                            <div style={{ marginTop: "16px", paddingTop: "12px", borderTop: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <span className="stage-badge stage-2">Level 2 • Formation</span>
+                                <span style={{ fontSize: "12px", fontWeight: "700", color: "#16a34a" }}>{disciples.filter(d => d.stage === "Baptized Disciple").length} Enrolled</span>
+                            </div>
+                        </div>
+
+                        {/* STAGE 3 */}
+                        <div className="epic-pathway-card" style={{ borderTop: "4px solid #ea580c" }}>
+                            <div className="epic-pathway-number" style={{ color: "#ea580c" }}>Stage 3</div>
+                            <h4 className="epic-pathway-name">EQUIPPING</h4>
+                            <p className="epic-pathway-desc">
+                                Discovering spiritual gifts; ministry skills; evangelism; teamwork; accountability and practical service.
+                            </p>
+                            <ul className="epic-pathway-topics">
+                                <li>Spiritual Gifts Discovery (Romans 12)</li>
+                                <li>Personal Testimony & Gospel Sharing</li>
+                                <li>Teamwork & Volunteer Ministry</li>
+                                <li>Accountability & Mutual Care</li>
+                                <li>Department Serving Experience</li>
+                            </ul>
+                            <div style={{ marginTop: "16px", paddingTop: "12px", borderTop: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <span className="stage-badge stage-3">Level 3 • Equipping</span>
+                                <span style={{ fontSize: "12px", fontWeight: "700", color: "#ea580c" }}>{disciples.filter(d => d.stage === "Cell Member").length} Enrolled</span>
+                            </div>
+                        </div>
+
+                        {/* STAGE 4 */}
+                        <div className="epic-pathway-card" style={{ borderTop: "4px solid #9333ea" }}>
+                            <div className="epic-pathway-number" style={{ color: "#9333ea" }}>Stage 4</div>
+                            <h4 className="epic-pathway-name">LEADERSHIP</h4>
+                            <p className="epic-pathway-desc">
+                                Leading a group; mentoring; servant leadership; communication; conflict resolution and pastoral care boundaries.
+                            </p>
+                            <ul className="epic-pathway-topics">
+                                <li>Leading a Discipleship Group</li>
+                                <li>1-on-1 Mentoring Dynamics</li>
+                                <li>Servant Leadership & Christlike Character</li>
+                                <li>Conflict Resolution & Peacemaking</li>
+                                <li>Pastoral Care & Confidentiality</li>
+                            </ul>
+                            <div style={{ marginTop: "16px", paddingTop: "12px", borderTop: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <span className="stage-badge stage-4">Level 4 • Leadership</span>
+                                <span style={{ fontSize: "12px", fontWeight: "700", color: "#9333ea" }}>{disciples.filter(d => d.stage === "Leader in Training").length} Enrolled</span>
+                            </div>
+                        </div>
+
+                        {/* STAGE 5 */}
+                        <div className="epic-pathway-card" style={{ borderTop: "4px solid #d97706" }}>
+                            <div className="epic-pathway-number" style={{ color: "#d97706" }}>Stage 5</div>
+                            <h4 className="epic-pathway-name">MULTIPLICATION</h4>
+                            <p className="epic-pathway-desc">
+                                Developing new leaders; reproducing disciples; raising ministry leaders; starting and sustaining healthy groups.
+                            </p>
+                            <ul className="epic-pathway-topics">
+                                <li>Multiplying Generations (2 Tim 2:2)</li>
+                                <li>Reproducing Disciple-Makers</li>
+                                <li>Planting & Nurturing New Groups</li>
+                                <li>Cluster Leadership & Coaching</li>
+                                <li>Commissioning & Sending Out</li>
+                            </ul>
+                            <div style={{ marginTop: "16px", paddingTop: "12px", borderTop: "1px solid #f1f5f9", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <span className="stage-badge stage-5">Level 5 • Multiplication</span>
+                                <span style={{ fontSize: "12px", fontWeight: "700", color: "#d97706" }}>{sentLeaders.length} Commissioned</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style={{ marginTop: "20px", padding: "14px 18px", background: "#f8fafc", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "13px", color: "#475569" }}>
+                        🛡️ <strong>Pastoral Assessment Discernment:</strong> Course completion alone should not automatically qualify someone for leadership; character, faithfulness, maturity, obedience, and pastoral discernment also matter.
+                    </div>
+                </div>
+            )}
+
+            {/* ============================================================ */}
+            {/* VIEW 6: GROUPS, CLUSTERS & MONITORING RHYTHM                 */}
+            {/* ============================================================ */}
+            {activeTab === "groups" && (
+                <div className="cia-tab-content">
+                    <div className="cia-section-banner" style={{ background: "linear-gradient(135deg, #1e293b, #334155)", color: "#ffffff", padding: "20px 24px", borderRadius: "10px", marginBottom: "20px" }}>
+                        <div>
+                            <div style={{ fontSize: "11px", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.8px", color: "#94a3b8", marginBottom: "4px" }}>
+                                DISCIPLESHIP GROUPS & CLUSTERS (SECTION 7 & 8)
+                            </div>
+                            <h3 style={{ margin: "0 0 6px 0", fontSize: "20px", fontWeight: "800", color: "#ffffff" }}>
+                                Church Leadership & Cluster Structure
+                            </h3>
+                            <p style={{ margin: 0, fontSize: "13px", color: "#cbd5e1" }}>
+                                Organizing the church into accountable discipleship clusters, group meeting schedules, and coaching relationships.
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* CLUSTERS OVERVIEW */}
+                    <div className="cia-dept-grid">
+                        <div className="cia-dept-card pastoral">
+                            <div className="cia-dept-card-icon">👑</div>
+                            <div className="cia-dept-card-info">
+                                <span className="cia-dept-name">Pastoral Staff Cluster</span>
+                                <strong className="cia-dept-count">{assistantPastors.length} Pastors</strong>
+                                <small>Movement Oversight & Doctrinal Shepherding</small>
+                            </div>
+                        </div>
+
+                        <div className="cia-dept-card adult">
+                            <div className="cia-dept-card-icon">🌟</div>
+                            <div className="cia-dept-card-info">
+                                <span className="cia-dept-name">Adult Discipleship Cluster</span>
+                                <strong className="cia-dept-count">{departmentCounts.adult} Disciples</strong>
+                                <small>Couples, Men's & Women's Life Groups</small>
+                            </div>
+                        </div>
+
+                        <div className="cia-dept-card youth">
+                            <div className="cia-dept-card-icon">🔥</div>
+                            <div className="cia-dept-card-info">
+                                <span className="cia-dept-name">Youth & Campus Cluster</span>
+                                <strong className="cia-dept-count">{departmentCounts.youth} Disciples</strong>
+                                <small>Campus Ministry, NextGen & Youth Groups</small>
+                            </div>
+                        </div>
+
+                        <div className="cia-dept-card worship">
+                            <div className="cia-dept-card-icon">🎵</div>
+                            <div className="cia-dept-card-info">
+                                <span className="cia-dept-name">Worship & Arts Cluster</span>
+                                <strong className="cia-dept-count">{departmentCounts.worship} Disciples</strong>
+                                <small>Sanctuary Praise, Choir & Multimedia</small>
+                            </div>
+                        </div>
+
+                        <div className="cia-dept-card children">
+                            <div className="cia-dept-card-icon">👶</div>
+                            <div className="cia-dept-card-info">
+                                <span className="cia-dept-name">Children's Ministry</span>
+                                <strong className="cia-dept-count">{departmentCounts.children} Disciples</strong>
+                                <small>Sunday School & Kingdom Kids</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ============================================================ */}
+            {/* VIEW 7: PASTORAL CARE & 1-ON-1 CHECK-IN LOGS                 */}
+            {/* ============================================================ */}
+            {activeTab === "care" && (
+                <div className="cia-tab-content">
+                    <div className="cia-section-banner" style={{ background: "linear-gradient(135deg, #be185d, #9d174d)", color: "#ffffff", padding: "20px 24px", borderRadius: "10px", marginBottom: "20px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+                            <div>
+                                <div style={{ fontSize: "11px", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.8px", color: "#fbcfe8", marginBottom: "4px" }}>
+                                    PASTORAL CARE & 1-ON-1 RHYTHM (SECTION 6 & 8)
+                                </div>
+                                <h3 style={{ margin: "0 0 6px 0", fontSize: "20px", fontWeight: "800", color: "#ffffff" }}>
+                                    Discipleship Touchpoints & Pastoral Care Logs
+                                </h3>
+                                <p style={{ margin: 0, fontSize: "13px", color: "#fce7f3" }}>
+                                    Tracking weekly 1-on-1 discipleship check-ins, prayer requests, spiritual health observations, and care follow-ups with role-based safeguards.
+                                </p>
+                            </div>
+                            <div>
+                                <button
+                                    type="button"
+                                    className="cia-btn-outline"
+                                    style={{ background: "rgba(255,255,255,0.15)", color: "#ffffff", borderColor: "rgba(255,255,255,0.3)" }}
+                                    onClick={() => {
+                                        if (realVisitors.length > 0) {
+                                            setSelectedVisitorForFollowUp(realVisitors[0]);
+                                            setShowFollowUpModal(true);
+                                        } else {
+                                            showAlert("info", "No disciples or visitors available to log follow-up.");
+                                        }
+                                    }}
+                                >
+                                    <HeartHandshake size={15} />
+                                    <span>Log 1-on-1 Discipleship Check-In</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="cia-table-card">
+                        <div className="cia-table-header">
+                            <div>
+                                <h4>Pastoral Touchpoints ({followUpLogs.length} Records)</h4>
+                                <p>Recorded interactions between disciples, mentors, and pastoral shepherds.</p>
+                            </div>
+                        </div>
+
+                        {followUpLogs.length === 0 ? (
+                            <div className="cia-empty-state">
+                                <HeartHandshake size={48} className="cia-empty-icon" />
+                                <h4>No Touchpoint Logs Recorded</h4>
+                                <p>Log 1-on-1 check-ins, home visits, and prayer sessions to track discipleship care.</p>
+                            </div>
+                        ) : (
+                            <div className="cia-table-responsive">
+                                <table className="cia-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Disciple</th>
+                                            <th>Interaction Type</th>
+                                            <th>Minister / Mentor</th>
+                                            <th>Spiritual Outcome</th>
+                                            <th>Notes & Next Step</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {followUpLogs.map((log) => {
+                                            const visitor = realVisitors.find(v => v.visitorId === log.visitorId);
+                                            const member = realMembers.find(m => m.memberId === log.visitorId);
+                                            const personName = visitor ? `${visitor.firstName} ${visitor.lastName}` : (member ? member.fullName : `Disciple #${log.visitorId}`);
+                                            return (
+                                                <tr key={log.id}>
+                                                    <td>{log.interactionDate}</td>
+                                                    <td><strong>{personName}</strong></td>
+                                                    <td>
+                                                        <span className="cia-status-pill in-followup">{log.type}</span>
+                                                    </td>
+                                                    <td>{log.ministerName || "Assigned Mentor"}</td>
+                                                    <td>
+                                                        <span className="cia-status-pill connected">{log.outcome}</span>
+                                                    </td>
+                                                    <td>
+                                                        <div style={{ fontSize: "12px", color: "#334155" }}>{log.notes}</div>
+                                                        {log.nextFollowUpDate && (
+                                                            <small style={{ color: "#0f766e", fontWeight: "600" }}>Next: {log.nextFollowUpDate}</small>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* ============================================================ */}
+            {/* VIEW 8: LEADERSHIP PIPELINE & MULTIPLICATION REPORTS         */}
+            {/* ============================================================ */}
+            {activeTab === "multiplication" && (
+                <div className="cia-tab-content">
+                    <div className="cia-section-banner" style={{ background: "linear-gradient(135deg, #7c2d12, #9a3412)", color: "#ffffff", padding: "20px 24px", borderRadius: "10px", marginBottom: "20px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+                            <div>
+                                <div style={{ fontSize: "11px", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.8px", color: "#fed7aa", marginBottom: "4px" }}>
+                                    LEADERSHIP PIPELINE & MULTIPLICATION (SECTION 8 & 10)
+                                </div>
+                                <h3 style={{ margin: "0 0 6px 0", fontSize: "20px", fontWeight: "800", color: "#ffffff" }}>
+                                    Generational Reproduction & Sending Framework
+                                </h3>
+                                <p style={{ margin: 0, fontSize: "13px", color: "#ffedd5" }}>
+                                    Measuring healthy new groups, leadership readiness reviews, and sustained spiritual reproduction across generations.
+                                </p>
+                            </div>
+                            <div>
+                                <button
+                                    type="button"
+                                    className="cia-btn-outline"
+                                    style={{ background: "rgba(255,255,255,0.15)", color: "#ffffff", borderColor: "rgba(255,255,255,0.3)" }}
+                                    onClick={() => setShowSendingModal(true)}
+                                >
+                                    <Send size={15} />
+                                    <span>Commission Disciple-Maker</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* MULTIPLICATION RATIO MATRIX */}
+                    <div className="epic-ladder-container">
+                        <div className="epic-ladder-header">
+                            <h3>Generational Multiplication Ratio (1 → 3 → 9 → 27)</h3>
+                            <p>Illustrative example: A pastor develops 3 leaders. Each leader develops 3 disciples. Those 9 disciples develop 3 more = 39 total disciples.</p>
+                        </div>
+
+                        <div className="epic-4gen-flow" style={{ background: "#f8fafc" }}>
+                            <div className="epic-4gen-step active" style={{ borderColor: "#d97706" }}>
+                                <div style={{ fontSize: "11px", fontWeight: "800", color: "#d97706" }}>TIER 1 (APEX)</div>
+                                <div style={{ fontSize: "24px", fontWeight: "800", color: "#0f172a" }}>1 Leader</div>
+                                <div style={{ fontSize: "12px", color: "#64748b" }}>Pastor / Overseer</div>
+                            </div>
+                            <div className="epic-4gen-arrow">×3 →</div>
+                            <div className="epic-4gen-step active" style={{ borderColor: "#7c3aed" }}>
+                                <div style={{ fontSize: "11px", fontWeight: "800", color: "#7c3aed" }}>TIER 2 (CLUSTER)</div>
+                                <div style={{ fontSize: "24px", fontWeight: "800", color: "#0f172a" }}>3 Leaders</div>
+                                <div style={{ fontSize: "12px", color: "#64748b" }}>Ministry Leaders</div>
+                            </div>
+                            <div className="epic-4gen-arrow">×3 →</div>
+                            <div className="epic-4gen-step active" style={{ borderColor: "#0d9488" }}>
+                                <div style={{ fontSize: "11px", fontWeight: "800", color: "#0d9488" }}>TIER 3 (LIFE GROUPS)</div>
+                                <div style={{ fontSize: "24px", fontWeight: "800", color: "#0f172a" }}>9 Disciples</div>
+                                <div style={{ fontSize: "12px", color: "#64748b" }}>Disciple-Makers</div>
+                            </div>
+                            <div className="epic-4gen-arrow">×3 →</div>
+                            <div className="epic-4gen-step active" style={{ borderColor: "#10b981" }}>
+                                <div style={{ fontSize: "11px", fontWeight: "800", color: "#10b981" }}>TIER 4 (GENERATIONS)</div>
+                                <div style={{ fontSize: "24px", fontWeight: "800", color: "#0f172a" }}>27 Future Disciples</div>
+                                <div style={{ fontSize: "12px", color: "#64748b" }}>Spiritual Children</div>
+                            </div>
+                        </div>
+
+                        <div style={{ marginTop: "14px", padding: "12px 16px", background: "#ecfdf5", border: "1px solid #a7f3d0", borderRadius: "8px", fontSize: "13px", color: "#065f46" }}>
+                            🌿 <strong>Multiplication Principle:</strong> "Do not turn multiplication into pressure or a quota. People mature at different rates. Prioritize faithful care, sound teaching, healthy relationships, and qualified leadership."
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* ============================================================ */}
             {/* VIEW 1: LEADERS DELEGATION CENTER                            */}
@@ -1702,15 +2612,18 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
             {/* ============================================================ */}
             {/* VIEW 2: CHURCH MEMBERS & DEPARTMENTS DIRECTORY                */}
             {/* ============================================================ */}
-            {activeTab === "members" && (
+            {(activeTab === "registry" || activeTab === "members") && (
                 <div className="cia-tab-content">
-                    {/* MEMBERS BANNER */}
+                    {/* MEMBERS BANNER - EPIC GENERATIONS DISCIPLE REGISTRY */}
                     <div className="cia-section-banner blue-theme">
                         <div>
-                            <div className="cia-mini-tag">LUKE 4:18 CONGREGATION DIRECTORY</div>
-                            <h3>Church Members & Department Directory ({realMembers.length} Total Members)</h3>
+                            <div className="cia-mini-tag" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                                <GitBranch size={12} />
+                                <span>EPIC GENERATIONS • SECTION 8 PILLAR 3</span>
+                            </div>
+                            <h3>Disciple Registry & Monitoring Profiles ({filteredMembersList.length} of {realMembers.length} Total Disciples)</h3>
                             <p>
-                                Complete overview of church members, pastoral staff, and department flocks in Luke 4:18 Ministries.
+                                Complete registry tracking every believer's generation level (Gen 1-5), spiritual parent/mentor, equipping pathway stage, spiritual children, and discipleship health.
                             </p>
                         </div>
                         <div className="cia-banner-btn-group">
@@ -1726,12 +2639,11 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                                 type="button"
                                 className="cia-btn-action-banner secondary"
                                 onClick={() => {
-                                    setActiveTab("delegation");
-                                    setLeaderFilter("ALL");
+                                    setActiveTab("tree");
                                 }}
                             >
-                                <UserCog size={15} />
-                                <span>Go to Delegation Center</span>
+                                <GitBranch size={15} />
+                                <span>Open Generational Tree</span>
                             </button>
                         </div>
                     </div>
@@ -1857,8 +2769,28 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                             <label>Role:</label>
                             <select value={memberRoleFilter} onChange={(e) => setMemberRoleFilter(e.target.value as any)}>
                                 <option value="ALL">All Roles ({realMembers.length})</option>
-                                <option value="LEADERS">Authorized Leaders Only ({realLeaders.length})</option>
-                                <option value="MEMBERS">Congregation Members Only ({realMembers.length - realLeaders.length})</option>
+                                <option value="LEADERS">Authorized Leaders ({realLeaders.length})</option>
+                                <option value="MEMBERS">Congregation Members ({realMembers.length - realLeaders.length})</option>
+                            </select>
+
+                            <label>Generation:</label>
+                            <select value={generationFilter} onChange={(e) => setGenerationFilter(e.target.value)}>
+                                <option value="ALL">All Generations (Gen 1-5)</option>
+                                <option value="5">👑 Gen 5: Movement Leaders</option>
+                                <option value="4">🏛️ Gen 4: Ministry Leaders</option>
+                                <option value="3">🌱 Gen 3: Disciple-Makers</option>
+                                <option value="2">🌿 Gen 2: Growing Disciples</option>
+                                <option value="1">✨ Gen 1: New Believers</option>
+                            </select>
+
+                            <label>Equipping Stage:</label>
+                            <select value={stageFilter} onChange={(e) => setStageFilter(e.target.value)}>
+                                <option value="ALL">All Stages (Stage 1-5)</option>
+                                <option value="1">Stage 1: Foundation (Salvation/Baptism)</option>
+                                <option value="2">Stage 2: Formation (Disciplines/Character)</option>
+                                <option value="3">Stage 3: Equipping (Ministry Gifts)</option>
+                                <option value="4">Stage 4: Leadership (Shepherding/Mentoring)</option>
+                                <option value="5">Stage 5: Multiplication (Movement/Sending)</option>
                             </select>
                         </div>
                     </div>
@@ -1868,11 +2800,12 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                         <table className="cia-table">
                             <thead>
                                 <tr>
-                                    <th>Member Name</th>
-                                    <th>Department</th>
-                                    <th>Role / Designation</th>
-                                    <th>Contact & Address</th>
-                                    <th>Civil Status / Gender</th>
+                                    <th>Disciple Name / Code</th>
+                                    <th>Generation Level</th>
+                                    <th>Equipping Stage</th>
+                                    <th>Department & Ministry</th>
+                                    <th>Role / Ministry Call</th>
+                                    <th>Contact & Barangay</th>
                                     <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
@@ -1884,6 +2817,8 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                                     const roleTag = getLeaderRoleTag(m.ministry);
                                     const isLeader = roleTag.tag !== "member";
                                     const assignedVisitorsCount = leaderWorkloadMap[m.memberId] || 0;
+                                    const genInfo = getMemberGenerationLevel(m);
+                                    const stageInfo = getMemberEquippingStage(m);
 
                                     return (
                                         <tr key={m.memberId} className={isLeader ? "row-leader" : ""}>
@@ -1903,6 +2838,16 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                                                 </div>
                                             </td>
                                             <td>
+                                                <span className={`gen-badge ${genInfo.badgeClass}`}>
+                                                    {genInfo.icon} {genInfo.label}: {genInfo.levelName}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span className={`stage-badge ${stageInfo.badgeClass}`}>
+                                                    {stageInfo.stageName}
+                                                </span>
+                                            </td>
+                                            <td>
                                                 <span className={`cia-dept-pill ${dept.badgeClass}`}>
                                                     {dept.icon} {dept.name}
                                                 </span>
@@ -1913,7 +2858,7 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                                                 </span>
                                                 {isLeader && (
                                                     <small className="d-block mt-1 text-muted">
-                                                        {assignedVisitorsCount} Newcomer(s) Assigned
+                                                        {assignedVisitorsCount} Disciples / Newcomers Assigned
                                                     </small>
                                                 )}
                                             </td>
@@ -1924,15 +2869,24 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                                                 </div>
                                             </td>
                                             <td>
-                                                <span>{m.civilStatus || "Single"} • {m.gender || "Other"}</span>
-                                            </td>
-                                            <td>
                                                 <span className={`cia-status-chip ${m.status?.toLowerCase() === "active" ? "active" : "inactive"}`}>
                                                     {m.status || "Active"}
                                                 </span>
                                             </td>
                                             <td>
-                                                <div className="cia-table-actions">
+                                                <div className="cia-table-actions" style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                                                    <button
+                                                        type="button"
+                                                        className="cia-btn-outline small"
+                                                        onClick={() => {
+                                                            setSelectedMemberForProfile(m);
+                                                            setShowMemberProfileModal(true);
+                                                        }}
+                                                        title="Open Discipleship Monitoring Profile"
+                                                    >
+                                                        <Eye size={13} />
+                                                        <span>Profile</span>
+                                                    </button>
                                                     {isLeader ? (
                                                         <button
                                                             type="button"
@@ -1948,7 +2902,7 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                                                             title="View or assign newcomer follow-ups in Delegation Center"
                                                         >
                                                             <UserCog size={13} />
-                                                            <span>Delegation Center</span>
+                                                            <span>Delegation</span>
                                                         </button>
                                                     ) : (
                                                         <button
@@ -1967,7 +2921,7 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                                                             title="Enroll in Discipleship & Foundations track"
                                                         >
                                                             <BookOpen size={13} />
-                                                            <span>Discipleship Track</span>
+                                                            <span>Track</span>
                                                         </button>
                                                     )}
                                                 </div>
@@ -1978,8 +2932,8 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
 
                                 {filteredMembersList.length === 0 && (
                                     <tr>
-                                        <td colSpan={7} className="cia-no-data">
-                                            No members match the selected search, department, or role filter.
+                                        <td colSpan={8} className="cia-no-data">
+                                            No members match the selected search, department, generation, or stage filter.
                                         </td>
                                     </tr>
                                 )}
@@ -3610,6 +4564,225 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                     </div>
                 </div>
             )}
+
+            {/* ============================================================ */}
+            {/* DISCIPLESHIP MONITORING PROFILE MODAL (Page 3 of Framework)  */}
+            {/* ============================================================ */}
+            {showMemberProfileModal && selectedMemberForProfile && (() => {
+                const m = selectedMemberForProfile;
+                const mName = m.fullName || `${m.firstName || ""} ${m.lastName || ""}`;
+                const genInfo = getMemberGenerationLevel(m);
+                const stageInfo = getMemberEquippingStage(m);
+                const dept = getMemberDepartment(m.ministry);
+                const roleTag = getLeaderRoleTag(m.ministry);
+                const isLeader = roleTag.tag !== "member";
+                const spiritualParent = m.invitedBy || (isLeader ? "Senior Leadership / Pastoral Board" : "Pastor Roberto Garcia (Spiritual Father)");
+                const clusterName = dept.name ? `${dept.name} Cluster` : "San Vicente Life Cluster";
+                const myChildren = delegations.filter((d) => d.assignedLeaderId === m.memberId || d.assignedLeaderName === mName);
+
+                return (
+                    <div className="cia-modal-backdrop" onClick={() => setShowMemberProfileModal(false)}>
+                        <div className="cia-modal-card" style={{ maxWidth: "780px" }} onClick={(e) => e.stopPropagation()}>
+                            <div className="cia-modal-header" style={{ background: "linear-gradient(135deg, #0f172a, #1e293b)", color: "#fff", padding: "18px 24px" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                    <div className="cia-avatar-circle" style={{ background: "#0d9488", color: "#fff", width: "42px", height: "42px", fontSize: "18px" }}>
+                                        {roleTag.icon}
+                                    </div>
+                                    <div>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                                            <h3 style={{ margin: 0, color: "#fff", fontSize: "18px" }}>{mName}</h3>
+                                            <span className={`gen-badge ${genInfo.badgeClass}`}>
+                                                {genInfo.icon} {genInfo.label}: {genInfo.levelName}
+                                            </span>
+                                            <span className={`stage-badge ${stageInfo.badgeClass}`}>
+                                                {stageInfo.stageName}
+                                            </span>
+                                        </div>
+                                        <p style={{ margin: "3px 0 0", color: "#94a3b8", fontSize: "12px" }}>
+                                            Discipleship Monitoring Profile • Member ID: {m.memberCode || `MEM-${m.memberId}`} • {dept.name}
+                                        </p>
+                                    </div>
+                                </div>
+                                <button type="button" onClick={() => setShowMemberProfileModal(false)} style={{ color: "#fff", background: "none", border: "none", fontSize: "22px", cursor: "pointer" }}>
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            <div className="cia-modal-body" style={{ maxHeight: "75vh", overflowY: "auto", padding: "20px 24px" }}>
+                                {/* 2 Timothy 2:2 Framework Callout */}
+                                <div style={{ background: "#f0fdfa", border: "1px solid #99f6e4", borderRadius: "8px", padding: "12px 16px", marginBottom: "16px", display: "flex", alignItems: "center", gap: "12px" }}>
+                                    <GitBranch size={22} style={{ color: "#0d9488", flexShrink: 0 }} />
+                                    <div style={{ fontSize: "12px", color: "#134e4a" }}>
+                                        <strong>2 Timothy 2:2 Generational Framework:</strong> "And what you have heard from me in the presence of many witnesses entrust to faithful men, who will be able to teach others also."
+                                    </div>
+                                </div>
+
+                                {/* SECTION 1: Lineage & Identity Grid */}
+                                <h4 style={{ fontSize: "13px", textTransform: "uppercase", letterSpacing: "0.5px", color: "#475569", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
+                                    <Compass size={15} /> 1. Spiritual Lineage & Mentorship
+                                </h4>
+                                <div className="epic-profile-grid">
+                                    <div className="epic-profile-field">
+                                        <div className="epic-profile-label">Spiritual Parent / Mentor</div>
+                                        <div className="epic-profile-value" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                            <span>👑</span> {spiritualParent}
+                                        </div>
+                                    </div>
+                                    <div className="epic-profile-field">
+                                        <div className="epic-profile-label">Discipleship Group / Cluster</div>
+                                        <div className="epic-profile-value">🌿 {clusterName}</div>
+                                    </div>
+                                    <div className="epic-profile-field">
+                                        <div className="epic-profile-label">Contact & Location</div>
+                                        <div className="epic-profile-value" style={{ fontSize: "13px" }}>
+                                            📞 {m.contactNumber || "No contact"} • 📍 {m.address || "San Vicente"}
+                                        </div>
+                                    </div>
+                                    <div className="epic-profile-field">
+                                        <div className="epic-profile-label">Ministry Assignment</div>
+                                        <div className="epic-profile-value" style={{ fontSize: "13px" }}>
+                                            {m.ministry || "General Flock"} ({roleTag.label})
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* SECTION 2: 5-Stage Equipping Pathway Progress */}
+                                <div style={{ marginTop: "20px" }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                                        <h4 style={{ fontSize: "13px", textTransform: "uppercase", letterSpacing: "0.5px", color: "#475569", margin: 0, display: "flex", alignItems: "center", gap: "6px" }}>
+                                            <Target size={15} /> 2. Five-Stage Equipping Pathway Progress
+                                        </h4>
+                                        <span style={{ fontSize: "12px", fontWeight: "700", color: "#0d9488" }}>
+                                            {stageInfo.progressPercent}% Completed
+                                        </span>
+                                    </div>
+
+                                    {/* Progress Track */}
+                                    <div style={{ width: "100%", height: "8px", background: "#e2e8f0", borderRadius: "999px", overflow: "hidden", marginBottom: "12px" }}>
+                                        <div style={{ width: `${stageInfo.progressPercent}%`, height: "100%", background: "linear-gradient(90deg, #0d9488, #2563eb)", borderRadius: "999px", transition: "width 0.3s ease" }} />
+                                    </div>
+
+                                    {/* Pathway Stages Overview */}
+                                    <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "8px", fontSize: "11px" }}>
+                                        {[
+                                            { num: 1, name: "Foundation", desc: "Salvation & Baptism" },
+                                            { num: 2, name: "Formation", desc: "Spiritual Disciplines" },
+                                            { num: 3, name: "Equipping", desc: "Ministry Skills" },
+                                            { num: 4, name: "Leadership", desc: "Leading Small Group" },
+                                            { num: 5, name: "Multiplication", desc: "Raising Leaders" },
+                                        ].map((s) => {
+                                            const isDone = stageInfo.stage >= s.num;
+                                            const isCurrent = stageInfo.stage === s.num;
+                                            return (
+                                                <div
+                                                    key={s.num}
+                                                    style={{
+                                                        padding: "8px",
+                                                        borderRadius: "6px",
+                                                        background: isCurrent ? "#ecfdf5" : isDone ? "#f8fafc" : "#f1f5f9",
+                                                        border: isCurrent ? "1.5px solid #059669" : isDone ? "1px solid #cbd5e1" : "1px solid #e2e8f0",
+                                                        textAlign: "center",
+                                                    }}
+                                                >
+                                                    <div style={{ fontWeight: "700", color: isCurrent ? "#059669" : isDone ? "#334155" : "#94a3b8" }}>
+                                                        {isDone ? "✓ " : ""}{s.num}. {s.name}
+                                                    </div>
+                                                    <div style={{ fontSize: "10px", color: isCurrent ? "#047857" : "#64748b", marginTop: "2px" }}>
+                                                        {s.desc}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* SECTION 3: Spiritual Children & Discipleship Multipliers */}
+                                <div style={{ marginTop: "20px" }}>
+                                    <h4 style={{ fontSize: "13px", textTransform: "uppercase", letterSpacing: "0.5px", color: "#475569", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
+                                        <TrendingUp size={15} /> 3. Spiritual Children & Caseload ({myChildren.length} Disciples / Newcomers)
+                                    </h4>
+                                    {myChildren.length > 0 ? (
+                                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "8px" }}>
+                                            {myChildren.map((c) => {
+                                                const vis = realVisitors.find((v) => v.visitorId === c.visitorId);
+                                                const childName = vis ? (vis.fullName || `${vis.firstName || ""} ${vis.lastName || ""}`) : `Visitor #${c.visitorId}`;
+                                                return (
+                                                    <div key={c.visitorId} style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "6px", padding: "8px 12px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                                        <div>
+                                                            <strong style={{ fontSize: "12px", color: "#1e293b" }}>{childName}</strong>
+                                                            <div style={{ fontSize: "10px", color: "#64748b" }}>Status: {c.delegationStatus}</div>
+                                                        </div>
+                                                        <span style={{ fontSize: "10px", background: "#ecfdf5", color: "#065f46", padding: "2px 6px", borderRadius: "4px", fontWeight: "600" }}>
+                                                            Child
+                                                        </span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    ) : (
+                                        <div style={{ padding: "12px", background: "#f8fafc", borderRadius: "6px", border: "1px dashed #cbd5e1", fontSize: "12px", color: "#64748b", textAlign: "center" }}>
+                                            No active spiritual children assigned yet. Ready to receive newcomers from the Delegation Center or Outreach list.
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* SECTION 4: Pastoral Follow-up Rhythm & Notes */}
+                                <div style={{ marginTop: "20px" }}>
+                                    <h4 style={{ fontSize: "13px", textTransform: "uppercase", letterSpacing: "0.5px", color: "#475569", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
+                                        <Activity size={15} /> 4. Follow-Up Rhythm & Action Notes
+                                    </h4>
+                                    <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "8px", padding: "14px" }}>
+                                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "12px" }}>
+                                            <span style={{ color: "#64748b" }}>Civil Status / Family:</span>
+                                            <strong>{m.civilStatus || "Single"} • {m.gender || "Other"}</strong>
+                                        </div>
+                                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "6px", fontSize: "12px" }}>
+                                            <span style={{ color: "#64748b" }}>Last Follow-up Rhythm:</span>
+                                            <span style={{ color: "#059669", fontWeight: "600" }}>Active within Weekly Pastoral Cycle</span>
+                                        </div>
+                                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px" }}>
+                                            <span style={{ color: "#64748b" }}>Next Recommended Step:</span>
+                                            <span style={{ color: "#2563eb", fontWeight: "600" }}>
+                                                {stageInfo.stage < 3 ? "Complete Foundation Lessons 1-6" : stageInfo.stage === 3 ? "Commission for Ministry Serving" : "Reproduce a new Life Group"}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="cia-modal-footer" style={{ padding: "14px 24px", background: "#f8fafc", borderTop: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <button
+                                    type="button"
+                                    className="cia-btn-outline"
+                                    onClick={() => setShowMemberProfileModal(false)}
+                                >
+                                    Close Profile
+                                </button>
+                                <div style={{ display: "flex", gap: "8px" }}>
+                                    <button
+                                        type="button"
+                                        className="cia-btn-primary"
+                                        style={{ background: "#0d9488" }}
+                                        onClick={() => {
+                                            setShowMemberProfileModal(false);
+                                            setActiveTab("care");
+                                            setFollowUpForm((prev) => ({
+                                                ...prev,
+                                                ministerName: mName,
+                                                notes: `1-on-1 discipleship check-in for ${mName} (${genInfo.label} - ${stageInfo.stageName})`,
+                                            }));
+                                            setShowFollowUpModal(true);
+                                        }}
+                                    >
+                                        <MessageCircle size={15} />
+                                        <span>Log 1-on-1 Check-in</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
 
             {/* ============================================================ */}
             {/* PRINT-ONLY SECTION (ZERO BLANK/GRAY OVERLAYS)                */}
