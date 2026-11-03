@@ -11,6 +11,7 @@
 // ============================================================
 
 import { API_BASE_URL } from "../config";
+import { discipleshipWebService } from "./discipleshipWebService";
 
 // ============================================================
 // DATA TYPES
@@ -240,22 +241,89 @@ class ChurchInActionService {
 
     public async getLiveVisitors(): Promise<any[]> {
         try {
+            const stored = localStorage.getItem("epic_visitors") || localStorage.getItem("visitors");
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+            }
+        } catch {}
+
+        try {
             const res = await this.apiFetch<any[]>("Visitors");
-            return Array.isArray(res) ? res : [];
+            const list = Array.isArray(res)
+                ? res
+                : (Array.isArray((res as any)?.visitors)
+                    ? (res as any).visitors
+                    : (Array.isArray((res as any)?.data)
+                        ? (res as any).data
+                        : []));
+            if (list.length > 0) {
+                try {
+                    localStorage.setItem("epic_visitors", JSON.stringify(list));
+                } catch {}
+                return list;
+            }
         } catch (err) {
             console.error("Error loading real visitors from database", err);
-            return [];
         }
+        return [];
     }
 
     public async getLiveMembers(): Promise<any[]> {
+        if (typeof window !== "undefined" && (window as any).__epicMembersCache) {
+            const cached = (window as any).__epicMembersCache;
+            if (Array.isArray(cached) && cached.length > 0) return cached;
+        }
+
+        try {
+            const stored =
+                localStorage.getItem("epic_members") ||
+                localStorage.getItem("members") ||
+                localStorage.getItem("allMembers") ||
+                localStorage.getItem("@epic_church_members_cache");
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    if (typeof window !== "undefined") (window as any).__epicMembersCache = parsed;
+                    return parsed;
+                }
+            }
+        } catch {}
+
+        try {
+            const members = await discipleshipWebService.getChurchMembers();
+            if (Array.isArray(members) && members.length > 0) {
+                if (typeof window !== "undefined") (window as any).__epicMembersCache = members;
+                try {
+                    localStorage.setItem("epic_members", JSON.stringify(members));
+                } catch {}
+                return members;
+            }
+        } catch (e) {
+            console.warn("discipleshipWebService member fetch failed, falling back to direct apiFetch", e);
+        }
+
         try {
             const res = await this.apiFetch<any[]>("Members");
-            return Array.isArray(res) ? res : [];
+            const list = Array.isArray(res)
+                ? res
+                : (Array.isArray((res as any)?.members)
+                    ? (res as any).members
+                    : (Array.isArray((res as any)?.data)
+                        ? (res as any).data
+                        : []));
+            if (list.length > 0) {
+                if (typeof window !== "undefined") (window as any).__epicMembersCache = list;
+                try {
+                    localStorage.setItem("epic_members", JSON.stringify(list));
+                } catch {}
+                return list;
+            }
         } catch (err) {
             console.error("Error loading real members from database", err);
-            return [];
         }
+
+        return [];
     }
 
     public async getLiveMinistries(): Promise<any[]> {

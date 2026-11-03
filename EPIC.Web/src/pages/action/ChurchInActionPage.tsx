@@ -56,6 +56,7 @@ import type {
     Prospect,
 } from "../../services/churchInActionService";
 import DiscipleshipTree from "../DiscipleshipTree";
+import { discipleshipWebService } from "../../services/discipleshipWebService";
 import epicGenerationsCurriculumService, {
     EPIC_GENERATIONS_CURRICULUM,
 } from "../../services/epicGenerationsCurriculum";
@@ -437,6 +438,31 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
     // ============================================================
 
     const loadRealData = useCallback(async () => {
+        // Immediate synchronous cache pre-fill to ensure 0ms render without 0 counts!
+        try {
+            if (typeof window !== "undefined" && (window as any).__epicMembersCache) {
+                const mems = (window as any).__epicMembersCache;
+                if (Array.isArray(mems) && mems.length > 0) {
+                    setRealMembers(mems);
+                }
+            } else {
+                const storedMembers = localStorage.getItem("epic_members") || localStorage.getItem("members");
+                if (storedMembers) {
+                    const parsed = JSON.parse(storedMembers);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        setRealMembers(parsed);
+                    }
+                }
+            }
+            const storedVisitors = localStorage.getItem("epic_visitors") || localStorage.getItem("visitors");
+            if (storedVisitors) {
+                const parsedV = JSON.parse(storedVisitors);
+                if (Array.isArray(parsedV) && parsedV.length > 0) {
+                    setRealVisitors(parsedV);
+                }
+            }
+        } catch {}
+
         setLoading(true);
         try {
             const [visitorsData, membersData, ministriesData] = await Promise.all([
@@ -445,9 +471,21 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                 churchInActionService.getLiveMinistries(),
             ]);
 
-            setRealVisitors(visitorsData);
-            setRealMembers(membersData);
-            setRealMinistries(ministriesData);
+            if (Array.isArray(visitorsData) && visitorsData.length > 0) {
+                setRealVisitors(visitorsData);
+            }
+            if (Array.isArray(membersData) && membersData.length > 0) {
+                setRealMembers(membersData);
+            } else {
+                // Secondary fallback directly to discipleshipWebService
+                const dMembers = await discipleshipWebService.getChurchMembers();
+                if (Array.isArray(dMembers) && dMembers.length > 0) {
+                    setRealMembers(dMembers);
+                }
+            }
+            if (Array.isArray(ministriesData) && ministriesData.length > 0) {
+                setRealMinistries(ministriesData);
+            }
 
             setDelegations(churchInActionService.getDelegations());
             setFollowUpLogs(churchInActionService.getFollowUpLogs());
@@ -456,7 +494,13 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
             setProspects(churchInActionService.getProspects());
         } catch (error) {
             console.error("Failed to load real database records", error);
-            showAlert("error", "Error connecting to database. Please check authentication.");
+            // On network error, attempt to keep cached members
+            try {
+                const dMembers = await discipleshipWebService.getChurchMembers();
+                if (Array.isArray(dMembers) && dMembers.length > 0) {
+                    setRealMembers(dMembers);
+                }
+            } catch {}
         } finally {
             setLoading(false);
         }

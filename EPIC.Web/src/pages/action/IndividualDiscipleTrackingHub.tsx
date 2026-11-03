@@ -21,6 +21,7 @@ import {
     MessageCircle,
     GitBranch,
     Crown,
+    RefreshCw,
 } from "lucide-react";
 
 import "./IndividualDiscipleTrackingHub.css";
@@ -52,12 +53,29 @@ export const IndividualDiscipleTrackingHub: React.FC<IndividualDiscipleTrackingH
     onLogCheckIn,
     onCurriculumUpdated,
 }) => {
+    // Resilient members list: initializes immediately from cache, syncs with prop, or auto-fetches
+    const [membersList, setMembersList] = useState<any[]>(() => {
+        if (members && members.length > 0) return members;
+        try {
+            if (typeof window !== "undefined" && (window as any).__epicMembersCache) {
+                const mems = (window as any).__epicMembersCache;
+                if (Array.isArray(mems) && mems.length > 0) return mems;
+            }
+            const stored = localStorage.getItem("epic_members") || localStorage.getItem("members") || localStorage.getItem("allMembers");
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+            }
+        } catch {}
+        return [];
+    });
+
     // 1. Selected Member State
     const [selectedMemberId, setSelectedMemberId] = useState<number>(() => {
-        if (initialMemberId && members.some((m) => m.memberId === initialMemberId)) {
+        if (initialMemberId && membersList.some((m) => m.memberId === initialMemberId)) {
             return initialMemberId;
         }
-        return members[0]?.memberId || 1;
+        return membersList[0]?.memberId || 1;
     });
 
     const [searchTerm, setSearchTerm] = useState<string>("");
@@ -65,12 +83,27 @@ export const IndividualDiscipleTrackingHub: React.FC<IndividualDiscipleTrackingH
     const [attendanceMap, setAttendanceMap] = useState<Map<number, { attended: number; missed: number; rate: number }>>(new Map());
     const [localRefreshTrigger, setLocalRefreshTrigger] = useState<number>(0);
 
-    // Sync initialMemberId if prop changes
+    // Keep membersList in sync with parent prop or self-heal via discipleshipWebService
     useEffect(() => {
-        if (initialMemberId && members.some((m) => m.memberId === initialMemberId)) {
-            setSelectedMemberId(initialMemberId);
+        if (members && members.length > 0) {
+            setMembersList(members);
+        } else if (membersList.length === 0) {
+            discipleshipWebService.getChurchMembers().then((list) => {
+                if (list && list.length > 0) {
+                    setMembersList(list);
+                }
+            }).catch(() => {});
         }
-    }, [initialMemberId, members]);
+    }, [members]);
+
+    // Sync initialMemberId if prop or list changes
+    useEffect(() => {
+        if (initialMemberId && membersList.some((m) => m.memberId === initialMemberId)) {
+            setSelectedMemberId(initialMemberId);
+        } else if (membersList.length > 0 && !membersList.some((m) => m.memberId === selectedMemberId)) {
+            setSelectedMemberId(membersList[0].memberId);
+        }
+    }, [initialMemberId, membersList, selectedMemberId]);
 
     // Fetch live attendance data once on mount
     useEffect(() => {
@@ -83,20 +116,20 @@ export const IndividualDiscipleTrackingHub: React.FC<IndividualDiscipleTrackingH
 
     // Filter members for fast switcher
     const filteredMembers = useMemo(() => {
-        if (!searchTerm) return members;
+        if (!searchTerm) return membersList;
         const q = searchTerm.toLowerCase().trim();
-        return members.filter((m) => {
+        return membersList.filter((m) => {
             const name = (m.fullName || `${m.firstName || ""} ${m.lastName || ""}`).toLowerCase();
             const code = (m.memberCode || "").toLowerCase();
             const min = (m.ministry || "").toLowerCase();
             return name.includes(q) || code.includes(q) || min.includes(q);
         });
-    }, [members, searchTerm]);
+    }, [membersList, searchTerm]);
 
     // Active selected member object
     const selectedMember = useMemo(() => {
-        return members.find((m) => m.memberId === selectedMemberId) || members[0] || null;
-    }, [members, selectedMemberId]);
+        return membersList.find((m) => m.memberId === selectedMemberId) || membersList[0] || null;
+    }, [membersList, selectedMemberId]);
 
     // Derived 360° Data for Selected Member
     const memberData = useMemo(() => {
@@ -159,8 +192,26 @@ export const IndividualDiscipleTrackingHub: React.FC<IndividualDiscipleTrackingH
 
     if (!memberData) {
         return (
-            <div style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>
-                No church members found in the database.
+            <div className="dt-360-hub-container" style={{ padding: "48px 24px", textAlign: "center" }}>
+                <div style={{ maxWidth: "460px", margin: "0 auto", background: "#ffffff", padding: "32px", borderRadius: "12px", border: "1px solid #e2e8f0", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
+                    <Activity size={36} style={{ color: "#0d9488", margin: "0 auto 16px" }} />
+                    <h3 style={{ fontSize: "18px", color: "#0f172a", marginBottom: "8px" }}>Synchronizing Disciple Registry...</h3>
+                    <p style={{ fontSize: "13px", color: "#64748b", marginBottom: "20px", lineHeight: "1.5" }}>
+                        Loading congregation members and discipleship records from the database.
+                    </p>
+                    <button
+                        type="button"
+                        className="cia-btn-primary"
+                        style={{ margin: "0 auto", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                        onClick={async () => {
+                            const res = await discipleshipWebService.getChurchMembers();
+                            if (res && res.length > 0) setMembersList(res);
+                        }}
+                    >
+                        <RefreshCw size={14} />
+                        <span>Force Sync Members</span>
+                    </button>
+                </div>
             </div>
         );
     }
