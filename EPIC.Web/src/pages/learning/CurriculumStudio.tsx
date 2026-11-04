@@ -113,10 +113,25 @@ export const CurriculumStudio: React.FC<CurriculumStudioProps> = ({
                 console.warn("Backend Courses API notice (fallback to integrated curriculum):", fetchErr);
             }
 
-            // Merge: Ensure all 5 stage courses are always prominently listed
+            // Deduplicate: normalize title to prevent duplicate stage courses (e.g. old backend "Foundations of Christian Discipleship" vs "Stage 1: Foundations of Christian Discipleship (GEN-101)")
+            const normTitle = (t: string) =>
+                (t || "")
+                    .toLowerCase()
+                    .replace(/^stage\s*\d+\s*:\s*/i, "")
+                    .replace(/\(gen-\d+\)/i, "")
+                    .replace(/[^a-z0-9]/g, "");
+
             const merged = [...genCourses];
             for (const ac of apiCourses) {
-                if (!merged.some((m) => m.courseId === ac.courseId || m.title.toLowerCase() === ac.title.toLowerCase())) {
+                const acNorm = normTitle(ac.title);
+                const isStageDuplicate =
+                    epicGenerationsCurriculumService.isGenerationsCourse(ac.courseId) ||
+                    merged.some((m) => {
+                        const mNorm = normTitle(m.title);
+                        return m.courseId === ac.courseId || mNorm === acNorm || (acNorm.length > 5 && (mNorm.includes(acNorm) || acNorm.includes(mNorm)));
+                    });
+
+                if (!isStageDuplicate) {
                     merged.push(ac);
                 }
             }

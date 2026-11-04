@@ -192,11 +192,26 @@ const LearningPage: React.FC<LearningPageProps> = ({
                 console.warn("Notice: Backend courses fetch failed, fallback to local:", courseErr);
             }
 
+            const normTitle = (t: string) =>
+                (t || "")
+                    .toLowerCase()
+                    .replace(/^stage\s*\d+\s*:\s*/i, "")
+                    .replace(/\(gen-\d+\)/i, "")
+                    .replace(/[^a-z0-9]/g, "");
+
             const genCourses = epicGenerationsCurriculumService.getGenerationsAsCourses();
             const courseList: Course[] = [...genCourses];
             if (Array.isArray(apiCourseData)) {
                 for (const ac of apiCourseData) {
-                    if (!courseList.some((c) => c.courseId === ac.courseId || c.title.toLowerCase() === ac.title.toLowerCase())) {
+                    const acNorm = normTitle(ac.title);
+                    const isStageDuplicate =
+                        epicGenerationsCurriculumService.isGenerationsCourse(ac.courseId) ||
+                        courseList.some((c) => {
+                            const cNorm = normTitle(c.title);
+                            return c.courseId === ac.courseId || cNorm === acNorm || (acNorm.length > 5 && (cNorm.includes(acNorm) || acNorm.includes(cNorm)));
+                        });
+
+                    if (!isStageDuplicate) {
                         courseList.push(ac);
                     }
                 }
