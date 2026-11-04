@@ -3981,6 +3981,7 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                         delegations={delegations}
                         followUpLogs={followUpLogs}
                         initialMemberId={selectedIndividualMemberId}
+                        onMemberSelected={(id) => setSelectedIndividualMemberId(id)}
                         onClose={() => setActiveTab("registry")}
                         onNavigateToLearning={() => handleNavigatePage("learning")}
                         onLogCheckIn={(m) => {

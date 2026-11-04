@@ -33,27 +33,216 @@
 .dt-360-selector-box {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     background: rgba(255, 255, 255, 0.12);
     border: 1px solid rgba(255, 255, 255, 0.25);
     border-radius: 10px;
-    padding: 6px 14px;
+    padding: 6px 12px;
+    position: relative;
+}
+
+.dt-360-search-filter-input {
+    background: transparent;
+    border: none;
+    color: #ffffff;
+    outline: none;
+    font-size: 13px;
+    font-weight: 600;
+    width: 140px;
+}
+
+.dt-360-search-filter-input::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.dt-360-search-clear-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: #ffffff;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+}
+
+.dt-360-search-clear-btn:hover {
+    background: rgba(255, 255, 255, 0.35);
+}
+
+.dt-360-select-divider {
+    width: 1px;
+    height: 22px;
+    background: rgba(255, 255, 255, 0.25);
 }
 
 .dt-360-select-input {
     background: transparent;
     color: #ffffff;
     border: none;
-    font-size: 14px;
+    font-size: 13.5px;
     font-weight: 700;
     outline: none;
     cursor: pointer;
-    min-width: 260px;
+    min-width: 220px;
+    max-width: 320px;
 }
 
 .dt-360-select-input option {
     background: #0f172a;
     color: #ffffff;
+    padding: 6px 10px;
+}
+
+.dt-360-nav-arrows {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 2px;
+}
+
+.dt-nav-arrow-btn {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    color: #ffffff;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.dt-nav-arrow-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* Search Results Autocomplete Dropdown */
+.dt-360-search-results-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    min-width: 380px;
+    background: #0f172a;
+    border: 1.5px solid #14b8a6;
+    border-radius: 12px;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6);
+    z-index: 2000;
+    overflow: hidden;
+    animation: fadeIn 0.15s ease-out;
+}
+
+.dt-search-results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    background: rgba(20, 184, 166, 0.12);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 11px;
+    font-weight: 800;
+    color: #99f6e4;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+}
+
+.dt-search-results-header button {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.dt-search-results-header button:hover {
+    color: #ffffff;
+}
+
+.dt-search-no-results {
+    padding: 18px 14px;
+    font-size: 13px;
+    color: #94a3b8;
+    text-align: center;
+}
+
+.dt-search-results-list {
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.dt-search-result-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.dt-search-result-row:last-child {
+    border-bottom: none;
+}
+
+.dt-search-result-row:hover {
+    background: rgba(20, 184, 166, 0.2);
+}
+
+.dt-search-result-row.selected {
+    background: rgba(20, 184, 166, 0.25);
+    border-left: 3px solid #14b8a6;
+}
+
+.dt-search-result-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #0d9488;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 13px;
+    flex-shrink: 0;
+}
+
+.dt-search-result-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.dt-search-result-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: #ffffff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dt-search-result-sub {
+    display: flex;
+    gap: 6px;
+    font-size: 11px;
+    color: #94a3b8;
+    margin-top: 2px;
+}
+
+.dt-search-view-pill {
+    font-size: 11px;
+    font-weight: 700;
+    color: #5eead4;
+    background: rgba(20, 184, 166, 0.2);
+    padding: 3px 8px;
+    border-radius: 6px;
+    flex-shrink: 0;
 }
 
 .dt-360-profile-main {

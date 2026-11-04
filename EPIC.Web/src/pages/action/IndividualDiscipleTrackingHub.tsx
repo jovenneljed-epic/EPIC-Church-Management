@@ -6,7 +6,7 @@
 // Aligned with 2 Timothy 2:2, Matthew 28:19-20, Exodus 18:21
 // ============================================================
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
     GraduationCap,
     TrendingUp,
@@ -22,6 +22,9 @@ import {
     GitBranch,
     Crown,
     RefreshCw,
+    ChevronLeft,
+    ChevronRight,
+    X,
 } from "lucide-react";
 
 import "./IndividualDiscipleTrackingHub.css";
@@ -38,6 +41,7 @@ export interface IndividualDiscipleTrackingHubProps {
     onNavigateToLearning?: () => void;
     onLogCheckIn?: (member: any) => void;
     onCurriculumUpdated?: () => void;
+    onMemberSelected?: (memberId: number) => void;
 }
 
 type DossierTab = "journey" | "learning" | "attendance" | "lineage" | "care" | "ministry";
@@ -52,6 +56,7 @@ export const IndividualDiscipleTrackingHub: React.FC<IndividualDiscipleTrackingH
     onNavigateToLearning,
     onLogCheckIn,
     onCurriculumUpdated,
+    onMemberSelected,
 }) => {
     // Resilient members list: initializes immediately from cache, syncs with prop, or auto-fetches
     const [membersList, setMembersList] = useState<any[]>(() => {
@@ -70,6 +75,8 @@ export const IndividualDiscipleTrackingHub: React.FC<IndividualDiscipleTrackingH
         return [];
     });
 
+    const prevInitialMemberIdRef = useRef<number | undefined>(initialMemberId);
+
     // 1. Selected Member State
     const [selectedMemberId, setSelectedMemberId] = useState<number>(() => {
         if (initialMemberId && membersList.some((m) => m.memberId === initialMemberId)) {
@@ -79,6 +86,7 @@ export const IndividualDiscipleTrackingHub: React.FC<IndividualDiscipleTrackingH
     });
 
     const [searchTerm, setSearchTerm] = useState<string>("");
+    const [showSearchDropdown, setShowSearchDropdown] = useState<boolean>(false);
     const [activeTab, setActiveTab] = useState<DossierTab>("journey");
     const [attendanceMap, setAttendanceMap] = useState<Map<number, { attended: number; missed: number; rate: number }>>(new Map());
     const [localRefreshTrigger, setLocalRefreshTrigger] = useState<number>(0);
@@ -96,14 +104,51 @@ export const IndividualDiscipleTrackingHub: React.FC<IndividualDiscipleTrackingH
         }
     }, [members]);
 
-    // Sync initialMemberId if prop or list changes
+    // Sync only when initialMemberId prop actually changes from the outside
     useEffect(() => {
-        if (initialMemberId && membersList.some((m) => m.memberId === initialMemberId)) {
+        if (initialMemberId && initialMemberId !== prevInitialMemberIdRef.current) {
+            prevInitialMemberIdRef.current = initialMemberId;
             setSelectedMemberId(initialMemberId);
-        } else if (membersList.length > 0 && !membersList.some((m) => m.memberId === selectedMemberId)) {
-            setSelectedMemberId(membersList[0].memberId);
+            setSearchTerm("");
+            setShowSearchDropdown(false);
         }
-    }, [initialMemberId, membersList, selectedMemberId]);
+    }, [initialMemberId]);
+
+    // Ensure selectedMemberId is valid if membersList changes
+    useEffect(() => {
+        if (membersList.length > 0) {
+            setSelectedMemberId((current) => {
+                if (current && membersList.some((m) => m.memberId === current)) {
+                    return current;
+                }
+                return membersList[0].memberId;
+            });
+        }
+    }, [membersList]);
+
+    // Handler to switch disciple
+    const handleSelectMember = (memberId: number) => {
+        const target = membersList.find((m) => m.memberId === memberId);
+        if (!target) return;
+        console.log("360° Hub selecting member:", target.fullName, "ID:", memberId);
+        setSelectedMemberId(memberId);
+        if (onMemberSelected) onMemberSelected(memberId);
+        setSearchTerm("");
+        setShowSearchDropdown(false);
+    };
+
+    // Cycle through disciples with Prev/Next buttons
+    const handleNavigateDisciple = (delta: number) => {
+        if (membersList.length === 0) return;
+        const currentIndex = membersList.findIndex((m) => m.memberId === selectedMemberId);
+        let nextIndex = currentIndex + delta;
+        if (nextIndex < 0) nextIndex = membersList.length - 1;
+        if (nextIndex >= membersList.length) nextIndex = 0;
+        const nextMember = membersList[nextIndex];
+        if (nextMember) {
+            handleSelectMember(nextMember.memberId);
+        }
+    };
 
     // Fetch live attendance data once on mount
     useEffect(() => {
@@ -310,26 +355,123 @@ export const IndividualDiscipleTrackingHub: React.FC<IndividualDiscipleTrackingH
                     <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
                         {/* Member Search / Selector */}
                         <div className="dt-360-selector-box">
-                            <Search size={14} style={{ color: "#99f6e4" }} />
-                            <input
-                                type="text"
-                                className="dt-360-select-input"
-                                placeholder="Filter member..."
-                                style={{ width: "120px", background: "transparent", border: "none", color: "#ffffff", outline: "none", fontSize: "12px" }}
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                <Search size={14} style={{ color: "#99f6e4" }} />
+                                <input
+                                    type="text"
+                                    className="dt-360-search-filter-input"
+                                    placeholder="Search disciple..."
+                                    value={searchTerm}
+                                    onChange={(e) => {
+                                        setSearchTerm(e.target.value);
+                                        setShowSearchDropdown(true);
+                                    }}
+                                    onFocus={() => {
+                                        if (searchTerm.trim().length > 0) setShowSearchDropdown(true);
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter" && filteredMembers.length > 0) {
+                                            handleSelectMember(filteredMembers[0].memberId);
+                                        } else if (e.key === "Escape") {
+                                            setShowSearchDropdown(false);
+                                        }
+                                    }}
+                                />
+                                {searchTerm && (
+                                    <button
+                                        type="button"
+                                        className="dt-360-search-clear-btn"
+                                        onClick={() => {
+                                            setSearchTerm("");
+                                            setShowSearchDropdown(false);
+                                        }}
+                                        title="Clear search"
+                                    >
+                                        <X size={12} />
+                                    </button>
+                                )}
+                            </div>
+
+                            <div className="dt-360-select-divider" />
+
                             <select
                                 className="dt-360-select-input"
                                 value={selectedMemberId}
-                                onChange={(e) => setSelectedMemberId(Number(e.target.value))}
+                                onChange={(e) => {
+                                    const val = Number(e.target.value);
+                                    if (val) handleSelectMember(val);
+                                }}
                             >
+                                {!filteredMembers.some((mem) => mem.memberId === selectedMemberId) && selectedMember && (
+                                    <option value={selectedMember.memberId}>
+                                        {selectedMember.fullName} ({selectedMember.memberCode || `MEM-${selectedMember.memberId}`})
+                                    </option>
+                                )}
                                 {filteredMembers.map((mem) => (
                                     <option key={mem.memberId} value={mem.memberId}>
                                         {mem.fullName} ({mem.memberCode || `MEM-${mem.memberId}`})
                                     </option>
                                 ))}
                             </select>
+
+                            <div className="dt-360-nav-arrows">
+                                <button
+                                    type="button"
+                                    className="dt-nav-arrow-btn"
+                                    title="Previous Disciple"
+                                    onClick={() => handleNavigateDisciple(-1)}
+                                >
+                                    <ChevronLeft size={15} />
+                                </button>
+                                <button
+                                    type="button"
+                                    className="dt-nav-arrow-btn"
+                                    title="Next Disciple"
+                                    onClick={() => handleNavigateDisciple(1)}
+                                >
+                                    <ChevronRight size={15} />
+                                </button>
+                            </div>
+
+                            {/* Floating Suggestions Dropdown */}
+                            {showSearchDropdown && searchTerm.trim().length > 0 && (
+                                <div className="dt-360-search-results-dropdown">
+                                    <div className="dt-search-results-header">
+                                        <span>Matching Disciples ({filteredMembers.length})</span>
+                                        <button type="button" onClick={() => setShowSearchDropdown(false)}>Close</button>
+                                    </div>
+                                    {filteredMembers.length === 0 ? (
+                                        <div className="dt-search-no-results">
+                                            No disciples found matching "{searchTerm}"
+                                        </div>
+                                    ) : (
+                                        <div className="dt-search-results-list">
+                                            {filteredMembers.slice(0, 10).map((mem) => (
+                                                <div
+                                                    key={mem.memberId}
+                                                    className={`dt-search-result-row ${mem.memberId === selectedMemberId ? "selected" : ""}`}
+                                                    onClick={() => handleSelectMember(mem.memberId)}
+                                                >
+                                                    <div className="dt-search-result-avatar">
+                                                        {mem.fullName?.charAt(0) || "D"}
+                                                    </div>
+                                                    <div className="dt-search-result-text">
+                                                        <div className="dt-search-result-name">
+                                                            {mem.fullName}
+                                                        </div>
+                                                        <div className="dt-search-result-sub">
+                                                            <span>{mem.memberCode || `MEM-${mem.memberId}`}</span>
+                                                            <span>•</span>
+                                                            <span>{mem.ministry || "Disciple"}</span>
+                                                        </div>
+                                                    </div>
+                                                    <span className="dt-search-view-pill">Select →</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
                         <button
