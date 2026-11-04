@@ -16,14 +16,16 @@ import {
     Award,
     Heart,
     Users,
-    AlertCircle
+    AlertCircle,
+    Lock,
+    ShieldAlert
 } from "lucide-react";
 
 import "./LearningPage.css";
 import ViewCourse from "./ViewCourse";
 import { CurriculumStudio } from "./CurriculumStudio";
 import PermissionService from "../../PermissionService";
-import { epicGenerationsCurriculumService } from "../../services/epicGenerationsCurriculum";
+import { epicGenerationsCurriculumService, type StageLockInfo } from "../../services/epicGenerationsCurriculum";
 
 import { API_BASE_URL } from "../../config";
 
@@ -51,6 +53,7 @@ interface Enrollment {
     progressPercentage: number;
     course?: Course;
     lessonProgresses?: any[];
+    lockInfo?: StageLockInfo;
 }
 
 interface LearningPageProps {
@@ -100,6 +103,14 @@ const LearningPage: React.FC<LearningPageProps> = ({
      */
     const [selectedCourseId, setSelectedCourseId] =
         useState<number | null>(null);
+
+    // Sequential stage prerequisite locking state
+    const [lockedModal, setLockedModal] =
+        useState<StageLockInfo | null>(null);
+
+    // Option for administrators/pastors to toggle bypass during testing/authoring
+    const [bypassAdminLock, setBypassAdminLock] =
+        useState<boolean>(false);
 
     const isCurriculumSpecialist =
         PermissionService.isAdministrator() ||
@@ -279,26 +290,23 @@ const LearningPage: React.FC<LearningPageProps> = ({
                 validEnrollments
             );
 
-            // Ensure all 5 stage courses have enrollment representations
+            // Ensure all 5 stage courses have enrollment representations with sequential stage lock info
             const genEnrollments: Enrollment[] = genCourses.map((gc) => {
                 const stage = epicGenerationsCurriculumService.parseStageFromCourseId(gc.courseId) || 1;
-                const completedList = epicGenerationsCurriculumService.getCompletedLessons();
-                const stageCompleted = completedList.filter((id) => {
-                    const p = epicGenerationsCurriculumService.parseLessonId(id);
-                    return p && p.stage === stage;
-                }).length;
-                const pct = Math.min(100, Math.round((stageCompleted / 18) * 100));
+                const stageProg = epicGenerationsCurriculumService.getStageProgress(stage);
+                const lockInfo = epicGenerationsCurriculumService.getStageLockInfo(stage, bypassAdminLock);
 
                 return {
                     courseEnrollmentId: 1000 + gc.courseId,
                     courseId: gc.courseId,
                     courseTitle: gc.title,
                     enrolledDate: "2026-11-01",
-                    completedDate: pct >= 100 ? "2026-11-04" : null,
-                    isCompleted: pct >= 100,
-                    progressPercentage: pct,
+                    completedDate: stageProg.isCompleted ? "2026-11-04" : null,
+                    isCompleted: stageProg.isCompleted,
+                    progressPercentage: stageProg.progressPercentage,
                     course: gc,
-                    lessonProgresses: []
+                    lessonProgresses: [],
+                    lockInfo
                 };
             });
 
@@ -452,22 +460,41 @@ const LearningPage: React.FC<LearningPageProps> = ({
                 return null;
             }
 
+            // Find an active in-progress course that is NOT locked
             const inProgress =
                 enrollments.find(
-                    enrollment =>
-                        enrollment.isCompleted !== true &&
-                        Number(
-                            enrollment.progressPercentage || 0
-                        ) > 0
+                    enrollment => {
+                        const stage = epicGenerationsCurriculumService.parseStageFromCourseId(enrollment.courseId);
+                        const isLocked = stage ? epicGenerationsCurriculumService.isStageLocked(stage, bypassAdminLock) : false;
+                        return !isLocked &&
+                            enrollment.isCompleted !== true &&
+                            Number(
+                                enrollment.progressPercentage || 0
+                            ) > 0;
+                    }
                 );
 
             if (inProgress) {
                 return inProgress;
             }
 
+            // Fallback to the first unlocked course that is not completed (e.g. Stage 1 if 0%)
+            const earliestUnlocked =
+                enrollments.find(
+                    enrollment => {
+                        const stage = epicGenerationsCurriculumService.parseStageFromCourseId(enrollment.courseId);
+                        const isLocked = stage ? epicGenerationsCurriculumService.isStageLocked(stage, bypassAdminLock) : false;
+                        return !isLocked && enrollment.isCompleted !== true;
+                    }
+                );
+
+            if (earliestUnlocked) {
+                return earliestUnlocked;
+            }
+
             return enrollments[0];
 
-        }, [enrollments]);
+        }, [enrollments, bypassAdminLock]);
 
     // =====================================================
     // FORMAT DATE
@@ -591,6 +618,17 @@ const LearningPage: React.FC<LearningPageProps> = ({
             );
 
             return;
+        }
+
+        // Enforce sequential stage prerequisite locking
+        const stage = epicGenerationsCurriculumService.parseStageFromCourseId(courseId);
+        if (stage) {
+            const lockInfo = epicGenerationsCurriculumService.getStageLockInfo(stage, bypassAdminLock);
+            if (lockInfo.isLocked) {
+                console.warn(`[EPIC Learning] Stage ${stage} is locked. Prerequisite required: Stage ${lockInfo.requiredStage}.`);
+                setLockedModal(lockInfo);
+                return;
+            }
         }
 
         /*
@@ -1024,6 +1062,37 @@ const LearningPage: React.FC<LearningPageProps> = ({
                 </div>
 
                 {/* =================================================
+                    SEQUENTIAL PROGRESSION INFO BANNER
+                ================================================= */}
+                <div className="sequential-pathway-banner">
+                    <div className="sequential-pathway-left">
+                        <div className="pathway-icon-circle">
+                            <Lock size={16} />
+                        </div>
+                        <div>
+                            <strong>Sequential Discipleship Progression Enforced</strong>
+                            <p>
+                                Stages unlock sequentially according to biblical discipleship (2 Timothy 2:2). Learners must finish 100% of the lower stage before advancing to higher stages.
+                            </p>
+                        </div>
+                    </div>
+                    {isCurriculumSpecialist && (
+                        <button
+                            type="button"
+                            className={`admin-toggle-prereq-btn ${bypassAdminLock ? "is-bypassed" : ""}`}
+                            onClick={() => {
+                                const nextState = !bypassAdminLock;
+                                setBypassAdminLock(nextState);
+                                loadLearningData();
+                            }}
+                            title="Admins/Pastors can toggle this to test higher stages"
+                        >
+                            {bypassAdminLock ? "🔓 Pastor Bypass: ON" : "🔒 Enforce Locking (Default)"}
+                        </button>
+                    )}
+                </div>
+
+                {/* =================================================
                     EMPTY
                 ================================================= */}
 
@@ -1043,6 +1112,12 @@ const LearningPage: React.FC<LearningPageProps> = ({
 
                         {enrollments.map(
                             enrollment => {
+
+                                const stage = epicGenerationsCurriculumService.parseStageFromCourseId(enrollment.courseId);
+                                const lockInfo = stage
+                                    ? epicGenerationsCurriculumService.getStageLockInfo(stage, bypassAdminLock)
+                                    : enrollment.lockInfo;
+                                const isLocked = lockInfo ? lockInfo.isLocked : false;
 
                                 const progress =
                                     Math.min(
@@ -1074,7 +1149,7 @@ const LearningPage: React.FC<LearningPageProps> = ({
                                 return (
 
                                     <article
-                                        className="learning-course-card"
+                                        className={`learning-course-card ${isLocked ? "is-locked" : ""}`}
                                         key={
                                             enrollment.courseEnrollmentId
                                         }
@@ -1105,21 +1180,37 @@ const LearningPage: React.FC<LearningPageProps> = ({
 
                                             )}
 
-                                            <span
-                                                className={
-                                                    completed
-                                                        ? "course-status completed"
-                                                        : "course-status"
-                                                }
-                                            >
-                                                {
-                                                    completed
-                                                        ? "Completed"
-                                                        : progress > 0
-                                                            ? "In Progress"
-                                                            : "Not Started"
-                                                }
-                                            </span>
+                                            {isLocked ? (
+                                                <span className="course-status locked">
+                                                    <Lock size={11} style={{ display: "inline", verticalAlign: "-1px", marginRight: 4 }} />
+                                                    Locked (Stage {lockInfo?.requiredStage} Req)
+                                                </span>
+                                            ) : (
+                                                <span
+                                                    className={
+                                                        completed
+                                                            ? "course-status completed"
+                                                            : "course-status"
+                                                    }
+                                                >
+                                                    {
+                                                        completed
+                                                            ? "Completed"
+                                                            : progress > 0
+                                                                ? "In Progress"
+                                                                : "Not Started"
+                                                    }
+                                                </span>
+                                            )}
+
+                                            {isLocked && (
+                                                <div className="course-locked-overlay">
+                                                    <div className="course-locked-overlay-content">
+                                                        <Lock size={28} />
+                                                        <span>Stage {stage} Locked</span>
+                                                    </div>
+                                                </div>
+                                            )}
 
                                         </div>
 
@@ -1142,6 +1233,18 @@ const LearningPage: React.FC<LearningPageProps> = ({
                                                     "Continue growing in faith and biblical understanding."
                                                 }
                                             </p>
+
+                                            {/* PREREQUISITE NOTICE IF LOCKED */}
+                                            {isLocked && lockInfo && (
+                                                <div className="course-locked-banner">
+                                                    <Lock size={15} style={{ flexShrink: 0, marginTop: 2, color: "#d97706" }} />
+                                                    <div>
+                                                        <strong>Prerequisite:</strong> Complete 100% of{" "}
+                                                        <em>Stage {lockInfo.requiredStage}: {lockInfo.requiredStageTitle}</em>{" "}
+                                                        to unlock ({lockInfo.requiredStageCompletedCount}/{lockInfo.requiredStageTotalLessons} lessons).
+                                                    </div>
+                                                </div>
+                                            )}
 
                                             {/* PROGRESS */}
 
@@ -1190,23 +1293,34 @@ const LearningPage: React.FC<LearningPageProps> = ({
 
                                             <button
                                                 type="button"
-                                                className="course-action-btn"
-                                                onClick={() =>
-                                                    openCourse(
-                                                        enrollment
-                                                    )
-                                                }
-                                            >
-                                                <span>
-                                                    {
-                                                        completed
-                                                            ? "View Course"
-                                                            : progress > 0
-                                                                ? "Continue Learning"
-                                                                : "Start Course"
+                                                className={isLocked ? "course-action-btn locked" : "course-action-btn"}
+                                                onClick={() => {
+                                                    if (isLocked && lockInfo) {
+                                                        setLockedModal(lockInfo);
+                                                    } else {
+                                                        openCourse(enrollment);
                                                     }
-                                                </span>
-                                                <ArrowRight size={15} />
+                                                }}
+                                            >
+                                                {isLocked ? (
+                                                    <>
+                                                        <Lock size={14} style={{ marginRight: 6 }} />
+                                                        <span>Locked — Stage {lockInfo?.requiredStage} Required</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <span>
+                                                            {
+                                                                completed
+                                                                    ? "View Course"
+                                                                    : progress > 0
+                                                                        ? "Continue Learning"
+                                                                        : "Start Course"
+                                                                    }
+                                                        </span>
+                                                        <ArrowRight size={15} />
+                                                    </>
+                                                )}
                                             </button>
 
                                         </div>
@@ -1293,6 +1407,89 @@ const LearningPage: React.FC<LearningPageProps> = ({
                     </span>
                 </div>
 
+            )}
+
+            {/* =================================================
+                PREREQUISITE LOCKED STAGE MODAL
+            ================================================= */}
+            {lockedModal && (
+                <div className="epic-prereq-modal-backdrop" onClick={() => setLockedModal(null)}>
+                    <div className="epic-prereq-modal" onClick={(e) => e.stopPropagation()}>
+                        <div className="epic-prereq-modal-header">
+                            <div className="prereq-modal-icon-badge">
+                                <Lock size={26} />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <span className="prereq-pill">SEQUENTIAL DISCIPLESHIP PATHWAY</span>
+                                <h3 style={{ margin: "4px 0 2px", fontSize: "19px", color: "#0f172a", fontWeight: "800" }}>
+                                    Stage {lockedModal.stage} is Locked
+                                </h3>
+                                <p style={{ margin: 0, fontSize: "13px", color: "#64748b" }}>
+                                    {lockedModal.courseTitle}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="epic-prereq-modal-body">
+                            <div className="prereq-rule-box">
+                                <ShieldAlert size={20} style={{ color: "#d97706", flexShrink: 0, marginTop: 2 }} />
+                                <p style={{ margin: 0, fontSize: "13px", lineHeight: "1.6", color: "#92400e" }}>
+                                    At <strong>Luke 4:18 Ministries</strong>, spiritual growth follows a disciplined, step-by-step progression (2 Timothy 2:2). Disciples must complete 100% of the lower stage before unlocking higher stages.
+                                </p>
+                            </div>
+
+                            <div className="prereq-requirement-card">
+                                <div style={{ fontSize: "11px", fontWeight: "800", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                                    Required Prerequisite:
+                                </div>
+                                <div style={{ fontSize: "15px", fontWeight: "800", color: "#1e293b", margin: "6px 0 10px" }}>
+                                    Stage {lockedModal.requiredStage}: {lockedModal.requiredStageTitle}
+                                </div>
+
+                                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", color: "#475569", marginBottom: "6px" }}>
+                                    <span>Current Completion:</span>
+                                    <strong>{lockedModal.requiredStageProgressPct}% ({lockedModal.requiredStageCompletedCount}/{lockedModal.requiredStageTotalLessons} Lessons)</strong>
+                                </div>
+
+                                <div className="prereq-modal-progress-bar">
+                                    <div
+                                        className="prereq-modal-progress-fill"
+                                        style={{ width: `${lockedModal.requiredStageProgressPct}%` }}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="epic-prereq-modal-footer">
+                            <button
+                                type="button"
+                                className="btn-modal-dismiss"
+                                onClick={() => setLockedModal(null)}
+                            >
+                                Close
+                            </button>
+                            {lockedModal.requiredStageCourseId && (
+                                <button
+                                    type="button"
+                                    className="btn-modal-primary"
+                                    onClick={() => {
+                                        const reqId = lockedModal.requiredStageCourseId!;
+                                        setLockedModal(null);
+                                        const prereqEnrollment = enrollments.find((e) => e.courseId === reqId);
+                                        if (prereqEnrollment) {
+                                            openCourse(prereqEnrollment);
+                                        } else {
+                                            setSelectedCourseId(reqId);
+                                        }
+                                    }}
+                                >
+                                    <span>Go to Stage {lockedModal.requiredStage} Now</span>
+                                    <ArrowRight size={15} />
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
             )}
 
         </div>

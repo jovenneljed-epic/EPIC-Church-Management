@@ -147,6 +147,18 @@ const LessonPage: React.FC<LessonPageProps> = ({
                 epicGenerationsCurriculumService.isGenerationsLesson(lessonId) ||
                 (courseId && epicGenerationsCurriculumService.isGenerationsCourse(courseId))
             ) {
+                const parsed = epicGenerationsCurriculumService.parseLessonId(lessonId, courseId);
+                if (parsed && parsed.stage > 1) {
+                    const isLocked = epicGenerationsCurriculumService.isStageLocked(parsed.stage);
+                    if (isLocked) {
+                        const lockInfo = epicGenerationsCurriculumService.getStageLockInfo(parsed.stage);
+                        setError(`🔒 Stage ${parsed.stage} is locked. Learners must complete 100% of Stage ${lockInfo.requiredStage} (${lockInfo.requiredStageTitle}) before accessing this lesson.`);
+                        setLoading(false);
+                        setNavigationLoading(false);
+                        return;
+                    }
+                }
+
                 const genLesson = epicGenerationsCurriculumService.getLessonData(lessonId, courseId);
                 if (genLesson) {
                     console.log("EPIC GENERATIONS LESSON LOADED:", genLesson.title);

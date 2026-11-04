@@ -695,7 +695,17 @@ export const CurriculumStudio: React.FC<CurriculumStudioProps> = ({
                                         <span style={{ fontSize: "11px", fontWeight: "800", textTransform: "uppercase", letterSpacing: "0.5px", background: "rgba(255,255,255,0.2)", padding: "2px 8px", borderRadius: "4px" }}>
                                             Stage {prog.stage} • {prog.generationLevel}
                                         </span>
-                                        <span style={{ fontSize: "12px", fontWeight: "800" }}>{prog.courseCode}</span>
+                                        <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                                            {(() => {
+                                                const lockInfo = epicGenerationsCurriculumService.getStageLockInfo(prog.stage);
+                                                return (
+                                                    <span style={{ fontSize: "10px", fontWeight: "700", padding: "2px 6px", borderRadius: "4px", background: lockInfo.isLocked ? "rgba(239, 68, 68, 0.35)" : "rgba(16, 185, 129, 0.35)", color: lockInfo.isLocked ? "#fca5a5" : "#6ee7b7" }}>
+                                                        {lockInfo.isLocked ? `🔒 Locked (Stage ${lockInfo.requiredStage} Req)` : "✓ Unlocked"}
+                                                    </span>
+                                                );
+                                            })()}
+                                            <span style={{ fontSize: "12px", fontWeight: "800" }}>{prog.courseCode}</span>
+                                        </div>
                                     </div>
                                     <h3 style={{ margin: "4px 0", fontSize: "17px", color: "#ffffff" }}>{prog.courseTitle}</h3>
                                     <p style={{ margin: 0, fontSize: "12px", color: "rgba(255,255,255,0.85)", fontStyle: "italic" }}>

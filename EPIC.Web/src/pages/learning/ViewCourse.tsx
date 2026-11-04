@@ -9,7 +9,8 @@ import "./ViewCourse.css";
 import LessonPage from "./LessonPage";
 import { LessonEditorModal } from "./LessonEditorModal";
 import PermissionService from "../../PermissionService";
-import { epicGenerationsCurriculumService } from "../../services/epicGenerationsCurriculum";
+import { epicGenerationsCurriculumService, type StageLockInfo } from "../../services/epicGenerationsCurriculum";
+import { Lock, ArrowRight, ArrowLeft } from "lucide-react";
 
 // =========================================================
 // API
@@ -110,6 +111,12 @@ const ViewCourse: React.FC<ViewCourseProps> = ({
 
     const [selectedLessonId, setSelectedLessonId] =
         useState<number | null>(null);
+
+    const [stageLockInfo, setStageLockInfo] =
+        useState<StageLockInfo | null>(null);
+
+    const [bypassAdminLock, setBypassAdminLock] =
+        useState(false);
 
     const [editorModalOpen, setEditorModalOpen] =
         useState(false);
@@ -249,6 +256,18 @@ const ViewCourse: React.FC<ViewCourseProps> = ({
 
                 // If this is one of the 5 official Stage courses (GEN-101 to GEN-501)
                 if (epicGenerationsCurriculumService.isGenerationsCourse(courseId)) {
+                    const lockInfo = epicGenerationsCurriculumService.getStageLockInfo(courseId, bypassAdminLock);
+                    if (lockInfo.isLocked && !bypassAdminLock) {
+                        setStageLockInfo(lockInfo);
+                        const genCourse = epicGenerationsCurriculumService.getCourseStructure(courseId);
+                        setCourse(genCourse);
+                        setError("");
+                        setLoading(false);
+                        return;
+                    } else {
+                        setStageLockInfo(null);
+                    }
+
                     const genCourse = epicGenerationsCurriculumService.getCourseStructure(courseId);
                     if (genCourse) {
                         console.log("EPIC GENERATIONS COURSE LOADED:", genCourse.courseTitle);
@@ -1747,6 +1766,73 @@ const ViewCourse: React.FC<ViewCourseProps> = ({
 
         );
 
+    }
+
+    // =====================================================
+    // STAGE LOCKED BARRIER SCREEN
+    // =====================================================
+
+    if (stageLockInfo && stageLockInfo.isLocked && !bypassAdminLock) {
+        return (
+            <div className="view-course-locked-container">
+                <div className="view-course-locked-card">
+                    <div className="locked-card-icon-wrap">
+                        <Lock size={44} />
+                    </div>
+                    <span className="locked-pill">PREREQUISITE REQUIRED</span>
+                    <h2>Stage {stageLockInfo.stage} is Locked</h2>
+                    <h3 className="locked-course-subtitle">{stageLockInfo.courseTitle}</h3>
+                    <p className="locked-explanation">
+                        To maintain a solid biblical foundation (2 Timothy 2:2), learners cannot jump ahead. You must finish <strong>100% of Stage {stageLockInfo.requiredStage}: {stageLockInfo.requiredStageTitle}</strong> before unlocking this course.
+                    </p>
+
+                    <div className="locked-prereq-progress">
+                        <div className="prereq-meta-row">
+                            <span>Stage {stageLockInfo.requiredStage} Completion</span>
+                            <strong>
+                                {stageLockInfo.requiredStageProgressPct}% ({stageLockInfo.requiredStageCompletedCount}/{stageLockInfo.requiredStageTotalLessons} lessons finished)
+                            </strong>
+                        </div>
+                        <div className="prereq-track">
+                            <div className="prereq-bar" style={{ width: `${stageLockInfo.requiredStageProgressPct}%` }} />
+                        </div>
+                    </div>
+
+                    <div className="locked-card-actions">
+                        {stageLockInfo.requiredStageCourseId && (
+                            <button
+                                type="button"
+                                className="btn-go-prereq"
+                                onClick={() => {
+                                    localStorage.setItem("epic_target_course_id", String(stageLockInfo.requiredStageCourseId));
+                                    window.location.reload();
+                                }}
+                            >
+                                <ArrowRight size={16} />
+                                <span>Go to Stage {stageLockInfo.requiredStage} Now</span>
+                            </button>
+                        )}
+                        <button type="button" className="btn-back-learning" onClick={onBack}>
+                            <ArrowLeft size={16} />
+                            <span>Return to EPIC Learning</span>
+                        </button>
+                        {PermissionService.isAdministrator() && (
+                            <button
+                                type="button"
+                                className="btn-admin-bypass"
+                                onClick={() => {
+                                    setBypassAdminLock(true);
+                                    setStageLockInfo(null);
+                                    loadCourse();
+                                }}
+                            >
+                                👑 Pastor / Admin Preview (Bypass Lock)
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
     }
 
     // =====================================================

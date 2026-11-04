@@ -7,6 +7,21 @@
 // Aligned with 2 Timothy 2:2 & Matthew 28:19-20
 // ============================================================
 
+export interface StageLockInfo {
+    stage: 1 | 2 | 3 | 4 | 5;
+    courseId: number;
+    courseTitle: string;
+    isLocked: boolean;
+    requiredStage: (1 | 2 | 3 | 4 | 5) | null;
+    requiredStageTitle: string | null;
+    requiredStageCourseId: number | null;
+    requiredStageCompletedCount: number;
+    requiredStageTotalLessons: number;
+    requiredStageProgressPct: number;
+    isPrerequisiteSatisfied: boolean;
+    lockReason: string | null;
+}
+
 export interface CurriculumLesson {
     lessonNumber: number;
     title: string;
@@ -2489,6 +2504,157 @@ export const epicGenerationsCurriculumService = {
             }
         }
         return lessons;
+    },
+
+    /**
+     * Get completion progress for a specific stage (1 to 5)
+     */
+    getStageProgress(stage: number): {
+        stage: number;
+        completedCount: number;
+        totalLessons: number;
+        progressPercentage: number;
+        isCompleted: boolean;
+    } {
+        const s = Number(stage);
+        if (s < 1 || s > 5) {
+            return { stage: s, completedCount: 0, totalLessons: 18, progressPercentage: 0, isCompleted: false };
+        }
+        const completedList = this.getCompletedLessons();
+        const stageCompleted = completedList.filter((id) => {
+            const p = this.parseLessonId(id);
+            return p && p.stage === s;
+        }).length;
+
+        // Also check if manually flagged completed in localStorage
+        const manualComplete =
+            typeof localStorage !== "undefined" && localStorage.getItem(`epic_stage_${s}_completed`) === "true";
+        const total = 18;
+        const pct = manualComplete ? 100 : Math.min(100, Math.round((stageCompleted / total) * 100));
+        const isCompleted = manualComplete || stageCompleted >= total || pct >= 100;
+
+        return {
+            stage: s,
+            completedCount: manualComplete ? total : stageCompleted,
+            totalLessons: total,
+            progressPercentage: pct,
+            isCompleted
+        };
+    },
+
+    /**
+     * Check if a specific stage (1-5) is locked based on prerequisite lower stages.
+     * Rule: Learners CANNOT jump to a higher stage without completing the lower stage!
+     * Stage 1: Always unlocked.
+     * Stage 2: Locked until Stage 1 is 100% completed.
+     * Stage 3: Locked until Stage 2 is 100% completed.
+     * Stage 4: Locked until Stage 3 is 100% completed.
+     * Stage 5: Locked until Stage 4 is 100% completed.
+     */
+    isStageLocked(stage: number, bypassAdminLock = false): boolean {
+        if (bypassAdminLock) return false;
+        const s = Number(stage);
+        if (s <= 1) return false;
+        if (s > 5) return false;
+
+        // Check prerequisite stage (s - 1)
+        const prereqProgress = this.getStageProgress(s - 1);
+        return !prereqProgress.isCompleted;
+    },
+
+    /**
+     * Check if a course is locked
+     */
+    isCourseLocked(courseId: number, bypassAdminLock = false): boolean {
+        const stage = this.parseStageFromCourseId(courseId);
+        if (!stage) return false;
+        return this.isStageLocked(stage, bypassAdminLock);
+    },
+
+    /**
+     * Get detailed prerequisite and lock information for a stage or course
+     */
+    getStageLockInfo(courseIdOrStage: number, bypassAdminLock = false): StageLockInfo {
+        let stage: (1 | 2 | 3 | 4 | 5) = 1;
+        if (courseIdOrStage >= 1 && courseIdOrStage <= 5) {
+            stage = courseIdOrStage as 1 | 2 | 3 | 4 | 5;
+        } else {
+            const parsed = this.parseStageFromCourseId(courseIdOrStage);
+            if (parsed) stage = parsed;
+        }
+
+        const prog = this.getProgramByStage(stage);
+        const courseId = stage * 100 + 1;
+
+        if (stage === 1) {
+            return {
+                stage: 1,
+                courseId,
+                courseTitle: prog.courseTitle,
+                isLocked: false,
+                requiredStage: null,
+                requiredStageTitle: null,
+                requiredStageCourseId: null,
+                requiredStageCompletedCount: 0,
+                requiredStageTotalLessons: 18,
+                requiredStageProgressPct: 100,
+                isPrerequisiteSatisfied: true,
+                lockReason: null
+            };
+        }
+
+        const reqStage = (stage - 1) as 1 | 2 | 3 | 4 | 5;
+        const reqProg = this.getProgramByStage(reqStage);
+        const reqProgress = this.getStageProgress(reqStage);
+        const isLocked = !bypassAdminLock && !reqProgress.isCompleted;
+
+        return {
+            stage,
+            courseId,
+            courseTitle: prog.courseTitle,
+            isLocked,
+            requiredStage: reqStage,
+            requiredStageTitle: reqProg.courseTitle,
+            requiredStageCourseId: reqStage * 100 + 1,
+            requiredStageCompletedCount: reqProgress.completedCount,
+            requiredStageTotalLessons: reqProgress.totalLessons,
+            requiredStageProgressPct: reqProgress.progressPercentage,
+            isPrerequisiteSatisfied: reqProgress.isCompleted,
+            lockReason: isLocked
+                ? `Stage ${stage} is locked. Learners must complete 100% of Stage ${reqStage} (${reqProg.generationTitle}) before advancing.`
+                : null
+        };
+    },
+
+    /**
+     * Quick helper for testing or pastoral advancement: mark a stage completed or reset progress
+     */
+    setStageCompleted(stage: number, completed: boolean): void {
+        const s = Number(stage);
+        if (s < 1 || s > 5) return;
+        try {
+            if (typeof localStorage !== "undefined") {
+                if (completed) {
+                    localStorage.setItem(`epic_stage_${s}_completed`, "true");
+                    const list = this.getCompletedLessons();
+                    for (let l = 1; l <= 18; l++) {
+                        const lessonId = s * 10000 + 100 + l;
+                        if (!list.includes(lessonId)) list.push(lessonId);
+                    }
+                    localStorage.setItem("epic_completed_lessons", JSON.stringify(list));
+                } else {
+                    localStorage.removeItem(`epic_stage_${s}_completed`);
+                    const list = this.getCompletedLessons().filter((id) => {
+                        const p = this.parseLessonId(id);
+                        return !p || p.stage !== s;
+                    });
+                    localStorage.setItem("epic_completed_lessons", JSON.stringify(list));
+                }
+                if (typeof window !== "undefined") {
+                    window.dispatchEvent(new CustomEvent("epic-curriculum-updated", { detail: { stage: s } }));
+                }
+            }
+        } catch {}
     }
 };
 
