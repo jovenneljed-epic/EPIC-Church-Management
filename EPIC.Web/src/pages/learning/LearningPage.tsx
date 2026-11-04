@@ -23,6 +23,7 @@ import "./LearningPage.css";
 import ViewCourse from "./ViewCourse";
 import { CurriculumStudio } from "./CurriculumStudio";
 import PermissionService from "../../PermissionService";
+import { epicGenerationsCurriculumService } from "../../services/epicGenerationsCurriculum";
 
 import { API_BASE_URL } from "../../config";
 
@@ -184,13 +185,22 @@ const LearningPage: React.FC<LearningPageProps> = ({
             // GET COURSES
             // -------------------------------------------------
 
-            const courseData =
-                await apiRequest("/Courses");
+            let apiCourseData: any[] = [];
+            try {
+                apiCourseData = await apiRequest("/Courses");
+            } catch (courseErr) {
+                console.warn("Notice: Backend courses fetch failed, fallback to local:", courseErr);
+            }
 
-            const courseList: Course[] =
-                Array.isArray(courseData)
-                    ? courseData
-                    : [];
+            const genCourses = epicGenerationsCurriculumService.getGenerationsAsCourses();
+            const courseList: Course[] = [...genCourses];
+            if (Array.isArray(apiCourseData)) {
+                for (const ac of apiCourseData) {
+                    if (!courseList.some((c) => c.courseId === ac.courseId || c.title.toLowerCase() === ac.title.toLowerCase())) {
+                        courseList.push(ac);
+                    }
+                }
+            }
 
             console.log(
                 "EPIC COURSES:",
@@ -254,8 +264,38 @@ const LearningPage: React.FC<LearningPageProps> = ({
                 validEnrollments
             );
 
+            // Ensure all 5 stage courses have enrollment representations
+            const genEnrollments: Enrollment[] = genCourses.map((gc) => {
+                const stage = epicGenerationsCurriculumService.parseStageFromCourseId(gc.courseId) || 1;
+                const completedList = epicGenerationsCurriculumService.getCompletedLessons();
+                const stageCompleted = completedList.filter((id) => {
+                    const p = epicGenerationsCurriculumService.parseLessonId(id);
+                    return p && p.stage === stage;
+                }).length;
+                const pct = Math.min(100, Math.round((stageCompleted / 18) * 100));
+
+                return {
+                    courseEnrollmentId: 1000 + gc.courseId,
+                    courseId: gc.courseId,
+                    courseTitle: gc.title,
+                    enrolledDate: "2026-11-01",
+                    completedDate: pct >= 100 ? "2026-11-04" : null,
+                    isCompleted: pct >= 100,
+                    progressPercentage: pct,
+                    course: gc,
+                    lessonProgresses: []
+                };
+            });
+
+            const combinedEnrollments = [...genEnrollments];
+            for (const ve of validEnrollments) {
+                if (!combinedEnrollments.some((ce) => ce.courseId === ve.courseId)) {
+                    combinedEnrollments.push(ve);
+                }
+            }
+
             setEnrollments(
-                validEnrollments
+                combinedEnrollments
             );
 
         } catch (err) {
@@ -277,6 +317,24 @@ const LearningPage: React.FC<LearningPageProps> = ({
 
         }
     };
+
+    // Auto-open course if directed from Church in Action
+    useEffect(() => {
+        try {
+            const targetId = localStorage.getItem("epic_target_course_id");
+            if (targetId) {
+                localStorage.removeItem("epic_target_course_id");
+                const id = Number(targetId);
+                if (id > 0) {
+                    if (onViewCourse) {
+                        onViewCourse(id);
+                    } else {
+                        setSelectedCourseId(id);
+                    }
+                }
+            }
+        } catch {}
+    }, [onViewCourse]);
 
     // =====================================================
     // INITIAL LOAD

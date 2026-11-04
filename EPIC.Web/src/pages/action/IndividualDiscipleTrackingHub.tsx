@@ -671,7 +671,19 @@ export const IndividualDiscipleTrackingHub: React.FC<IndividualDiscipleTrackingH
                                 <button
                                     type="button"
                                     className="cia-btn-outline small"
-                                    onClick={onNavigateToLearning}
+                                    onClick={() => {
+                                        const courseId = curStatus.stage * 100 + 1;
+                                        try {
+                                            localStorage.setItem("epic_target_course_id", String(courseId));
+                                            window.dispatchEvent(
+                                                new CustomEvent("epic-open-course", {
+                                                    detail: { courseId }
+                                                })
+                                            );
+                                        } catch {}
+                                        onNavigateToLearning();
+                                    }}
+                                    title={`Open Stage ${curStatus.stage} Course in EPIC Learning Studio`}
                                 >
                                     Open in Studio ↗
                                 </button>

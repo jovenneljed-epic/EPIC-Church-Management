@@ -2063,8 +2063,19 @@ const ChurchInActionPage: React.FC<ChurchInActionPageProps> = ({
                                                 type="button"
                                                 className="cia-btn-outline small"
                                                 style={{ width: "100%", justifyContent: "center", borderColor: prog.themeColor, color: prog.themeColor }}
-                                                onClick={() => handleNavigatePage("learning")}
-                                                title="Open course in EPIC Learning Studio"
+                                                onClick={() => {
+                                                    const targetCourseId = prog.stage * 100 + 1;
+                                                    try {
+                                                        localStorage.setItem("epic_target_course_id", String(targetCourseId));
+                                                        window.dispatchEvent(
+                                                            new CustomEvent("epic-open-course", {
+                                                                detail: { courseId: targetCourseId }
+                                                            })
+                                                        );
+                                                    } catch {}
+                                                    handleNavigatePage("learning");
+                                                }}
+                                                title={`Open Stage ${prog.stage} (${prog.courseCode}) in EPIC Learning`}
                                             >
                                                 <GraduationCap size={12} />
                                                 <span>Studio ↗</span>

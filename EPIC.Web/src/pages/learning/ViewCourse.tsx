@@ -9,6 +9,7 @@ import "./ViewCourse.css";
 import LessonPage from "./LessonPage";
 import { LessonEditorModal } from "./LessonEditorModal";
 import PermissionService from "../../PermissionService";
+import { epicGenerationsCurriculumService } from "../../services/epicGenerationsCurriculum";
 
 // =========================================================
 // API
@@ -245,6 +246,18 @@ const ViewCourse: React.FC<ViewCourseProps> = ({
                 console.log(
                     "================================="
                 );
+
+                // If this is one of the 5 official Stage courses (GEN-101 to GEN-501)
+                if (epicGenerationsCurriculumService.isGenerationsCourse(courseId)) {
+                    const genCourse = epicGenerationsCurriculumService.getCourseStructure(courseId);
+                    if (genCourse) {
+                        console.log("EPIC GENERATIONS COURSE LOADED:", genCourse.courseTitle);
+                        setCourse(genCourse);
+                        setError("");
+                        setLoading(false);
+                        return;
+                    }
+                }
 
                 // =================================================
                 // LOAD COURSE STRUCTURE
@@ -1317,6 +1330,15 @@ const ViewCourse: React.FC<ViewCourseProps> = ({
                 );
 
             } catch (err) {
+
+                // Fallback check for generations course
+                const genFallback = epicGenerationsCurriculumService.getCourseStructure(courseId);
+                if (genFallback) {
+                    setCourse(genFallback);
+                    setError("");
+                    setLoading(false);
+                    return;
+                }
 
                 console.error(
                     "EPIC LOAD COURSE ERROR:",

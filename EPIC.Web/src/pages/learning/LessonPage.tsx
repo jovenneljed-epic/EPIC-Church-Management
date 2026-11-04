@@ -7,6 +7,7 @@ import {
     formatGoogleSheetsEmbedUrl,
 } from "./learningTemplates";
 import PermissionService from "../../PermissionService";
+import { epicGenerationsCurriculumService } from "../../services/epicGenerationsCurriculum";
 import { LessonEditorModal } from "./LessonEditorModal";
 
 // =========================================================
@@ -140,6 +141,27 @@ const LessonPage: React.FC<LessonPageProps> = ({
             setLoading(true);
             setError("");
             setNavigationLoading(true);
+
+            // Check if this is one of the 5 official Stage courses (GEN-101 to GEN-501)
+            if (
+                epicGenerationsCurriculumService.isGenerationsLesson(lessonId) ||
+                (courseId && epicGenerationsCurriculumService.isGenerationsCourse(courseId))
+            ) {
+                const genLesson = epicGenerationsCurriculumService.getLessonData(lessonId, courseId);
+                if (genLesson) {
+                    console.log("EPIC GENERATIONS LESSON LOADED:", genLesson.title);
+                    setLesson(genLesson);
+                    setLoading(false);
+                    setError("");
+                    const navCourseId = genLesson.courseId ?? courseId;
+                    if (navCourseId) {
+                        await loadNavigation(navCourseId);
+                    } else {
+                        setNavigationLoading(false);
+                    }
+                    return;
+                }
+            }
 
             const token = getToken();
 
@@ -327,6 +349,22 @@ const LessonPage: React.FC<LessonPageProps> = ({
     ) => {
         try {
             setNavigationLoading(true);
+
+            if (epicGenerationsCurriculumService.isGenerationsCourse(currentCourseId)) {
+                const genCourse = epicGenerationsCurriculumService.getCourseStructure(currentCourseId);
+                if (genCourse) {
+                    setCourseModules(
+                        genCourse.modules.map((m: any) => ({
+                            courseModuleId: m.courseModuleId,
+                            title: m.title
+                        }))
+                    );
+                    const navLessons = epicGenerationsCurriculumService.getNavigationLessons(currentCourseId);
+                    setNavigationLessons(navLessons);
+                    setNavigationLoading(false);
+                    return;
+                }
+            }
 
             const token = getToken();
 
@@ -659,6 +697,33 @@ const LessonPage: React.FC<LessonPageProps> = ({
     const completeLesson = async () => {
         try {
             setCompleting(true);
+
+            if (
+                epicGenerationsCurriculumService.isGenerationsLesson(lessonId) ||
+                (courseId && epicGenerationsCurriculumService.isGenerationsCourse(courseId))
+            ) {
+                epicGenerationsCurriculumService.markLessonCompleted(lessonId);
+                setLesson(prev =>
+                    prev
+                        ? {
+                            ...prev,
+                            progressPercentage: 100,
+                            isCompleted: true,
+                            completedDate: new Date().toISOString()
+                        }
+                        : prev
+                );
+                setNavigationLessons(prev =>
+                    prev.map(l => l.lessonId === lessonId ? { ...l, isCompleted: true } : l)
+                );
+                const currentCourseId = lesson?.courseId ?? courseId;
+                if (currentCourseId) {
+                    await loadNavigation(currentCourseId);
+                }
+                return;
+            }
+
+
 
             const token = getToken();
 

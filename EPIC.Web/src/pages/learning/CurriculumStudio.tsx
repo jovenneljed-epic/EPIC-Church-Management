@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { API_BASE_URL } from "../../config";
 import { READY_MADE_LESSON_TEMPLATES } from "./learningTemplates";
-import { EPIC_GENERATIONS_CURRICULUM } from "../../services/epicGenerationsCurriculum";
+import { EPIC_GENERATIONS_CURRICULUM, epicGenerationsCurriculumService } from "../../services/epicGenerationsCurriculum";
 import { LessonEditorModal } from "./LessonEditorModal";
 import "./CurriculumStudio.css";
 
@@ -93,18 +93,38 @@ export const CurriculumStudio: React.FC<CurriculumStudioProps> = ({
             setLoading(true);
             setError("");
             const token = getToken();
-            const res = await fetch(`${API_BASE_URL}/Courses`, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    Accept: "application/json",
-                },
-            });
 
-            if (!res.ok) throw new Error("Failed to load courses.");
-            const data = await res.json();
-            setCourses(Array.isArray(data) ? data : []);
+            // Official 5 separate stage courses (GEN-101 to GEN-501)
+            const genCourses: Course[] = epicGenerationsCurriculumService.getGenerationsAsCourses();
+
+            let apiCourses: Course[] = [];
+            try {
+                const res = await fetch(`${API_BASE_URL}/Courses`, {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        Accept: "application/json",
+                    },
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (Array.isArray(data)) apiCourses = data;
+                }
+            } catch (fetchErr) {
+                console.warn("Backend Courses API notice (fallback to integrated curriculum):", fetchErr);
+            }
+
+            // Merge: Ensure all 5 stage courses are always prominently listed
+            const merged = [...genCourses];
+            for (const ac of apiCourses) {
+                if (!merged.some((m) => m.courseId === ac.courseId || m.title.toLowerCase() === ac.title.toLowerCase())) {
+                    merged.push(ac);
+                }
+            }
+
+            setCourses(merged);
         } catch (err: any) {
             setError(err.message || "Failed to load courses.");
+            setCourses(epicGenerationsCurriculumService.getGenerationsAsCourses());
         } finally {
             setLoading(false);
         }
@@ -237,6 +257,11 @@ export const CurriculumStudio: React.FC<CurriculumStudioProps> = ({
 
     // Delete Course
     const handleDeleteCourse = async (courseId: number, title: string) => {
+        if (epicGenerationsCurriculumService.isGenerationsCourse(courseId)) {
+            alert(`"${title}" is one of the 5 official core Discipleship Pathway courses and cannot be deleted.`);
+            return;
+        }
+
         if (!window.confirm(`Are you sure you want to permanently delete course "${title}"?`)) {
             return;
         }
@@ -309,42 +334,57 @@ export const CurriculumStudio: React.FC<CurriculumStudioProps> = ({
         }
 
         try {
-            const token = getToken();
-            const res = await fetch(`${API_BASE_URL}/Courses/${targetCourseId}`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            if (!res.ok) throw new Error("Failed to load course modules.");
-            const c = await res.json();
+            let courseModules: { courseModuleId: number; title: string }[] = [];
+            let courseTitle = "";
 
-            let courseModules = (c.modules || []).map((m: any) => ({
-                courseModuleId: m.courseModuleId,
-                title: m.title,
-            }));
-
-            // If no modules exist yet, create a default module first
-            if (courseModules.length === 0) {
-                const modRes = await fetch(`${API_BASE_URL}/CourseModules`, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${token}`,
-                    },
-                    body: JSON.stringify({
-                        courseId: targetCourseId,
-                        title: "Module 1: Foundations",
-                        description: "Core curriculum foundations.",
-                        sortOrder: 1,
-                        isPublished: true,
-                    }),
+            if (epicGenerationsCurriculumService.isGenerationsCourse(targetCourseId)) {
+                const genCourse = epicGenerationsCurriculumService.getCourseStructure(targetCourseId);
+                if (genCourse) {
+                    courseTitle = genCourse.courseTitle;
+                    courseModules = genCourse.modules.map((m: any) => ({
+                        courseModuleId: m.courseModuleId,
+                        title: m.title
+                    }));
+                }
+            } else {
+                const token = getToken();
+                const res = await fetch(`${API_BASE_URL}/Courses/${targetCourseId}`, {
+                    headers: { Authorization: `Bearer ${token}` },
                 });
-                if (modRes.ok) {
-                    const newMod = await modRes.json();
-                    courseModules = [{ courseModuleId: newMod.courseModuleId, title: newMod.title }];
+                if (!res.ok) throw new Error("Failed to load course modules.");
+                const c = await res.json();
+                courseTitle = c.title || "";
+
+                courseModules = (c.modules || []).map((m: any) => ({
+                    courseModuleId: m.courseModuleId,
+                    title: m.title,
+                }));
+
+                // If no modules exist yet, create a default module first
+                if (courseModules.length === 0) {
+                    const modRes = await fetch(`${API_BASE_URL}/CourseModules`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            Authorization: `Bearer ${token}`,
+                        },
+                        body: JSON.stringify({
+                            courseId: targetCourseId,
+                            title: "Module 1: Foundations",
+                            description: "Core curriculum foundations.",
+                            sortOrder: 1,
+                            isPublished: true,
+                        }),
+                    });
+                    if (modRes.ok) {
+                        const newMod = await modRes.json();
+                        courseModules = [{ courseModuleId: newMod.courseModuleId, title: newMod.title }];
+                    }
                 }
             }
 
             setLessonModalCourseId(targetCourseId);
-            setLessonModalCourseTitle(c.title || "");
+            setLessonModalCourseTitle(courseTitle);
             setLessonModalModules(courseModules);
             setLessonModalInitialTemplate(templateId);
             setEditingLessonData(null);
@@ -677,18 +717,28 @@ export const CurriculumStudio: React.FC<CurriculumStudioProps> = ({
                                         ))}
                                     </div>
 
-                                    <div style={{ marginTop: "auto", paddingTop: "12px", borderTop: "1px solid rgba(255,255,255,0.08)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                    <div style={{ marginTop: "auto", paddingTop: "12px", borderTop: "1px solid rgba(255,255,255,0.08)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
                                         <span style={{ fontSize: "11px", color: "#94a3b8" }}>Target: <strong>{prog.generationTitle}</strong></span>
-                                        <button
-                                            type="button"
-                                            className="btn-secondary"
-                                            style={{ fontSize: "11px", padding: "4px 10px" }}
-                                            onClick={() => {
-                                                window.location.href = "/cms/church-in-action";
-                                            }}
-                                        >
-                                            View Active Disciples ↗
-                                        </button>
+                                        <div style={{ display: "flex", gap: "6px" }}>
+                                            <button
+                                                type="button"
+                                                className="btn-primary"
+                                                style={{ fontSize: "11px", padding: "4px 12px" }}
+                                                onClick={() => onViewCourse(prog.stage * 100 + 1)}
+                                            >
+                                                Open Course Syllabus & Lessons →
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className="btn-secondary"
+                                                style={{ fontSize: "11px", padding: "4px 10px" }}
+                                                onClick={() => {
+                                                    window.location.href = "/cms/church-in-action";
+                                                }}
+                                            >
+                                                Disciples ↗
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

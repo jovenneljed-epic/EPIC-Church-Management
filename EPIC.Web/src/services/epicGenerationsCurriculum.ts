@@ -1873,6 +1873,71 @@ export const epicGenerationsCurriculumService = {
     },
 
     /**
+     * Update a disciple's progress and grade score directly
+     */
+    updateDiscipleProgress(
+        memberId: number,
+        memberName: string,
+        completedLessons: number,
+        progressPct: number,
+        gradeScore: number | null = null
+    ): DiscipleCurriculumStatus {
+        const current = this.getDiscipleStatus({ memberId, fullName: memberName });
+        const storageKey = this.getStorageKey();
+        let roster: any[] = [];
+        try {
+            const raw = localStorage.getItem(storageKey);
+            if (raw) roster = JSON.parse(raw);
+        } catch {}
+
+        const normName = memberName.toLowerCase().trim();
+        const idKey = String(memberId);
+
+        let found = false;
+        for (let i = 0; i < roster.length; i++) {
+            const r = roster[i];
+            const rId = String(r.memberId || r.id || "");
+            const rName = String(r.studentName || "").toLowerCase().trim();
+            if (rId === idKey || rName === normName) {
+                roster[i] = {
+                    ...r,
+                    completedLessons,
+                    progressPercentage: progressPct,
+                    gradeScore,
+                    completedDate: progressPct >= 100 ? new Date().toISOString().slice(0, 10) : null,
+                    status: progressPct >= 100 ? "Completed" : "In Progress",
+                };
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) {
+            roster.unshift({
+                id: `MEM-${memberId}-${Date.now()}`,
+                memberId,
+                memberCode: `MEM-${memberId}`,
+                studentName: memberName,
+                courseTitle: current.currentCourseTitle,
+                instructor: current.mentorName,
+                enrolledDate: new Date().toISOString().slice(0, 10),
+                completedDate: progressPct >= 100 ? new Date().toISOString().slice(0, 10) : null,
+                progressPercentage: progressPct,
+                completedLessons,
+                totalLessons: current.totalLessonsCount,
+                status: progressPct >= 100 ? "Completed" : "In Progress",
+                gradeScore,
+            });
+        }
+
+        try {
+            localStorage.setItem(storageKey, JSON.stringify(roster));
+        } catch {}
+
+        return this.getDiscipleStatus({ memberId, fullName: memberName });
+    },
+
+    /**
      * Enroll or advance a disciple into a new curriculum stage (1 through 5)
      */
     enrollInStage(memberId: number, memberName: string, stage: 1 | 2 | 3 | 4 | 5, mentor = "Pastor Ronnel M. Aviguetero"): DiscipleCurriculumStatus {
@@ -1957,6 +2022,473 @@ export const epicGenerationsCurriculumService = {
             averageProgressPct: Math.round(sumProgress / total),
             graduationRatePct: Math.round((totalCompleted / total) * 100),
         };
+    },
+
+    /**
+     * Map course ID or stage number to stage (1-5)
+     */
+    parseStageFromCourseId(courseId: number): (1 | 2 | 3 | 4 | 5) | null {
+        const id = Number(courseId);
+        if (id === 1 || id === 101) return 1;
+        if (id === 2 || id === 201) return 2;
+        if (id === 3 || id === 301) return 3;
+        if (id === 4 || id === 401) return 4;
+        if (id === 5 || id === 501) return 5;
+        return null;
+    },
+
+    /**
+     * Parse lesson ID into stage and lessonNumber (1 to 18)
+     */
+    parseLessonId(lessonId: number, courseId?: number): { stage: 1 | 2 | 3 | 4 | 5; lessonNumber: number } | null {
+        const id = Number(lessonId);
+        if (isNaN(id)) return null;
+
+        // Check format (stage * 10000) + 100 + lessonNumber (e.g. 10101 to 50118)
+        if (id >= 10101 && id <= 50118) {
+            const stage = Math.floor(id / 10000);
+            const lessonNumber = id % 100;
+            if (stage >= 1 && stage <= 5 && lessonNumber >= 1 && lessonNumber <= 18) {
+                return { stage: stage as 1 | 2 | 3 | 4 | 5, lessonNumber };
+            }
+        }
+
+        // Check direct lesson number (1 to 18) when courseId is provided
+        if (id >= 1 && id <= 18 && courseId) {
+            const st = this.parseStageFromCourseId(courseId);
+            if (st) return { stage: st, lessonNumber: id };
+        }
+
+        return null;
+    },
+
+    /**
+     * Check if a course ID is one of the 5 generations stage courses
+     */
+    isGenerationsCourse(courseId: number): boolean {
+        return this.parseStageFromCourseId(courseId) !== null;
+    },
+
+    /**
+     * Check if a lesson ID belongs to the 5 generations stage courses
+     */
+    isGenerationsLesson(lessonId: number): boolean {
+        return this.parseLessonId(lessonId) !== null;
+    },
+
+    /**
+     * Get completed lesson IDs from localStorage
+     */
+    getCompletedLessons(): number[] {
+        try {
+            if (typeof localStorage === "undefined") return [];
+            const raw = localStorage.getItem("epic_completed_lessons");
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed)) return parsed.map(Number);
+            }
+        } catch {}
+        return [];
+    },
+
+    /**
+     * Check if a specific lesson has been marked completed
+     */
+    isLessonCompleted(lessonId: number): boolean {
+        const list = this.getCompletedLessons();
+        return list.includes(Number(lessonId));
+    },
+
+    /**
+     * Mark a lesson completed and synchronize with disciple progress & Church in Action
+     */
+    markLessonCompleted(lessonId: number): void {
+        const id = Number(lessonId);
+        const list = this.getCompletedLessons();
+        if (!list.includes(id)) {
+            list.push(id);
+            try {
+                if (typeof localStorage !== "undefined") {
+                    localStorage.setItem("epic_completed_lessons", JSON.stringify(list));
+                }
+            } catch {}
+        }
+
+        const parsed = this.parseLessonId(id);
+        if (parsed) {
+            const currentUserName =
+                (typeof localStorage !== "undefined" &&
+                    (localStorage.getItem("currentFullName") || localStorage.getItem("currentUser"))) ||
+                "Believer";
+            const memberId = Number(
+                (typeof localStorage !== "undefined" && localStorage.getItem("currentMemberId")) || 1
+            );
+
+            // Count how many lessons in this stage are completed
+            const stageCompleted = list.filter((lId) => {
+                const p = this.parseLessonId(lId);
+                return p && p.stage === parsed.stage;
+            }).length;
+
+            const prog = this.getProgramByStage(parsed.stage);
+            const total = prog.totalLessons;
+            const pct = Math.min(100, Math.round((stageCompleted / total) * 100));
+
+            this.updateDiscipleProgress(memberId, currentUserName, stageCompleted, pct, pct >= 100 ? 98 : null);
+
+            // Dispatch global event for live reactive updates across tabs and views
+            if (typeof window !== "undefined") {
+                window.dispatchEvent(
+                    new CustomEvent("epic-curriculum-updated", {
+                        detail: { lessonId: id, stage: parsed.stage, progress: pct }
+                    })
+                );
+            }
+        }
+    },
+
+    /**
+     * Return all 5 stages as standalone, fully populated LMS courses for Curriculum Studio & Learning catalog
+     */
+    getGenerationsAsCourses(): any[] {
+        const thumbnails: Record<number, string> = {
+            1: "https://images.unsplash.com/photo-1507692049790-de58290a4334?w=800&auto=format&fit=crop&q=60",
+            2: "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?w=800&auto=format&fit=crop&q=60",
+            3: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800&auto=format&fit=crop&q=60",
+            4: "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=800&auto=format&fit=crop&q=60",
+            5: "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=800&auto=format&fit=crop&q=60"
+        };
+
+        return EPIC_GENERATIONS_CURRICULUM.map((prog) => ({
+            courseId: prog.stage * 100 + 1,
+            title: `Stage ${prog.stage}: ${prog.courseTitle} (${prog.courseCode})`,
+            shortDescription: prog.subtitle,
+            description: prog.description,
+            thumbnailUrl: thumbnails[prog.stage],
+            category: prog.category,
+            level: prog.generationTitle,
+            estimatedMinutes: 360,
+            isPublished: true,
+            isFeatured: true,
+            instructorName: "Pastor Ronnel M. Aviguetero",
+            moduleCount: 6,
+            lessonCount: 18,
+            createdDate: "2026-11-01"
+        }));
+    },
+
+    /**
+     * Get the full CourseData structure (with all 6 modules and 18 lessons) for ViewCourse.tsx
+     */
+    getCourseStructure(courseId: number): any | null {
+        const stage = this.parseStageFromCourseId(courseId);
+        if (!stage) return null;
+        const prog = this.getProgramByStage(stage);
+        const targetCourseId = stage * 100 + 1;
+
+        const completedList = this.getCompletedLessons();
+        let completedCount = 0;
+
+        const modules = prog.modules.map((m) => ({
+            courseModuleId: stage * 100 + m.moduleNumber,
+            title: `Module ${m.moduleNumber}: ${m.title}`,
+            description: m.description,
+            sortOrder: m.moduleNumber,
+            lessons: m.lessons.map((l) => {
+                const lessonId = stage * 10000 + 100 + l.lessonNumber;
+                const isCompleted = completedList.includes(lessonId);
+                if (isCompleted) completedCount++;
+
+                return {
+                    lessonId,
+                    title: `Lesson ${l.lessonNumber}: ${l.title}`,
+                    content: null,
+                    videoUrl: null,
+                    resourceUrl: null,
+                    sortOrder: l.lessonNumber,
+                    estimatedMinutes: 20,
+                    isFreePreview: true,
+                    moduleId: stage * 100 + m.moduleNumber,
+                    moduleSortOrder: m.moduleNumber,
+                    progress: {
+                        lessonProgressId: 20000 + lessonId,
+                        courseEnrollmentId: 1000 + targetCourseId,
+                        lessonId,
+                        isCompleted,
+                        progressPercentage: isCompleted ? 100 : 0,
+                        startedDate: isCompleted ? "2026-11-01T08:00:00Z" : null,
+                        completedDate: isCompleted ? "2026-11-01T09:00:00Z" : null,
+                        timeSpentMinutes: isCompleted ? 20 : 0,
+                        lastPositionSeconds: 0
+                    }
+                };
+            })
+        }));
+
+        const totalLessons = 18;
+        const progressPercentage = Math.round((completedCount / totalLessons) * 100);
+        const isCompleted = progressPercentage >= 100 || completedCount >= totalLessons;
+
+        // Determine current lesson
+        let currentLessonId: number | null = null;
+        for (const mod of modules) {
+            for (const les of mod.lessons) {
+                if (!les.progress.isCompleted) {
+                    currentLessonId = les.lessonId;
+                    break;
+                }
+            }
+            if (currentLessonId) break;
+        }
+        if (!currentLessonId) {
+            currentLessonId = stage * 10000 + 101;
+        }
+
+        return {
+            courseId: targetCourseId,
+            courseTitle: `Stage ${stage}: ${prog.courseTitle} (${prog.courseCode})`,
+            courseDescription: `${prog.subtitle} — ${prog.description}`,
+            courseEnrollmentId: 1000 + targetCourseId,
+            progressPercentage,
+            isCompleted,
+            enrolledDate: "2026-11-01",
+            completedDate: isCompleted ? "2026-11-04" : null,
+            totalLessons,
+            completedLessons: completedCount,
+            currentLessonId,
+            modules
+        };
+    },
+
+    /**
+     * Get rich lesson content, scripture anchor, exposition, objectives, prayer, and formative quiz for LessonPage.tsx
+     */
+    getLessonData(lessonId: number, courseId?: number): any | null {
+        const parsed = this.parseLessonId(lessonId, courseId);
+        if (!parsed) return null;
+        const prog = this.getProgramByStage(parsed.stage);
+        let targetModule: CurriculumModule | null = null;
+        let targetLesson: CurriculumLesson | null = null;
+
+        for (const m of prog.modules) {
+            for (const l of m.lessons) {
+                if (l.lessonNumber === parsed.lessonNumber) {
+                    targetModule = m;
+                    targetLesson = l;
+                    break;
+                }
+            }
+            if (targetLesson) break;
+        }
+
+        if (!targetLesson || !targetModule) return null;
+
+        const actualLessonId = parsed.stage * 10000 + 100 + targetLesson.lessonNumber;
+        const targetCourseId = parsed.stage * 100 + 1;
+        const completed = this.isLessonCompleted(actualLessonId);
+
+        const objectivesHtml = targetLesson.objectives
+            .map((obj) => `<li style="margin-bottom: 6px;"><strong>${obj}</strong></li>`)
+            .join("");
+
+        const content = `
+<div class="epic-lesson-container" style="font-family: inherit; line-height: 1.7; color: #1e293b;">
+    <!-- Course & Stage Banner -->
+    <div style="background: ${prog.bannerGradient}; color: white; padding: 24px 28px; border-radius: 14px; margin-bottom: 24px; box-shadow: 0 4px 14px rgba(0,0,0,0.1);">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px;">
+            <span style="display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; background: rgba(255,255,255,0.2); border-radius: 9999px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">
+                ${prog.icon} ${prog.generationLevel} • Stage ${prog.stage} (${prog.courseCode})
+            </span>
+            <span style="font-size: 13px; opacity: 0.9;">Module ${targetModule.moduleNumber} of ${prog.modulesCount} • Lesson ${targetLesson.lessonNumber} of ${prog.totalLessons}</span>
+        </div>
+        <h1 style="margin: 0 0 6px; font-size: 26px; font-weight: 800; color: #ffffff;">${targetLesson.title}</h1>
+        <div style="font-size: 15px; opacity: 0.95; font-weight: 500;">
+            ${prog.courseTitle} — <em>${targetModule.title}</em>
+        </div>
+    </div>
+
+    <!-- Scripture Anchor Card -->
+    <div style="background: #f0fdf4; border: 1px solid #86efac; border-left: 5px solid #22c55e; border-radius: 10px; padding: 18px 22px; margin-bottom: 22px;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px; color: #15803d; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em;">
+            <span>📖</span> Primary Scripture Anchor
+        </div>
+        <div style="font-size: 18px; font-weight: 700; color: #166534; font-family: Georgia, serif;">
+            ${targetLesson.scriptureAnchor}
+        </div>
+    </div>
+
+    <!-- Memory Verse Callout Card -->
+    <div style="background: #fffbeb; border: 1px solid #fde68a; border-left: 5px solid #f59e0b; border-radius: 10px; padding: 20px 24px; margin-bottom: 26px;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; color: #b45309; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em;">
+            <span>⭐</span> Key Memory Verse for Meditation
+        </div>
+        <blockquote style="margin: 0; font-size: 17px; font-style: italic; line-height: 1.6; color: #78350f; font-family: Georgia, serif;">
+            ${targetLesson.memoryVerse}
+        </blockquote>
+    </div>
+
+    <!-- Learning Objectives -->
+    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px 24px; margin-bottom: 26px;">
+        <h3 style="margin: 0 0 12px; font-size: 16px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+            <span>🎯</span> Core Learning Objectives
+        </h3>
+        <ul style="margin: 0; padding-left: 20px; color: #334155; line-height: 1.8;">
+            ${objectivesHtml}
+        </ul>
+    </div>
+
+    <!-- Theological Exposition & Deep Study -->
+    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 26px 28px; margin-bottom: 26px;">
+        <h2 style="margin: 0 0 16px; font-size: 20px; font-weight: 800; color: #0f172a; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+            <span>📜</span> Biblical Exposition & Theological Foundation
+        </h2>
+        
+        <p style="font-size: 16px; line-height: 1.8; color: #334155; margin-bottom: 16px;">
+            In this session of <strong>${prog.courseTitle}</strong>, we examine the divine principle revealed in <strong>${targetLesson.scriptureAnchor}</strong>. As disciples progressing along the <em>${prog.generationLevel} (${prog.generationTitle})</em> equipping pathway, understanding this truth is not merely academic, but transformational. God calls every believer to be rooted in His unchanging truth, grounded in grace, and equipped for fruitfulness.
+        </p>
+
+        <h3 style="font-size: 17px; font-weight: 700; color: #1e293b; margin: 20px 0 8px;">1. The Doctrinal Principle Revealed in Scripture</h3>
+        <p style="font-size: 15px; line-height: 1.8; color: #475569; margin-bottom: 16px;">
+            When the Holy Spirit inspired this passage, He established an eternal Kingdom pattern. Our foundation must rest solely on Jesus Christ and His revealed Word. In modern culture, human opinions shift like the wind, but the Word of our God endures forever (Isaiah 40:8). By meditating on <em>${targetLesson.scriptureAnchor}</em>, we discover God's uncompromised heart for our spiritual formation, our ministry calling, and our generational legacy.
+        </p>
+
+        <h3 style="font-size: 17px; font-weight: 700; color: #1e293b; margin: 20px 0 8px;">2. Personal Application to Daily Discipleship</h3>
+        <p style="font-size: 15px; line-height: 1.8; color: #475569; margin-bottom: 16px;">
+            Maturity is measured by our joyful obedience to Christ in everyday decisions. As you reflect on <em>"${targetLesson.title}"</em>, allow the Holy Spirit to search your heart. Where is God asking you to step out in faith? How does this truth reshape your relationships, your family, your workplace, and your local church fellowship at Luke 4:18 Ministries?
+        </p>
+
+        <h3 style="font-size: 17px; font-weight: 700; color: #1e293b; margin: 20px 0 8px;">3. The 2 Timothy 2:2 Generational Multiplier</h3>
+        <p style="font-size: 15px; line-height: 1.8; color: #475569; margin-bottom: 16px;">
+            Paul told Timothy: <em>“And the things that you have heard from me among many witnesses, commit these to faithful men who will be able to teach others also.”</em> Everything you receive in this lesson is not meant to terminate on you. You are being equipped so that tomorrow you can guide and mentor the next generation of believers.
+        </p>
+    </div>
+
+    <!-- Practical Action Callout -->
+    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-left: 5px solid #3b82f6; border-radius: 10px; padding: 22px 24px; margin-bottom: 26px;">
+        <h3 style="margin: 0 0 10px; font-size: 16px; font-weight: 700; color: #1d4ed8; display: flex; align-items: center; gap: 8px;">
+            <span>⚡</span> Practical Step of Obedience (Kingdom Action)
+        </h3>
+        <p style="margin: 0 0 12px; font-size: 16px; font-weight: 600; color: #1e40af; line-height: 1.6;">
+            ${targetLesson.practicalAction}
+        </p>
+        <div style="font-size: 13px; color: #3b82f6;">
+            ✓ Complete this practical action before your next 1-on-1 discipleship check-in with your spiritual mentor.
+        </div>
+    </div>
+
+    <!-- 1-on-1 Discipleship Questions -->
+    <div style="background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 12px; padding: 20px 24px; margin-bottom: 26px;">
+        <h3 style="margin: 0 0 12px; font-size: 16px; font-weight: 700; color: #7e22ce; display: flex; align-items: center; gap: 8px;">
+            <span>💬</span> 1-on-1 Discipleship Check-In Questions
+        </h3>
+        <ol style="margin: 0; padding-left: 20px; color: #581c87; line-height: 1.8; font-size: 14px;">
+            <li>What did the Holy Spirit speak to your heart most clearly through ${targetLesson.scriptureAnchor}?</li>
+            <li>In what area of your life does this lesson challenge you to take a bolder step of obedience?</li>
+            <li>How can your spiritual mentor or life group pray for you this week as you apply this lesson?</li>
+        </ol>
+    </div>
+
+    <!-- Pastoral Prayer -->
+    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px 24px; margin-bottom: 24px;">
+        <h3 style="margin: 0 0 10px; font-size: 15px; font-weight: 700; color: #475569; display: flex; align-items: center; gap: 8px;">
+            <span>🙏</span> Pastoral Prayer of Commitment
+        </h3>
+        <p style="margin: 0; font-size: 15px; font-style: italic; line-height: 1.7; color: #334155; font-family: Georgia, serif;">
+            “Heavenly Father, thank You for Your living and active Word. We ask that the truth of ${targetLesson.scriptureAnchor} take deep root in our hearts. Holy Spirit, transform our minds, strengthen our hands for good works, and empower us to be faithful disciples of the Lord Jesus Christ. May our lives bring glory to Your Name and bear fruit that lasts for generations. In Jesus' mighty Name, Amen.”
+        </p>
+    </div>
+</div>
+`;
+
+        const quizData = {
+            title: `Formative Knowledge Check: ${targetLesson.title}`,
+            description: `Verify your biblical understanding of ${targetLesson.title} (${targetLesson.scriptureAnchor}). 70% required to certify completion.`,
+            passingScorePercent: 70,
+            questions: [
+                {
+                    id: "q1",
+                    question: targetLesson.quizQuestion.question,
+                    type: "multiple_choice",
+                    options: targetLesson.quizQuestion.options,
+                    correctAnswer: targetLesson.quizQuestion.correctAnswer,
+                    explanation: targetLesson.quizQuestion.explanation,
+                    points: 10
+                },
+                {
+                    id: "q2",
+                    question: `Which passage of Scripture serves as the primary theological anchor for this lesson?`,
+                    type: "multiple_choice",
+                    options: [
+                        targetLesson.scriptureAnchor,
+                        "1 Chronicles 4:10",
+                        "Ecclesiastes 3:1-8",
+                        "Leviticus 19:18"
+                    ],
+                    correctAnswer: 0,
+                    explanation: `The foundational scripture for this lesson is ${targetLesson.scriptureAnchor}.`,
+                    points: 10
+                },
+                {
+                    id: "q3",
+                    question: `What is the assigned practical step of obedience (Kingdom Action) for this lesson?`,
+                    type: "multiple_choice",
+                    options: [
+                        targetLesson.practicalAction,
+                        "Postpone personal devotion until free time arises",
+                        "Keep faith strictly private without sharing or serving",
+                        "Focus only on secular matters"
+                    ],
+                    correctAnswer: 0,
+                    explanation: `Faith without works is dead. The assigned practical action is: ${targetLesson.practicalAction}`,
+                    points: 10
+                }
+            ]
+        };
+
+        return {
+            lessonId: actualLessonId,
+            title: `Lesson ${targetLesson.lessonNumber}: ${targetLesson.title}`,
+            content,
+            videoUrl: null,
+            resourceUrl: null,
+            lessonType: "Theological Exposition & Discipleship Study",
+            googleClassroomUrl: null,
+            googleSheetsUrl: null,
+            quizDataJson: JSON.stringify(quizData),
+            estimatedMinutes: 20,
+            isFreePreview: true,
+            progressPercentage: completed ? 100 : 0,
+            isCompleted: completed,
+            startedDate: "2026-11-01T08:00:00Z",
+            completedDate: completed ? "2026-11-01T09:00:00Z" : null,
+            courseId: targetCourseId,
+            courseModuleId: parsed.stage * 100 + targetModule.moduleNumber,
+            moduleTitle: `Module ${targetModule.moduleNumber}: ${targetModule.title}`
+        };
+    },
+
+    /**
+     * Get navigation list of all 18 lessons in a course for LessonPage.tsx
+     */
+    getNavigationLessons(courseId: number): any[] {
+        const stage = this.parseStageFromCourseId(courseId);
+        if (!stage) return [];
+        const prog = this.getProgramByStage(stage);
+        const completedList = this.getCompletedLessons();
+
+        const lessons: any[] = [];
+        for (const m of prog.modules) {
+            for (const l of m.lessons) {
+                const lessonId = stage * 10000 + 100 + l.lessonNumber;
+                lessons.push({
+                    lessonId,
+                    title: `Lesson ${l.lessonNumber}: ${l.title}`,
+                    estimatedMinutes: 20,
+                    isCompleted: completedList.includes(lessonId)
+                });
+            }
+        }
+        return lessons;
     }
 };
 
