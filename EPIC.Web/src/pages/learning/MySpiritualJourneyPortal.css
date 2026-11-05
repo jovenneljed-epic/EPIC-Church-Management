@@ -61,6 +61,38 @@
     color: #ccfbf1;
 }
 
+/* Admin / Overseer Disciple Switcher */
+.msj-admin-disciple-picker {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 4px 12px;
+    border-radius: 999px;
+}
+
+.msj-disciple-select {
+    background: transparent;
+    border: none;
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 12px;
+    outline: none;
+    cursor: pointer;
+}
+
+.msj-disciple-select option {
+    background: #042f2e;
+    color: #ffffff;
+}
+
+.msj-disciple-select optgroup {
+    background: #0f172a;
+    color: #99f6e4;
+    font-weight: 800;
+}
+
 .msj-hero-main {
     display: flex;
     justify-content: space-between;

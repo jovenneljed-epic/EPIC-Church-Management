@@ -393,10 +393,20 @@ export const epicTransformationService = {
         const stage4 = epicGenerationsCurriculumService.getStageProgress(4);
         const stage5 = epicGenerationsCurriculumService.getStageProgress(5);
 
-        let initialStep: 1 | 2 | 3 | 4 | 5 | 6 | 7 = 1;
-        let initialStage: 1 | 2 | 3 | 4 | 5 = 1;
+        const isLeaderOrAdmin =
+            memberName.toLowerCase().includes("admin") ||
+            memberName.toLowerCase().includes("pastor") ||
+            memberName.toLowerCase().includes("ronnel") ||
+            (memberCode && memberCode.toLowerCase().includes("admin")) ||
+            memberId === 99999;
 
-        if (stage5.isCompleted) {
+        let initialStep: 1 | 2 | 3 | 4 | 5 | 6 | 7 = isLeaderOrAdmin ? 7 : 1;
+        let initialStage: 1 | 2 | 3 | 4 | 5 = isLeaderOrAdmin ? 5 : 1;
+
+        if (isLeaderOrAdmin) {
+            initialStep = 7;
+            initialStage = 5;
+        } else if (stage5.isCompleted) {
             initialStep = 7;
             initialStage = 5;
         } else if (stage4.isCompleted) {
@@ -416,41 +426,60 @@ export const epicTransformationService = {
             initialStage = 1;
         }
 
-        const maturityIndex = Math.min(100, Math.round(((initialStep - 1) / 6) * 100 + (stage1.progressPercentage / 6)));
-        const healthScore = Math.max(6, Math.min(10, Math.round(5 + (maturityIndex / 20))));
+        const maturityIndex = isLeaderOrAdmin
+            ? 100
+            : Math.min(100, Math.round(((initialStep - 1) / 6) * 100 + (stage1.progressPercentage / 6)));
+        const healthScore = isLeaderOrAdmin
+            ? 10
+            : Math.max(6, Math.min(10, Math.round(5 + (maturityIndex / 20))));
 
         const initialState: MemberTransformationState = {
             memberId,
-            memberCode: memberCode || `EPIC-${memberId}`,
+            memberCode: memberCode || (isLeaderOrAdmin ? "EPIC-PASTOR-01" : `EPIC-${memberId}`),
             fullName: memberName,
             currentStep: initialStep,
             currentStage: initialStage,
             maturityIndex,
             healthScore,
-            waterBaptized: initialStep >= 2,
-            waterBaptismDate: initialStep >= 2 ? "2026-02-15" : undefined,
-            encounterCompleted: initialStep >= 2,
-            encounterDate: initialStep >= 2 ? "2026-02-10" : undefined,
-            lifeGroupName: "San Vicente Central Life Group",
-            lifeGroupLeader: "Pastor Ronnel M. Aviguetero",
-            spiritualParent: "Pastor Ronnel M. Aviguetero (Spiritual Father)",
-            spiritualChildrenCount: initialStep >= 5 ? 2 : 0,
-            altarStreakDays: 7,
+            waterBaptized: isLeaderOrAdmin || initialStep >= 2,
+            waterBaptismDate: isLeaderOrAdmin ? "2020-01-01" : (initialStep >= 2 ? "2026-02-15" : undefined),
+            encounterCompleted: isLeaderOrAdmin || initialStep >= 2,
+            encounterDate: isLeaderOrAdmin ? "2020-01-01" : (initialStep >= 2 ? "2026-02-10" : undefined),
+            lifeGroupName: isLeaderOrAdmin ? "San Vicente Pastoral & Apostolic Council" : "San Vicente Central Life Group",
+            lifeGroupLeader: isLeaderOrAdmin ? memberName : "Pastor Ronnel M. Aviguetero",
+            spiritualParent: isLeaderOrAdmin ? "Senior Pastoral Covering • Luke 4:18 Ministries" : "Pastor Ronnel M. Aviguetero (Spiritual Father)",
+            spiritualChildrenCount: isLeaderOrAdmin ? 12 : (initialStep >= 5 ? 2 : 0),
+            altarStreakDays: isLeaderOrAdmin ? 365 : 7,
             todayHabits: {
                 word: true,
                 prayer: true,
-                gratitude: false,
+                gratitude: isLeaderOrAdmin ? true : false,
                 lastUpdatedDate: todayStr
             },
             exodus18: {
                 competence: true,
                 fearingGod: true,
                 menOfTruth: true,
-                hatingCovetousness: initialStep >= 3,
-                signedOffBy: "Pastor Ronnel M. Aviguetero",
-                signedOffAt: "2026-10-15"
+                hatingCovetousness: isLeaderOrAdmin || initialStep >= 3,
+                signedOffBy: isLeaderOrAdmin ? "Senior Pastoral Council" : "Pastor Ronnel M. Aviguetero",
+                signedOffAt: isLeaderOrAdmin ? "2020-01-01" : "2026-10-15"
             },
-            signOffs: [
+            signOffs: isLeaderOrAdmin ? [
+                {
+                    step: 1,
+                    stepTitle: "First Encounter & Salvation",
+                    pastorName: "Senior Pastoral Council",
+                    verifiedAt: "2020-01-01",
+                    blessing: "Affirmed in Christ Jesus. Sins forgiven and eternal life received."
+                },
+                {
+                    step: 7,
+                    stepTitle: "Movement Catalyzer & G12 Parent (Gen 5)",
+                    pastorName: "Senior Pastoral Council",
+                    verifiedAt: "2026-01-01",
+                    blessing: "Apostolic commission to multiply disciples, raise leaders, and establish cluster hubs!"
+                }
+            ] : [
                 {
                     step: 1,
                     stepTitle: "First Encounter & Salvation",

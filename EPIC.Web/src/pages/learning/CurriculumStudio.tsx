@@ -555,6 +555,7 @@ export const CurriculumStudio: React.FC<CurriculumStudioProps> = ({
             {activeTab === "journey" && (
                 <div style={{ background: "#ffffff", borderRadius: "16px", padding: "8px" }}>
                     <MySpiritualJourneyPortal
+                        loggedInUser={{ fullName: "Pastor Ronnel M. Aviguetero", role: "ADMIN" }}
                         onNavigateToCourse={(courseId) => onViewCourse(courseId)}
                     />
                 </div>

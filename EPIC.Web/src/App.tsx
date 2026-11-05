@@ -3206,6 +3206,7 @@ if(
             return renderProtectedPage(
                 "EPIC Learning",
                 <MySpiritualJourneyPortal
+                    loggedInUser={{ fullName, role }}
                     onNavigateToCourse={(courseId) => {
                         handleViewCourse(courseId);
                     }}

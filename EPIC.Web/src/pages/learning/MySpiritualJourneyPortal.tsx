@@ -38,27 +38,93 @@ import {
     type MemberTransformationState,
 } from "../../services/epicTransformationService";
 import epicGenerationsCurriculumService from "../../services/epicGenerationsCurriculum";
+import PermissionService from "../../PermissionService";
+import { discipleshipWebService } from "../../services/discipleshipWebService";
 
 interface MySpiritualJourneyPortalProps {
     memberId?: number;
     memberName?: string;
     memberCode?: string;
+    loggedInUser?: { fullName: string; role: string };
     onNavigateToCourse?: (courseId: number) => void;
     onNavigateToCMS?: () => void;
 }
 
 export const MySpiritualJourneyPortal: React.FC<MySpiritualJourneyPortalProps> = ({
-    memberId = 3649,
-    memberName = "April Jhoy A. Aboc",
-    memberCode = "EPIC-3649",
+    memberId: propMemberId,
+    memberName: propMemberName,
+    memberCode: propMemberCode,
+    loggedInUser,
     onNavigateToCourse,
     onNavigateToCMS,
 }) => {
+    // 1. Determine if Admin / Overseer
+    const isAdmin = useMemo(() => {
+        if (loggedInUser) {
+            const role = (loggedInUser.role || "").toUpperCase();
+            const name = (loggedInUser.fullName || "").toLowerCase();
+            return role.includes("ADMIN") || name.includes("admin") || name.includes("ronnel") || PermissionService.isAdministrator();
+        }
+        return PermissionService.isAdministrator();
+    }, [loggedInUser]);
+
+    // 2. Members List (for Admin Switcher)
+    const [membersList, setMembersList] = useState<any[]>(() => {
+        try {
+            if (typeof window !== "undefined" && (window as any).__epicMembersCache) {
+                const c = (window as any).__epicMembersCache;
+                if (Array.isArray(c) && c.length > 0) return c;
+            }
+            const stored = localStorage.getItem("epic_members") || localStorage.getItem("members");
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+            }
+        } catch {}
+        return [];
+    });
+
+    useEffect(() => {
+        if (membersList.length === 0) {
+            discipleshipWebService.getChurchMembers().then((list) => {
+                if (list && list.length > 0) setMembersList(list);
+            }).catch(() => {});
+        }
+    }, [membersList.length]);
+
+    // 3. Active Disciple Identity
+    const [activeMemberId, setActiveMemberId] = useState<number>(() => {
+        if (propMemberId) return propMemberId;
+        if (isAdmin) return 99999;
+        return 1;
+    });
+
+    const [activeMemberName, setActiveMemberName] = useState<string>(() => {
+        if (propMemberName) return propMemberName;
+        if (isAdmin) return loggedInUser?.fullName || "Pastor Ronnel M. Aviguetero";
+        return loggedInUser?.fullName || "Believer";
+    });
+
+    const [activeMemberCode, setActiveMemberCode] = useState<string>(() => {
+        if (propMemberCode) return propMemberCode;
+        if (isAdmin) return "EPIC-PASTOR-01";
+        return "EPIC-01";
+    });
+
+    // Sync if props change
+    useEffect(() => {
+        if (propMemberId) {
+            setActiveMemberId(propMemberId);
+            if (propMemberName) setActiveMemberName(propMemberName);
+            if (propMemberCode) setActiveMemberCode(propMemberCode);
+        }
+    }, [propMemberId, propMemberName, propMemberCode]);
+
     // --------------------------------------------------------
     // STATE
     // --------------------------------------------------------
     const [state, setState] = useState<MemberTransformationState>(() =>
-        epicTransformationService.getMemberState(memberId, memberName, memberCode)
+        epicTransformationService.getMemberState(activeMemberId, activeMemberName, activeMemberCode)
     );
     const [selectedStepNum, setSelectedStepNum] = useState<number>(() => state.currentStep);
     const [isCertModalOpen, setIsCertModalOpen] = useState(false);
@@ -66,9 +132,9 @@ export const MySpiritualJourneyPortal: React.FC<MySpiritualJourneyPortalProps> =
 
     // Refresh state when events fire
     const reloadState = useCallback(() => {
-        const fresh = epicTransformationService.getMemberState(memberId, memberName, memberCode);
+        const fresh = epicTransformationService.getMemberState(activeMemberId, activeMemberName, activeMemberCode);
         setState(fresh);
-    }, [memberId, memberName, memberCode]);
+    }, [activeMemberId, activeMemberName, activeMemberCode]);
 
     useEffect(() => {
         reloadState();
@@ -108,8 +174,8 @@ export const MySpiritualJourneyPortal: React.FC<MySpiritualJourneyPortalProps> =
     );
 
     const eligibility = useMemo(
-        () => epicTransformationService.checkEligibilityToAdvance(memberId, state),
-        [memberId, state]
+        () => epicTransformationService.checkEligibilityToAdvance(activeMemberId, state),
+        [activeMemberId, state]
     );
 
     // Curriculum progress for current active stage
@@ -123,7 +189,7 @@ export const MySpiritualJourneyPortal: React.FC<MySpiritualJourneyPortalProps> =
     // --------------------------------------------------------
     const handleToggleHabit = (habitKey: "word" | "prayer" | "gratitude") => {
         const updated = epicTransformationService.toggleDailyHabit(
-            memberId,
+            activeMemberId,
             habitKey,
             state.fullName
         );
@@ -161,10 +227,55 @@ export const MySpiritualJourneyPortal: React.FC<MySpiritualJourneyPortalProps> =
             {/* 1. HERO PROFILE BANNER */}
             <div className="msj-hero-card">
                 <div className="msj-hero-top">
-                    <span className="msj-pill-tag">
-                        <Sparkles size={14} style={{ color: "#5eead4" }} />
-                        <span>EPIC Discipleship Journey • Luke 4:18 Ministries</span>
-                    </span>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                        <span className="msj-pill-tag">
+                            <Sparkles size={14} style={{ color: "#5eead4" }} />
+                            <span>EPIC Discipleship Journey • Luke 4:18 Ministries</span>
+                        </span>
+
+                        {/* Admin / Shepherd Disciple Switcher */}
+                        {isAdmin && (
+                            <div className="msj-admin-disciple-picker">
+                                <span style={{ fontSize: "11px", fontWeight: "700", color: "#99f6e4" }}>
+                                    Viewing As:
+                                </span>
+                                <select
+                                    value={activeMemberId}
+                                    onChange={(e) => {
+                                        const val = Number(e.target.value);
+                                        if (val === 99999) {
+                                            setActiveMemberId(99999);
+                                            setActiveMemberName(loggedInUser?.fullName || "Pastor Ronnel M. Aviguetero");
+                                            setActiveMemberCode("EPIC-PASTOR-01");
+                                        } else {
+                                            const found = membersList.find((m) => m.memberId === val);
+                                            if (found) {
+                                                const fName = found.fullName || `${found.firstName || ""} ${found.lastName || ""}`.trim();
+                                                setActiveMemberId(found.memberId);
+                                                setActiveMemberName(fName);
+                                                setActiveMemberCode(found.memberCode || `EPIC-${found.memberId}`);
+                                            }
+                                        }
+                                    }}
+                                    className="msj-disciple-select"
+                                >
+                                    <option value={99999}>
+                                        👑 {loggedInUser?.fullName || "System Administrator"} (Leader Profile • Step 7)
+                                    </option>
+                                    <optgroup label="Church Disciples & Members">
+                                        {membersList.map((m) => {
+                                            const fName = m.fullName || `${m.firstName || ""} ${m.lastName || ""}`.trim();
+                                            return (
+                                                <option key={m.memberId} value={m.memberId}>
+                                                    👤 {fName} ({m.memberCode || `EPIC-${m.memberId}`})
+                                                </option>
+                                            );
+                                        })}
+                                    </optgroup>
+                                </select>
+                            </div>
+                        )}
+                    </div>
 
                     <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
                         {onNavigateToCMS && (
