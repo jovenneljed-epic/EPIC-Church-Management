@@ -105,6 +105,7 @@ import AttendanceByDateReport from "./pages/reports/AttendanceByDateReport";
 import LearningPage from "./pages/learning/LearningPage";
 import ViewCourse from "./pages/learning/ViewCourse";
 import LessonPage from "./pages/learning/LessonPage";
+import MySpiritualJourneyPortal from "./pages/learning/MySpiritualJourneyPortal";
 
 // =========================================================
 // PERMISSIONS
@@ -128,6 +129,7 @@ type Page =
   | "subscriptions"
   | "client-payment"
   | "website-analytics"
+  | "my-journey"
   | "learning"
   | "view-course"
   | "lesson"
@@ -211,6 +213,7 @@ const PAGE_ROUTES: Record<Page, string> = {
     "client-payment": "/client-payment",
     "website-analytics": "/website-analytics",
 
+    "my-journey": "/cms/my-journey",
     learning: "/cms/learning",
     "view-course": "/cms/learning/course",
     lesson: "/cms/learning/lesson",
@@ -337,6 +340,9 @@ const PAGE_TITLES: Record<Page, string> = {
     expenses:
         "Expenses Management",
 
+    "my-journey":
+        "My Spiritual Journey",
+
     learning:
         "EPIC Learning",
 
@@ -423,6 +429,9 @@ const PAGE_SUBTITLES: Record<Page, string> = {
 
     expenses:
         "Manage church expenses",
+
+    "my-journey":
+        "Personal Discipleship Transformation: From New Believer to Kingdom Leader",
 
     learning:
         "Grow in faith, develop leaders and strengthen discipleship",
@@ -1231,6 +1240,13 @@ const NAVIGATION_SECTIONS:
         title: "EPIC LEARNING",
 
         items: [
+            {
+                page: "my-journey",
+                label: "My Spiritual Journey",
+                icon: "🎯",
+                permission:
+                    "EPIC Learning",
+            },
             {
                 page: "learning",
                 label: "EPIC Learning",
@@ -2351,7 +2367,7 @@ useCallback(
 
 
 
-            case "learning":
+        case "learning":
 
                 navigatePublic("learning");
 
@@ -3185,6 +3201,17 @@ if(
 
 
 
+
+        case "my-journey":
+            return renderProtectedPage(
+                "EPIC Learning",
+                <MySpiritualJourneyPortal
+                    onNavigateToCourse={(courseId) => {
+                        handleViewCourse(courseId);
+                    }}
+                    onNavigateToCMS={() => navigate("church-in-action")}
+                />
+            );
 
         case "learning":
 

@@ -661,3 +661,133 @@
         border: 2px solid #000000 !important;
     }
 }
+
+/* ============================================================
+   PASTORAL MILESTONE SIGN-OFF MODAL & EXODUS 18:21 TOGGLES
+============================================================ */
+.dt-signoff-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, #0d9488, #059669);
+    color: #ffffff;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(13, 148, 136, 0.3);
+    transition: all 0.15s ease;
+}
+
+.dt-signoff-btn:hover {
+    background: linear-gradient(135deg, #0f766e, #047857);
+    transform: translateY(-1px);
+}
+
+.dt-view-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #ffffff;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.dt-view-toggle-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.dt-view-toggle-btn.active {
+    background: #ffffff;
+    color: #0f766e;
+    font-weight: 800;
+}
+
+.dt-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 99999;
+    padding: 20px;
+}
+
+.dt-modal-dialog {
+    background: #ffffff;
+    border-radius: 16px;
+    max-width: 650px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 24px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+    border: 1px solid #e2e8f0;
+}
+
+.dt-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.dt-gate-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 8px;
+    font-size: 13px;
+}
+
+.dt-gate-box.satisfied {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+    color: #14532d;
+}
+
+.dt-gate-box.missing {
+    background: #fffbeb;
+    border-color: #fde68a;
+    color: #92400e;
+}
+
+.dt-exodus-row {
+    background: #f8fafc;
+    padding: 12px 14px;
+    border-radius: 8px;
+    border: 1.5px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.dt-exodus-row:hover {
+    border-color: #0d9488;
+}
+
+.dt-exodus-row.affirmed {
+    background: #f0fdf4;
+    border-color: #86efac;
+}

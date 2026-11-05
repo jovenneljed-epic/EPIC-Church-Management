@@ -25,11 +25,19 @@ import {
     ChevronLeft,
     ChevronRight,
     X,
+    Award,
+    Sparkles,
+    CheckCircle2,
+    Lock,
 } from "lucide-react";
 
 import "./IndividualDiscipleTrackingHub.css";
 import epicGenerationsCurriculumService from "../../services/epicGenerationsCurriculum";
 import { discipleshipWebService } from "../../services/discipleshipWebService";
+import epicTransformationService, {
+    TRANSFORMATION_STEPS_DEFINITIONS,
+} from "../../services/epicTransformationService";
+import MySpiritualJourneyPortal from "../learning/MySpiritualJourneyPortal";
 
 export interface IndividualDiscipleTrackingHubProps {
     members: any[];
@@ -263,6 +271,25 @@ export const IndividualDiscipleTrackingHub: React.FC<IndividualDiscipleTrackingH
 
     const { member: m, name: mName, curStatus, att, spiritualParent, myChildren, myLogs, maturityIndex, healthScore } = memberData;
 
+    // View perspective toggle
+    const [viewPerspective, setViewPerspective] = useState<"dossier" | "journey">("dossier");
+    const [isSignOffModalOpen, setIsSignOffModalOpen] = useState(false);
+    const [isCertModalOpen, setIsCertModalOpen] = useState(false);
+    const [certStep, setCertStep] = useState<number>(1);
+    const [pastorNameInput, setPastorNameInput] = useState("Pastor Ronnel M. Aviguetero");
+    const [pastorBlessingInput, setPastorBlessingInput] = useState("");
+    const [pastoralNotesInput, setPastoralNotesInput] = useState("");
+
+    // Load rich transformation state from epicTransformationService
+    const memberTransState = useMemo(() => {
+        return epicTransformationService.getMemberState(m.memberId, mName, m.memberCode);
+    }, [m.memberId, mName, m.memberCode, localRefreshTrigger]);
+
+    // Check advance eligibility
+    const eligibility = useMemo(() => {
+        return epicTransformationService.checkEligibilityToAdvance(m.memberId, memberTransState);
+    }, [m.memberId, memberTransState, localRefreshTrigger]);
+
     // Advance lesson handler
     const handleAdvanceLesson = () => {
         epicGenerationsCurriculumService.advanceLesson(m.memberId, mName);
@@ -278,65 +305,80 @@ export const IndividualDiscipleTrackingHub: React.FC<IndividualDiscipleTrackingH
         if (onCurriculumUpdated) onCurriculumUpdated();
     };
 
+    // Confirm pastoral milestone sign-off
+    const handleConfirmPastoralSignOff = () => {
+        epicTransformationService.advanceMilestone(
+            m.memberId,
+            pastorNameInput || "Pastor Ronnel M. Aviguetero",
+            pastorBlessingInput || `Officially verified and ordained into next milestone!`,
+            pastoralNotesInput
+        );
+        if (memberTransState.currentStep >= 2 && memberTransState.currentStep <= 5) {
+            handleAdvanceStage();
+        }
+        setLocalRefreshTrigger((p) => p + 1);
+        setIsSignOffModalOpen(false);
+        if (onCurriculumUpdated) onCurriculumUpdated();
+    };
+
+    // Toggle Exodus 18:21 trait
+    const handleToggleExodusTrait = (traitKey: "competence" | "fearingGod" | "menOfTruth" | "hatingCovetousness") => {
+        const currentVal = !!memberTransState.exodus18[traitKey];
+        epicTransformationService.updateExodus18(
+            m.memberId,
+            { [traitKey]: !currentVal },
+            pastorNameInput || "Pastor Ronnel M. Aviguetero"
+        );
+        setLocalRefreshTrigger((p) => p + 1);
+    };
+
     // 7-Stage Transformation Stepper definitions
-    const transformationSteps = [
-        {
-            step: 1,
-            title: "First Encounter & Salvation",
-            desc: "Confessed Christ as Lord",
-            isDone: true,
-            isCurrent: false,
-            date: m.dateJoined || "2026-01-15",
-        },
-        {
-            step: 2,
-            title: "Water Baptism & Covenant",
-            desc: "Buried & risen with Christ",
-            isDone: curStatus.stage >= 2 || curStatus.isCertified,
-            isCurrent: curStatus.stage === 1 && curStatus.completedLessonsCount >= 6,
-            date: "Baptized in Christ",
-        },
-        {
-            step: 3,
-            title: "Foundation Mastery (Gen 1)",
-            desc: "GEN-101 (18 Lessons)",
-            isDone: curStatus.stage >= 2,
-            isCurrent: curStatus.stage === 1,
-            date: curStatus.stage === 1 ? `${curStatus.completedLessonsCount}/18 Lessons` : "Completed",
-        },
-        {
-            step: 4,
-            title: "Spiritual Formation (Gen 2)",
-            desc: "GEN-201 & Life Group",
-            isDone: curStatus.stage >= 3,
-            isCurrent: curStatus.stage === 2,
-            date: curStatus.stage === 2 ? `${curStatus.completedLessonsCount}/18 Lessons` : curStatus.stage > 2 ? "Completed" : "Upcoming",
-        },
-        {
-            step: 5,
-            title: "Disciple-Maker (Gen 3)",
-            desc: "GEN-301 & First Spiritual Child",
-            isDone: curStatus.stage >= 4,
-            isCurrent: curStatus.stage === 3,
-            date: curStatus.stage === 3 ? `${curStatus.completedLessonsCount}/18 Lessons` : curStatus.stage > 3 ? "Completed" : "Upcoming",
-        },
-        {
-            step: 6,
-            title: "Ministry Leader (Gen 4)",
-            desc: "GEN-401 & Leading Life Group",
-            isDone: curStatus.stage >= 5,
-            isCurrent: curStatus.stage === 4,
-            date: curStatus.stage === 4 ? `${curStatus.completedLessonsCount}/18 Lessons` : curStatus.stage > 4 ? "Completed" : "Upcoming",
-        },
-        {
-            step: 7,
-            title: "Movement Catalyzer (Gen 5)",
-            desc: "GEN-501 & Multiplying Hubs",
-            isDone: curStatus.stage === 5 && curStatus.isCertified,
-            isCurrent: curStatus.stage === 5 && !curStatus.isCertified,
-            date: curStatus.stage === 5 ? `${curStatus.completedLessonsCount}/18 Lessons` : "Upcoming",
-        },
-    ];
+    const transformationSteps = useMemo(() => {
+        return TRANSFORMATION_STEPS_DEFINITIONS.map((def) => {
+            const isDone = memberTransState.currentStep > def.step;
+            const isCurrent = memberTransState.currentStep === def.step;
+            return {
+                step: def.step,
+                title: def.title,
+                desc: def.subTitle,
+                isDone,
+                isCurrent,
+                date: isDone ? "✓ Certified" : isCurrent ? "Active In-Progress" : "Locked",
+            };
+        });
+    }, [memberTransState.currentStep]);
+
+    // If viewing from Member Perspective
+    if (viewPerspective === "journey") {
+        return (
+            <div className="dt-360-hub-container">
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#0f766e", padding: "12px 20px", borderRadius: "12px", color: "#ffffff", flexWrap: "wrap", gap: "10px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <span style={{ fontWeight: "800", fontSize: "13px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                            🎯 Member Perspective Preview: {mName} ({m.memberCode || `EPIC-${m.memberId}`})
+                        </span>
+                    </div>
+                    <button
+                        type="button"
+                        className="cia-btn-outline small"
+                        style={{ background: "#ffffff", color: "#0f766e", borderColor: "#ffffff", fontWeight: "800" }}
+                        onClick={() => setViewPerspective("dossier")}
+                    >
+                        ← Return to Pastoral Cockpit & Dossier
+                    </button>
+                </div>
+                <MySpiritualJourneyPortal
+                    memberId={m.memberId}
+                    memberName={mName}
+                    memberCode={m.memberCode}
+                    onNavigateToCourse={() => {
+                        if (onNavigateToLearning) onNavigateToLearning();
+                    }}
+                    onNavigateToCMS={() => setViewPerspective("dossier")}
+                />
+            </div>
+        );
+    }
 
     return (
         <div className="dt-360-hub-container">
@@ -344,6 +386,22 @@ export const IndividualDiscipleTrackingHub: React.FC<IndividualDiscipleTrackingH
             <div className="dt-360-header-card">
                 <div className="dt-360-top-bar">
                     <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                        <div style={{ display: "flex", background: "rgba(0,0,0,0.25)", borderRadius: "8px", padding: "2px", gap: "4px" }}>
+                            <button
+                                type="button"
+                                className="dt-view-toggle-btn active"
+                                onClick={() => setViewPerspective("dossier")}
+                            >
+                                📋 Pastoral Dossier
+                            </button>
+                            <button
+                                type="button"
+                                className="dt-view-toggle-btn"
+                                onClick={() => setViewPerspective("journey")}
+                            >
+                                🎯 Member Journey View
+                            </button>
+                        </div>
                         <span style={{ fontSize: "11px", fontWeight: "800", color: "#99f6e4", textTransform: "uppercase", letterSpacing: "0.8px", background: "rgba(20, 184, 166, 0.25)", padding: "4px 12px", borderRadius: "999px" }}>
                             🎯 INDIVIDUAL DISCIPLESHIP 360° MONITORING SYSTEM
                         </span>
@@ -577,8 +635,32 @@ export const IndividualDiscipleTrackingHub: React.FC<IndividualDiscipleTrackingH
                         <TrendingUp size={18} style={{ color: "#0d9488" }} />
                         <span>The Transformation Journey: From New Believer to Real Leader</span>
                     </h3>
-                    <div style={{ fontSize: "12px", color: "#64748b" }}>
-                        Current Milestone: <strong style={{ color: "#0d9488" }}>Step {curStatus.stage + 2} of 7</strong>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                        <div style={{ fontSize: "12px", color: "#64748b" }}>
+                            Current Milestone: <strong style={{ color: "#0d9488" }}>Step {memberTransState.currentStep} of 7</strong>
+                        </div>
+                        <button
+                            type="button"
+                            className="dt-signoff-btn"
+                            onClick={() => setIsSignOffModalOpen(true)}
+                            title="Open Pastoral Milestone Clearance Gate & Sign-Off"
+                        >
+                            <Sparkles size={14} />
+                            <span>Pastoral Sign-Off & Advance</span>
+                        </button>
+                        <button
+                            type="button"
+                            className="cia-btn-outline small"
+                            style={{ borderColor: "#0d9488", color: "#0d9488", padding: "4px 10px" }}
+                            onClick={() => {
+                                setCertStep(memberTransState.currentStep);
+                                setIsCertModalOpen(true);
+                            }}
+                            title="View or Award Official Discipleship Certificate"
+                        >
+                            <Award size={14} />
+                            <span>Award Certificate</span>
+                        </button>
                     </div>
                 </div>
                 <p className="dt-360-section-subtitle">
@@ -1135,29 +1217,256 @@ export const IndividualDiscipleTrackingHub: React.FC<IndividualDiscipleTrackingH
                     {/* Exodus 18:21 Checklist */}
                     <div className="dt-360-card">
                         <div className="dt-360-card-header">
-                            <h4 className="dt-360-card-title">
-                                <Crown size={16} style={{ color: "#d97706" }} />
-                                <span>Exodus 18:21 Leadership Standards</span>
-                            </h4>
-                            <span style={{ fontSize: "11px", color: "#64748b" }}>Biblical Affirmation</span>
+                            <div>
+                                <h4 className="dt-360-card-title">
+                                    <Crown size={16} style={{ color: "#d97706" }} />
+                                    <span>Exodus 18:21 Leadership Standards</span>
+                                </h4>
+                                <p style={{ margin: "2px 0 0", fontSize: "11px", color: "#64748b" }}>
+                                    Click any trait to toggle pastoral affirmation for {mName}
+                                </p>
+                            </div>
+                            <span style={{ fontSize: "11px", color: "#0d9488", fontWeight: "700" }}>
+                                Overseer: {memberTransState.exodus18.signedOffBy || "Pastor Ronnel M. Aviguetero"}
+                            </span>
                         </div>
                         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                             {[
-                                { trait: "Able Men / Competence", desc: "Demonstrates faithfulness in assigned ministry responsibilities", isAffirmed: true },
-                                { trait: "Fearing God", desc: "Reverent before God's Word, humble posture, prayerful life", isAffirmed: true },
-                                { trait: "Men of Truth", desc: "Speaks with integrity, honest in relationships, rejects gossip", isAffirmed: true },
-                                { trait: "Hating Covetousness", desc: "Faithful in tithing, content, free from greed or financial compromise", isAffirmed: curStatus.stage >= 2 },
+                                { key: "competence" as const, trait: "Able Men / Competence", desc: "Demonstrates faithfulness in assigned ministry responsibilities", isAffirmed: !!memberTransState.exodus18.competence },
+                                { key: "fearingGod" as const, trait: "Fearing God", desc: "Reverent before God's Word, humble posture, prayerful life", isAffirmed: !!memberTransState.exodus18.fearingGod },
+                                { key: "menOfTruth" as const, trait: "Men of Truth", desc: "Speaks with integrity, honest in relationships, rejects gossip", isAffirmed: !!memberTransState.exodus18.menOfTruth },
+                                { key: "hatingCovetousness" as const, trait: "Hating Covetousness", desc: "Faithful in tithing, content, free from greed or financial compromise", isAffirmed: !!memberTransState.exodus18.hatingCovetousness },
                             ].map((item, idx) => (
-                                <div key={idx} style={{ background: item.isAffirmed ? "#f0fdf4" : "#f8fafc", padding: "10px 12px", borderRadius: "6px", border: item.isAffirmed ? "1px solid #bbf7d0" : "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                    <div>
+                                <button
+                                    key={idx}
+                                    type="button"
+                                    className={`dt-exodus-row ${item.isAffirmed ? "affirmed" : ""}`}
+                                    onClick={() => handleToggleExodusTrait(item.key)}
+                                    title="Click to toggle pastoral affirmation"
+                                    style={{ border: item.isAffirmed ? "1.5px solid #86efac" : "1px solid #e2e8f0", background: item.isAffirmed ? "#f0fdf4" : "#f8fafc", width: "100%" }}
+                                >
+                                    <div style={{ textAlign: "left" }}>
                                         <strong style={{ fontSize: "12px", color: "#1e293b" }}>{item.trait}</strong>
                                         <div style={{ fontSize: "11px", color: "#64748b" }}>{item.desc}</div>
                                     </div>
                                     <span style={{ fontSize: "11px", color: item.isAffirmed ? "#15803d" : "#94a3b8", fontWeight: "700" }}>
-                                        {item.isAffirmed ? "✓ Affirmed" : "In Progress"}
+                                        {item.isAffirmed ? "✓ Affirmed by Pastor" : "+ Tap to Affirm"}
                                     </span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* PASTORAL MILESTONE SIGN-OFF MODAL */}
+            {isSignOffModalOpen && (
+                <div className="dt-modal-overlay" onClick={() => setIsSignOffModalOpen(false)}>
+                    <div className="dt-modal-dialog" onClick={(e) => e.stopPropagation()}>
+                        <div className="dt-modal-header">
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                <Sparkles size={18} style={{ color: "#0d9488" }} />
+                                <h3 style={{ margin: 0, fontSize: "16px", fontWeight: "800", color: "#0f172a" }}>
+                                    Pastoral Milestone Sign-Off & Advancement Gate
+                                </h3>
+                            </div>
+                            <button
+                                type="button"
+                                style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}
+                                onClick={() => setIsSignOffModalOpen(false)}
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <div style={{ background: "#f0fdfa", border: "1px solid #99f6e4", borderRadius: "10px", padding: "14px 18px", marginBottom: "16px" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <div>
+                                    <strong style={{ fontSize: "15px", color: "#0f766e" }}>{mName}</strong>
+                                    <span style={{ fontSize: "12px", color: "#134e4a", marginLeft: "8px" }}>({m.memberCode || `EPIC-${m.memberId}`})</span>
+                                </div>
+                                <span style={{ fontSize: "11px", fontWeight: "800", background: "#ccfbf1", color: "#0f766e", padding: "2px 8px", borderRadius: "4px" }}>
+                                    Step {memberTransState.currentStep} of 7
+                                </span>
+                            </div>
+                            <div style={{ fontSize: "12px", color: "#0d9488", marginTop: "6px" }}>
+                                Advancing from: <strong>{transformationSteps[memberTransState.currentStep - 1]?.title}</strong> → <strong>Step {Math.min(7, memberTransState.currentStep + 1)} ({transformationSteps[Math.min(6, memberTransState.currentStep)]?.title})</strong>
+                            </div>
+                        </div>
+
+                        {/* Automated Verification Gate Evaluation */}
+                        <div style={{ marginBottom: "18px" }}>
+                            <div style={{ fontSize: "12px", fontWeight: "800", textTransform: "uppercase", color: "#475569", marginBottom: "8px", letterSpacing: "0.5px" }}>
+                                Automated Qualification Gate Assessment:
+                            </div>
+                            {eligibility.satisfiedGates.map((gate, i) => (
+                                <div key={i} className="dt-gate-box satisfied">
+                                    <CheckCircle2 size={16} style={{ color: "#16a34a", flexShrink: 0, marginTop: "2px" }} />
+                                    <span><strong>Satisfied:</strong> {gate}</span>
                                 </div>
                             ))}
+                            {eligibility.missingGates.map((gate, i) => (
+                                <div key={i} className="dt-gate-box missing">
+                                    <Lock size={15} style={{ color: "#d97706", flexShrink: 0, marginTop: "2px" }} />
+                                    <span><strong>Requirement:</strong> {gate}</span>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Pastoral Inputs */}
+                        <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "18px" }}>
+                            <div>
+                                <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#334155", marginBottom: "4px" }}>
+                                    Authorizing Pastor / Discipler Name:
+                                </label>
+                                <input
+                                    type="text"
+                                    value={pastorNameInput}
+                                    onChange={(e) => setPastorNameInput(e.target.value)}
+                                    style={{ width: "100%", padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: "6px", fontSize: "13px" }}
+                                />
+                            </div>
+
+                            <div>
+                                <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#334155", marginBottom: "4px" }}>
+                                    Prophetic Blessing & Word of Affirmation:
+                                </label>
+                                <textarea
+                                    rows={3}
+                                    value={pastorBlessingInput}
+                                    onChange={(e) => setPastorBlessingInput(e.target.value)}
+                                    placeholder="e.g. Affirmed as a faithful disciple of Christ. Walk worthy of your calling in holiness, wisdom, and power!"
+                                    style={{ width: "100%", padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: "6px", fontSize: "13px" }}
+                                />
+                            </div>
+
+                            <div>
+                                <label style={{ display: "block", fontSize: "12px", fontWeight: "700", color: "#334155", marginBottom: "4px" }}>
+                                    Confidential Pastoral Notes (Internal Church Records):
+                                </label>
+                                <input
+                                    type="text"
+                                    value={pastoralNotesInput}
+                                    onChange={(e) => setPastoralNotesInput(e.target.value)}
+                                    placeholder="e.g. Demonstrated exceptional humility and fruitfulness in 1-on-1 check-ins..."
+                                    style={{ width: "100%", padding: "8px 12px", border: "1px solid #cbd5e1", borderRadius: "6px", fontSize: "13px" }}
+                                />
+                            </div>
+                        </div>
+
+                        <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                            <button
+                                type="button"
+                                className="cia-btn-outline small"
+                                onClick={() => setIsSignOffModalOpen(false)}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                className="dt-signoff-btn"
+                                style={{ padding: "8px 20px", fontSize: "13px" }}
+                                onClick={handleConfirmPastoralSignOff}
+                            >
+                                <CheckCircle2 size={16} />
+                                <span>Officially Verify & Advance Candidate</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* CERTIFICATE MODAL */}
+            {isCertModalOpen && (
+                <div className="dt-modal-overlay" onClick={() => setIsCertModalOpen(false)}>
+                    <div className="dt-modal-dialog" style={{ maxWidth: "720px" }} onClick={(e) => e.stopPropagation()}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+                            <div style={{ display: "flex", gap: "6px" }}>
+                                {[1, 2, 3, 4, 5, 6, 7].map((s) => (
+                                    <button
+                                        key={s}
+                                        type="button"
+                                        className={`cia-btn-outline small ${certStep === s ? "active" : ""}`}
+                                        style={{
+                                            padding: "2px 8px",
+                                            fontSize: "11px",
+                                            background: certStep === s ? "#0d9488" : "#ffffff",
+                                            color: certStep === s ? "#ffffff" : "#0d9488",
+                                        }}
+                                        onClick={() => setCertStep(s)}
+                                    >
+                                        Step {s}
+                                    </button>
+                                ))}
+                            </div>
+                            <button
+                                type="button"
+                                style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}
+                                onClick={() => setIsCertModalOpen(false)}
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div style={{ border: "6px double #0d9488", borderRadius: "12px", padding: "32px", background: "linear-gradient(180deg, #ffffff 0%, #f0fdfa 100%)", textAlign: "center" }}>
+                            <div style={{ fontSize: "13px", fontWeight: "800", letterSpacing: "2px", textTransform: "uppercase", color: "#0d9488", marginBottom: "6px" }}>
+                                EPIC Church • Luke 4:18 Ministries (San Vicente Church)
+                            </div>
+                            <h2 style={{ fontSize: "24px", fontWeight: "900", color: "#0f172a", margin: "0 0 10px", textTransform: "uppercase" }}>
+                                Certificate of Discipleship Completion
+                            </h2>
+                            <p style={{ fontSize: "12px", color: "#64748b", margin: 0 }}>
+                                Official Generational Leadership Framework Credential
+                            </p>
+
+                            <div style={{ margin: "18px 0" }}>
+                                <span style={{ fontSize: "13px", color: "#475569" }}>This certifies that</span>
+                                <div style={{ fontSize: "24px", fontWeight: "900", color: "#0d9488", borderBottom: "2px solid #0d9488", display: "inline-block", padding: "4px 24px", margin: "8px 0", fontFamily: "Georgia, serif" }}>
+                                    {mName}
+                                </div>
+                                <div style={{ fontSize: "11px", color: "#0d9488", fontWeight: "700" }}>
+                                    {m.memberCode || `EPIC-${m.memberId}`}
+                                </div>
+                            </div>
+
+                            <p style={{ fontSize: "13px", color: "#334155", lineHeight: 1.6, margin: "12px auto", maxWidth: "500px" }}>
+                                Has faithfully fulfilled the biblical discipleship requirements, personal secret place altar disciplines, sound doctrine examination, and ministry qualifications for:
+                            </p>
+
+                            <div style={{ background: "rgba(13, 148, 136, 0.1)", border: "1.5px solid #0d9488", borderRadius: "8px", padding: "8px 16px", display: "inline-block", margin: "6px 0 14px" }}>
+                                <strong style={{ fontSize: "15px", color: "#0f766e" }}>
+                                    {TRANSFORMATION_STEPS_DEFINITIONS[certStep - 1]?.title}
+                                </strong>
+                                <div style={{ fontSize: "11px", color: "#134e4a" }}>
+                                    {TRANSFORMATION_STEPS_DEFINITIONS[certStep - 1]?.subTitle}
+                                </div>
+                            </div>
+
+                            <div style={{ display: "flex", justifyContent: "space-around", marginTop: "24px", paddingTop: "16px", borderTop: "1px solid #cbd5e1" }}>
+                                <div style={{ textAlign: "center" }}>
+                                    <div style={{ width: "150px", borderBottom: "1.5px solid #0f172a", margin: "0 auto 6px" }} />
+                                    <strong style={{ fontSize: "12px", color: "#0f172a" }}>Pastor Ronnel M. Aviguetero</strong>
+                                    <div style={{ fontSize: "10px", color: "#64748b" }}>Senior Pastor</div>
+                                </div>
+
+                                <div style={{ textAlign: "center" }}>
+                                    <div style={{ width: "150px", borderBottom: "1.5px solid #0f172a", margin: "0 auto 6px" }} />
+                                    <strong style={{ fontSize: "12px", color: "#0f172a" }}>Spiritual Parent / Shepherd</strong>
+                                    <div style={{ fontSize: "10px", color: "#64748b" }}>Discipleship Overseer</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "16px" }}>
+                            <button
+                                type="button"
+                                className="dt-signoff-btn"
+                                style={{ padding: "8px 18px", fontSize: "13px" }}
+                                onClick={() => window.print()}
+                            >
+                                <Printer size={15} />
+                                <span>Print Official Certificate</span>
+                            </button>
                         </div>
                     </div>
                 </div>

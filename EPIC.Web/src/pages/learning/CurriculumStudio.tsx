@@ -3,6 +3,7 @@ import { API_BASE_URL } from "../../config";
 import { READY_MADE_LESSON_TEMPLATES } from "./learningTemplates";
 import { EPIC_GENERATIONS_CURRICULUM, epicGenerationsCurriculumService } from "../../services/epicGenerationsCurriculum";
 import { LessonEditorModal } from "./LessonEditorModal";
+import MySpiritualJourneyPortal from "./MySpiritualJourneyPortal";
 import "./CurriculumStudio.css";
 
 interface Course {
@@ -29,7 +30,7 @@ interface CurriculumStudioProps {
     onViewCourse: (courseId: number) => void;
 }
 
-type StudioTab = "courses" | "generations" | "templates" | "assessments" | "enrollments";
+type StudioTab = "courses" | "journey" | "generations" | "templates" | "assessments" | "enrollments";
 
 export const CurriculumStudio: React.FC<CurriculumStudioProps> = ({
     onSwitchToLearnerView,
@@ -513,6 +514,14 @@ export const CurriculumStudio: React.FC<CurriculumStudioProps> = ({
                 </button>
                 <button
                     type="button"
+                    className={`studio-tab-btn ${activeTab === "journey" ? "active" : ""}`}
+                    onClick={() => setActiveTab("journey")}
+                    style={activeTab === "journey" ? { background: "rgba(13, 148, 136, 0.3)", borderColor: "#14b8a6", color: "#5eead4" } : {}}
+                >
+                    <span>🎯</span> My Transformation Journey (7 Steps)
+                </button>
+                <button
+                    type="button"
                     className={`studio-tab-btn ${activeTab === "generations" ? "active" : ""}`}
                     onClick={() => setActiveTab("generations")}
                     style={activeTab === "generations" ? { background: "rgba(13, 148, 136, 0.25)", borderColor: "#14b8a6", color: "#5eead4" } : {}}
@@ -541,6 +550,15 @@ export const CurriculumStudio: React.FC<CurriculumStudioProps> = ({
                     <span>👥</span> Student Enrollments ({enrollments.length})
                 </button>
             </div>
+
+            {/* TAB: TRANSFORMATION JOURNEY */}
+            {activeTab === "journey" && (
+                <div style={{ background: "#ffffff", borderRadius: "16px", padding: "8px" }}>
+                    <MySpiritualJourneyPortal
+                        onNavigateToCourse={(courseId) => onViewCourse(courseId)}
+                    />
+                </div>
+            )}
 
             {/* TAB 1: COURSES & TRACKS */}
             {activeTab === "courses" && (

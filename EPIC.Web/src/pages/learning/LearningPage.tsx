@@ -869,6 +869,19 @@ const LearningPage: React.FC<LearningPageProps> = ({
                             <span>Explore Courses</span>
                         </button>
 
+                        <button
+                            type="button"
+                            className="learning-secondary-btn"
+                            style={{ borderColor: "#0d9488", color: "#0d9488", background: "rgba(13, 148, 136, 0.08)", gap: "6px" }}
+                            onClick={() => {
+                                window.history.pushState({}, "", "/cms/my-journey");
+                                window.dispatchEvent(new PopStateEvent("popstate"));
+                            }}
+                        >
+                            <span>🎯</span>
+                            <span>My Transformation Journey</span>
+                        </button>
+
                         {isCurriculumSpecialist && (
                             <button
                                 type="button"
