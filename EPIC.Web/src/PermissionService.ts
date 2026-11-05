@@ -329,8 +329,8 @@ class PermissionService {
     }
 
     isModuleAllowed(module: string): boolean {
-        // Platform admin has all modules allowed
-        if (this.isPlatformAdmin()) {
+        // Administrator and Platform Admin always have full, unrestricted access to all church modules
+        if (this.isAdministrator() || this.isPlatformAdmin()) {
             return true;
         }
 
@@ -348,8 +348,14 @@ class PermissionService {
             return false;
         }
 
-        // Settings is always accessible to church admin for their local profile/staff
+        // Settings is always accessible to church admin
         if (normalized === "settings" && this.isAdministrator()) {
+            return true;
+        }
+
+        // Check if church admin explicitly granted access in the Permission Matrix
+        const matrixPermission = this.findPermission(normalized);
+        if (matrixPermission && matrixPermission.view) {
             return true;
         }
 
@@ -361,6 +367,15 @@ class PermissionService {
                 "church services",
                 "members",
                 "visitors",
+                "attendance",
+                "events",
+                "giving",
+                "income",
+                "expenses",
+                "ministries",
+                "reports",
+                "epic learning",
+                "church in action",
                 "settings"
             ];
             return defaultCore.includes(normalized);
@@ -380,8 +395,10 @@ class PermissionService {
             "event management": ["events", "event"],
             "church services": ["services", "church service"],
             "services": ["church services", "church service"],
-            "epic learning": ["learning", "lms"],
-            "learning": ["epic learning", "lms"],
+            "epic learning": ["learning", "lms", "my spiritual journey", "my-journey"],
+            "learning": ["epic learning", "lms", "my spiritual journey", "my-journey"],
+            "my spiritual journey": ["epic learning", "learning", "my-journey"],
+            "my-journey": ["epic learning", "learning", "my spiritual journey"],
             "church in action": ["churchinaction", "evangelism", "discipleship"],
             "attendance": ["smile face scanner", "smile-scanner", "face scanner", "scanner", "member attendance report"],
             "reports": ["member attendance report", "attendance report"]
@@ -416,14 +433,37 @@ class PermissionService {
             return true;
         }
 
-        return [
+        const adminRoles = [
             "admin",
             "administrator",
             "system administrator",
             "super admin",
             "superadmin",
             "system admin",
-        ].includes(role);
+        ];
+
+        if (adminRoles.includes(role)) {
+            return true;
+        }
+
+        // Check stored user object
+        try {
+            const rawUser = localStorage.getItem("user") || localStorage.getItem("currentUser") || "";
+            if (rawUser && rawUser.startsWith("{")) {
+                const parsed = JSON.parse(rawUser);
+                if (parsed.roleId === 1 || adminRoles.includes(String(parsed.role || "").toLowerCase().trim())) {
+                    return true;
+                }
+            }
+        } catch {}
+
+        // Check username / current user
+        const username = this.getCurrentUser().trim().toLowerCase();
+        if (["admin", "systemadmin", "administrator"].includes(username)) {
+            return true;
+        }
+
+        return false;
     }
 
     // ============================================================
@@ -735,8 +775,26 @@ class PermissionService {
             return null;
         }
 
-        const permissions =
+        let permissions =
             this.getParsedPermissions();
+
+        // Fallback: If permissions array is empty in session, check role-cached matrix saved by Admin
+        if (permissions.length === 0) {
+            const roleId = this.getCurrentRoleId();
+            const role = this.getNormalizedRole();
+            const cached = (roleId ? localStorage.getItem(`epic_role_permissions_${roleId}`) : null) ||
+                           (role ? localStorage.getItem(`epic_role_permissions_${role}`) : null);
+            if (cached) {
+                try {
+                    const parsed = JSON.parse(cached);
+                    if (Array.isArray(parsed)) {
+                        permissions = parsed
+                            .map(item => this.parsePermissionItem(item))
+                            .filter((p): p is Permission => p !== null);
+                    }
+                } catch {}
+            }
+        }
 
         /*
          * First attempt: exact normalized match.
@@ -790,7 +848,15 @@ class PermissionService {
                 "epic learning": [
                     "learning",
                     "epic lms",
-                    "lms"
+                    "lms",
+                    "my spiritual journey",
+                    "my-journey"
+                ],
+
+                "my spiritual journey": [
+                    "epic learning",
+                    "learning",
+                    "my-journey"
                 ],
 
                 "demo requests": [
@@ -848,34 +914,26 @@ class PermissionService {
         action: PermissionAction
     ): boolean {
 
-        // --------------------------------------------------------
-        // SUBSCRIBER PLAN MODULE GATING
-        // --------------------------------------------------------
+        // ========================================================
+        // 1. MASTER ADMINISTRATOR BYPASS (100% UNRESTRICTED)
+        // ========================================================
+        // An Administrator is the master controller of the system.
+        // Admin accounts have full, unrestricted access to ALL modules,
+        // sidebar buttons, and actions (view, create, edit, delete, export).
+        if (this.isAdministrator() || this.isPlatformAdmin()) {
+            return true;
+        }
 
+        // ========================================================
+        // 2. SUBSCRIBER PLAN MODULE GATING (NON-ADMIN ROLES)
+        // ========================================================
         if (!this.isModuleAllowed(module)) {
             return false;
         }
 
-        // --------------------------------------------------------
-        // PLATFORM SUPER-ADMIN = UNRESTRICTED BYPASS
-        // --------------------------------------------------------
-
-        if (this.isPlatformAdmin()) {
-            return true;
-        }
-
-        // --------------------------------------------------------
-        // TENANT ADMIN = FULL ACCESS TO ALLOWED MODULES
-        // --------------------------------------------------------
-
-        if (this.isAdministrator()) {
-            return true;
-        }
-
-        // --------------------------------------------------------
-        // NORMALIZE ACTION
-        // --------------------------------------------------------
-
+        // ========================================================
+        // 3. NORMALIZE ACTION
+        // ========================================================
         const normalizedAction =
             this.normalizeAction(action);
 
@@ -883,21 +941,25 @@ class PermissionService {
             return false;
         }
 
-        // --------------------------------------------------------
-        // FIND PERMISSION
-        // --------------------------------------------------------
-
+        // ========================================================
+        // 4. FIND PERMISSION FROM ROLE MATRIX
+        // ========================================================
         const permission =
             this.findPermission(module);
 
         if (!permission) {
+            if (this.isMemberOnly()) {
+                const norm = this.normalizeModule(module);
+                if (norm === "epic learning" || norm === "learning" || norm === "my spiritual journey" || norm === "my-journey") {
+                    return action === "view";
+                }
+            }
             return false;
         }
 
-        // --------------------------------------------------------
-        // CHECK ACTION
-        // --------------------------------------------------------
-
+        // ========================================================
+        // 5. CHECK ACTION
+        // ========================================================
         return (
             permission[
                 normalizedAction
@@ -912,7 +974,9 @@ class PermissionService {
     canView(
         module: string
     ): boolean {
-
+        if (this.isAdministrator() || this.isPlatformAdmin()) {
+            return true;
+        }
         return this.hasPermission(
             module,
             "view"
@@ -926,7 +990,9 @@ class PermissionService {
     canCreate(
         module: string
     ): boolean {
-
+        if (this.isAdministrator() || this.isPlatformAdmin()) {
+            return true;
+        }
         return this.hasPermission(
             module,
             "create"
@@ -940,7 +1006,9 @@ class PermissionService {
     canEdit(
         module: string
     ): boolean {
-
+        if (this.isAdministrator() || this.isPlatformAdmin()) {
+            return true;
+        }
         return this.hasPermission(
             module,
             "edit"
@@ -954,7 +1022,9 @@ class PermissionService {
     canDelete(
         module: string
     ): boolean {
-
+        if (this.isAdministrator() || this.isPlatformAdmin()) {
+            return true;
+        }
         return this.hasPermission(
             module,
             "delete"
@@ -968,7 +1038,9 @@ class PermissionService {
     canExport(
         module: string
     ): boolean {
-
+        if (this.isAdministrator() || this.isPlatformAdmin()) {
+            return true;
+        }
         return this.hasPermission(
             module,
             "export"
@@ -983,7 +1055,7 @@ class PermissionService {
         module: string
     ): Permission | null {
 
-        if (this.isAdministrator()) {
+        if (this.isAdministrator() || this.isPlatformAdmin()) {
 
             return {
                 module,
@@ -1011,7 +1083,7 @@ class PermissionService {
          * This also makes debugging much clearer.
          */
 
-        if (this.isAdministrator()) {
+        if (this.isAdministrator() || this.isPlatformAdmin()) {
 
             return EPIC_PERMISSION_MODULES.map(
                 module => ({
@@ -1036,7 +1108,7 @@ class PermissionService {
         module: string
     ): boolean {
 
-        if (this.isAdministrator()) {
+        if (this.isAdministrator() || this.isPlatformAdmin()) {
             return true;
         }
 
@@ -1065,7 +1137,7 @@ class PermissionService {
         actions: PermissionAction[]
     ): boolean {
 
-        if (this.isAdministrator()) {
+        if (this.isAdministrator() || this.isPlatformAdmin()) {
             return true;
         }
 

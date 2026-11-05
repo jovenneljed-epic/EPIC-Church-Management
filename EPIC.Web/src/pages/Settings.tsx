@@ -1138,15 +1138,28 @@ const Settings: React.FC = () => {
             clearNotifications();
             setSelectedRole(role);
 
-            const result = await apiRequest<{
-                roleId: number;
-                roleName: string;
-                permissions: Permission[];
-            }>(
-                `/Roles/${role.roleId}/permissions`
-            );
+            let existing: any[] = [];
+            try {
+                const result = await apiRequest<{
+                    roleId: number;
+                    roleName: string;
+                    permissions: Permission[];
+                }>(
+                    `/Roles/${role.roleId}/permissions`
+                );
+                existing = result?.permissions || [];
+            } catch (apiErr) {
+                console.warn("Could not fetch permissions from API, falling back to local storage:", apiErr);
+                const cached = localStorage.getItem(`epic_role_permissions_${role.roleId}`) ||
+                               localStorage.getItem(`epic_role_permissions_${role.roleName.toLowerCase().trim()}`);
+                if (cached) {
+                    try {
+                        existing = JSON.parse(cached);
+                    } catch {}
+                }
+            }
 
-            const existing = result.permissions || [];
+            const isAdminRole = role.roleId === 1 || ["admin", "administrator"].includes(role.roleName.toLowerCase().trim());
 
             const normalized: Permission[] =
                 EPIC_PERMISSION_MODULES.map((module) => {
@@ -1162,11 +1175,11 @@ const Settings: React.FC = () => {
                             ...found,
                             roleId: role.roleId,
                             module,
-                            canView: Boolean(found.canView),
-                            canCreate: Boolean(found.canCreate),
-                            canEdit: Boolean(found.canEdit),
-                            canDelete: Boolean(found.canDelete),
-                            canExport: Boolean(found.canExport)
+                            canView: isAdminRole ? true : Boolean(found.canView ?? found.view),
+                            canCreate: isAdminRole ? true : Boolean(found.canCreate ?? found.create),
+                            canEdit: isAdminRole ? true : Boolean(found.canEdit ?? found.edit),
+                            canDelete: isAdminRole ? true : Boolean(found.canDelete ?? found.delete),
+                            canExport: isAdminRole ? true : Boolean(found.canExport ?? found.export)
                         };
                     }
 
@@ -1174,11 +1187,11 @@ const Settings: React.FC = () => {
                         permissionId: undefined,
                         roleId: role.roleId,
                         module,
-                        canView: false,
-                        canCreate: false,
-                        canEdit: false,
-                        canDelete: false,
-                        canExport: false
+                        canView: isAdminRole,
+                        canCreate: isAdminRole,
+                        canEdit: isAdminRole,
+                        canDelete: isAdminRole,
+                        canExport: isAdminRole
                     };
                 });
 
@@ -1328,30 +1341,51 @@ const Settings: React.FC = () => {
                 "ABOUT TO CALL API..."
             );
 
-            const response = await apiRequest(
-                url,
-                {
-                    method: "PUT",
-                    headers: {
-                        "Content-Type":
-                            "application/json"
-                    },
-                    body:
-                        JSON.stringify(payload)
-                }
+            let apiSuccess = false;
+            try {
+                const response = await apiRequest(
+                    url,
+                    {
+                        method: "PUT",
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+                        body:
+                            JSON.stringify(payload)
+                    }
+                );
+                console.log("API CALL COMPLETED!", response);
+                apiSuccess = true;
+            } catch (apiErr: any) {
+                console.warn("API PUT /Roles permissions failed, persisting to local storage:", apiErr);
+            }
+
+            // Persist to local role permission matrix cache
+            localStorage.setItem(
+                `epic_role_permissions_${selectedRole.roleId}`,
+                JSON.stringify(payload)
+            );
+            localStorage.setItem(
+                `epic_role_permissions_${selectedRole.roleName.toLowerCase().trim()}`,
+                JSON.stringify(payload)
             );
 
-            console.log(
-                "API CALL COMPLETED!"
-            );
+            // If currently logged in user has this role, immediately update active permissions
+            const currentRoleId = PermissionService.getCurrentRoleId();
+            const currentRole = PermissionService.getCurrentRole().toLowerCase().trim();
+            if (
+                selectedRole.roleId === currentRoleId ||
+                selectedRole.roleName.toLowerCase().trim() === currentRole
+            ) {
+                PermissionService.setPermissions(payload);
+            }
 
-            console.log(
-                "API RESPONSE:",
-                response
-            );
+            // Dispatch event to update all UI buttons and filters immediately
+            window.dispatchEvent(new Event("epic:permissions-changed"));
 
             setMessage(
-                `PERMISSIONS SAVED FOR ${selectedRole.roleName}.`
+                `PERMISSIONS SAVED FOR ${selectedRole.roleName}.${apiSuccess ? "" : " (Saved to local configuration)"}`
             );
 
             console.log(

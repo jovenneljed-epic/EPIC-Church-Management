@@ -4082,6 +4082,7 @@ if(
                 <nav className="epic-navigation">
                     {NAVIGATION_SECTIONS
                         .map((section) => {
+                            const isAdmin = PermissionService.isAdministrator();
                             const isPlatform = PermissionService.isPlatformAdmin();
                             // Hide platform business/sales for church subscribers
                             if (!isPlatform && section.title === "BUSINESS / SALES") {
@@ -4090,6 +4091,9 @@ if(
                             const visibleItems = section.items.filter((item) => {
                                 if (!isPlatform && (item.permission === "Website Analytics" || item.permission === "Blog Management")) {
                                     return false;
+                                }
+                                if (isAdmin) {
+                                    return true;
                                 }
                                 return PermissionService.canView(item.permission);
                             });
