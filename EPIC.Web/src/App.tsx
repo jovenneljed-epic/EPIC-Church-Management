@@ -1184,7 +1184,7 @@ const NAVIGATION_SECTIONS:
                 label: "SMILE Face Scanner",
                 icon: "😊",
                 permission:
-                    "Attendance",
+                    "SMILE Face Scanner",
             },
         ],
     },
@@ -1245,7 +1245,7 @@ const NAVIGATION_SECTIONS:
                 label: "My Spiritual Journey",
                 icon: "🎯",
                 permission:
-                    "EPIC Learning",
+                    "My Spiritual Journey",
             },
             {
                 page: "learning",
@@ -3204,7 +3204,7 @@ if(
 
         case "my-journey":
             return renderProtectedPage(
-                "EPIC Learning",
+                "My Spiritual Journey",
                 <MySpiritualJourneyPortal
                     loggedInUser={{ fullName, role }}
                     onNavigateToCourse={(courseId) => {
@@ -3354,10 +3354,9 @@ onNavigate={handlePublicNavigate}
 
 case "blog-management":
 
-return (
-
-<BlogManagement />
-
+return renderProtectedPage(
+    "Blog Management",
+    <BlogManagement />
 );
 
 

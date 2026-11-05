@@ -33,22 +33,25 @@ export interface Permission {
 
 export const EPIC_PERMISSION_MODULES = [
     "Dashboard",
-    "Members",
-    "Attendance",
-    "Visitors",
     "Church Services",
     "Events",
+    "Reports",
+    "Members",
+    "Attendance",
+    "SMILE Face Scanner",
+    "Ministries",
+    "Visitors",
+    "Church in Action",
     "Giving",
     "Income",
     "Expenses",
-    "Ministries",
-    "Reports",
-    "Settings",
-    "Demo Requests",
-    "Subscriptions",
-    "Website Analytics",
+    "My Spiritual Journey",
     "EPIC Learning",
-    "Church in Action",
+    "Settings",
+    "Blog Management",
+    "Website Analytics",
+    "Subscriptions",
+    "Demo Requests",
 ] as const;
 
 // ============================================================
@@ -368,15 +371,18 @@ class PermissionService {
                 "members",
                 "visitors",
                 "attendance",
+                "smile face scanner",
                 "events",
                 "giving",
                 "income",
                 "expenses",
                 "ministries",
                 "reports",
+                "my spiritual journey",
                 "epic learning",
                 "church in action",
-                "settings"
+                "settings",
+                "blog management"
             ];
             return defaultCore.includes(normalized);
         }
@@ -395,12 +401,15 @@ class PermissionService {
             "event management": ["events", "event"],
             "church services": ["services", "church service"],
             "services": ["church services", "church service"],
-            "epic learning": ["learning", "lms", "my spiritual journey", "my-journey"],
-            "learning": ["epic learning", "lms", "my spiritual journey", "my-journey"],
-            "my spiritual journey": ["epic learning", "learning", "my-journey"],
-            "my-journey": ["epic learning", "learning", "my spiritual journey"],
+            "epic learning": ["learning", "lms"],
+            "learning": ["epic learning", "lms"],
+            "my spiritual journey": ["my-journey", "spiritual journey", "discipleship journey"],
+            "my-journey": ["my spiritual journey", "spiritual journey"],
+            "smile face scanner": ["smile facial scanner", "smile-scanner", "face scanner", "scanner", "facial scanner"],
+            "smile facial scanner": ["smile face scanner", "smile-scanner", "face scanner", "scanner"],
+            "blog management": ["blog", "blogs", "blog module", "articles"],
             "church in action": ["churchinaction", "evangelism", "discipleship"],
-            "attendance": ["smile face scanner", "smile-scanner", "face scanner", "scanner", "member attendance report"],
+            "attendance": ["member attendance report"],
             "reports": ["member attendance report", "attendance report"]
         };
         return (map[a]?.includes(b) ?? false) || (map[b]?.includes(a) ?? false);
@@ -848,15 +857,35 @@ class PermissionService {
                 "epic learning": [
                     "learning",
                     "epic lms",
-                    "lms",
-                    "my spiritual journey",
-                    "my-journey"
+                    "lms"
                 ],
 
                 "my spiritual journey": [
-                    "epic learning",
-                    "learning",
-                    "my-journey"
+                    "my-journey",
+                    "spiritual journey",
+                    "discipleship journey"
+                ],
+
+                "smile face scanner": [
+                    "smile facial scanner",
+                    "smile-scanner",
+                    "face scanner",
+                    "scanner",
+                    "facial scanner"
+                ],
+
+                "smile facial scanner": [
+                    "smile face scanner",
+                    "smile-scanner",
+                    "face scanner",
+                    "scanner"
+                ],
+
+                "blog management": [
+                    "blog",
+                    "blogs",
+                    "blog module",
+                    "articles"
                 ],
 
                 "demo requests": [

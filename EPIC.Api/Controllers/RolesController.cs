@@ -27,22 +27,25 @@ namespace EPIC.Api.Controllers
         private static readonly string[] PermissionModules =
  {
     "Dashboard",
+    "Church Services",
+    "Events",
+    "Reports",
     "Members",
     "Attendance",
+    "SMILE Face Scanner",
+    "Ministries",
     "Visitors",
-    "Church Services",
+    "Church in Action",
     "Giving",
     "Income",
     "Expenses",
-    "Ministries",
-    "Events",
-    "Reports",
+    "My Spiritual Journey",
+    "EPIC Learning",
     "Settings",
-
-    // New permission-controlled modules
-    "Demo Requests",
+    "Blog Management",
+    "Website Analytics",
     "Subscriptions",
-    "EPIC Learning"
+    "Demo Requests"
 };
 
         public RolesController(
