@@ -63,7 +63,16 @@ export const MySpiritualJourneyPortal: React.FC<MySpiritualJourneyPortalProps> =
         if (loggedInUser) {
             const role = (loggedInUser.role || "").toUpperCase();
             const name = (loggedInUser.fullName || "").toLowerCase();
-            return role.includes("ADMIN") || name.includes("admin") || name.includes("ronnel") || PermissionService.isAdministrator();
+            return (
+                role.includes("ADMIN") ||
+                role.includes("PASTOR") ||
+                role.includes("OVERSEER") ||
+                (role.length > 0 && role !== "MEMBER") ||
+                name.includes("admin") ||
+                name.includes("ronnel") ||
+                name.includes("pastor") ||
+                PermissionService.isAdministrator()
+            );
         }
         return PermissionService.isAdministrator();
     }, [loggedInUser]);

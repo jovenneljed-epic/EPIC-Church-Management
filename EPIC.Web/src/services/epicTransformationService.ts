@@ -367,11 +367,32 @@ export const epicTransformationService = {
         const storageKey = `epic_transformation_state_${memberId}`;
         const todayStr = new Date().toISOString().slice(0, 10);
 
+        const isLeaderOrAdmin =
+            memberName.toLowerCase().includes("admin") ||
+            memberName.toLowerCase().includes("pastor") ||
+            memberName.toLowerCase().includes("ronnel") ||
+            (memberCode && memberCode.toLowerCase().includes("admin")) ||
+            memberId === 99999;
+
         try {
             if (typeof localStorage !== "undefined") {
                 const raw = localStorage.getItem(storageKey);
                 if (raw) {
                     const parsed = JSON.parse(raw) as MemberTransformationState;
+                    if (isLeaderOrAdmin && (parsed.currentStep < 7 || parsed.fullName.toLowerCase().includes("april"))) {
+                        parsed.fullName = memberName.toLowerCase().includes("april") ? "Pastor Ronnel M. Aviguetero" : memberName;
+                        parsed.memberCode = "EPIC-PASTOR-01";
+                        parsed.currentStep = 7;
+                        parsed.currentStage = 5;
+                        parsed.maturityIndex = 100;
+                        parsed.healthScore = 10;
+                        parsed.altarStreakDays = Math.max(parsed.altarStreakDays, 365);
+                        parsed.spiritualChildrenCount = 12;
+                        parsed.lifeGroupName = "San Vicente Pastoral & Apostolic Council";
+                        parsed.lifeGroupLeader = parsed.fullName;
+                        parsed.spiritualParent = "Senior Pastoral Covering • Luke 4:18 Ministries";
+                        this.saveMemberState(memberId, parsed);
+                    }
                     // Reset today's habit booleans if day changed
                     if (parsed.todayHabits && parsed.todayHabits.lastUpdatedDate !== todayStr) {
                         parsed.todayHabits = {
@@ -392,13 +413,6 @@ export const epicTransformationService = {
         const stage3 = epicGenerationsCurriculumService.getStageProgress(3);
         const stage4 = epicGenerationsCurriculumService.getStageProgress(4);
         const stage5 = epicGenerationsCurriculumService.getStageProgress(5);
-
-        const isLeaderOrAdmin =
-            memberName.toLowerCase().includes("admin") ||
-            memberName.toLowerCase().includes("pastor") ||
-            memberName.toLowerCase().includes("ronnel") ||
-            (memberCode && memberCode.toLowerCase().includes("admin")) ||
-            memberId === 99999;
 
         let initialStep: 1 | 2 | 3 | 4 | 5 | 6 | 7 = isLeaderOrAdmin ? 7 : 1;
         let initialStage: 1 | 2 | 3 | 4 | 5 = isLeaderOrAdmin ? 5 : 1;
