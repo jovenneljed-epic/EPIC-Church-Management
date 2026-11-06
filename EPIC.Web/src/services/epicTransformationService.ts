@@ -903,7 +903,7 @@ export const epicTransformationService = {
     <style>
         @page {
             size: letter portrait;
-            margin: 8mm 10mm;
+            margin: 6mm 8mm;
         }
         * {
             box-sizing: border-box;
@@ -913,24 +913,18 @@ export const epicTransformationService = {
         html, body {
             margin: 0;
             padding: 0;
+            width: 100%;
+            height: 100%;
             background: #ffffff;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             color: #0f172a;
         }
-        .cert-wrapper {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 94vh;
-            padding: 4px;
-        }
         .cert-container {
             width: 100%;
-            max-width: 680px;
-            margin: 0 auto;
-            border: 5px double #0d9488;
-            border-radius: 12px;
-            padding: 24px 28px 20px;
+            box-sizing: border-box;
+            border: 8px double #0d9488;
+            border-radius: 16px;
+            padding: 34px 44px 26px 44px;
             background: linear-gradient(180deg, #ffffff 0%, #f0fdfa 100%);
             text-align: center;
             position: relative;
@@ -938,179 +932,179 @@ export const epicTransformationService = {
             break-inside: avoid;
         }
         .cert-church-name {
-            font-size: 17px;
+            font-size: 24px;
             font-weight: 900;
-            letter-spacing: 2px;
+            letter-spacing: 3px;
             text-transform: uppercase;
             color: #0d9488;
-            margin: 0 0 2px 0;
+            margin: 0 0 4px 0;
         }
         .cert-church-motto {
-            font-size: 11px;
+            font-size: 13px;
             font-weight: 700;
-            color: #0d9488;
+            color: #0f766e;
             font-style: italic;
-            margin-bottom: 2px;
+            margin-bottom: 3px;
         }
         .cert-church-address {
-            font-size: 10.5px;
+            font-size: 12px;
             color: #475569;
-            margin-bottom: 2px;
+            margin-bottom: 3px;
         }
         .cert-church-contact {
-            font-size: 10px;
+            font-size: 11.5px;
             color: #64748b;
-            margin-bottom: 12px;
+            margin-bottom: 18px;
         }
         .cert-title {
-            font-size: 23px;
+            font-size: 28px;
             font-weight: 900;
             color: #0f172a;
-            margin: 4px 0 3px 0;
+            margin: 8px 0 4px 0;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
         .cert-subtitle {
-            font-size: 11px;
+            font-size: 12px;
             color: #64748b;
-            margin: 0 0 14px 0;
+            margin: 0 0 18px 0;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 1.5px;
+            font-weight: 700;
         }
         .cert-certifies {
-            font-size: 12px;
+            font-size: 14px;
             color: #475569;
-            margin-bottom: 4px;
+            margin-bottom: 6px;
         }
         .cert-recipient {
-            font-size: 24px;
+            font-size: 32px;
             font-weight: 900;
             color: #0d9488;
-            border-bottom: 2px solid #0d9488;
+            border-bottom: 2.5px solid #0d9488;
             display: inline-block;
-            padding: 3px 24px;
-            margin: 4px 0 2px 0;
+            padding: 4px 40px;
+            margin: 6px 0 4px 0;
             font-family: Georgia, "Times New Roman", serif;
             letter-spacing: 0.5px;
         }
         .cert-code {
-            font-size: 11px;
+            font-size: 13px;
             font-weight: 800;
             color: #0d9488;
             letter-spacing: 1px;
-            margin-bottom: 12px;
+            margin-bottom: 16px;
         }
         .cert-body {
-            font-size: 12px;
+            font-size: 13.5px;
             color: #334155;
-            line-height: 1.5;
-            max-width: 520px;
-            margin: 0 auto 10px auto;
+            line-height: 1.6;
+            max-width: 620px;
+            margin: 0 auto 14px auto;
         }
         .cert-milestone-box {
             background: rgba(13, 148, 136, 0.08);
-            border: 1.5px solid #0d9488;
-            border-radius: 8px;
-            padding: 8px 18px;
+            border: 2px solid #0d9488;
+            border-radius: 10px;
+            padding: 10px 24px;
             display: inline-block;
-            margin: 6px 0 12px 0;
+            margin: 8px 0 16px 0;
         }
         .cert-milestone-title {
-            font-size: 15px;
+            font-size: 17px;
             font-weight: 800;
             color: #0f766e;
             margin-bottom: 2px;
         }
         .cert-milestone-sub {
-            font-size: 11px;
+            font-size: 12.5px;
             color: #134e4a;
         }
         .cert-scripture {
-            font-size: 11px;
+            font-size: 12.5px;
             font-style: italic;
             color: #475569;
-            max-width: 480px;
-            margin: 0 auto 20px auto;
-            line-height: 1.45;
+            max-width: 560px;
+            margin: 0 auto 22px auto;
+            line-height: 1.5;
         }
         .cert-footer {
             display: flex;
             justify-content: space-around;
             align-items: flex-end;
-            margin-top: 20px;
-            padding-top: 14px;
-            border-top: 1px solid #cbd5e1;
+            margin-top: 22px;
+            padding-top: 18px;
+            border-top: 1.5px solid #cbd5e1;
         }
         .cert-sign-col {
             text-align: center;
-            min-width: 170px;
+            min-width: 200px;
         }
         .cert-sign-line {
-            width: 155px;
-            border-bottom: 1.5px solid #0f172a;
-            margin: 0 auto 5px auto;
+            width: 190px;
+            border-bottom: 2px solid #0f172a;
+            margin: 0 auto 8px auto;
         }
         .cert-sign-name {
-            font-size: 12px;
+            font-size: 14px;
             font-weight: 800;
             color: #0f172a;
         }
         .cert-sign-role {
-            font-size: 10px;
+            font-size: 11px;
+            font-weight: 700;
             color: #64748b;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
         .cert-date {
-            margin-top: 14px;
-            font-size: 10px;
+            margin-top: 16px;
+            font-size: 11px;
             color: #64748b;
         }
     </style>
 </head>
 <body>
-    <div class="cert-wrapper">
-        <div class="cert-container">
-            <div class="cert-church-name">EPIC CHURCH</div>
-            <div class="cert-church-motto">“Engaging People Into Christ”</div>
-            <div class="cert-church-address">Brgy. San Vicente, Umingan, Pangasinan</div>
-            <div class="cert-church-contact">Email: Jovenneljed@gmail.com &bull; Contact No: 09913114163</div>
+    <div class="cert-container">
+        <div class="cert-church-name">EPIC CHURCH</div>
+        <div class="cert-church-motto">“Engaging People Into Christ”</div>
+        <div class="cert-church-address">Brgy. San Vicente, Umingan, Pangasinan</div>
+        <div class="cert-church-contact">Email: Jovenneljed@gmail.com &bull; Contact No: 09913114163</div>
 
-            <h1 class="cert-title">Certificate of Discipleship Completion</h1>
-            <div class="cert-subtitle">Official Generational Leadership Framework Credential</div>
+        <h1 class="cert-title">Certificate of Discipleship Completion</h1>
+        <div class="cert-subtitle">Official Generational Leadership Framework Credential</div>
 
-            <div class="cert-certifies">This certifies that</div>
-            <div class="cert-recipient">${options.fullName}</div>
-            <div class="cert-code">${options.memberCode}</div>
+        <div class="cert-certifies">This certifies that</div>
+        <div class="cert-recipient">${options.fullName}</div>
+        <div class="cert-code">${options.memberCode}</div>
 
-            <p class="cert-body">
-                Has faithfully fulfilled the biblical discipleship requirements, personal secret place altar disciplines, sound doctrine examination, and ministry qualifications for:
-            </p>
+        <p class="cert-body">
+            Has faithfully fulfilled the biblical discipleship requirements, personal secret place altar disciplines, sound doctrine examination, and ministry qualifications for:
+        </p>
 
-            <div class="cert-milestone-box">
-                <div class="cert-milestone-title">Step ${options.stepNumber}: ${title}</div>
-                <div class="cert-milestone-sub">${subTitle}</div>
-            </div>
-
-            <p class="cert-scripture">
-                “And what you have heard from me in the presence of many witnesses entrust to faithful men, who will be able to teach others also.” — 2 Timothy 2:2
-            </p>
-
-            <div class="cert-footer">
-                <div class="cert-sign-col">
-                    <div class="cert-sign-line"></div>
-                    <div class="cert-sign-name">${pastor}</div>
-                    <div class="cert-sign-role">Senior Pastor</div>
-                </div>
-                <div class="cert-sign-col">
-                    <div class="cert-sign-line"></div>
-                    <div class="cert-sign-name">${spiritualParent}</div>
-                    <div class="cert-sign-role">Discipleship Overseer</div>
-                </div>
-            </div>
-
-            <div class="cert-date">Awarded on ${certDate}</div>
+        <div class="cert-milestone-box">
+            <div class="cert-milestone-title">Step ${options.stepNumber}: ${title}</div>
+            <div class="cert-milestone-sub">${subTitle}</div>
         </div>
+
+        <p class="cert-scripture">
+            “And what you have heard from me in the presence of many witnesses entrust to faithful men, who will be able to teach others also.” — 2 Timothy 2:2
+        </p>
+
+        <div class="cert-footer">
+            <div class="cert-sign-col">
+                <div class="cert-sign-line"></div>
+                <div class="cert-sign-name">${pastor}</div>
+                <div class="cert-sign-role">Senior Pastor</div>
+            </div>
+            <div class="cert-sign-col">
+                <div class="cert-sign-line"></div>
+                <div class="cert-sign-name">${spiritualParent}</div>
+                <div class="cert-sign-role">Discipleship Overseer</div>
+            </div>
+        </div>
+
+        <div class="cert-date">Awarded on ${certDate}</div>
     </div>
 </body>
 </html>`;
