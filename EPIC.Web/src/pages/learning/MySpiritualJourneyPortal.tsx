@@ -169,18 +169,20 @@ export const MySpiritualJourneyPortal: React.FC<MySpiritualJourneyPortalProps> =
     // --------------------------------------------------------
     // STATE
     // --------------------------------------------------------
-    const [state, setState] = useState<MemberTransformationState>(() =>
-        epicTransformationService.getMemberState(activeMemberId, activeMemberName, activeMemberCode)
-    );
+    const [state, setState] = useState<MemberTransformationState>(() => {
+        const found = membersList.find((m) => m.memberId === activeMemberId);
+        return epicTransformationService.getMemberState(activeMemberId, activeMemberName, activeMemberCode, found);
+    });
     const [selectedStepNum, setSelectedStepNum] = useState<number>(() => state.currentStep);
     const [isCertModalOpen, setIsCertModalOpen] = useState(false);
     const [certStepNum, setCertStepNum] = useState<number>(state.currentStep);
 
     // Refresh state when events fire
     const reloadState = useCallback(() => {
-        const fresh = epicTransformationService.getMemberState(activeMemberId, activeMemberName, activeMemberCode);
+        const found = membersList.find((m) => m.memberId === activeMemberId);
+        const fresh = epicTransformationService.getMemberState(activeMemberId, activeMemberName, activeMemberCode, found);
         setState(fresh);
-    }, [activeMemberId, activeMemberName, activeMemberCode]);
+    }, [activeMemberId, activeMemberName, activeMemberCode, membersList]);
 
     useEffect(() => {
         reloadState();
@@ -225,10 +227,46 @@ export const MySpiritualJourneyPortal: React.FC<MySpiritualJourneyPortalProps> =
     );
 
     // Curriculum progress for current active stage
+    const curStatus = useMemo(() => {
+        const found = membersList.find((m) => m.memberId === activeMemberId);
+        return epicGenerationsCurriculumService.getDiscipleStatus(found || {
+            memberId: activeMemberId,
+            fullName: activeMemberName,
+            ministry: state.memberRole || (activeMemberId === 99999 ? "SENIOR PASTOR" : "")
+        });
+    }, [membersList, activeMemberId, activeMemberName, state.memberRole]);
+
     const stageProgress = useMemo(() => {
-        const stageNum = currentStepDef.stage || 1;
+        if (state.currentStep === 7 || curStatus.stage === 5) {
+            return {
+                stage: 5,
+                completedCount: 18,
+                totalLessons: 18,
+                progressPercentage: 100,
+                isCompleted: true
+            };
+        }
+        const stageNum = selectedStepDef.stage || 1;
+        if (curStatus.stage === stageNum) {
+            return {
+                stage: curStatus.stage,
+                completedCount: curStatus.completedLessonsCount,
+                totalLessons: curStatus.totalLessonsCount,
+                progressPercentage: curStatus.progressPercentage,
+                isCompleted: curStatus.isCertified
+            };
+        }
+        if (state.currentStage > stageNum) {
+            return {
+                stage: stageNum,
+                completedCount: 18,
+                totalLessons: 18,
+                progressPercentage: 100,
+                isCompleted: true
+            };
+        }
         return epicGenerationsCurriculumService.getStageProgress(stageNum);
-    }, [currentStepDef.stage]);
+    }, [state.currentStep, state.currentStage, curStatus, selectedStepDef.stage]);
 
     // --------------------------------------------------------
     // HANDLERS
@@ -320,6 +358,9 @@ export const MySpiritualJourneyPortal: React.FC<MySpiritualJourneyPortalProps> =
                                                 setActiveMemberCode("EPIC-PASTOR-01");
                                                 setDiscipleSearchQuery("");
                                                 setIsDisciplePickerOpen(false);
+                                                const fresh = epicTransformationService.getMemberState(99999, loggedInUser?.fullName || "System Administrator", "EPIC-PASTOR-01");
+                                                setState(fresh);
+                                                setSelectedStepNum(fresh.currentStep);
                                             }}
                                         >
                                             <X size={12} />
@@ -369,6 +410,9 @@ export const MySpiritualJourneyPortal: React.FC<MySpiritualJourneyPortalProps> =
                                                         setActiveMemberCode("EPIC-PASTOR-01");
                                                         setIsDisciplePickerOpen(false);
                                                         setDiscipleSearchQuery("");
+                                                        const fresh = epicTransformationService.getMemberState(99999, loggedInUser?.fullName || "System Administrator", "EPIC-PASTOR-01");
+                                                        setState(fresh);
+                                                        setSelectedStepNum(fresh.currentStep);
                                                     }}
                                                 >
                                                     <div className="msj-popover-avatar leader">
@@ -412,6 +456,9 @@ export const MySpiritualJourneyPortal: React.FC<MySpiritualJourneyPortalProps> =
                                                             setActiveMemberCode(code);
                                                             setIsDisciplePickerOpen(false);
                                                             setDiscipleSearchQuery("");
+                                                            const fresh = epicTransformationService.getMemberState(m.memberId, fName, code, m);
+                                                            setState(fresh);
+                                                            setSelectedStepNum(fresh.currentStep);
                                                         }}
                                                     >
                                                         <div className="msj-popover-avatar">
@@ -422,7 +469,7 @@ export const MySpiritualJourneyPortal: React.FC<MySpiritualJourneyPortalProps> =
                                                                 {fName}
                                                             </div>
                                                             <div className="msj-popover-desc">
-                                                                {code} {m.roleName ? `• ${m.roleName}` : ""}
+                                                                {code} {m.ministry ? `• ${m.ministry}` : (m.roleName ? `• ${m.roleName}` : "")}
                                                             </div>
                                                         </div>
                                                         {isSelected && (
@@ -485,6 +532,23 @@ export const MySpiritualJourneyPortal: React.FC<MySpiritualJourneyPortalProps> =
                                 <span className="msj-meta-badge">
                                     {state.memberCode}
                                 </span>
+                                {state.memberRole && (
+                                    <>
+                                        <span>•</span>
+                                        <span
+                                            className="msj-meta-badge"
+                                            style={{
+                                                background: "rgba(245, 158, 11, 0.25)",
+                                                color: "#fef08a",
+                                                border: "1px solid rgba(245, 158, 11, 0.4)",
+                                                fontWeight: 700,
+                                                letterSpacing: "0.5px"
+                                            }}
+                                        >
+                                            🛡️ {state.memberRole}
+                                        </span>
+                                    </>
+                                )}
                                 <span>•</span>
                                 <span className="msj-meta-badge" style={{ background: "rgba(20, 184, 166, 0.35)", color: "#99f6e4" }}>
                                     {currentStepDef.generationLevel} • {currentStepDef.role}

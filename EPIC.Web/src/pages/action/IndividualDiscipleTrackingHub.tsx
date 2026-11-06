@@ -282,8 +282,8 @@ export const IndividualDiscipleTrackingHub: React.FC<IndividualDiscipleTrackingH
 
     // Load rich transformation state from epicTransformationService
     const memberTransState = useMemo(() => {
-        return epicTransformationService.getMemberState(m.memberId, mName, m.memberCode);
-    }, [m.memberId, mName, m.memberCode, localRefreshTrigger]);
+        return epicTransformationService.getMemberState(m.memberId, mName, m.memberCode, m);
+    }, [m, mName, localRefreshTrigger]);
 
     // Check advance eligibility
     const eligibility = useMemo(() => {
