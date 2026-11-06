@@ -903,7 +903,7 @@ export const epicTransformationService = {
     <style>
         @page {
             size: letter portrait;
-            margin: 6mm 8mm;
+            margin: 10mm 12mm 14mm 12mm;
         }
         * {
             box-sizing: border-box;
@@ -913,18 +913,18 @@ export const epicTransformationService = {
         html, body {
             margin: 0;
             padding: 0;
-            width: 100%;
-            height: 100%;
             background: #ffffff;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             color: #0f172a;
         }
         .cert-container {
             width: 100%;
+            max-width: 680px;
+            margin: 0 auto;
             box-sizing: border-box;
-            border: 8px double #0d9488;
-            border-radius: 16px;
-            padding: 34px 44px 26px 44px;
+            border: 5px double #0d9488;
+            border-radius: 12px;
+            padding: 22px 28px 16px 28px;
             background: linear-gradient(180deg, #ffffff 0%, #f0fdfa 100%);
             text-align: center;
             position: relative;
@@ -932,135 +932,149 @@ export const epicTransformationService = {
             break-inside: avoid;
         }
         .cert-church-name {
-            font-size: 24px;
+            font-size: 19px;
             font-weight: 900;
-            letter-spacing: 3px;
+            letter-spacing: 2px;
             text-transform: uppercase;
             color: #0d9488;
-            margin: 0 0 4px 0;
+            margin: 0 0 2px 0;
+            line-height: 1.2;
         }
         .cert-church-motto {
-            font-size: 13px;
+            font-size: 11px;
             font-weight: 700;
             color: #0f766e;
             font-style: italic;
-            margin-bottom: 3px;
+            margin-bottom: 2px;
+            line-height: 1.2;
         }
         .cert-church-address {
+            font-size: 10px;
+            color: #475569;
+            margin-bottom: 2px;
+            line-height: 1.2;
+        }
+        .cert-church-contact {
+            font-size: 9.5px;
+            color: #64748b;
+            margin-bottom: 10px;
+            line-height: 1.2;
+        }
+        .cert-title {
+            font-size: 22px;
+            font-weight: 900;
+            color: #0f172a;
+            margin: 0 0 3px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            line-height: 1.2;
+        }
+        .cert-subtitle {
+            font-size: 10.5px;
+            color: #64748b;
+            margin: 0 0 12px 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+        .cert-certifies {
             font-size: 12px;
             color: #475569;
             margin-bottom: 3px;
-        }
-        .cert-church-contact {
-            font-size: 11.5px;
-            color: #64748b;
-            margin-bottom: 18px;
-        }
-        .cert-title {
-            font-size: 28px;
-            font-weight: 900;
-            color: #0f172a;
-            margin: 8px 0 4px 0;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .cert-subtitle {
-            font-size: 12px;
-            color: #64748b;
-            margin: 0 0 18px 0;
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            font-weight: 700;
-        }
-        .cert-certifies {
-            font-size: 14px;
-            color: #475569;
-            margin-bottom: 6px;
+            line-height: 1.2;
         }
         .cert-recipient {
-            font-size: 32px;
+            font-size: 25px;
             font-weight: 900;
             color: #0d9488;
-            border-bottom: 2.5px solid #0d9488;
+            border-bottom: 2px solid #0d9488;
             display: inline-block;
-            padding: 4px 40px;
-            margin: 6px 0 4px 0;
+            padding: 2px 28px;
+            margin: 3px 0 2px 0;
             font-family: Georgia, "Times New Roman", serif;
             letter-spacing: 0.5px;
+            line-height: 1.2;
         }
         .cert-code {
-            font-size: 13px;
+            font-size: 11px;
             font-weight: 800;
             color: #0d9488;
             letter-spacing: 1px;
-            margin-bottom: 16px;
+            margin-bottom: 10px;
+            line-height: 1.2;
         }
         .cert-body {
-            font-size: 13.5px;
+            font-size: 11.5px;
             color: #334155;
-            line-height: 1.6;
-            max-width: 620px;
-            margin: 0 auto 14px auto;
+            line-height: 1.45;
+            max-width: 540px;
+            margin: 0 auto 8px auto;
         }
         .cert-milestone-box {
             background: rgba(13, 148, 136, 0.08);
-            border: 2px solid #0d9488;
-            border-radius: 10px;
-            padding: 10px 24px;
+            border: 1.5px solid #0d9488;
+            border-radius: 8px;
+            padding: 7px 18px;
             display: inline-block;
-            margin: 8px 0 16px 0;
+            margin: 4px 0 10px 0;
         }
         .cert-milestone-title {
-            font-size: 17px;
+            font-size: 14.5px;
             font-weight: 800;
             color: #0f766e;
             margin-bottom: 2px;
+            line-height: 1.2;
         }
         .cert-milestone-sub {
-            font-size: 12.5px;
+            font-size: 11px;
             color: #134e4a;
+            line-height: 1.2;
         }
         .cert-scripture {
-            font-size: 12.5px;
+            font-size: 11px;
             font-style: italic;
             color: #475569;
-            max-width: 560px;
-            margin: 0 auto 22px auto;
-            line-height: 1.5;
+            max-width: 500px;
+            margin: 0 auto 14px auto;
+            line-height: 1.4;
         }
         .cert-footer {
             display: flex;
             justify-content: space-around;
             align-items: flex-end;
-            margin-top: 22px;
-            padding-top: 18px;
-            border-top: 1.5px solid #cbd5e1;
+            margin-top: 14px;
+            padding-top: 12px;
+            border-top: 1px solid #cbd5e1;
         }
         .cert-sign-col {
             text-align: center;
-            min-width: 200px;
+            min-width: 170px;
         }
         .cert-sign-line {
-            width: 190px;
-            border-bottom: 2px solid #0f172a;
-            margin: 0 auto 8px auto;
+            width: 160px;
+            border-bottom: 1.5px solid #0f172a;
+            margin: 0 auto 5px auto;
         }
         .cert-sign-name {
-            font-size: 14px;
+            font-size: 12px;
             font-weight: 800;
             color: #0f172a;
+            line-height: 1.2;
         }
         .cert-sign-role {
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 700;
             color: #64748b;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            line-height: 1.2;
         }
         .cert-date {
-            margin-top: 16px;
-            font-size: 11px;
+            margin-top: 10px;
+            font-size: 10px;
             color: #64748b;
+            line-height: 1.2;
         }
     </style>
 </head>
@@ -1109,17 +1123,16 @@ export const epicTransformationService = {
 </body>
 </html>`;
 
-        // Direct iframe printing (instant, seamless, zero pop-up blocker issues)
+        // Direct iframe printing with off-screen positioning for accurate dimensions
         if (typeof document !== "undefined") {
             try {
                 const iframe = document.createElement("iframe");
                 iframe.style.position = "fixed";
-                iframe.style.right = "0";
-                iframe.style.bottom = "0";
-                iframe.style.width = "0";
-                iframe.style.height = "0";
-                iframe.style.border = "0";
-                iframe.style.visibility = "hidden";
+                iframe.style.top = "-9999px";
+                iframe.style.left = "-9999px";
+                iframe.style.width = "816px";
+                iframe.style.height = "1056px";
+                iframe.style.border = "none";
                 document.body.appendChild(iframe);
 
                 const frameDoc = iframe.contentWindow?.document;
@@ -1152,7 +1165,7 @@ export const epicTransformationService = {
                                 } catch {}
                             }, 3000);
                         }
-                    }, 350);
+                    }, 400);
                     return;
                 }
             } catch {}

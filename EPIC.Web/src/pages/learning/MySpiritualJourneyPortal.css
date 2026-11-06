@@ -941,7 +941,7 @@
 @media print {
     @page {
         size: letter portrait;
-        margin: 6mm 8mm;
+        margin: 10mm 12mm 14mm 12mm;
     }
 
     /* Hide background elements, navigation, sidebar, hero card, stepper, two-col */
@@ -1003,12 +1003,12 @@
     .msj-cert-frame {
         display: block !important;
         width: 100% !important;
-        max-width: 100% !important;
-        margin: 0 !important;
-        padding: 34px 44px 26px 44px !important;
-        border: 8px double #0d9488 !important;
-        border-radius: 16px !important;
-        background: #ffffff !important;
+        max-width: 680px !important;
+        margin: 0 auto !important;
+        padding: 22px 28px 16px 28px !important;
+        border: 5px double #0d9488 !important;
+        border-radius: 12px !important;
+        background: linear-gradient(180deg, #ffffff 0%, #f0fdfa 100%) !important;
         box-sizing: border-box !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
@@ -1017,10 +1017,84 @@
         box-shadow: none !important;
     }
 
-    .msj-cert-recipient {
+    .msj-cert-church-name {
+        font-size: 19px !important;
+        font-weight: 900 !important;
+        letter-spacing: 2px !important;
+        text-transform: uppercase !important;
+        color: #0d9488 !important;
+        margin: 0 0 2px 0 !important;
+        line-height: 1.2 !important;
+    }
+
+    .msj-cert-church-motto {
+        font-size: 11px !important;
+        font-weight: 700 !important;
         color: #0f766e !important;
-        border-bottom: 2.5px solid #0d9488 !important;
+        font-style: italic !important;
+        margin-bottom: 2px !important;
+        line-height: 1.2 !important;
+    }
+
+    .msj-cert-church-address {
+        font-size: 10px !important;
+        color: #475569 !important;
+        margin-bottom: 2px !important;
+        line-height: 1.2 !important;
+    }
+
+    .msj-cert-church-contact {
+        font-size: 9.5px !important;
+        color: #64748b !important;
+        margin-bottom: 10px !important;
+        line-height: 1.2 !important;
+    }
+
+    .msj-cert-title {
+        font-size: 22px !important;
+        font-weight: 900 !important;
+        color: #0f172a !important;
+        margin: 0 0 3px 0 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
+        line-height: 1.2 !important;
+    }
+
+    .msj-cert-recipient {
+        font-size: 25px !important;
+        font-weight: 900 !important;
+        color: #0d9488 !important;
+        border-bottom: 2px solid #0d9488 !important;
+        display: inline-block !important;
+        padding: 2px 28px !important;
+        margin: 3px 0 2px 0 !important;
+        font-family: Georgia, 'Times New Roman', serif !important;
+        letter-spacing: 0.5px !important;
+        line-height: 1.2 !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
+    }
+
+    .msj-cert-body {
+        font-size: 11.5px !important;
+        color: #334155 !important;
+        line-height: 1.45 !important;
+        max-width: 540px !important;
+        margin: 0 auto 8px auto !important;
+    }
+
+    .msj-cert-footer {
+        display: flex !important;
+        justify-content: space-around !important;
+        align-items: flex-end !important;
+        margin-top: 14px !important;
+        padding-top: 12px !important;
+        border-top: 1px solid #cbd5e1 !important;
+    }
+
+    .msj-cert-line {
+        width: 160px !important;
+        border-bottom: 1.5px solid #0f172a !important;
+        margin: 0 auto 5px auto !important;
     }
 }
