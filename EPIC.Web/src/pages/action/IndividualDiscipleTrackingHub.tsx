@@ -1462,7 +1462,18 @@ export const IndividualDiscipleTrackingHub: React.FC<IndividualDiscipleTrackingH
                                 type="button"
                                 className="dt-signoff-btn"
                                 style={{ padding: "8px 18px", fontSize: "13px" }}
-                                onClick={() => window.print()}
+                                onClick={() => {
+                                    const stepDef = epicTransformationService.getStepDefinition(certStep);
+                                    epicTransformationService.printCertificate({
+                                        fullName: mName,
+                                        memberCode: m.memberCode,
+                                        stepNumber: certStep,
+                                        stepTitle: stepDef.title,
+                                        stepSubtitle: stepDef.subTitle,
+                                        pastorName: pastorNameInput || "Pastor Ronnel M. Aviguetero",
+                                        spiritualParent: spiritualParent || "Spiritual Parent / Shepherd"
+                                    });
+                                }}
                             >
                                 <Printer size={15} />
                                 <span>Print Official Certificate</span>

@@ -904,3 +904,93 @@
     border-bottom: 1.5px solid #0f172a;
     margin-bottom: 6px;
 }
+
+/* ============================================================
+   OFFICIAL CERTIFICATE PRINT MEDIA STYLES
+   Ensures single-page, centered, beautiful certificate print
+   ============================================================ */
+@media print {
+    @page {
+        size: A4 portrait;
+        margin: 12mm;
+    }
+
+    /* Hide background elements, navigation, sidebar, hero card, stepper, two-col */
+    .msj-hero-card,
+    .msj-stepper-card,
+    .msj-two-col,
+    .msj-card,
+    .msj-oversight-bar,
+    .msj-hero-top-actions,
+    .epic-sidebar,
+    .epic-topbar,
+    .epic-footer,
+    .msj-modal-card > div:first-child,
+    .msj-modal-card > div:last-child {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        overflow: hidden !important;
+    }
+
+    body,
+    .epic-main,
+    .epic-content,
+    .msj-container {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+        width: 100% !important;
+        min-height: auto !important;
+    }
+
+    .msj-modal-backdrop {
+        position: static !important;
+        background: transparent !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        display: block !important;
+        width: 100% !important;
+        height: auto !important;
+        z-index: auto !important;
+    }
+
+    .msj-modal-card {
+        position: static !important;
+        background: transparent !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        border: none !important;
+        padding: 0 !important;
+        margin: 0 auto !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        max-height: none !important;
+        overflow: visible !important;
+    }
+
+    .msj-cert-frame {
+        display: block !important;
+        width: 100% !important;
+        max-width: 740px !important;
+        margin: 10px auto !important;
+        padding: 40px 36px !important;
+        border: 6px double #0d9488 !important;
+        border-radius: 14px !important;
+        background: #ffffff !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        box-shadow: none !important;
+    }
+
+    .msj-cert-recipient {
+        color: #0f766e !important;
+        border-bottom: 2px solid #0d9488 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+}

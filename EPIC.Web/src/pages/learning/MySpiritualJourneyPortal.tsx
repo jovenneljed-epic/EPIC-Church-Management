@@ -300,7 +300,16 @@ export const MySpiritualJourneyPortal: React.FC<MySpiritualJourneyPortalProps> =
     };
 
     const handlePrintCertificate = () => {
-        window.print();
+        const stepDef = epicTransformationService.getStepDefinition(certStepNum);
+        epicTransformationService.printCertificate({
+            fullName: state.fullName,
+            memberCode: state.memberCode,
+            stepNumber: certStepNum,
+            stepTitle: stepDef.title,
+            stepSubtitle: stepDef.subTitle,
+            pastorName: "Pastor Ronnel M. Aviguetero",
+            spiritualParent: state.spiritualParent || "Spiritual Parent / Shepherd"
+        });
     };
 
     // --------------------------------------------------------

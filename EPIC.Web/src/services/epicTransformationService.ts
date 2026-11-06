@@ -869,6 +869,295 @@ export const epicTransformationService = {
         };
         this.saveMemberState(memberId, state);
         return state;
+    },
+
+    /**
+     * Print official discipleship certificate in a clean, isolated frame
+     * Guaranteed 1 sheet of paper without outer website elements
+     */
+    printCertificate(options: {
+        fullName: string;
+        memberCode: string;
+        stepNumber: number;
+        stepTitle?: string;
+        stepSubtitle?: string;
+        pastorName?: string;
+        spiritualParent?: string;
+    }): void {
+        const stepDef = this.getStepDefinition(options.stepNumber);
+        const title = options.stepTitle || stepDef.title;
+        const subTitle = options.stepSubtitle || stepDef.subTitle;
+        const pastor = options.pastorName || "Pastor Ronnel M. Aviguetero";
+        const spiritualParent = options.spiritualParent || "Spiritual Parent / Shepherd";
+        const certDate = new Date().toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric"
+        });
+
+        const printHtml = `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Certificate of Discipleship Completion - ${options.fullName}</title>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 12mm 15mm;
+        }
+        * {
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        html, body {
+            margin: 0;
+            padding: 0;
+            background: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            color: #0f172a;
+        }
+        .cert-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 98vh;
+            padding: 10px;
+        }
+        .cert-container {
+            width: 100%;
+            max-width: 760px;
+            margin: 0 auto;
+            border: 6px double #0d9488;
+            border-radius: 14px;
+            padding: 42px 38px 36px;
+            background: linear-gradient(180deg, #ffffff 0%, #f0fdfa 100%);
+            text-align: center;
+            position: relative;
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+        .cert-header {
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #0d9488;
+            margin-bottom: 8px;
+        }
+        .cert-title {
+            font-size: 26px;
+            font-weight: 900;
+            color: #0f172a;
+            margin: 0 0 6px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .cert-subtitle {
+            font-size: 12px;
+            color: #64748b;
+            margin: 0 0 20px 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .cert-certifies {
+            font-size: 13px;
+            color: #475569;
+            margin-bottom: 6px;
+        }
+        .cert-recipient {
+            font-size: 26px;
+            font-weight: 900;
+            color: #0d9488;
+            border-bottom: 2px solid #0d9488;
+            display: inline-block;
+            padding: 4px 28px;
+            margin: 6px 0 4px 0;
+            font-family: Georgia, "Times New Roman", serif;
+            letter-spacing: 0.5px;
+        }
+        .cert-code {
+            font-size: 12px;
+            font-weight: 800;
+            color: #0d9488;
+            letter-spacing: 1px;
+            margin-bottom: 18px;
+        }
+        .cert-body {
+            font-size: 13px;
+            color: #334155;
+            line-height: 1.6;
+            max-width: 540px;
+            margin: 0 auto 14px auto;
+        }
+        .cert-milestone-box {
+            background: rgba(13, 148, 136, 0.08);
+            border: 1.5px solid #0d9488;
+            border-radius: 8px;
+            padding: 10px 20px;
+            display: inline-block;
+            margin: 8px 0 16px 0;
+        }
+        .cert-milestone-title {
+            font-size: 16px;
+            font-weight: 800;
+            color: #0f766e;
+            margin-bottom: 2px;
+        }
+        .cert-milestone-sub {
+            font-size: 12px;
+            color: #134e4a;
+        }
+        .cert-scripture {
+            font-size: 12px;
+            font-style: italic;
+            color: #475569;
+            max-width: 500px;
+            margin: 0 auto 28px auto;
+            line-height: 1.5;
+        }
+        .cert-footer {
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-end;
+            margin-top: 28px;
+            padding-top: 18px;
+            border-top: 1px solid #cbd5e1;
+        }
+        .cert-sign-col {
+            text-align: center;
+            min-width: 180px;
+        }
+        .cert-sign-line {
+            width: 160px;
+            border-bottom: 1.5px solid #0f172a;
+            margin: 0 auto 6px auto;
+        }
+        .cert-sign-name {
+            font-size: 12px;
+            font-weight: 800;
+            color: #0f172a;
+        }
+        .cert-sign-role {
+            font-size: 10px;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .cert-date {
+            margin-top: 18px;
+            font-size: 11px;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+    <div class="cert-wrapper">
+        <div class="cert-container">
+            <div class="cert-header">EPIC Church • Luke 4:18 Ministries (San Vicente Church)</div>
+            <h1 class="cert-title">Certificate of Discipleship Completion</h1>
+            <div class="cert-subtitle">Official Generational Leadership Framework Credential</div>
+
+            <div class="cert-certifies">This certifies that</div>
+            <div class="cert-recipient">${options.fullName}</div>
+            <div class="cert-code">${options.memberCode}</div>
+
+            <p class="cert-body">
+                Has faithfully fulfilled the biblical discipleship requirements, personal secret place altar disciplines, sound doctrine examination, and ministry qualifications for:
+            </p>
+
+            <div class="cert-milestone-box">
+                <div class="cert-milestone-title">Step ${options.stepNumber}: ${title}</div>
+                <div class="cert-milestone-sub">${subTitle}</div>
+            </div>
+
+            <p class="cert-scripture">
+                “And what you have heard from me in the presence of many witnesses entrust to faithful men, who will be able to teach others also.” — 2 Timothy 2:2
+            </p>
+
+            <div class="cert-footer">
+                <div class="cert-sign-col">
+                    <div class="cert-sign-line"></div>
+                    <div class="cert-sign-name">${pastor}</div>
+                    <div class="cert-sign-role">Senior Pastor</div>
+                </div>
+                <div class="cert-sign-col">
+                    <div class="cert-sign-line"></div>
+                    <div class="cert-sign-name">${spiritualParent}</div>
+                    <div class="cert-sign-role">Discipleship Overseer</div>
+                </div>
+            </div>
+
+            <div class="cert-date">Awarded on ${certDate}</div>
+        </div>
+    </div>
+</body>
+</html>`;
+
+        // Direct iframe printing (instant, seamless, zero pop-up blocker issues)
+        if (typeof document !== "undefined") {
+            try {
+                const iframe = document.createElement("iframe");
+                iframe.style.position = "fixed";
+                iframe.style.right = "0";
+                iframe.style.bottom = "0";
+                iframe.style.width = "0";
+                iframe.style.height = "0";
+                iframe.style.border = "0";
+                iframe.style.visibility = "hidden";
+                document.body.appendChild(iframe);
+
+                const frameDoc = iframe.contentWindow?.document;
+                if (frameDoc) {
+                    frameDoc.open();
+                    frameDoc.write(printHtml);
+                    frameDoc.close();
+
+                    setTimeout(() => {
+                        try {
+                            iframe.contentWindow?.focus();
+                            iframe.contentWindow?.print();
+                        } catch {
+                            const pw = window.open("", "_blank", "width=850,height=900");
+                            if (pw) {
+                                pw.document.open();
+                                pw.document.write(printHtml);
+                                pw.document.close();
+                                setTimeout(() => {
+                                    pw.focus();
+                                    pw.print();
+                                }, 300);
+                            } else {
+                                window.print();
+                            }
+                        } finally {
+                            setTimeout(() => {
+                                try {
+                                    document.body.removeChild(iframe);
+                                } catch {}
+                            }, 3000);
+                        }
+                    }, 350);
+                    return;
+                }
+            } catch {}
+        }
+
+        // Fallback to window.open
+        if (typeof window !== "undefined") {
+            const pw = window.open("", "_blank", "width=850,height=900");
+            if (pw) {
+                pw.document.open();
+                pw.document.write(printHtml);
+                pw.document.close();
+                setTimeout(() => {
+                    pw.focus();
+                    pw.print();
+                }, 300);
+            } else {
+                window.print();
+            }
+        }
     }
 };
 
