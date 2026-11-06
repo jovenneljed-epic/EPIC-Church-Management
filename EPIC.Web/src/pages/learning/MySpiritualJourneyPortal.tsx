@@ -308,7 +308,7 @@ export const MySpiritualJourneyPortal: React.FC<MySpiritualJourneyPortalProps> =
             stepTitle: stepDef.title,
             stepSubtitle: stepDef.subTitle,
             pastorName: "Pastor Ronnel M. Aviguetero",
-            spiritualParent: "Jovelyn D. Aviguetero"
+            spiritualParent: "Pastor Jovelyn D. Aviguetero"
         });
     };
 
@@ -1051,7 +1051,7 @@ export const MySpiritualJourneyPortal: React.FC<MySpiritualJourneyPortalProps> =
                                 <div className="msj-cert-sign">
                                     <div className="msj-cert-line" />
                                     <strong style={{ fontSize: "12px", color: "#0f172a" }}>
-                                        Jovelyn D. Aviguetero
+                                        Pastor Jovelyn D. Aviguetero
                                     </strong>
                                     <div style={{ fontSize: "10px", color: "#64748b" }}>Discipleship Overseer</div>
                                 </div>

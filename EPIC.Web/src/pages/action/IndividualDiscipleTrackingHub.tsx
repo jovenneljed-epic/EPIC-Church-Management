@@ -1461,7 +1461,7 @@ export const IndividualDiscipleTrackingHub: React.FC<IndividualDiscipleTrackingH
 
                                 <div style={{ textAlign: "center" }}>
                                     <div style={{ width: "150px", borderBottom: "1.5px solid #0f172a", margin: "0 auto 5px" }} />
-                                    <strong style={{ fontSize: "12px", color: "#0f172a" }}>Jovelyn D. Aviguetero</strong>
+                                    <strong style={{ fontSize: "12px", color: "#0f172a" }}>Pastor Jovelyn D. Aviguetero</strong>
                                     <div style={{ fontSize: "10px", color: "#64748b" }}>Discipleship Overseer</div>
                                 </div>
                             </div>
@@ -1481,7 +1481,7 @@ export const IndividualDiscipleTrackingHub: React.FC<IndividualDiscipleTrackingH
                                         stepTitle: stepDef.title,
                                         stepSubtitle: stepDef.subTitle,
                                         pastorName: pastorNameInput || "Pastor Ronnel M. Aviguetero",
-                                        spiritualParent: "Jovelyn D. Aviguetero"
+                                        spiritualParent: "Pastor Jovelyn D. Aviguetero"
                                     });
                                 }}
                             >

@@ -888,7 +888,7 @@ export const epicTransformationService = {
         const title = options.stepTitle || stepDef.title;
         const subTitle = options.stepSubtitle || stepDef.subTitle;
         const pastor = options.pastorName || "Pastor Ronnel M. Aviguetero";
-        const spiritualParent = options.spiritualParent || "Jovelyn D. Aviguetero";
+        const spiritualParent = options.spiritualParent || "Pastor Jovelyn D. Aviguetero";
         const certDate = new Date().toLocaleDateString("en-US", {
             year: "numeric",
             month: "long",
