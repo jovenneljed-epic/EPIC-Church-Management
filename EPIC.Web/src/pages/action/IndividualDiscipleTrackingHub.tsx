@@ -1408,20 +1408,30 @@ export const IndividualDiscipleTrackingHub: React.FC<IndividualDiscipleTrackingH
                             </button>
                         </div>
 
-                        <div style={{ border: "6px double #0d9488", borderRadius: "12px", padding: "32px", background: "linear-gradient(180deg, #ffffff 0%, #f0fdfa 100%)", textAlign: "center" }}>
-                            <div style={{ fontSize: "13px", fontWeight: "800", letterSpacing: "2px", textTransform: "uppercase", color: "#0d9488", marginBottom: "6px" }}>
-                                EPIC Church • Luke 4:18 Ministries (San Vicente Church)
+                        <div style={{ border: "5px double #0d9488", borderRadius: "12px", padding: "24px 28px 20px", background: "linear-gradient(180deg, #ffffff 0%, #f0fdfa 100%)", textAlign: "center" }}>
+                            <div style={{ fontSize: "17px", fontWeight: "900", letterSpacing: "2px", textTransform: "uppercase", color: "#0d9488", margin: "0 0 2px" }}>
+                                EPIC CHURCH
                             </div>
-                            <h2 style={{ fontSize: "24px", fontWeight: "900", color: "#0f172a", margin: "0 0 10px", textTransform: "uppercase" }}>
+                            <div style={{ fontSize: "11px", fontWeight: "700", color: "#0d9488", fontStyle: "italic", marginBottom: "2px" }}>
+                                “Engaging People Into Christ”
+                            </div>
+                            <div style={{ fontSize: "10.5px", color: "#475569", marginBottom: "2px" }}>
+                                Brgy. San Vicente, Umingan, Pangasinan
+                            </div>
+                            <div style={{ fontSize: "10px", color: "#64748b", marginBottom: "10px" }}>
+                                Email: Jovenneljed@gmail.com • Contact No: 09913114163
+                            </div>
+
+                            <h2 style={{ fontSize: "23px", fontWeight: "900", color: "#0f172a", margin: "4px 0 3px", textTransform: "uppercase" }}>
                                 Certificate of Discipleship Completion
                             </h2>
-                            <p style={{ fontSize: "12px", color: "#64748b", margin: 0 }}>
+                            <p style={{ fontSize: "11px", color: "#64748b", margin: 0, textTransform: "uppercase", letterSpacing: "1px" }}>
                                 Official Generational Leadership Framework Credential
                             </p>
 
-                            <div style={{ margin: "18px 0" }}>
-                                <span style={{ fontSize: "13px", color: "#475569" }}>This certifies that</span>
-                                <div style={{ fontSize: "24px", fontWeight: "900", color: "#0d9488", borderBottom: "2px solid #0d9488", display: "inline-block", padding: "4px 24px", margin: "8px 0", fontFamily: "Georgia, serif" }}>
+                            <div style={{ margin: "16px 0" }}>
+                                <span style={{ fontSize: "12px", color: "#475569" }}>This certifies that</span>
+                                <div style={{ fontSize: "24px", fontWeight: "900", color: "#0d9488", borderBottom: "2px solid #0d9488", display: "inline-block", padding: "3px 24px", margin: "4px 0 2px", fontFamily: "Georgia, serif" }}>
                                     {mName}
                                 </div>
                                 <div style={{ fontSize: "11px", color: "#0d9488", fontWeight: "700" }}>
@@ -1429,11 +1439,11 @@ export const IndividualDiscipleTrackingHub: React.FC<IndividualDiscipleTrackingH
                                 </div>
                             </div>
 
-                            <p style={{ fontSize: "13px", color: "#334155", lineHeight: 1.6, margin: "12px auto", maxWidth: "500px" }}>
+                            <p style={{ fontSize: "12px", color: "#334155", lineHeight: 1.5, margin: "10px auto", maxWidth: "500px" }}>
                                 Has faithfully fulfilled the biblical discipleship requirements, personal secret place altar disciplines, sound doctrine examination, and ministry qualifications for:
                             </p>
 
-                            <div style={{ background: "rgba(13, 148, 136, 0.1)", border: "1.5px solid #0d9488", borderRadius: "8px", padding: "8px 16px", display: "inline-block", margin: "6px 0 14px" }}>
+                            <div style={{ background: "rgba(13, 148, 136, 0.1)", border: "1.5px solid #0d9488", borderRadius: "8px", padding: "8px 16px", display: "inline-block", margin: "6px 0 12px" }}>
                                 <strong style={{ fontSize: "15px", color: "#0f766e" }}>
                                     {TRANSFORMATION_STEPS_DEFINITIONS[certStep - 1]?.title}
                                 </strong>
@@ -1442,16 +1452,16 @@ export const IndividualDiscipleTrackingHub: React.FC<IndividualDiscipleTrackingH
                                 </div>
                             </div>
 
-                            <div style={{ display: "flex", justifyContent: "space-around", marginTop: "24px", paddingTop: "16px", borderTop: "1px solid #cbd5e1" }}>
+                            <div style={{ display: "flex", justifyContent: "space-around", marginTop: "20px", paddingTop: "14px", borderTop: "1px solid #cbd5e1" }}>
                                 <div style={{ textAlign: "center" }}>
-                                    <div style={{ width: "150px", borderBottom: "1.5px solid #0f172a", margin: "0 auto 6px" }} />
+                                    <div style={{ width: "150px", borderBottom: "1.5px solid #0f172a", margin: "0 auto 5px" }} />
                                     <strong style={{ fontSize: "12px", color: "#0f172a" }}>Pastor Ronnel M. Aviguetero</strong>
                                     <div style={{ fontSize: "10px", color: "#64748b" }}>Senior Pastor</div>
                                 </div>
 
                                 <div style={{ textAlign: "center" }}>
-                                    <div style={{ width: "150px", borderBottom: "1.5px solid #0f172a", margin: "0 auto 6px" }} />
-                                    <strong style={{ fontSize: "12px", color: "#0f172a" }}>Spiritual Parent / Shepherd</strong>
+                                    <div style={{ width: "150px", borderBottom: "1.5px solid #0f172a", margin: "0 auto 5px" }} />
+                                    <strong style={{ fontSize: "12px", color: "#0f172a" }}>Jovelyn D. Aviguetero</strong>
                                     <div style={{ fontSize: "10px", color: "#64748b" }}>Discipleship Overseer</div>
                                 </div>
                             </div>
@@ -1471,7 +1481,7 @@ export const IndividualDiscipleTrackingHub: React.FC<IndividualDiscipleTrackingH
                                         stepTitle: stepDef.title,
                                         stepSubtitle: stepDef.subTitle,
                                         pastorName: pastorNameInput || "Pastor Ronnel M. Aviguetero",
-                                        spiritualParent: spiritualParent || "Spiritual Parent / Shepherd"
+                                        spiritualParent: "Jovelyn D. Aviguetero"
                                     });
                                 }}
                             >

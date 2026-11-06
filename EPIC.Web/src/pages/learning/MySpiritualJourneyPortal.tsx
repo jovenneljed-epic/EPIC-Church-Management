@@ -308,7 +308,7 @@ export const MySpiritualJourneyPortal: React.FC<MySpiritualJourneyPortalProps> =
             stepTitle: stepDef.title,
             stepSubtitle: stepDef.subTitle,
             pastorName: "Pastor Ronnel M. Aviguetero",
-            spiritualParent: state.spiritualParent || "Spiritual Parent / Shepherd"
+            spiritualParent: "Jovelyn D. Aviguetero"
         });
     };
 
@@ -994,18 +994,28 @@ export const MySpiritualJourneyPortal: React.FC<MySpiritualJourneyPortalProps> =
 
                         {/* Printable Certificate Frame */}
                         <div className="msj-cert-frame">
-                            <div className="msj-cert-header">
-                                EPIC Church • Luke 4:18 Ministries (San Vicente Church)
+                            <div className="msj-cert-church-name">
+                                EPIC CHURCH
                             </div>
-                            <h2 className="msj-cert-title">
+                            <div className="msj-cert-church-motto">
+                                “Engaging People Into Christ”
+                            </div>
+                            <div className="msj-cert-church-address">
+                                Brgy. San Vicente, Umingan, Pangasinan
+                            </div>
+                            <div className="msj-cert-church-contact">
+                                Email: Jovenneljed@gmail.com • Contact No: 09913114163
+                            </div>
+
+                            <h2 className="msj-cert-title" style={{ marginTop: "6px" }}>
                                 Certificate of Discipleship Completion
                             </h2>
-                            <p style={{ fontSize: "12px", color: "#64748b", margin: 0 }}>
+                            <p style={{ fontSize: "11px", color: "#64748b", margin: 0, textTransform: "uppercase", letterSpacing: "1px" }}>
                                 Official Generational Leadership Framework Credential
                             </p>
 
-                            <div style={{ margin: "20px 0" }}>
-                                <span style={{ fontSize: "13px", color: "#475569" }}>This certifies that</span>
+                            <div style={{ margin: "16px 0" }}>
+                                <span style={{ fontSize: "12px", color: "#475569" }}>This certifies that</span>
                                 <div className="msj-cert-recipient">{state.fullName}</div>
                                 <div style={{ fontSize: "11px", color: "#0d9488", fontWeight: "700" }}>
                                     {state.memberCode}
@@ -1016,16 +1026,16 @@ export const MySpiritualJourneyPortal: React.FC<MySpiritualJourneyPortalProps> =
                                 Has faithfully fulfilled the biblical discipleship requirements, personal secret place altar disciplines, sound doctrine examination, and ministry qualifications for:
                             </p>
 
-                            <div style={{ background: "rgba(13, 148, 136, 0.1)", border: "1.5px solid #0d9488", borderRadius: "8px", padding: "10px 18px", display: "inline-block", margin: "8px 0 16px" }}>
-                                <strong style={{ fontSize: "16px", color: "#0f766e" }}>
+                            <div style={{ background: "rgba(13, 148, 136, 0.1)", border: "1.5px solid #0d9488", borderRadius: "8px", padding: "8px 16px", display: "inline-block", margin: "6px 0 12px" }}>
+                                <strong style={{ fontSize: "15px", color: "#0f766e" }}>
                                     {epicTransformationService.getStepDefinition(certStepNum).title}
                                 </strong>
-                                <div style={{ fontSize: "12px", color: "#134e4a" }}>
+                                <div style={{ fontSize: "11px", color: "#134e4a" }}>
                                     {epicTransformationService.getStepDefinition(certStepNum).subTitle}
                                 </div>
                             </div>
 
-                            <p style={{ fontSize: "12px", fontStyle: "italic", color: "#475569", maxWidth: "480px", margin: "0 auto" }}>
+                            <p style={{ fontSize: "11px", fontStyle: "italic", color: "#475569", maxWidth: "480px", margin: "0 auto" }}>
                                 “And what you have heard from me in the presence of many witnesses entrust to faithful men, who will be able to teach others also.” — 2 Timothy 2:2
                             </p>
 
@@ -1041,7 +1051,7 @@ export const MySpiritualJourneyPortal: React.FC<MySpiritualJourneyPortalProps> =
                                 <div className="msj-cert-sign">
                                     <div className="msj-cert-line" />
                                     <strong style={{ fontSize: "12px", color: "#0f172a" }}>
-                                        Spiritual Parent / Shepherd
+                                        Jovelyn D. Aviguetero
                                     </strong>
                                     <div style={{ fontSize: "10px", color: "#64748b" }}>Discipleship Overseer</div>
                                 </div>
