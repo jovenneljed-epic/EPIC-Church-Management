@@ -11,7 +11,7 @@
 // 5. 1-Click bridge to EPIC Learning Studio (GEN-101 to GEN-501)
 // ============================================================
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import {
     TrendingUp,
     CheckCircle2,
@@ -29,6 +29,9 @@ import {
     X,
     Crown,
     Target,
+    Search,
+    ChevronDown,
+    User,
 } from "lucide-react";
 
 import "./MySpiritualJourneyPortal.css";
@@ -128,6 +131,41 @@ export const MySpiritualJourneyPortal: React.FC<MySpiritualJourneyPortalProps> =
             if (propMemberCode) setActiveMemberCode(propMemberCode);
         }
     }, [propMemberId, propMemberName, propMemberCode]);
+
+    // Searchable Disciple Switcher State
+    const disciplePickerRef = useRef<HTMLDivElement>(null);
+    const [isDisciplePickerOpen, setIsDisciplePickerOpen] = useState(false);
+    const [discipleSearchQuery, setDiscipleSearchQuery] = useState("");
+
+    // Click outside & Escape key listeners
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (disciplePickerRef.current && !disciplePickerRef.current.contains(e.target as Node)) {
+                setIsDisciplePickerOpen(false);
+            }
+        };
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "Escape") {
+                setIsDisciplePickerOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        document.addEventListener("keydown", handleKeyDown);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+            document.removeEventListener("keydown", handleKeyDown);
+        };
+    }, []);
+
+    const filteredMembers = useMemo(() => {
+        const q = discipleSearchQuery.trim().toLowerCase();
+        if (!q) return membersList;
+        return membersList.filter((m) => {
+            const name = (m.fullName || `${m.firstName || ""} ${m.lastName || ""}`).toLowerCase();
+            const code = (m.memberCode || `epic-${m.memberId}`).toLowerCase();
+            return name.includes(q) || code.includes(q);
+        });
+    }, [membersList, discipleSearchQuery]);
 
     // --------------------------------------------------------
     // STATE
@@ -242,46 +280,176 @@ export const MySpiritualJourneyPortal: React.FC<MySpiritualJourneyPortalProps> =
                             <span>EPIC Discipleship Journey • Luke 4:18 Ministries</span>
                         </span>
 
-                        {/* Admin / Shepherd Disciple Switcher */}
+                        {/* Admin / Shepherd Searchable Disciple Switcher */}
                         {isAdmin && (
-                            <div className="msj-admin-disciple-picker">
-                                <span style={{ fontSize: "11px", fontWeight: "700", color: "#99f6e4" }}>
+                            <div className="msj-admin-disciple-picker" ref={disciplePickerRef}>
+                                <span className="msj-disciple-picker-label">
                                     Viewing As:
                                 </span>
-                                <select
-                                    value={activeMemberId}
-                                    onChange={(e) => {
-                                        const val = Number(e.target.value);
-                                        if (val === 99999) {
-                                            setActiveMemberId(99999);
-                                            setActiveMemberName(loggedInUser?.fullName || "Pastor Ronnel M. Aviguetero");
-                                            setActiveMemberCode("EPIC-PASTOR-01");
-                                        } else {
-                                            const found = membersList.find((m) => m.memberId === val);
-                                            if (found) {
-                                                const fName = found.fullName || `${found.firstName || ""} ${found.lastName || ""}`.trim();
-                                                setActiveMemberId(found.memberId);
-                                                setActiveMemberName(fName);
-                                                setActiveMemberCode(found.memberCode || `EPIC-${found.memberId}`);
-                                            }
-                                        }
-                                    }}
-                                    className="msj-disciple-select"
+
+                                <button
+                                    type="button"
+                                    className="msj-disciple-trigger-btn"
+                                    onClick={() => setIsDisciplePickerOpen((prev) => !prev)}
+                                    title="Click to search and switch disciple profile"
                                 >
-                                    <option value={99999}>
-                                        👑 {loggedInUser?.fullName || "System Administrator"} (Leader Profile • Step 7)
-                                    </option>
-                                    <optgroup label="Church Disciples & Members">
-                                        {membersList.map((m) => {
-                                            const fName = m.fullName || `${m.firstName || ""} ${m.lastName || ""}`.trim();
-                                            return (
-                                                <option key={m.memberId} value={m.memberId}>
-                                                    👤 {fName} ({m.memberCode || `EPIC-${m.memberId}`})
-                                                </option>
-                                            );
-                                        })}
-                                    </optgroup>
-                                </select>
+                                    <span className="msj-disciple-trigger-text">
+                                        {activeMemberId === 99999 ? (
+                                            <>
+                                                <Crown size={13} style={{ color: "#fbbf24" }} />
+                                                <span>{loggedInUser?.fullName || "System Administrator"} (Leader Profile • Step 7)</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <User size={13} style={{ color: "#5eead4" }} />
+                                                <span>{activeMemberName} ({activeMemberCode})</span>
+                                            </>
+                                        )}
+                                    </span>
+                                    <ChevronDown
+                                        size={14}
+                                        style={{
+                                            transform: isDisciplePickerOpen ? "rotate(180deg)" : "rotate(0deg)",
+                                            transition: "transform 0.2s ease",
+                                            flexShrink: 0
+                                        }}
+                                    />
+                                </button>
+
+                                {activeMemberId !== 99999 && (
+                                    <button
+                                        type="button"
+                                        className="msj-disciple-reset-btn"
+                                        title="Reset view back to Admin Leader Profile"
+                                        onClick={() => {
+                                            setActiveMemberId(99999);
+                                            setActiveMemberName(loggedInUser?.fullName || "System Administrator");
+                                            setActiveMemberCode("EPIC-PASTOR-01");
+                                        }}
+                                    >
+                                        <X size={12} />
+                                        <span>My Profile</span>
+                                    </button>
+                                )}
+
+                                {/* Popover Dropdown with Search Bar */}
+                                {isDisciplePickerOpen && (
+                                    <div className="msj-disciple-dropdown-popover">
+                                        {/* Search Input Bar */}
+                                        <div className="msj-disciple-search-box">
+                                            <Search size={14} className="msj-disciple-search-icon" />
+                                            <input
+                                                type="text"
+                                                className="msj-disciple-search-input"
+                                                placeholder="Search by disciple name or code..."
+                                                value={discipleSearchQuery}
+                                                onChange={(e) => setDiscipleSearchQuery(e.target.value)}
+                                                autoFocus
+                                            />
+                                            {discipleSearchQuery && (
+                                                <button
+                                                    type="button"
+                                                    className="msj-disciple-search-clear"
+                                                    onClick={() => setDiscipleSearchQuery("")}
+                                                    title="Clear search"
+                                                >
+                                                    <X size={12} />
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        <div className="msj-disciple-results-count">
+                                            <span>
+                                                {discipleSearchQuery
+                                                    ? `${filteredMembers.length} matches found`
+                                                    : `Church Disciples & Members (${membersList.length})`}
+                                            </span>
+                                        </div>
+
+                                        <div className="msj-disciple-items-scroll">
+                                            {/* Default Admin / Leader Option */}
+                                            {(!discipleSearchQuery ||
+                                              "system administrator leader pastor ronnel profile step 7".includes(discipleSearchQuery.toLowerCase())) && (
+                                                <button
+                                                    type="button"
+                                                    className={`msj-disciple-item ${activeMemberId === 99999 ? "selected" : ""}`}
+                                                    onClick={() => {
+                                                        setActiveMemberId(99999);
+                                                        setActiveMemberName(loggedInUser?.fullName || "System Administrator");
+                                                        setActiveMemberCode("EPIC-PASTOR-01");
+                                                        setIsDisciplePickerOpen(false);
+                                                        setDiscipleSearchQuery("");
+                                                    }}
+                                                >
+                                                    <div className="msj-disciple-avatar leader">
+                                                        <Crown size={13} />
+                                                    </div>
+                                                    <div className="msj-disciple-info">
+                                                        <div className="msj-disciple-name">
+                                                            {loggedInUser?.fullName || "System Administrator"}
+                                                        </div>
+                                                        <div className="msj-disciple-sub">
+                                                            Leader Profile • Step 7 (Multiply)
+                                                        </div>
+                                                    </div>
+                                                    {activeMemberId === 99999 && (
+                                                        <CheckCircle2 size={14} className="msj-disciple-check" />
+                                                    )}
+                                                </button>
+                                            )}
+
+                                            {/* Filtered Disciples */}
+                                            {filteredMembers.map((m) => {
+                                                const fName = m.fullName || `${m.firstName || ""} ${m.lastName || ""}`.trim();
+                                                const code = m.memberCode || `EPIC-${m.memberId}`;
+                                                const isSelected = m.memberId === activeMemberId;
+                                                const initials = fName
+                                                    .split(" ")
+                                                    .map((n: string) => n[0])
+                                                    .filter(Boolean)
+                                                    .slice(0, 2)
+                                                    .join("")
+                                                    .toUpperCase() || "M";
+
+                                                return (
+                                                    <button
+                                                        key={m.memberId}
+                                                        type="button"
+                                                        className={`msj-disciple-item ${isSelected ? "selected" : ""}`}
+                                                        onClick={() => {
+                                                            setActiveMemberId(m.memberId);
+                                                            setActiveMemberName(fName);
+                                                            setActiveMemberCode(code);
+                                                            setIsDisciplePickerOpen(false);
+                                                            setDiscipleSearchQuery("");
+                                                        }}
+                                                    >
+                                                        <div className="msj-disciple-avatar">
+                                                            {initials}
+                                                        </div>
+                                                        <div className="msj-disciple-info">
+                                                            <div className="msj-disciple-name">
+                                                                {fName}
+                                                            </div>
+                                                            <div className="msj-disciple-sub">
+                                                                {code} {m.roleName ? `• ${m.roleName}` : ""}
+                                                            </div>
+                                                        </div>
+                                                        {isSelected && (
+                                                            <CheckCircle2 size={14} className="msj-disciple-check" />
+                                                        )}
+                                                    </button>
+                                                );
+                                            })}
+
+                                            {filteredMembers.length === 0 && (
+                                                <div className="msj-disciple-empty">
+                                                    No disciples found matching "{discipleSearchQuery}"
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
